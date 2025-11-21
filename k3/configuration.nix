@@ -10,7 +10,7 @@
     ../services/beszel.nix
     ../services/beszel-agent.nix
     ../services/n8n.nix
-    ../services/pinepods.nix
+    ../services/audiobookshelf.nix
     ../services/searxng.nix
     ../modules/container-backup.nix
   ];
@@ -47,10 +47,10 @@
         serviceName = "docker-n8n.service";
         volumes = [ "n8n-data" "n8n-files" ];
       };
-      pinepods-db = {
-        containerName = "pinepods-db";
-        serviceName = "docker-pinepods-db.service";
-        volumes = [ "pinepods-pgdata" ];
+      audiobookshelf = {
+        containerName = "audiobookshelf";
+        serviceName = "docker-audiobookshelf.service";
+        volumes = [ "audiobookshelf-config" "audiobookshelf-metadata" ];
       };
       searxng-valkey = {
         containerName = "searxng-valkey";

@@ -7,10 +7,17 @@
   # Create Docker network for Karakeep
   systemd.services.init-karakeep-network = {
     description = "Create Docker network for Karakeep";
-    after = [ "network.target" ];
+    after = [ "network.target" "docker.service" ];
+    requires = [ "docker.service" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig.Type = "oneshot";
+    serviceConfig.RemainAfterExit = true;
     script = ''
+      # Wait for Docker socket to be available
+      while ! ${config.virtualisation.docker.package}/bin/docker info >/dev/null 2>&1; do
+        echo "Waiting for Docker to be ready..."
+        sleep 1
+      done
       ${config.virtualisation.docker.package}/bin/docker network inspect karakeep >/dev/null 2>&1 || \
       ${config.virtualisation.docker.package}/bin/docker network create karakeep
     '';
@@ -87,5 +94,26 @@
       };
       dependsOn = [ "karakeep" ];
     };
+  };
+
+  # Ensure container services wait for network creation
+  systemd.services."docker-karakeep-chrome" = {
+    after = [ "init-karakeep-network.service" ];
+    requires = [ "init-karakeep-network.service" ];
+  };
+
+  systemd.services."docker-karakeep-meilisearch" = {
+    after = [ "init-karakeep-network.service" ];
+    requires = [ "init-karakeep-network.service" ];
+  };
+
+  systemd.services."docker-karakeep" = {
+    after = [ "init-karakeep-network.service" ];
+    requires = [ "init-karakeep-network.service" ];
+  };
+
+  systemd.services."docker-karakeep-homedash" = {
+    after = [ "init-karakeep-network.service" ];
+    requires = [ "init-karakeep-network.service" ];
   };
 }
