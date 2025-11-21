@@ -90,23 +90,7 @@ in {
         User = "root";
       };
       path = with pkgs; [ (if cfg.backend == "docker" then docker else podman) gzip gnutar coreutils findutils systemd ];
-      script = let
-        stopCommand = if job.serviceName != null then ''
-          echo "Stopping service ${job.serviceName}..."
-          systemctl stop "${job.serviceName}"
-        '' else ''
-          echo "Stopping container ${job.containerName}..."
-          $BIN stop "${job.containerName}"
-        '';
-        
-        startCommand = if job.serviceName != null then ''
-          echo "Starting service ${job.serviceName}..."
-          systemctl start "${job.serviceName}"
-        '' else ''
-          echo "Starting container ${job.containerName}..."
-          $BIN start "${job.containerName}"
-        '';
-      in ''
+      script = ''
         set -euo pipefail
         
         BACKUP_DIR="${cfg.mountPoint}/containers/${name}"
@@ -117,7 +101,13 @@ in {
         echo "Starting backup for ${name} using $BIN..."
 
         # Stop the container/service
-        ${stopCommand}
+        if [ -n "${job.serviceName}" ]; then
+          echo "Stopping service ${job.serviceName}..."
+          systemctl stop "${job.serviceName}"
+        else
+          echo "Stopping container ${job.containerName}..."
+          $BIN stop "${job.containerName}"
+        fi
 
         # Backup volumes
         for vol in ${toString job.volumes}; do
@@ -132,7 +122,13 @@ in {
         done
 
         # Start the container/service
-        ${startCommand}
+        if [ -n "${job.serviceName}" ]; then
+          echo "Starting service ${job.serviceName}..."
+          systemctl start "${job.serviceName}"
+        else
+          echo "Starting container ${job.containerName}..."
+          $BIN start "${job.containerName}"
+        fi
 
         # Prune old backups
         echo "Pruning backups older than ${toString job.keepDays} days..."
@@ -157,7 +153,7 @@ in {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "03:00:00";
-        # Persistent = true; # Disabled to prevent immediate run during deploy which conflicts with service start
+        Persistent = true;
         Unit = "container-backup.target";
       };
     };
