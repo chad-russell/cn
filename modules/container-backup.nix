@@ -85,26 +85,79 @@ in {
       description = "Backup service for container ${job.containerName}";
       requires = if cfg.backend == "docker" then [ "docker.service" ] else [];
       after = [ "network.target" "remote-fs.target" ] ++ (if cfg.backend == "docker" then [ "docker.service" ] else []);
+      # Only run when explicitly triggered (by timer or manually), not during system activation
+      unitConfig = {
+        ConditionPathExists = cfg.mountPoint;
+        RefuseManualStart = false;
+        RefuseManualStop = false;
+      };
+      # Don't want these services to auto-start on boot or during system activation
+      wantedBy = lib.mkForce [];
       serviceConfig = {
         Type = "oneshot";
         User = "root";
+        # Increase timeout for stopping services
+        TimeoutStartSec = "5min";
       };
       path = with pkgs; [ (if cfg.backend == "docker" then docker else podman) gzip gnutar coreutils findutils systemd ];
       script = let
         stopCommand = if job.serviceName != null then ''
           echo "Stopping service ${job.serviceName}..."
-          systemctl stop "${job.serviceName}"
+          if systemctl is-active --quiet "${job.serviceName}"; then
+            if ! systemctl stop "${job.serviceName}"; then
+              echo "Warning: Failed to stop service ${job.serviceName}, continuing anyway..." >&2
+            fi
+            # Wait for service to fully stop
+            for i in {1..30}; do
+              if ! systemctl is-active --quiet "${job.serviceName}"; then
+                break
+              fi
+              echo "Waiting for ${job.serviceName} to stop (attempt $i/30)..."
+              sleep 1
+            done
+          else
+            echo "Service ${job.serviceName} is not active, skipping stop."
+          fi
         '' else ''
           echo "Stopping container ${job.containerName}..."
-          $BIN stop "${job.containerName}"
+          if $BIN ps --filter "name=${job.containerName}" --filter "status=running" --format "{{.Names}}" | grep -q "${job.containerName}"; then
+            if ! $BIN stop "${job.containerName}" 2>/dev/null; then
+              echo "Warning: Failed to stop container ${job.containerName}, continuing anyway..." >&2
+            fi
+          else
+            echo "Container ${job.containerName} is not running, skipping stop."
+          fi
         '';
         
         startCommand = if job.serviceName != null then ''
           echo "Starting service ${job.serviceName}..."
-          systemctl start "${job.serviceName}"
+          # Reset failed state if present
+          systemctl reset-failed "${job.serviceName}" 2>/dev/null || true
+          
+          if ! systemctl start "${job.serviceName}"; then
+            echo "Error: Failed to start service ${job.serviceName}" >&2
+            exit 1
+          fi
+          
+          # Wait for service to be active
+          for i in {1..30}; do
+            if systemctl is-active --quiet "${job.serviceName}"; then
+              echo "Service ${job.serviceName} started successfully."
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "Error: Service ${job.serviceName} did not become active after 30 seconds" >&2
+              exit 1
+            fi
+            echo "Waiting for ${job.serviceName} to start (attempt $i/30)..."
+            sleep 1
+          done
         '' else ''
           echo "Starting container ${job.containerName}..."
-          $BIN start "${job.containerName}"
+          if ! $BIN start "${job.containerName}" 2>/dev/null; then
+            echo "Error: Failed to start container ${job.containerName}" >&2
+            exit 1
+          fi
         '';
       in ''
         set -euo pipefail
