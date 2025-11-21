@@ -157,7 +157,7 @@ in {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "03:00:00";
-        Persistent = true;
+        # Persistent = true; # Disabled to prevent immediate run during deploy which conflicts with service start
         Unit = "container-backup.target";
       };
     };
