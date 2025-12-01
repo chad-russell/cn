@@ -74,9 +74,11 @@
   # Set your time zone.
   time.timeZone = "America/New_York";
 
-  # Install git package
+  # Install git and git-crypt for secret management
   environment.systemPackages = with pkgs; [
     git
+    git-crypt
+    gnupg
   ];
 
   # Enable experimental Nix features

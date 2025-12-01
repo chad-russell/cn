@@ -10,6 +10,7 @@
     ../services/beszel.nix
     ../services/beszel-agent.nix
     ../services/n8n.nix
+    ../services/onyx.nix
     ../services/pinepods.nix
     ../services/searxng.nix
     ../modules/container-backup.nix
@@ -46,6 +47,21 @@
         containerName = "n8n";
         serviceName = "docker-n8n.service";
         volumes = [ "n8n-data" "n8n-files" ];
+      };
+      onyx-db = {
+        containerName = "onyx-relational-db";
+        serviceName = "docker-onyx-relational-db.service";
+        volumes = [ "onyx-db-volume" ];
+      };
+      onyx-vespa = {
+        containerName = "onyx-index";
+        serviceName = "docker-onyx-index.service";
+        volumes = [ "onyx-vespa-volume" ];
+      };
+      onyx-minio = {
+        containerName = "onyx-minio";
+        serviceName = "docker-onyx-minio.service";
+        volumes = [ "onyx-minio-data" ];
       };
       pinepods-db = {
         containerName = "pinepods-db";
