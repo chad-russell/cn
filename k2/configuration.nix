@@ -6,6 +6,7 @@
     ../common/base-configuration.nix
     ../common/hardware-watchdog.nix
     ../common/network-optimizations.nix
+    ../common/nfs-backup-mount.nix
     # Service modules (shared)
     # Backup module
     ../modules/python-backup.nix
