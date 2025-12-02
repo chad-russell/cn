@@ -103,10 +103,10 @@ in {
         # Stop the container/service
         if [ -n "${job.serviceName}" ]; then
           echo "Stopping service ${job.serviceName}..."
-          systemctl stop "${job.serviceName}"
+          systemctl stop "${job.serviceName}" || echo "Warning: Failed to stop service, proceeding anyway..."
         else
           echo "Stopping container ${job.containerName}..."
-          $BIN stop "${job.containerName}"
+          $BIN stop "${job.containerName}" || echo "Warning: Failed to stop container, proceeding anyway..."
         fi
 
         # Backup volumes

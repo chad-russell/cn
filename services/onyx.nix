@@ -220,6 +220,7 @@
         Restart = "always";
         RestartSec = "10s";
         TimeoutStartSec = "300s";
+        SuccessExitStatus = "0 137";
       };
     };
     "docker-onyx-background" = {
@@ -227,6 +228,7 @@
         Restart = "always";
         RestartSec = "10s";
         TimeoutStartSec = "300s";
+        SuccessExitStatus = "0 137";
       };
     };
   };
