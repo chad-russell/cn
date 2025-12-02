@@ -23,7 +23,7 @@
     routes = [
       { routeConfig.Gateway = "192.168.20.1"; }
     ];
-    dns = [ "192.168.10.1" "8.8.8.8" ];
+    dns = [ "8.8.8.8" ];
   };
 
   # Open firewall for Caddy reverse proxy
