@@ -7,12 +7,8 @@
     ../common/hardware-watchdog.nix
     ../common/network-optimizations.nix
     # Service modules (shared)
-    ../services/beszel-agent.nix
-    ../services/karakeep.nix
-    ../services/memos.nix
-    ../services/ntfy.nix
-    ../services/papra.nix
-    ../modules/container-backup.nix
+    # Backup module
+    ../modules/python-backup.nix
   ];
 
   # Set your hostname.
@@ -36,41 +32,9 @@
   # Open firewall for Caddy reverse proxy
   networking.firewall.allowedTCPPorts = [ 80 443 ];
 
-  # Configure container backups
-  services.containerBackup = {
+  # Enable the Python backup script timer
+  services.pythonContainerBackup = {
     enable = true;
-    backend = "docker";
-    jobs = {
-      karakeep-app = {
-        containerName = "karakeep";
-        serviceName = "docker-karakeep.service";
-        volumes = [ "karakeep-app-data" ];
-      };
-      karakeep-meili = {
-        containerName = "karakeep-meilisearch";
-        serviceName = "docker-karakeep-meilisearch.service";
-        volumes = [ "karakeep-data" ];
-      };
-      karakeep-homedash = {
-        containerName = "karakeep-homedash";
-        serviceName = "docker-karakeep-homedash.service";
-        volumes = [ "karakeep-homedash-config" ];
-      };
-      memos = {
-        containerName = "memos";
-        serviceName = "docker-memos.service";
-        volumes = [ "memos-data" ];
-      };
-      ntfy = {
-        containerName = "ntfy";
-        serviceName = "docker-ntfy.service";
-        volumes = [ "ntfy-config" "ntfy-cache" ];
-      };
-      papra = {
-        containerName = "papra";
-        serviceName = "docker-papra.service";
-        volumes = [ "papra-data" ];
-      };
-    };
+    scriptPath = "/home/crussell/docker/backup.py";
   };
 }

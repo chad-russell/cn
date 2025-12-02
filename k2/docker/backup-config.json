@@ -1,0 +1,44 @@
+{
+  "nfs": {
+    "server": "192.168.20.31",
+    "path": "/mnt/tank/backups",
+    "mountPoint": "/mnt/backups"
+  },
+  "defaults": {
+    "backend": "docker",
+    "keepDays": 7
+  },
+  "jobs": [
+    {
+      "name": "karakeep-app",
+      "containerName": "karakeep",
+      "volumes": ["karakeep-app-data"]
+    },
+    {
+      "name": "karakeep-meili",
+      "containerName": "karakeep-meilisearch",
+      "volumes": ["karakeep-data"]
+    },
+    {
+      "name": "karakeep-homedash",
+      "containerName": "karakeep-homedash",
+      "volumes": ["karakeep-homedash-config"]
+    },
+    {
+      "name": "memos",
+      "containerName": "memos",
+      "volumes": ["memos-data"]
+    },
+    {
+      "name": "ntfy",
+      "containerName": "ntfy",
+      "volumes": ["ntfy-config", "ntfy-cache"]
+    },
+    {
+      "name": "papra",
+      "containerName": "papra",
+      "volumes": ["papra-data"]
+    }
+  ]
+}
+

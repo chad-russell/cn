@@ -1,0 +1,22 @@
+services:
+  ntfy:
+    image: docker.io/binwiederhier/ntfy:v2.11.0
+    container_name: ntfy
+    ports:
+      - "8090:80"
+    volumes:
+      - ntfy-cache:/var/cache/ntfy
+      - ntfy-config:/etc/ntfy
+    environment:
+      - TZ=America/New_York
+    command: ["serve"]
+    restart: unless-stopped
+
+volumes:
+  ntfy-cache:
+    external: true
+    name: ntfy-cache
+  ntfy-config:
+    external: true
+    name: ntfy-config
+

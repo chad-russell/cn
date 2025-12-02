@@ -6,8 +6,6 @@
     ../common/base-configuration.nix
     ../common/hardware-watchdog.nix
     ../common/network-optimizations.nix
-    # Service modules (shared)
-    ../services/beszel-agent.nix
     # Backup module
     ../modules/python-backup.nix
   ];
