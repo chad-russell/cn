@@ -147,6 +147,8 @@ services:
       - /bin/sh
       - -c
       - "alembic upgrade head && echo \"Starting Onyx Api Server\" && uvicorn onyx.main:app --host 0.0.0.0 --port 8081"
+    ports:
+      - "8081:8081"
     depends_on:
       onyx-relational-db:
         condition: service_healthy
