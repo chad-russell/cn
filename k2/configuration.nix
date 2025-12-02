@@ -9,7 +9,7 @@
     ../common/nfs-backup-mount.nix
     # Service modules (shared)
     # Backup module
-    ../modules/python-backup.nix
+    ../modules/container-backup.nix
   ];
 
   # Set your hostname.
@@ -30,7 +30,7 @@
   networking.firewall.allowedTCPPorts = [ 80 443 ];
 
   # Enable the Python backup script timer
-  services.pythonContainerBackup = {
+  services.containerBackup = {
     enable = true;
     scriptPath = "/home/crussell/cn/docker/backup.py";
     configPath = "/home/crussell/cn/k2/docker/backup-config.json";

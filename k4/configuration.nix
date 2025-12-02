@@ -8,7 +8,7 @@
     ../common/network-optimizations.nix
     ../common/nfs-backup-mount.nix
     # Backup module
-    ../modules/python-backup.nix
+    ../modules/container-backup.nix
   ];
 
   # Set your hostname.
@@ -43,7 +43,7 @@
   };
 
   # Enable the Python backup script timer
-  services.pythonContainerBackup = {
+  services.containerBackup = {
     enable = true;
     scriptPath = "/home/crussell/cn/docker/backup.py";
     configPath = "/home/crussell/cn/k4/docker/backup-config.json";
