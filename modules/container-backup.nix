@@ -97,13 +97,15 @@ in {
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
         BIN="${cfg.backend}"
         mkdir -p "$BACKUP_DIR"
+        
+        SERVICE_NAME="${if job.serviceName != null then job.serviceName else ""}"
 
         echo "Starting backup for ${name} using $BIN..."
 
         # Stop the container/service
-        if [ -n "${job.serviceName}" ]; then
-          echo "Stopping service ${job.serviceName}..."
-          systemctl stop "${job.serviceName}" || echo "Warning: Failed to stop service, proceeding anyway..."
+        if [ -n "$SERVICE_NAME" ]; then
+          echo "Stopping service $SERVICE_NAME..."
+          systemctl stop "$SERVICE_NAME" || echo "Warning: Failed to stop service, proceeding anyway..."
         else
           echo "Stopping container ${job.containerName}..."
           $BIN stop "${job.containerName}" || echo "Warning: Failed to stop container, proceeding anyway..."
@@ -122,9 +124,9 @@ in {
         done
 
         # Start the container/service
-        if [ -n "${job.serviceName}" ]; then
-          echo "Starting service ${job.serviceName}..."
-          systemctl start "${job.serviceName}"
+        if [ -n "$SERVICE_NAME" ]; then
+          echo "Starting service $SERVICE_NAME..."
+          systemctl start "$SERVICE_NAME"
         else
           echo "Starting container ${job.containerName}..."
           $BIN start "${job.containerName}"
