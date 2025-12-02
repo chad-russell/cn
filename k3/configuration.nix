@@ -8,6 +8,8 @@
     ../common/network-optimizations.nix
     # Service modules (shared)
     ../services/beszel-agent.nix
+    # Backup module
+    ../modules/python-backup.nix
   ];
 
   # Set your hostname.
@@ -26,5 +28,11 @@
       { routeConfig.Gateway = "192.168.20.1"; }
     ];
     dns = [ "192.168.10.1" "8.8.8.8" ];
+  };
+  
+  # Enable the Python backup script timer
+  services.pythonContainerBackup = {
+    enable = true;
+    scriptPath = "/home/crussell/docker/backup.py";
   };
 }

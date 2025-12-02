@@ -1,0 +1,58 @@
+{
+  "nfs": {
+    "server": "192.168.20.31",
+    "path": "/mnt/tank/backups",
+    "mountPoint": "/mnt/backups"
+  },
+  "defaults": {
+    "backend": "docker",
+    "keepDays": 7
+  },
+  "jobs": [
+    {
+      "name": "audiobookshelf",
+      "containerName": "audiobookshelf",
+      "volumes": [
+        "audiobookshelf_audiobookshelf-config", 
+        "audiobookshelf_audiobookshelf-metadata",
+        "audiobookshelf_audiobookshelf-audiobooks",
+        "audiobookshelf_audiobookshelf-podcasts"
+      ]
+    },
+    {
+      "name": "beszel",
+      "containerName": "beszel",
+      "volumes": ["beszel-data"]
+    },
+    {
+      "name": "n8n",
+      "containerName": "n8n",
+      "volumes": ["n8n_n8n-data", "n8n_n8n-files"]
+    },
+    {
+      "name": "onyx-db",
+      "containerName": "onyx-relational-db",
+      "volumes": ["onyx_onyx-db-volume"]
+    },
+    {
+      "name": "onyx-vespa",
+      "containerName": "onyx-index",
+      "volumes": ["onyx_onyx-vespa-volume"]
+    },
+    {
+      "name": "onyx-minio",
+      "containerName": "onyx-minio",
+      "volumes": ["onyx_onyx-minio-data"]
+    },
+    {
+      "name": "searxng",
+      "containerName": "searxng",
+      "volumes": ["searxng-config"]
+    },
+    {
+      "name": "searxng-valkey",
+      "containerName": "searxng-valkey",
+      "volumes": ["searxng-valkey-data"]
+    }
+  ]
+}
