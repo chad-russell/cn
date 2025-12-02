@@ -8,7 +8,6 @@
     ../common/network-optimizations.nix
     # Service modules (shared)
     ../services/beszel-agent.nix
-    ../modules/container-backup.nix
   ];
 
   # Set your hostname.
@@ -27,44 +26,5 @@
       { routeConfig.Gateway = "192.168.20.1"; }
     ];
     dns = [ "192.168.10.1" "8.8.8.8" ];
-  };
-
-  # Configure container backups
-  services.containerBackup = {
-    enable = true;
-    jobs = {
-      beszel = {
-        containerName = "beszel";
-        volumes = [ "beszel-data" ];
-      };
-      n8n = {
-        containerName = "n8n";
-        volumes = [ "n8n-data" "n8n-files" ];
-      };
-      onyx-db = {
-        containerName = "onyx-relational-db";
-        volumes = [ "onyx-db-volume" ];
-      };
-      onyx-vespa = {
-        containerName = "onyx-index";
-        volumes = [ "onyx-vespa-volume" ];
-      };
-      onyx-minio = {
-        containerName = "onyx-minio";
-        volumes = [ "onyx-minio-data" ];
-      };
-      pinepods-db = {
-        containerName = "pinepods-db";
-        volumes = [ "pinepods-pgdata" ];
-      };
-      searxng-valkey = {
-        containerName = "searxng-valkey";
-        volumes = [ "searxng-valkey-data" ];
-      };
-      searxng = {
-        containerName = "searxng";
-        volumes = [ "searxng-config" ];
-      };
-    };
   };
 }
