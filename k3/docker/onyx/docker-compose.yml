@@ -1,0 +1,191 @@
+services:
+  # PostgreSQL database for Onyx
+  onyx-relational-db:
+    image: postgres:15.2-alpine
+    container_name: onyx-relational-db
+    restart: always
+    shm_size: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - onyx-db-volume:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    command: ["-c", "max_connections=250"]
+    networks:
+      - onyx
+
+  # Vespa search engine
+  onyx-index:
+    image: vespaengine/vespa:8.609.39
+    container_name: onyx-index
+    restart: always
+    volumes:
+      - onyx-vespa-volume:/opt/vespa/var
+    environment:
+      - VESPA_SKIP_UPGRADE_CHECK=true
+    networks:
+      - onyx
+
+  # Redis cache
+  onyx-cache:
+    image: redis:7.4-alpine
+    restart: always
+    tmpfs:
+      - /data
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks:
+      - onyx
+
+  # MinIO object storage
+  onyx-minio:
+    image: minio/minio:RELEASE.2025-07-23T15-54-02Z-cpuv1
+    container_name: onyx-minio
+    restart: always
+    volumes:
+      - onyx-minio-data:/data
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_DEFAULT_BUCKETS=onyx-file-store-bucket
+    command: ["server", "/data", "--console-address", ":9001"]
+    networks:
+      - onyx
+
+  # Inference model server
+  onyx-inference-model-server:
+    image: onyxdotapp/onyx-model-server:latest
+    restart: always
+    volumes:
+      - onyx-model-cache-huggingface:/app/.cache/huggingface/
+      - onyx-inference-model-server-logs:/var/log/onyx
+    command: 
+      - /bin/sh
+      - -c
+      - "exec uvicorn model_server.main:app --host 0.0.0.0 --port 9000"
+    networks:
+      - onyx
+
+  # Indexing model server
+  onyx-indexing-model-server:
+    image: onyxdotapp/onyx-model-server:latest
+    restart: always
+    volumes:
+      - onyx-indexing-huggingface-model-cache:/app/.cache/huggingface/
+      - onyx-indexing-model-server-logs:/var/log/onyx
+    environment:
+      - INDEXING_ONLY=True
+    command: 
+      - /bin/sh
+      - -c
+      - "exec uvicorn model_server.main:app --host 0.0.0.0 --port 9000"
+    networks:
+      - onyx
+
+  # Background worker
+  onyx-background:
+    image: onyxdotapp/onyx-backend:latest
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - onyx-background-logs:/var/log/onyx
+    environment:
+      - USE_LIGHTWEIGHT_BACKGROUND_WORKER=true
+      - POSTGRES_HOST=onyx-relational-db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - VESPA_HOST=onyx-index
+      - REDIS_HOST=onyx-cache
+      - MODEL_SERVER_HOST=onyx-inference-model-server
+      - INDEXING_MODEL_SERVER_HOST=onyx-indexing-model-server
+      - S3_ENDPOINT_URL=http://onyx-minio:9000
+      - S3_AWS_ACCESS_KEY_ID=minioadmin
+      - S3_AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+    command: 
+      - /bin/sh
+      - -c
+      - "if [ -f /etc/ssl/certs/custom-ca.crt ]; then update-ca-certificates; fi && /app/scripts/supervisord_entrypoint.sh"
+    depends_on:
+      onyx-relational-db:
+        condition: service_healthy
+      onyx-index:
+        condition: service_started
+      onyx-cache:
+        condition: service_started
+      onyx-inference-model-server:
+        condition: service_started
+      onyx-indexing-model-server:
+        condition: service_started
+    networks:
+      - onyx
+
+  # API Server
+  onyx-api-server:
+    image: onyxdotapp/onyx-backend:latest
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - onyx-api-server-logs:/var/log/onyx
+    environment:
+      - AUTH_TYPE=basic
+      - POSTGRES_HOST=onyx-relational-db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - VESPA_HOST=onyx-index
+      - REDIS_HOST=onyx-cache
+      - MODEL_SERVER_HOST=onyx-inference-model-server
+      - S3_ENDPOINT_URL=http://onyx-minio:9000
+      - S3_AWS_ACCESS_KEY_ID=minioadmin
+      - S3_AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+    command: 
+      - /bin/sh
+      - -c
+      - "alembic upgrade head && echo \"Starting Onyx Api Server\" && uvicorn onyx.main:app --host 0.0.0.0 --port 8080"
+    depends_on:
+      onyx-relational-db:
+        condition: service_healthy
+      onyx-index:
+        condition: service_started
+      onyx-cache:
+        condition: service_started
+      onyx-inference-model-server:
+        condition: service_started
+      onyx-minio:
+        condition: service_started
+    networks:
+      - onyx
+
+  # Web Server
+  onyx-web-server:
+    image: onyxdotapp/onyx-web-server:latest
+    restart: always
+    ports:
+      - "3033:3000"
+    environment:
+      - INTERNAL_URL=http://onyx-api-server:8080
+    depends_on:
+      - onyx-api-server
+    networks:
+      - onyx
+
+volumes:
+  onyx-db-volume:
+  onyx-vespa-volume:
+  onyx-minio-data:
+  onyx-model-cache-huggingface:
+  onyx-inference-model-server-logs:
+  onyx-indexing-huggingface-model-cache:
+  onyx-indexing-model-server-logs:
+  onyx-background-logs:
+  onyx-api-server-logs:
+
+networks:
+  onyx:
+    driver: bridge
+
