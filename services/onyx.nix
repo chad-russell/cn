@@ -118,6 +118,8 @@
       environment = {
         USE_LIGHTWEIGHT_BACKGROUND_WORKER = "true";
         POSTGRES_HOST = "onyx-relational-db";
+        POSTGRES_USER = "postgres";
+        POSTGRES_PASSWORD = config.mySecrets.onyx.postgres_password or "password";
         VESPA_HOST = "onyx-index";
         REDIS_HOST = "onyx-cache";
         MODEL_SERVER_HOST = "onyx-inference-model-server";
@@ -151,6 +153,8 @@
       environment = {
         AUTH_TYPE = "basic";
         POSTGRES_HOST = "onyx-relational-db";
+        POSTGRES_USER = "postgres";
+        POSTGRES_PASSWORD = config.mySecrets.onyx.postgres_password or "password";
         VESPA_HOST = "onyx-index";
         REDIS_HOST = "onyx-cache";
         MODEL_SERVER_HOST = "onyx-inference-model-server";
