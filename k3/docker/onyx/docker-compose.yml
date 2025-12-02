@@ -146,7 +146,7 @@ services:
     command: 
       - /bin/sh
       - -c
-      - "alembic upgrade head && echo \"Starting Onyx Api Server\" && uvicorn onyx.main:app --host 0.0.0.0 --port 8080"
+      - "alembic upgrade head && echo \"Starting Onyx Api Server\" && uvicorn onyx.main:app --host 0.0.0.0 --port 8081"
     depends_on:
       onyx-relational-db:
         condition: service_healthy
@@ -168,7 +168,7 @@ services:
     ports:
       - "3033:3000"
     environment:
-      - INTERNAL_URL=http://onyx-api-server:8080
+      - INTERNAL_URL=http://onyx-api-server:8081
     depends_on:
       - onyx-api-server
     networks:

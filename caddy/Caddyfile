@@ -1,0 +1,136 @@
+{
+    # Global options block
+    email chaddouglasrussell@gmail.com
+}
+
+# 1. Main internal wildcard: *.internal.crussell.io
+#    This covers MOST of your services.
+*.internal.crussell.io {
+    tls {
+        dns route53 {
+            hosted_zone_id Z0225258330LLQ5BK81Z0
+        }
+        propagation_timeout 5m
+    }
+
+    # --- Localhost Services (k2 / 192.168.20.62) ---
+    @karakeep host karakeep.internal.crussell.io
+    handle @karakeep {
+        reverse_proxy localhost:3322
+    }
+
+    @karakeep-homedash host karakeep-homedash.internal.crussell.io
+    handle @karakeep-homedash {
+        reverse_proxy localhost:8595
+    }
+
+    @memos host memos.internal.crussell.io
+    handle @memos {
+        reverse_proxy localhost:5230
+    }
+
+    @papra host papra.internal.crussell.io
+    handle @papra {
+        reverse_proxy localhost:1221
+    }
+
+    @ntfy host ntfy.internal.crussell.io
+    handle @ntfy {
+        reverse_proxy localhost:8090
+    }
+
+    # --- k3 Services (192.168.20.63) ---
+    @audiobookshelf host audiobookshelf.internal.crussell.io
+    handle @audiobookshelf {
+        reverse_proxy 192.168.20.63:13378
+    }
+
+    @searxng host searxng.internal.crussell.io
+    handle @searxng {
+        reverse_proxy 192.168.20.63:8080
+    }
+
+    @onyx host onyx.internal.crussell.io
+    handle @onyx {
+        handle_path /api/* {
+            reverse_proxy 192.168.20.63:8081
+        }
+
+        handle {
+            reverse_proxy 192.168.20.63:3033
+        }
+    }
+
+    # --- k4 Services (192.168.20.64) ---
+    @beszel host beszel.internal.crussell.io
+    handle @beszel {
+        reverse_proxy 192.168.20.64:8090
+    }
+
+    # --- k1 Services (192.168.20.61) ---
+    @qbittorrent host qbittorrent.internal.crussell.io
+    handle @qbittorrent {
+        reverse_proxy 192.168.20.61:8080
+    }
+
+    @sonarr host sonarr.internal.crussell.io
+    handle @sonarr {
+        reverse_proxy 192.168.20.61:8989
+    }
+
+    @radarr host radarr.internal.crussell.io
+    handle @radarr {
+        reverse_proxy 192.168.20.61:7878
+    }
+
+    @prowlarr host prowlarr.internal.crussell.io
+    handle @prowlarr {
+        reverse_proxy 192.168.20.61:9696
+    }
+
+    @jellyseerr host jellyseerr.internal.crussell.io
+    handle @jellyseerr {
+        reverse_proxy 192.168.20.61:5055
+    }
+}
+
+# 2. Public/Root Domain Services: *.crussell.io
+#    These are NOT under .internal but seem to use the same DNS auth method.
+#    We can group them under a second wildcard if you have a wildcard DNS record for *.crussell.io
+#    OR keep them separate if you prefer. Grouping them is cleaner if DNS supports it.
+
+*.crussell.io {
+    tls {
+        dns route53 {
+            hosted_zone_id Z0225258330LLQ5BK81Z0
+        }
+        propagation_timeout 15m
+        resolvers 8.8.8.8 1.1.1.1
+    }
+
+    @homeassistant host homeassistant.crussell.io
+    handle @homeassistant {
+        reverse_proxy 192.168.20.51:8123
+    }
+
+    @jellyfin host jellyfin.crussell.io
+    handle @jellyfin {
+        reverse_proxy 192.168.20.61:8096
+    }
+
+    @n8n host n8n.crussell.io
+    handle @n8n {
+        reverse_proxy 192.168.20.63:5678
+    }
+
+    @immich host immich.crussell.io
+    handle @immich {
+        reverse_proxy 192.168.20.64:2283
+    }
+
+    @chex-mix-timer host chex-mix-timer.crussell.io
+    handle @chex-mix-timer {
+        reverse_proxy 192.168.20.64:8732
+    }
+}
+
