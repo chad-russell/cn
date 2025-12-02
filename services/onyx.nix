@@ -28,6 +28,10 @@
       extraOptions = [ 
         "--network=onyx"
         "--shm-size=1g"
+        "--health-cmd=pg_isready -U postgres"
+        "--health-interval=10s"
+        "--health-timeout=5s"
+        "--health-retries=5"
       ];
       volumes = [ "onyx-db-volume:/var/lib/postgresql/data" ];
       environment = {
@@ -208,4 +212,22 @@
   
   # Open firewall port for Onyx web interface
   networking.firewall.allowedTCPPorts = [ 3033 ];
+
+  # Improve systemd service reliability
+  systemd.services = {
+    "docker-onyx-api-server" = {
+      serviceConfig = {
+        Restart = "always";
+        RestartSec = "10s";
+        TimeoutStartSec = "300s";
+      };
+    };
+    "docker-onyx-background" = {
+      serviceConfig = {
+        Restart = "always";
+        RestartSec = "10s";
+        TimeoutStartSec = "300s";
+      };
+    };
+  };
 }
