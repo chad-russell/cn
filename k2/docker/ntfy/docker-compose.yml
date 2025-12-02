@@ -20,3 +20,4 @@ volumes:
     external: true
     name: ntfy-config
 
+

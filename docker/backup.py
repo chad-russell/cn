@@ -5,6 +5,7 @@ import datetime
 import os
 import sys
 import time
+import argparse
 from pathlib import Path
 
 CONFIG_FILE = "backup-config.json"
@@ -116,14 +117,15 @@ def backup_job(job, defaults, mount_point):
     log(f"Finished job: {name}")
 
 def main():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, CONFIG_FILE)
+    parser = argparse.ArgumentParser(description="Backup containers.")
+    parser.add_argument("--config", "-c", default=CONFIG_FILE, help=f"Path to configuration file (default: {CONFIG_FILE})")
+    args = parser.parse_args()
 
-    if not os.path.exists(config_path):
-        log(f"Config file not found at {config_path}")
+    if not os.path.exists(args.config):
+        log(f"Config file not found at {args.config}")
         sys.exit(1)
 
-    with open(config_path, 'r') as f:
+    with open(args.config, 'r') as f:
         config = json.load(f)
 
     nfs_config = config.get("nfs", {})
@@ -153,4 +155,3 @@ if __name__ == "__main__":
         log("This script must be run as root (for docker/mount permissions).")
         sys.exit(1)
     main()
-

@@ -45,6 +45,7 @@
   # Enable the Python backup script timer
   services.pythonContainerBackup = {
     enable = true;
-    scriptPath = "/home/crussell/docker/backup.py";
+    scriptPath = "/home/crussell/cn/docker/backup.py";
+    configPath = "/home/crussell/cn/k4/docker/backup-config.json";
   };
 }

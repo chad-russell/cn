@@ -5,6 +5,7 @@ with lib;
 let
   cfg = config.services.pythonContainerBackup;
   backupScript = "/home/crussell/docker/backup.py"; # Assuming standard location or configured path
+  configFile = "/home/crussell/docker/backup-config.json";
 in {
   options.services.pythonContainerBackup = {
     enable = mkEnableOption "Automated container backups using Python script";
@@ -20,6 +21,12 @@ in {
       default = backupScript;
       description = "Path to the backup.py script.";
     };
+
+    configPath = mkOption {
+      type = types.str;
+      default = configFile;
+      description = "Path to the backup-config.json file.";
+    };
   };
 
   config = mkIf cfg.enable {
@@ -29,7 +36,7 @@ in {
       serviceConfig = {
         Type = "oneshot";
         User = "root";
-        ExecStart = "${pkgs.python3}/bin/python3 ${cfg.scriptPath}";
+        ExecStart = "${pkgs.python3}/bin/python3 ${cfg.scriptPath} --config ${cfg.configPath}";
       };
     };
 
@@ -44,4 +51,3 @@ in {
     };
   };
 }
-

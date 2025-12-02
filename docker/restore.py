@@ -212,16 +212,14 @@ def main():
     parser = argparse.ArgumentParser(description="Restore container backups.")
     parser.add_argument("job_name", help="Name of the backup job (e.g., n8n, beszel)")
     parser.add_argument("--timestamp", "-t", help="Timestamp prefix (e.g., 20251201-191215). Defaults to latest.")
+    parser.add_argument("--config", "-c", default=CONFIG_FILE, help=f"Path to configuration file (default: {CONFIG_FILE})")
     args = parser.parse_args()
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, CONFIG_FILE)
-
-    if not os.path.exists(config_path):
-        log(f"Config file not found at {config_path}")
+    if not os.path.exists(args.config):
+        log(f"Config file not found at {args.config}")
         sys.exit(1)
 
-    with open(config_path, 'r') as f:
+    with open(args.config, 'r') as f:
         config = json.load(f)
 
     nfs_config = config.get("nfs", {})
@@ -237,4 +235,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
