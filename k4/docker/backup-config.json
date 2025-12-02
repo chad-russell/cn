@@ -1,0 +1,28 @@
+{
+  "nfs": {
+    "server": "192.168.20.31",
+    "path": "/mnt/tank/backups",
+    "mountPoint": "/mnt/backups"
+  },
+  "defaults": {
+    "backend": "docker",
+    "keepDays": 7
+  },
+  "jobs": [
+    {
+      "name": "beszel",
+      "containerName": "beszel",
+      "volumes": ["beszel_beszel-data"]
+    },
+    {
+      "name": "immich",
+      "containerName": "immich",
+      "volumes": [
+        "immich_pgdata",
+        "immich_redis-data",
+        "immich_model-cache"
+      ]
+    }
+  ]
+}
+
