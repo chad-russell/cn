@@ -14,10 +14,6 @@
   # Set your hostname.
   networking.hostName = "k2";
 
-  # Beszel agent authentication key (get from beszel hub when adding system)
-  virtualisation.oci-containers.containers.beszel-agent.environment.KEY = 
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZIx3DijQERcOTAbdQJmDSaTlI+20O8kE19iWyh8Fn5";
-
   # Configure network interface
   systemd.network.networks."40-eth0" = {
     matchConfig.Name = "eno1";

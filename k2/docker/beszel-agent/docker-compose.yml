@@ -12,5 +12,5 @@ services:
     environment:
       LISTEN: 45876
       KEY: ${BESZEL_AGENT_KEY}
-      TOKEN: 20522cf7-bea2-45fe-9183-c64b58534100
+      TOKEN: ced86240-f09b-417b-949f-c29c400dd528
       HUB_URL: https://beszel.internal.crussell.io
