@@ -32,7 +32,7 @@ services:
     container_name: LibreChat-MongoDB
     image: mongo:5
     restart: always
-    user: "${UID}:${GID}"
+    # user: "${UID}:${GID}"
     volumes:
       - ./data-mongodb:/data/db
     command: mongod --noauth
