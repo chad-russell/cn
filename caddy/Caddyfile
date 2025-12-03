@@ -61,6 +61,12 @@
         }
     }
 
+    @librechat host librechat.internal.crussell.io
+    handle @librechat {
+        reverse_proxy 192.168.20.63:3080
+    }
+
+
     # --- k4 Services (192.168.20.64) ---
     @beszel host beszel.internal.crussell.io
     handle @beszel {
