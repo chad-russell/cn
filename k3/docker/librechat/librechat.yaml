@@ -30,3 +30,11 @@ endpoints:
       summarize: false
       forcePrompt: false
       modelDisplayLabel: "Local Server"
+
+mcpServers:
+  homeassistant:
+    type: streamable-http
+    url: "${HOME_ASSISTANT_URL}/api/mcp"
+    headers:
+      Authorization: "Bearer ${HOME_ASSISTANT_ACCESS_TOKEN}"
+    chatMenu: true
