@@ -23,7 +23,7 @@ endpoints:
       apiKey: "${LOCAL_AI_API_KEY}"
       baseURL: "${LOCAL_AI_BASE_URL}"
       models:
-        default: []
+        default: ["gpt-oss-120b", "gpt-oss-20b", "qwen3-14b-q8", "qwen3-1.7b", "qwen3-30b-a3b-instruct", "qwen3-30b-a3b-thinking", "qwen3-4b-instruct", "qwen3-4b-thinking", "qwen3-8b", "qwen3-coder-30b-a3b-instruct-q8", "cydonia-24b", "magistral-small", "dolphin-mistral", "nomic-embed-text-v2"]
         fetch: true
       titleConvo: true
       titleModel: "Qwen3-1.7B-BF16"
