@@ -19,17 +19,17 @@ endpoints:
       forcePrompt: false
       modelDisplayLabel: "OpenRouter"
 
-    - name: "Local AI"
+    - name: "ChadGPT"
       apiKey: "${LOCAL_AI_API_KEY}"
       baseURL: "${LOCAL_AI_BASE_URL}"
       models:
-        default: ["llama3-8b", "mistral-7b"] # Replace with your actual model names
-        fetch: true  # Fetch models from your local server
+        default: ["GPT-OSS 120B F16", "Qwen3-14B-Q8_K_XL", "Cydonia-24B-Q6_K_L"]
+        fetch: true
       titleConvo: true
-      titleModel: "current_model"
+      titleModel: "Qwen3-1.7B-BF16"
       summarize: false
       forcePrompt: false
-      modelDisplayLabel: "Local Server"
+      modelDisplayLabel: "ChadGPT"
 
 mcpServers:
   homeassistant:
