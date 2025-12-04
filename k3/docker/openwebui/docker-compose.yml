@@ -11,13 +11,11 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - WEBUI_AUTH=true
-      # Connect to Ollama if you have it running (adjust URL as needed)
-      # - OLLAMA_BASE_URL=http://host.docker.internal:11434
-      # Or use OpenAI-compatible APIs via the UI settings
+      - ANONYMIZED_TELEMETRY=false
+      - DO_NOT_TRACK=true
+      - SCARF_NO_ANALYTICS=true
     volumes:
       - openwebui-data:/app/backend/data
-    env_file:
-      - .env
 
 volumes:
   openwebui-data:
