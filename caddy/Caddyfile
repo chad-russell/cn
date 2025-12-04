@@ -50,22 +50,15 @@
         reverse_proxy 192.168.20.63:8080
     }
 
-    @onyx host onyx.internal.crussell.io
-    handle @onyx {
-        handle_path /api/* {
-            reverse_proxy 192.168.20.63:8081
-        }
-
-        handle {
-            reverse_proxy 192.168.20.63:3033
-        }
-    }
-
     @librechat host librechat.internal.crussell.io
     handle @librechat {
         reverse_proxy 192.168.20.63:3080
     }
 
+    @openwebui host openwebui.internal.crussell.io
+    handle @openwebui {
+        reverse_proxy 192.168.20.63:3001
+    }
 
     # --- k4 Services (192.168.20.64) ---
     @beszel host beszel.internal.crussell.io

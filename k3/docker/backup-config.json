@@ -30,21 +30,6 @@
       "volumes": ["n8n_n8n-data", "n8n_n8n-files"]
     },
     {
-      "name": "onyx-db",
-      "containerName": "onyx-relational-db",
-      "volumes": ["onyx_onyx-db-volume"]
-    },
-    {
-      "name": "onyx-vespa",
-      "containerName": "onyx-index",
-      "volumes": ["onyx_onyx-vespa-volume"]
-    },
-    {
-      "name": "onyx-minio",
-      "containerName": "onyx-minio",
-      "volumes": ["onyx_onyx-minio-data"]
-    },
-    {
       "name": "searxng",
       "containerName": "searxng",
       "volumes": ["searxng-config"]
@@ -53,6 +38,11 @@
       "name": "searxng-valkey",
       "containerName": "searxng-valkey",
       "volumes": ["searxng-valkey-data"]
+    },
+    {
+      "name": "openwebui",
+      "containerName": "openwebui",
+      "volumes": ["openwebui_openwebui-data"]
     }
   ]
 }
