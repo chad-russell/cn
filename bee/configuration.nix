@@ -66,6 +66,7 @@
     git
     vim
     htop
+    gh
   ];
 
   # Enable experimental Nix features

@@ -5,11 +5,20 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
     # Latest stable nixpkgs for systems that need newest kernel/packages
     nixpkgs-latest.url = "github:nixos/nixpkgs/nixos-25.11";
+    
+    # Home Manager
+    home-manager.url = "github:nix-community/home-manager/release-24.11";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs-latest";
+
+    # Dank Material Shell
+    dms.url = "github:AvengeMedia/DankMaterialShell";
+    dms.inputs.nixpkgs.follows = "nixpkgs-latest";
+
     disko.url = "github:nix-community/disko";
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-latest, disko, nixos-anywhere }: {
+  outputs = { self, nixpkgs, nixpkgs-latest, home-manager, dms, disko, nixos-anywhere }: {
     # k2 configuration
     nixosConfigurations.k2 = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -54,6 +63,13 @@
         ./bee/configuration.nix
         ./bee/disk-config.nix
         disko.nixosModules.disko
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.users.crussell = import ./bee/home.nix;
+          home-manager.extraSpecialArgs = { inherit dms; };
+        }
       ];
     };
   };
