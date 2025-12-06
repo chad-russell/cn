@@ -38,6 +38,15 @@
     force = true; # Overwrite existing file
   };
 
+  home.enableNixpkgsReleaseCheck = false;
+
+  # Wezterm terminal
+  programs.wezterm = {
+    enable = true;
+    enableZshIntegration = true;
+    extraConfig = builtins.readFile ./wezterm.lua;
+  };
+
   # Dank Material Shell
   # See https://github.com/AvengeMedia/DankMaterialShell for configuration options
   # You might need to adjust settings here if DMS needs specific config
