@@ -19,12 +19,12 @@
   # environment.
   home.packages = [
     # Dank Material Shell (install as package for now)
-    dms.packages.${pkgs.system}.default
+    dms.packages.${pkgs.stdenv.hostPlatform.system}.default
     
     # Packages for your Niri/DMS setup
     pkgs.nerd-fonts.fira-code
     pkgs.noto-fonts
-    pkgs.noto-fonts-emoji
+    pkgs.noto-fonts-color-emoji
     pkgs.font-awesome
   ];
 
