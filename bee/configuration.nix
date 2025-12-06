@@ -1,8 +1,15 @@
 { config, pkgs, ... }:
 
 {
+  imports = [
+    ../modules/niri-desktop.nix
+  ];
+
   # Set hostname
   networking.hostName = "bee";
+
+  # Enable Niri desktop
+  desktop.niri.enable = true;
 
   # Use the systemd-boot EFI boot loader
   boot.loader.systemd-boot.enable = true;
