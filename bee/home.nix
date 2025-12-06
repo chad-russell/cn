@@ -1,11 +1,6 @@
-{ config, pkgs, dms, quickshell, ... }:
+{ config, pkgs, dms, ... }:
 
 {
-  imports = [
-    dms.homeModules.dankMaterialShell.default
-    quickshell.homeManagerModules.default
-  ];
-
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
   home.username = "crussell";
@@ -23,6 +18,9 @@
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = [
+    # Dank Material Shell (install as package for now)
+    dms.packages.${pkgs.system}.default
+    
     # Packages for your Niri/DMS setup
     pkgs.nerdfonts
     pkgs.noto-fonts

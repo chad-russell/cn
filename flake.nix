@@ -14,15 +14,11 @@
     dms.url = "github:AvengeMedia/DankMaterialShell";
     dms.inputs.nixpkgs.follows = "nixpkgs-latest";
 
-    # Quickshell (DMS dependency)
-    quickshell.url = "github:outfoxxed/quickshell";
-    quickshell.inputs.nixpkgs.follows = "nixpkgs-latest";
-
     disko.url = "github:nix-community/disko";
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-latest, home-manager, dms, quickshell, disko, nixos-anywhere }: {
+  outputs = { self, nixpkgs, nixpkgs-latest, home-manager, dms, disko, nixos-anywhere }: {
     # k2 configuration
     nixosConfigurations.k2 = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -72,7 +68,7 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.crussell = ./bee/home.nix;
-          home-manager.extraSpecialArgs = { inherit dms quickshell; };
+          home-manager.extraSpecialArgs = { inherit dms; };
         }
       ];
     };
