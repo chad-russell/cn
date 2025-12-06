@@ -48,6 +48,17 @@
 
   home.enableNixpkgsReleaseCheck = false;
 
+  # Create desktop entry for Bazaar
+  xdg.desktopEntries.bazaar = {
+    name = "Bazaar";
+    genericName = "App Store";
+    comment = "Install and manage Flatpak applications";
+    exec = "bazaar";
+    icon = "bazaar";
+    terminal = false;
+    categories = [ "System" "PackageManager" ];
+  };
+
   # Wezterm terminal
   programs.weztermModule.enable = true;
 

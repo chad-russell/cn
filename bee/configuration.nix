@@ -75,6 +75,19 @@
 
   # Enable Flatpak
   services.flatpak.enable = true;
+  
+  # Add Flathub repository
+  systemd.services.flatpak-add-flathub = {
+    description = "Add Flathub remote to Flatpak";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo";
+    };
+  };
 
   # Enable Docker (needed for distrobox)
   virtualisation.docker.enable = true;
