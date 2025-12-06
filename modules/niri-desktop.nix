@@ -14,14 +14,14 @@ in {
     programs.niri.enable = true;
 
     # GDM display manager
-    services.xserver.displayManager.gdm.enable = true;
-    services.xserver.displayManager.gdm.wayland = true;
+    services.displayManager.gdm.enable = true;
+    services.displayManager.gdm.wayland = true;
     
     # Enable xserver as it's often required for display manager initialization
     # even if we are only running Wayland sessions
     services.xserver.enable = true;
     # Disable X11 desktop manager since we are using niri
-    services.xserver.desktopManager.gnome.enable = false;
+    services.desktopManager.gnome.enable = false;
 
     # XDG portal for proper Wayland integration
     xdg.portal.enable = true;

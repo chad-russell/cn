@@ -30,7 +30,10 @@
 
   # Niri Configuration
   # We use your existing config.kdl directly
-  xdg.configFile."niri/config.kdl".source = ./current-niri-config.kdl;
+  xdg.configFile."niri/config.kdl" = {
+    source = ./current-niri-config.kdl;
+    force = true; # Overwrite existing file
+  };
 
   # Dank Material Shell
   # See https://github.com/AvengeMedia/DankMaterialShell for configuration options
