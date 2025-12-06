@@ -2,7 +2,7 @@
 
 {
   imports = [
-    dms.homeModules.dankMaterialShell
+    dms.homeModules.dankMaterialShell.default
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
