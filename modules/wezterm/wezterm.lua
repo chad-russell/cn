@@ -18,7 +18,7 @@ config.color_scheme = "Earthsong"
 config.window_decorations = "RESIZE"
 
 -- Use zsh
-config.default_prog = { '/usr/sbin/zsh', '-l' }
+config.default_prog = { '/etc/profiles/per-user/crussell/bin/zsh', '-l' }
 
 -- Font configuration
 config.font = wezterm.font("JetBrains Mono")
