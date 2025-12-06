@@ -3,11 +3,13 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+    # Latest stable nixpkgs for systems that need newest kernel/packages
+    nixpkgs-latest.url = "github:nixos/nixpkgs/nixos-25.11";
     disko.url = "github:nix-community/disko";
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
   };
 
-  outputs = { self, nixpkgs, disko, nixos-anywhere }: {
+  outputs = { self, nixpkgs, nixpkgs-latest, disko, nixos-anywhere }: {
     # k2 configuration
     nixosConfigurations.k2 = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -40,6 +42,17 @@
         ./k4/configuration.nix
         ./k4/disk-config.nix
         ./common/hardware-configuration.nix
+        disko.nixosModules.disko
+      ];
+    };
+
+    # bee configuration - Beelink SER7
+    nixosConfigurations.bee = nixpkgs-latest.lib.nixosSystem {
+      system = "x86_64-linux";
+      specialArgs = { inherit disko; };
+      modules = [
+        ./bee/configuration.nix
+        ./bee/disk-config.nix
         disko.nixosModules.disko
       ];
     };
