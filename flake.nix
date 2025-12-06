@@ -6,8 +6,8 @@
     # Latest stable nixpkgs for systems that need newest kernel/packages
     nixpkgs-latest.url = "github:nixos/nixpkgs/nixos-25.11";
     
-    # Home Manager
-    home-manager.url = "github:nix-community/home-manager/release-24.11";
+    # Home Manager (use master for latest nixpkgs compatibility)
+    home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs-latest";
 
     # Dank Material Shell
