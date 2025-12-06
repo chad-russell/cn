@@ -1,6 +1,11 @@
 { config, pkgs, dms, ... }:
 
 {
+  imports = [
+    ../modules/wezterm
+    ../modules/vicinae
+  ];
+
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
   home.username = "crussell";
@@ -41,10 +46,21 @@
   home.enableNixpkgsReleaseCheck = false;
 
   # Wezterm terminal
-  programs.wezterm = {
+  programs.weztermModule.enable = true;
+
+  # Vicinae workspace switcher
+  services.vicinaeModule = {
     enable = true;
-    enableZshIntegration = true;
-    extraConfig = builtins.readFile ./wezterm.lua;
+    autoStart = true;
+    settings = {
+      font.size = 11;
+      theme.name = "vicinae-dark";
+      window = {
+        csd = true;
+        opacity = 0.95;
+        rounding = 10;
+      };
+    };
   };
 
   # Dank Material Shell
