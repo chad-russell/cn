@@ -22,7 +22,7 @@
     dms.packages.${pkgs.system}.default
     
     # Packages for your Niri/DMS setup
-    pkgs.nerdfonts
+    pkgs.nerd-fonts.fira-code
     pkgs.noto-fonts
     pkgs.noto-fonts-emoji
     pkgs.font-awesome
