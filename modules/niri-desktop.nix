@@ -34,7 +34,11 @@ in {
       mako               # notifications
       wl-clipboard       # clipboard
       waybar             # status bar (optional but recommended)
+      xwayland-satellite # X11 compatibility for niri
     ];
+
+    # Enable hardware graphics support (required for Wayland compositors)
+    hardware.graphics.enable = true;
   };
 }
 
