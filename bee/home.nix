@@ -21,6 +21,9 @@
     # Dank Material Shell (install as package for now)
     dms.packages.${pkgs.stdenv.hostPlatform.system}.default
     
+    # Quickshell - required by DMS
+    pkgs.quickshell
+    
     # Packages for your Niri/DMS setup
     pkgs.nerd-fonts.fira-code
     pkgs.noto-fonts
