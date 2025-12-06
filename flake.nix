@@ -67,7 +67,7 @@
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.crussell = import ./bee/home.nix;
+          home-manager.users.crussell = ./bee/home.nix;
           home-manager.extraSpecialArgs = { inherit dms; };
         }
       ];
