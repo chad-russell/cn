@@ -38,7 +38,19 @@ in {
     ];
 
     # Enable hardware graphics support (required for Wayland compositors)
-    hardware.graphics.enable = true;
+    hardware.graphics = {
+      enable = true;
+      enable32Bit = true; # For 32-bit apps (Steam, Wine, etc.)
+    };
+
+    # Ensure firmware is available for GPU
+    hardware.enableRedistributableFirmware = true;
+
+    # Set environment variables for Niri session
+    environment.sessionVariables = {
+      NIRI_CONFIG = "/home/crussell/.config/niri/config.kdl"; # Explicit config path
+      WLR_RENDERER = "vulkan"; # Force Vulkan renderer for better AMD support
+    };
   };
 }
 
