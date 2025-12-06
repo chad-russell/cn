@@ -34,6 +34,9 @@
     pkgs.noto-fonts
     pkgs.noto-fonts-color-emoji
     pkgs.font-awesome
+
+    pkgs.bazaar
+    pkgs.distrobox
   ];
 
   # Niri Configuration
@@ -47,6 +50,30 @@
 
   # Wezterm terminal
   programs.weztermModule.enable = true;
+
+  # Zsh shell
+  programs.zsh = {
+    enable = true;
+    enableCompletion = true;
+    autosuggestion.enable = true;
+    syntaxHighlighting.enable = true;
+    
+    shellAliases = {
+      ll = "ls -la";
+      update = "sudo nixos-rebuild switch --flake /home/crussell/Code/cn#bee";
+    };
+    
+    history = {
+      size = 10000;
+      path = "${config.xdg.dataHome}/zsh/history";
+    };
+
+    oh-my-zsh = {
+      enable = true;
+      plugins = [ "git" "docker" "kubectl" ];
+      theme = "robbyrussell";
+    };
+  };
 
   # Vicinae workspace switcher
   services.vicinaeModule = {
