@@ -1,36 +1,26 @@
 { config, lib, pkgs, vicinae, ... }:
 
-with lib;
-
-let
-  cfg = config.services.vicinaeModule;
-in {
+{
   imports = [
     vicinae.homeManagerModules.default
   ];
 
-  options.services.vicinaeModule = {
-    enable = mkEnableOption "Vicinae workspace switcher";
-
-    autoStart = mkOption {
-      type = types.bool;
-      default = true;
-      description = "Whether to start Vicinae automatically";
-    };
-
-    settings = mkOption {
-      type = types.attrs;
-      default = {};
-      description = "Vicinae configuration settings";
-    };
+  services.vicinae = {
+    enable = true;
+    autoStart = true;
   };
 
-  config = mkIf cfg.enable {
-    services.vicinae = {
-      enable = true;
-      autoStart = cfg.autoStart;
-      settings = cfg.settings;
-    };
-  };
+  # services.vicinae = {
+  #   autoStart = true;
+  #   settings = {
+  #     font.size = 11;
+  #     theme.name = "vicinae-dark";
+  #     window = {
+  #       csd = true;
+  #       opacity = 0.95;
+  #       rounding = 10;
+  #     };
+  #   };
+  # };
 }
 

@@ -63,6 +63,7 @@
       system = "x86_64-linux";
       specialArgs = { inherit disko; };
       modules = [
+	{ nixpkgs.config.allowUnfree = true; }
         ./bee/configuration.nix
         ./bee/disk-config.nix
         disko.nixosModules.disko
@@ -71,6 +72,25 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.crussell = ./bee/home.nix;
+          home-manager.extraSpecialArgs = { inherit dms vicinae; };
+        }
+      ];
+    };
+
+    # think configuration - ThinkPad T14
+    nixosConfigurations.think = nixpkgs-latest.lib.nixosSystem {
+      system = "x86_64-linux";
+      specialArgs = { inherit disko; };
+      modules = [
+	{ nixpkgs.config.allowUnfree = true; }
+        ./think/configuration.nix
+        ./think/disk-config.nix
+        disko.nixosModules.disko
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.users.crussell = ./think/home.nix;
           home-manager.extraSpecialArgs = { inherit dms vicinae; };
         }
       ];

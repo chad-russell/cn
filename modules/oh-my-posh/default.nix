@@ -1,10 +1,9 @@
 { config, lib, pkgs, ... }:
 
 {
-  programs.wezterm = {
+  programs.oh-my-posh = {
     enable = true;
     enableZshIntegration = true;
-    extraConfig = builtins.readFile ./wezterm.lua;
+    configFile = ./config.json;
   };
 }
-

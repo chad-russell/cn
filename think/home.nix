@@ -66,7 +66,7 @@
       el = "${pkgs.eza}/bin/eza -alF";
       v = "${pkgs.neovim}/bin/nvim";
       vi = "${pkgs.neovim}/bin/nvim";
-      nrs = "sudo nixos-rebuild switch --flake /home/crussell/Code/cn#bee";
+      nrs = "sudo nixos-rebuild switch --flake /home/crussell/Code/cn#think";
     };
     
     history = {

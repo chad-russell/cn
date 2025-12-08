@@ -1,56 +1,46 @@
-{ config, lib, pkgs, ... }:
+{ config, pkgs, ... }:
 
-with lib;
+{
+  # Enable niri compositor
+  programs.niri.enable = true;
 
-let
-  cfg = config.desktop.niri;
-in {
-  options.desktop.niri = {
-    enable = mkEnableOption "Niri tiling Wayland compositor with GDM";
+  # GDM display manager
+  services.displayManager.gdm.enable = true;
+  services.displayManager.gdm.wayland = true;
+  
+  # Enable xserver as it's often required for display manager initialization
+  # even if we are only running Wayland sessions
+  services.xserver.enable = true;
+  # Disable X11 desktop manager since we are using niri
+  services.desktopManager.gnome.enable = false;
+
+  # XDG portal for proper Wayland integration
+  xdg.portal.enable = true;
+  xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gnome ];
+
+  # Essential desktop packages
+  environment.systemPackages = with pkgs; [
+    alacritty          # terminal
+    fuzzel             # app launcher
+    mako               # notifications
+    wl-clipboard       # clipboard
+    waybar             # status bar (optional but recommended)
+    xwayland-satellite # X11 compatibility for niri
+  ];
+
+  # Enable hardware graphics support (required for Wayland compositors)
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true; # For 32-bit apps (Steam, Wine, etc.)
   };
 
-  config = mkIf cfg.enable {
-    # Enable niri compositor
-    programs.niri.enable = true;
+  # Ensure firmware is available for GPU
+  hardware.enableRedistributableFirmware = true;
 
-    # GDM display manager
-    services.displayManager.gdm.enable = true;
-    services.displayManager.gdm.wayland = true;
-    
-    # Enable xserver as it's often required for display manager initialization
-    # even if we are only running Wayland sessions
-    services.xserver.enable = true;
-    # Disable X11 desktop manager since we are using niri
-    services.desktopManager.gnome.enable = false;
-
-    # XDG portal for proper Wayland integration
-    xdg.portal.enable = true;
-    xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gnome ];
-
-    # Essential desktop packages
-    environment.systemPackages = with pkgs; [
-      alacritty          # terminal
-      fuzzel             # app launcher
-      mako               # notifications
-      wl-clipboard       # clipboard
-      waybar             # status bar (optional but recommended)
-      xwayland-satellite # X11 compatibility for niri
-    ];
-
-    # Enable hardware graphics support (required for Wayland compositors)
-    hardware.graphics = {
-      enable = true;
-      enable32Bit = true; # For 32-bit apps (Steam, Wine, etc.)
-    };
-
-    # Ensure firmware is available for GPU
-    hardware.enableRedistributableFirmware = true;
-
-    # Set environment variables for Niri session
-    environment.sessionVariables = {
-      NIRI_CONFIG = "/home/crussell/.config/niri/config.kdl"; # Explicit config path
-      WLR_RENDERER = "vulkan"; # Force Vulkan renderer for better AMD support
-    };
+  # Set environment variables for Niri session
+  environment.sessionVariables = {
+    NIRI_CONFIG = "/home/crussell/.config/niri/config.kdl"; # Explicit config path
+    WLR_RENDERER = "vulkan"; # Force Vulkan renderer for better AMD support
   };
 }
 
