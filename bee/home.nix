@@ -81,7 +81,7 @@
 
     oh-my-zsh = {
       enable = true;
-      plugins = [ "git" "docker" "kubectl" ];
+      plugins = [ "git" "docker" ];
       theme = "robbyrussell";
     };
   };

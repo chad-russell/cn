@@ -73,6 +73,10 @@
     gh
   ];
 
+  environment.sessionVariables = {
+    XDG_DATA_DIRS = [ "/var/lib/flatpak/exports/share:$XDG_DATA_DIRS" ];
+  };
+
   # Enable Flatpak
   services.flatpak.enable = true;
   
