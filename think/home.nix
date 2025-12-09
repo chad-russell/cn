@@ -93,6 +93,8 @@
         lsof -i :$1
       }
 
+      alias resource_home_env='unset __HM_SESS_VARS_SOURCED && source ~/.zshenv'
+
       # Keybindings
       # Ctrl+F: accept autosuggestion
       bindkey '^F' autosuggest-accept
@@ -103,7 +105,8 @@
     '';
   };
 
-  home.sessionPath = [ "/home/crussell/.local/bin" ];
+  # Add ~/.local/bin to PATH (for user-installed scripts)
+  home.sessionPath = [ "${config.home.homeDirectory}/.local/bin" ];
 
   # Session environment variables (available in shell sessions)
   home.sessionVariables = {
