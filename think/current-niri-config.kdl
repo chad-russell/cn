@@ -226,6 +226,8 @@ environment {
   QT_QPA_PLATFORMTHEME "gtk3"
   QT_QPA_PLATFORMTHEME_QT6 "gtk3"
   TERMINAL "ghostty"
+  XCURSOR_THEME "Bibata-Modern-Classic"
+  XCURSOR_SIZE "24"
 }
 
 hotkey-overlay {

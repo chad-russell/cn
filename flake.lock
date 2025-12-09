@@ -241,6 +241,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-unstable": {
+      "locked": {
+        "lastModified": 1764950072,
+        "narHash": "sha256-BmPWzogsG2GsXZtlT+MTcAWeDK5hkbGRZTeZNW42fwA=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "f61125a668a320878494449750330ca58b78c557",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs_2": {
       "locked": {
         "lastModified": 1749201760,
@@ -275,6 +291,22 @@
     },
     "nixpkgs_4": {
       "locked": {
+        "lastModified": 1764947035,
+        "narHash": "sha256-EYHSjVM4Ox4lvCXUMiKKs2vETUSL5mx+J2FfutM7T9w=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a672be65651c80d3f592a89b3945466584a22069",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_5": {
+      "locked": {
         "lastModified": 1762111121,
         "narHash": "sha256-4vhDuZ7OZaZmKKrnDpxLZZpGIJvAeMtK6FKLJYUtAdw=",
         "owner": "NixOS",
@@ -289,6 +321,25 @@
         "type": "github"
       }
     },
+    "opencode": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_4"
+      },
+      "locked": {
+        "lastModified": 1765242443,
+        "narHash": "sha256-tPvMWAdTvNMvoeK1L0zieVJvTvIb6MagnhDymGZloI0=",
+        "owner": "sst",
+        "repo": "opencode",
+        "rev": "73c5c328a88c80e9c7ac52f81f7520d5edcac436",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sst",
+        "ref": "dev",
+        "repo": "opencode",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "disko": "disko",
@@ -297,6 +348,8 @@
         "nixos-anywhere": "nixos-anywhere",
         "nixpkgs": "nixpkgs_3",
         "nixpkgs-latest": "nixpkgs-latest",
+        "nixpkgs-unstable": "nixpkgs-unstable",
+        "opencode": "opencode",
         "vicinae": "vicinae"
       }
     },
@@ -338,7 +391,7 @@
     },
     "vicinae": {
       "inputs": {
-        "nixpkgs": "nixpkgs_4",
+        "nixpkgs": "nixpkgs_5",
         "systems": "systems"
       },
       "locked": {

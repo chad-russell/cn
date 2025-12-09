@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, pkgsUnstable, ... }:
 
 {
   # Enable niri compositor
@@ -26,6 +26,8 @@
     wl-clipboard       # clipboard
     waybar             # status bar (optional but recommended)
     xwayland-satellite # X11 compatibility for niri
+    pkgsUnstable.dgop  # dgop from nixpkgs-unstable
+    bibata-cursors     # modern cursor theme
   ];
 
   # Enable hardware graphics support (required for Wayland compositors)
@@ -41,6 +43,8 @@
   environment.sessionVariables = {
     NIRI_CONFIG = "/home/crussell/.config/niri/config.kdl"; # Explicit config path
     WLR_RENDERER = "vulkan"; # Force Vulkan renderer for better AMD support
+    XCURSOR_THEME = "Bibata-Modern-Classic"; # Cursor theme name
+    XCURSOR_SIZE = "24"; # Cursor size
   };
 }
 

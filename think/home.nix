@@ -1,4 +1,4 @@
-{ config, pkgs, dms, ... }:
+{ config, pkgs, dms, opencode, ... }:
 
 {
   imports = [
@@ -42,6 +42,8 @@
 
     pkgs.rsync
     pkgs.pgcli
+
+    opencode.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 
   # Niri Configuration
@@ -99,6 +101,14 @@
       # Ctrl+N: next line (like down arrow)
       bindkey '^N' down-line-or-history
     '';
+  };
+
+  home.sessionPath = [ "/home/crussell/.local/bin" ];
+
+  # Session environment variables (available in shell sessions)
+  home.sessionVariables = {
+    XCURSOR_THEME = "Bibata-Modern-Classic";
+    XCURSOR_SIZE = "24";
   };
 
   programs.zoxide = {

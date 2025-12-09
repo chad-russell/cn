@@ -16,5 +16,4 @@
     ];
     hashedPassword = "$6$HG8zp6H0V/NAQJbw$CkWKAqc8nU4BdshhBXg9SczhrVNLQqu2tLAozAfgMEfXopUOyo8pdp8k13oQLpiPJqzASjdOj1Bi2fIfnMFjK1";
   };
-
 }
