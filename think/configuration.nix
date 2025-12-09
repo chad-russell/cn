@@ -5,7 +5,6 @@
     ../modules/niri-desktop.nix
     ../modules/flatpak.nix
     ../modules/containers.nix
-    ../modules/networking.nix
     ../modules/user.nix
     ../modules/base-desktop.nix
   ];
@@ -13,8 +12,13 @@
   # Set hostname
   networking.hostName = "think";
 
-  # Use DHCP for think (or set to "192.168.20.XXX" for static IP)
-  customNetworking.staticIP = null;
+  # Networking - NetworkManager for laptop (WiFi support)
+  networking.networkmanager.enable = true;
+  networking.useDHCP = false;
+  
+  # SSH
+  services.openssh.enable = true;
+  services.openssh.settings.PermitRootLogin = "prohibit-password";
 
   # Use the systemd-boot EFI boot loader
   boot.loader.systemd-boot.enable = true;

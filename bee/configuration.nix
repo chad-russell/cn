@@ -5,7 +5,6 @@
     ../modules/niri-desktop.nix
     ../modules/flatpak.nix
     ../modules/containers.nix
-    ../modules/networking.nix
     ../modules/user.nix
     ../modules/base-desktop.nix
   ];
@@ -13,8 +12,23 @@
   # Set hostname
   networking.hostName = "bee";
 
-  # Static IP for bee
-  customNetworking.staticIP = "192.168.20.105";
+  # Networking - systemd-networkd with static IP
+  systemd.network.enable = true;
+  networking.useNetworkd = true;
+  networking.useDHCP = false;
+  systemd.network.wait-online.enable = false;
+  
+  systemd.network.networks."10-lan" = {
+    matchConfig.Name = "en*";
+    networkConfig.DHCP = "no";
+    address = [ "192.168.20.105/24" ];
+    routes = [ { Gateway = "192.168.20.1"; } ];
+    dns = [ "8.8.8.8" "1.1.1.1" ];
+  };
+
+  # SSH
+  services.openssh.enable = true;
+  services.openssh.settings.PermitRootLogin = "prohibit-password";
 
   # Use the systemd-boot EFI boot loader
   boot.loader.systemd-boot.enable = true;
