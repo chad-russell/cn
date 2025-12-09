@@ -13,6 +13,12 @@
     # Enable systemd-networkd for network management
     systemd.network.enable = true;
     networking.useDHCP = lib.mkIf (config.customNetworking.staticIP == null) true;
+    
+    # Don't wait for network to be fully configured at boot (prevents timeouts)
+    systemd.services.systemd-networkd-wait-online.serviceConfig.ExecStart = [
+      "" # clear the default
+      "${pkgs.systemd}/lib/systemd/systemd-networkd-wait-online --any"
+    ];
 
     # Configure network interface
     systemd.network.networks."10-lan" = lib.mkIf (config.customNetworking.staticIP != null) {
