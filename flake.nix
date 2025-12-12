@@ -1,6 +1,17 @@
 {
   description = "NixOS configurations for homelab cluster";
 
+  nixConfig = {
+    extra-substituters = [
+      "https://numtide.cachix.org"
+      "https://niri.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "numtide.cachix.org-1:2ps1kLBUWjxIneOy1Ik6cQjb41X0iXVXeHigGmycPPE="
+      "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
     nixpkgs-latest.url = "github:nixos/nixpkgs/nixos-25.11";
@@ -11,8 +22,21 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs-latest";
 
     # Dank Material Shell
-    dms.url = "github:AvengeMedia/DankMaterialShell";
-    dms.inputs.nixpkgs.follows = "nixpkgs-latest";
+    dgop = {
+      url = "github:AvengeMedia/dgop";
+      inputs.nixpkgs.follows = "nixpkgs-latest";
+    };
+
+    dms = {
+      url = "github:AvengeMedia/DankMaterialShell";
+      inputs.nixpkgs.follows = "nixpkgs-latest";
+      inputs.dgop.follows = "dgop";
+    };
+
+    niri = {
+      url = "github:sodiboo/niri-flake";
+      inputs.nixpkgs.follows = "nixpkgs-latest";
+    };
 
     # Vicinae - workspace switcher
     vicinae.url = "github:vicinaehq/vicinae";
@@ -20,11 +44,11 @@
     disko.url = "github:nix-community/disko";
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
     
-    # OpenCode
+    llm-agents.url = "github:numtide/llm-agents.nix";
     opencode.url = "github:sst/opencode/dev";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-latest, nixpkgs-unstable, home-manager, dms, vicinae, disko, nixos-anywhere, opencode }: {
+  outputs = { self, nixpkgs, nixpkgs-latest, nixpkgs-unstable, home-manager, dgop, dms, niri, vicinae, disko, nixos-anywhere, llm-agents, opencode }: {
     # k2 configuration
     nixosConfigurations.k2 = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -64,7 +88,7 @@
     # bee configuration - Beelink SER7
     nixosConfigurations.bee = nixpkgs-latest.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit disko opencode nixpkgs-unstable; };
+      specialArgs = { inherit disko opencode nixpkgs-unstable dms; };
       modules = [
         { nixpkgs.config.allowUnfree = true; }
         ./modules/unstable-packages.nix
@@ -76,7 +100,7 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.crussell = ./bee/home.nix;
-          home-manager.extraSpecialArgs = { inherit dms vicinae opencode; };
+          home-manager.extraSpecialArgs = { inherit vicinae opencode; };
         }
       ];
     };
@@ -84,7 +108,7 @@
     # think configuration - ThinkPad T14
     nixosConfigurations.think = nixpkgs-latest.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit disko opencode nixpkgs-unstable; };
+      specialArgs = { inherit disko opencode dms niri nixpkgs-unstable; };
       modules = [
         { nixpkgs.config.allowUnfree = true; }
         ./modules/unstable-packages.nix
@@ -96,7 +120,7 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.crussell = ./think/home.nix;
-          home-manager.extraSpecialArgs = { inherit dms vicinae opencode; };
+          home-manager.extraSpecialArgs = { inherit vicinae opencode llm-agents dms niri; };
         }
       ];
     };

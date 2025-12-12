@@ -42,6 +42,15 @@
         "command": "editor.action.clipboardCopyAction"
     },
     {
+        "key": "ctrl+f",
+        "command": "actions.find"
+    },
+    {
+        "key": "ctrl+f",
+        "command": "actions.find",
+        "when": "editorTextFocus && vim.mode == 'Normal'"
+    },
+    {
         "key": "tab",
         "command": "workbench.action.nextEditor",
         "when": "editorTextFocus && vim.mode == 'Normal'"

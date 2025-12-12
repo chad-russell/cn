@@ -1,8 +1,11 @@
-{ config, pkgs, ... }:
+{ config, pkgs, dms, niri, ... }:
 
 {
   imports = [
+    dms.nixosModules.dankMaterialShell
+    niri.nixosModules.niri
     ../modules/niri-desktop.nix
+    ../modules/gnome-desktop.nix
     ../modules/flatpak.nix
     ../modules/containers.nix
     ../modules/user.nix
@@ -28,6 +31,20 @@
   # Use the systemd-boot EFI boot loader
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+
+  # Nix settings
+  nix.settings = {
+    trusted-users = [ "root" "crussell" ];
+    substituters = [
+      "https://cache.nixos.org"
+      "https://numtide.cachix.org"
+      "https://niri.cachix.org"
+    ];
+    trusted-public-keys = [
+      "numtide.cachix.org-1:2ps1kLBUWjxIneOy1Ik6cQjb41X0iXVXeHigGmycPPE="
+      "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
+    ];
+  };
 
   # Use the latest kernel
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -67,6 +84,10 @@
 
   # Intel CPU thermal management
   services.thermald.enable = true;
+
+  # Power management services for battery monitoring (required by DMS)
+  # Note: only upower is needed; power-profiles-daemon conflicts with TLP
+  services.upower.enable = true;
 
   # Enable Bluetooth
   hardware.bluetooth.enable = true;

@@ -1,11 +1,10 @@
-{ config, pkgs, dms, ... }:
+{ config, pkgs, ... }:
 
 {
   imports = [
     ../modules/wezterm
     ../modules/vicinae
     ../modules/oh-my-posh
-    ../modules/neovim
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
@@ -25,13 +24,6 @@
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = [
-    # Dank Material Shell (install as package for now)
-    dms.packages.${pkgs.stdenv.hostPlatform.system}.default
-    
-    # Quickshell - required by DMS
-    pkgs.quickshell
-    
-    # Packages for your Niri/DMS setup
     pkgs.nerd-fonts.fira-code
     pkgs.noto-fonts
     pkgs.noto-fonts-color-emoji
@@ -64,8 +56,8 @@
     shellAliases = {
       e = "${pkgs.eza}/bin/eza";
       el = "${pkgs.eza}/bin/eza -alF";
-      v = "${pkgs.neovim}/bin/nvim";
-      vi = "${pkgs.neovim}/bin/nvim";
+      # v = "${pkgs.neovim}/bin/nvim";
+      # vi = "${pkgs.neovim}/bin/nvim";
       nrs = "sudo nixos-rebuild switch --flake /home/crussell/Code/cn#bee";
     };
     
@@ -105,11 +97,6 @@
     enable = true;
     enableZshIntegration = true;
   };
-
-  # Dank Material Shell
-  # See https://github.com/AvengeMedia/DankMaterialShell for configuration options
-  # You might need to adjust settings here if DMS needs specific config
-  # For now, we just import the module which installs the package.
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
