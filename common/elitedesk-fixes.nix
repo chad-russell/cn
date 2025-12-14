@@ -23,16 +23,18 @@
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
-      # Disable all problematic offloading features:
-      # - tso: TCP Segmentation Offload
-      # - gso: Generic Segmentation Offload
-      # - gro: Generic Receive Offload
-      # - sg: Scatter-Gather (critical - often missed but causes crashes)
-      # - tx/rx: Hardware checksumming (slightly increases CPU usage but prevents hangs)
-      # Also disable Energy Efficient Ethernet (EEE) which can cause PHY layer power issues
-      ExecStart = "${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off gro off sg off tx off rx off && ${pkgs.ethtool}/bin/ethtool --set-eee eno1 eee off";
       RemainAfterExit = true;
     };
+    # Disable all problematic offloading features:
+    # - tso: TCP Segmentation Offload
+    # - gso: Generic Segmentation Offload
+    # - gro: Generic Receive Offload
+    # - sg: Scatter-Gather (critical - often missed but causes crashes)
+    # - tx/rx: Hardware checksumming (slightly increases CPU usage but prevents hangs)
+    script = ''
+      ${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off gro off sg off tx off rx off
+      ${pkgs.ethtool}/bin/ethtool --set-eee eno1 eee off
+    '';
   };
 }
 
