@@ -8,6 +8,7 @@
   services.vicinae = {
     enable = true;
     autoStart = true;
+    package = vicinae.packages.${pkgs.system}.default;
   };
 
   # services.vicinae = {

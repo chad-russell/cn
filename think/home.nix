@@ -1,4 +1,12 @@
-{ config, pkgs, llm-agents, opencode, dms, niri, ... }:
+{
+  config,
+  pkgs,
+  llm-agents,
+  opencode,
+  dms,
+  nixvim-config,
+  ...
+}:
 
 {
   imports = [
@@ -36,11 +44,15 @@
 
     pkgs.rsync
     pkgs.pgcli
+    pkgs.ripgrep
+    pkgs.bat
 
     opencode.packages.${pkgs.stdenv.hostPlatform.system}.default
 
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.gemini-cli
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex
+
+    nixvim-config.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 
   # Dank Material Shell with niri integration
@@ -60,104 +72,186 @@
 
   # Niri keybinds (via niri home module) to match your existing config
   programs.niri.settings.binds = {
+    # Alt-Tab switcher (new in v25.11)
+    "Mod+Tab".action.switch-focus-between-windows = [ ];
+    "Mod+Shift+Tab".action.switch-focus-between-windows = [ ];
+
     # Window/column navigation
-    "Mod+Left".action.focus-column-left = [];
-    "Mod+Down".action.focus-window-down = [];
-    "Mod+Up".action.focus-window-up = [];
-    "Mod+Right".action.focus-column-right = [];
-    "Mod+H".action.focus-column-left = [];
-    "Mod+J".action.focus-window-down = [];
-    "Mod+K".action.focus-window-up = [];
-    "Mod+L".action.focus-column-right = [];
-    "Mod+O".action.toggle-overview = [];
+    "Mod+Left".action.focus-column-left = [ ];
+    "Mod+Down".action.focus-window-down = [ ];
+    "Mod+Up".action.focus-window-up = [ ];
+    "Mod+Right".action.focus-column-right = [ ];
+    "Mod+H".action.focus-column-left = [ ];
+    "Mod+J".action.focus-window-down = [ ];
+    "Mod+K".action.focus-window-up = [ ];
+    "Mod+L".action.focus-column-right = [ ];
+    "Mod+O".action.toggle-overview = [ ];
 
     # Window/column movement
-    "Mod+Ctrl+Left".action.move-column-left = [];
-    "Mod+Ctrl+Down".action.move-window-down = [];
-    "Mod+Ctrl+Up".action.move-window-up = [];
-    "Mod+Ctrl+Right".action.move-column-right = [];
-    "Mod+Ctrl+H".action.move-column-left = [];
-    "Mod+Ctrl+L".action.move-column-right = [];
-    "Mod+BracketLeft".action.consume-or-expel-window-left = [];
-    "Mod+BracketRight".action.consume-or-expel-window-right = [];
+    "Mod+Ctrl+Left".action.move-column-left = [ ];
+    "Mod+Ctrl+Right".action.move-column-right = [ ];
+    "Mod+Ctrl+H".action.move-column-left = [ ];
+    "Mod+Ctrl+L".action.move-column-right = [ ];
+    "Mod+BracketLeft".action.consume-or-expel-window-left = [ ];
+    "Mod+BracketRight".action.consume-or-expel-window-right = [ ];
+    "Mod+Ctrl+Down".action.move-column-to-workspace-down = [ ];
+    "Mod+Ctrl+J".action.move-column-to-workspace-down = [ ];
+    "Mod+Ctrl+Up".action.move-column-to-workspace-up = [ ];
+    "Mod+Ctrl+K".action.move-column-to-workspace-up = [ ];
 
     # Window sizing
-    "Mod+Minus".action.set-column-width = ["-10%"];
-    "Mod+Equal".action.set-column-width = ["+10%"];
-    "Mod+Shift+Minus".action.set-window-height = ["-10%"];
-    "Mod+Shift+Equal".action.set-window-height = ["+10%"];
+    "Mod+Minus".action.set-column-width = [ "-10%" ];
+    "Mod+Equal".action.set-column-width = [ "+10%" ];
+    "Mod+Shift+Minus".action.set-window-height = [ "-10%" ];
+    "Mod+Shift+Equal".action.set-window-height = [ "+10%" ];
 
     # Window actions
-    "Mod+P".action.screenshot = [];
-    "Mod+V".action.toggle-window-floating = [];
-    "Mod+Shift+V".action.switch-focus-between-floating-and-tiling = [];
-    "Mod+Q".action.close-window = [];
-    "Mod+X".action.maximize-column = [];
-    "Mod+Shift+F".action.fullscreen-window = [];
+    "Mod+P".action.screenshot = [ ];
+    "Mod+V".action.toggle-window-floating = [ ];
+    "Mod+Shift+V".action.switch-focus-between-floating-and-tiling = [ ];
+    "Mod+Q".action.close-window = [ ];
+    "Mod+X".action.maximize-column = [ ];
+    "Mod+Shift+F".action.fullscreen-window = [ ];
 
     # Workspace switcher (vicinae)
-    "Mod+Space".action.spawn = ["vicinae" "toggle"];
+    "Mod+Space".action.spawn = [
+      "vicinae"
+      "toggle"
+    ];
 
     # Monitor navigation
-    "Mod+Shift+Left".action.focus-monitor-left = [];
-    "Mod+Shift+Down".action.focus-monitor-down = [];
-    "Mod+Shift+Up".action.focus-monitor-up = [];
-    "Mod+Shift+Right".action.focus-monitor-right = [];
-    "Mod+Shift+H".action.focus-monitor-left = [];
-    "Mod+Shift+J".action.focus-workspace-down = [];
-    "Mod+Shift+K".action.focus-workspace-up = [];
-    "Mod+Shift+L".action.focus-monitor-right = [];
+    "Mod+Shift+Left".action.focus-monitor-left = [ ];
+    "Mod+Shift+H".action.focus-monitor-left = [ ];
+    "Mod+Shift+Down".action.focus-monitor-down = [ ];
+    "Mod+Shift+J".action.focus-workspace-down = [ ];
+    "Mod+Shift+Up".action.focus-monitor-up = [ ];
+    "Mod+Shift+K".action.focus-workspace-up = [ ];
+    "Mod+Shift+Right".action.focus-monitor-right = [ ];
+    "Mod+Shift+L".action.focus-monitor-right = [ ];
 
     # Move to monitor
-    "Mod+Shift+Ctrl+Left".action.move-column-to-monitor-left = [];
-    "Mod+Shift+Ctrl+Down".action.move-column-to-monitor-down = [];
-    "Mod+Shift+Ctrl+Up".action.move-column-to-monitor-up = [];
-    "Mod+Shift+Ctrl+Right".action.move-column-to-monitor-right = [];
-    "Mod+Shift+Ctrl+H".action.move-column-to-monitor-left = [];
-    "Mod+Shift+Ctrl+J".action.move-column-to-monitor-down = [];
-    "Mod+Shift+Ctrl+K".action.move-column-to-monitor-up = [];
-    "Mod+Shift+Ctrl+L".action.move-column-to-monitor-right = [];
+    "Mod+Shift+Ctrl+Left".action.move-column-to-monitor-left = [ ];
+    "Mod+Shift+Ctrl+Down".action.move-column-to-monitor-down = [ ];
+    "Mod+Shift+Ctrl+Up".action.move-column-to-monitor-up = [ ];
+    "Mod+Shift+Ctrl+Right".action.move-column-to-monitor-right = [ ];
+    "Mod+Shift+Ctrl+H".action.move-column-to-monitor-left = [ ];
+    "Mod+Shift+Ctrl+J".action.move-column-to-monitor-down = [ ];
+    "Mod+Shift+Ctrl+K".action.move-column-to-monitor-up = [ ];
+    "Mod+Shift+Ctrl+L".action.move-column-to-monitor-right = [ ];
 
     # DMS keybinds (manually configured to avoid conflicts)
-    "Mod+N".action.spawn = ["dms" "ipc" "notifications" "toggle"];
-    "Mod+Comma".action.spawn = ["dms" "ipc" "settings" "toggle"];
-    "Super+Alt+L".action.spawn = ["dms" "ipc" "lock" "lock"];
-    "Mod+M".action.spawn = ["dms" "ipc" "processlist" "toggle"];
+    "Mod+N".action.spawn = [
+      "dms"
+      "ipc"
+      "notifications"
+      "toggle"
+    ];
+    "Mod+Comma".action.spawn = [
+      "dms"
+      "ipc"
+      "settings"
+      "toggle"
+    ];
+    "Super+Alt+L".action.spawn = [
+      "dms"
+      "ipc"
+      "lock"
+      "lock"
+    ];
+    "Mod+M".action.spawn = [
+      "dms"
+      "ipc"
+      "processlist"
+      "toggle"
+    ];
     "Mod+Alt+N" = {
       allow-when-locked = true;
-      action.spawn = ["dms" "ipc" "night" "toggle"];
+      action.spawn = [
+        "dms"
+        "ipc"
+        "night"
+        "toggle"
+      ];
     };
-    "Mod+E".action.spawn = ["dms" "ipc" "powermenu" "toggle"];
+    "Mod+E".action.spawn = [
+      "dms"
+      "ipc"
+      "powermenu"
+      "toggle"
+    ];
 
     # Applications
-    "Mod+T".action.spawn = ["wezterm"];
-    "Mod+B".action.spawn = ["flatpak" "run" "app.zen_browser.zen"];
-    "Mod+F".action.spawn = ["nautilus" "--new-window"];
+    "Mod+T".action.spawn = [ "wezterm" ];
+    "Mod+B".action.spawn = [
+      "flatpak"
+      "run"
+      "app.zen_browser.zen"
+    ];
+    "Mod+F".action.spawn = [
+      "nautilus"
+      "--new-window"
+    ];
 
     # Media keys (DMS)
     "XF86AudioRaiseVolume" = {
       allow-when-locked = true;
-      action.spawn = ["dms" "ipc" "audio" "increment" "3"];
+      action.spawn = [
+        "dms"
+        "ipc"
+        "audio"
+        "increment"
+        "3"
+      ];
     };
     "XF86AudioLowerVolume" = {
       allow-when-locked = true;
-      action.spawn = ["dms" "ipc" "audio" "decrement" "3"];
+      action.spawn = [
+        "dms"
+        "ipc"
+        "audio"
+        "decrement"
+        "3"
+      ];
     };
     "XF86AudioMute" = {
       allow-when-locked = true;
-      action.spawn = ["dms" "ipc" "audio" "mute"];
+      action.spawn = [
+        "dms"
+        "ipc"
+        "audio"
+        "mute"
+      ];
     };
     "XF86AudioMicMute" = {
       allow-when-locked = true;
-      action.spawn = ["dms" "ipc" "audio" "micmute"];
+      action.spawn = [
+        "dms"
+        "ipc"
+        "audio"
+        "micmute"
+      ];
     };
     "XF86MonBrightnessUp" = {
       allow-when-locked = true;
-      action.spawn = ["dms" "ipc" "brightness" "increment" "5" ""];
+      action.spawn = [
+        "dms"
+        "ipc"
+        "brightness"
+        "increment"
+        "5"
+        ""
+      ];
     };
     "XF86MonBrightnessDown" = {
       allow-when-locked = true;
-      action.spawn = ["dms" "ipc" "brightness" "decrement" "5" ""];
+      action.spawn = [
+        "dms"
+        "ipc"
+        "brightness"
+        "decrement"
+        "5"
+        ""
+      ];
     };
   };
 
@@ -176,7 +270,10 @@
     # Firefox Picture-in-Picture and Zoom floating
     {
       matches = [
-        { app-id = "^firefox$"; title = "^Picture-in-Picture$"; }
+        {
+          app-id = "^firefox$";
+          title = "^Picture-in-Picture$";
+        }
       ];
       open-floating = true;
     }
@@ -218,15 +315,15 @@
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
     defaultKeymap = "viins";
-    
+
     shellAliases = {
       e = "${pkgs.eza}/bin/eza";
       el = "${pkgs.eza}/bin/eza -alF";
-      # v = "${pkgs.neovim}/bin/nvim";
-      # vi = "${pkgs.neovim}/bin/nvim";
+      v = "${pkgs.neovim}/bin/nvim";
+      vi = "${pkgs.neovim}/bin/nvim";
       nrs = "sudo nixos-rebuild switch --flake /home/crussell/Code/cn#think";
     };
-    
+
     history = {
       expireDuplicatesFirst = true;
       extended = true;
@@ -279,4 +376,3 @@
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 }
-

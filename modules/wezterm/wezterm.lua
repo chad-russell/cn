@@ -44,6 +44,9 @@ config.cursor_blink_ease_out = 'EaseOut'
 config.default_cursor_style = 'BlinkingBlock'
 config.cursor_blink_rate = 650
 
+-- Disable audible bell (no terminal sounds)
+config.audible_bell = "Disabled"
+
 -- Tab bar color groups (themed to Everforest palette)
 config.colors = config.colors or {}
 config.colors.tab_bar = {

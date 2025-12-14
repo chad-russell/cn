@@ -1,8 +1,9 @@
-{ config, pkgs, pkgsUnstable, dms, ... }:
+{ config, pkgs, pkgsUnstable, dms, niri, ... }:
 
 {
   # Enable niri compositor
   programs.niri.enable = true;
+  programs.niri.package = niri.packages.${pkgs.system}.niri-unstable;
 
   # GDM display manager
   services.displayManager.gdm.enable = true;

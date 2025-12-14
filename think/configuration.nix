@@ -8,6 +8,7 @@
     ../modules/gnome-desktop.nix
     ../modules/flatpak.nix
     ../modules/containers.nix
+    ../modules/k3s.nix
     ../modules/user.nix
     ../modules/base-desktop.nix
   ];
@@ -31,6 +32,7 @@
   # Use the systemd-boot EFI boot loader
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.systemd-boot.configurationLimit = 6; # Keep only last 6 generations
 
   # Nix settings
   nix.settings = {
@@ -45,6 +47,16 @@
       "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
     ];
   };
+
+  # Automatic garbage collection
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 30d";
+  };
+
+  # Also limit the number of generations system-wide
+  nix.settings.auto-optimise-store = true; # Optimize store by hardlinking identical files
 
   # Use the latest kernel
   boot.kernelPackages = pkgs.linuxPackages_latest;

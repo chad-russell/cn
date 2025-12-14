@@ -5,10 +5,12 @@
     extra-substituters = [
       "https://numtide.cachix.org"
       "https://niri.cachix.org"
+      "https://vicinae.cachix.org"
     ];
     extra-trusted-public-keys = [
       "numtide.cachix.org-1:2ps1kLBUWjxIneOy1Ik6cQjb41X0iXVXeHigGmycPPE="
       "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
+      "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc="
     ];
   };
 
@@ -38,17 +40,22 @@
       inputs.nixpkgs.follows = "nixpkgs-latest";
     };
 
-    # Vicinae - workspace switcher
-    vicinae.url = "github:vicinaehq/vicinae";
+    # Vicinae - workspace switcher (pinned to tagged release for binary cache)
+    # To upgrade: check latest tag at https://github.com/vicinaehq/vicinae/tags
+    # Then verify cache exists: nix build 'github:vicinaehq/vicinae/vX.Y.Z#default' --dry-run --accept-flake-config
+    # If output says "will be fetched" -> cached. If "will be built" -> no cache, try older tag.
+    vicinae.url = "github:vicinaehq/vicinae/v0.16.14";
 
     disko.url = "github:nix-community/disko";
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
     
     llm-agents.url = "github:numtide/llm-agents.nix";
     opencode.url = "github:sst/opencode/dev";
+
+    nixvim-config.url = "path:/home/crussell/Code/nixvim";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-latest, nixpkgs-unstable, home-manager, dgop, dms, niri, vicinae, disko, nixos-anywhere, llm-agents, opencode }: {
+  outputs = { self, nixpkgs, nixpkgs-latest, nixpkgs-unstable, home-manager, dgop, dms, niri, vicinae, disko, nixos-anywhere, llm-agents, opencode, nixvim-config }: {
     # k2 configuration
     nixosConfigurations.k2 = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -120,7 +127,7 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.crussell = ./think/home.nix;
-          home-manager.extraSpecialArgs = { inherit vicinae opencode llm-agents dms niri; };
+          home-manager.extraSpecialArgs = { inherit vicinae opencode llm-agents dms niri nixvim-config; };
         }
       ];
     };
