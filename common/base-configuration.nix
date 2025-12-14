@@ -83,6 +83,10 @@
 
   # Enable experimental Nix features
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  
+  # Allow crussell to perform remote deployments without signature verification
+  # This is safe since crussell already has passwordless sudo access
+  nix.settings.trusted-users = [ "root" "crussell" ];
 
   # This is required by NixOS.
   system.stateVersion = "25.05";
