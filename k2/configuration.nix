@@ -7,6 +7,7 @@
     ../common/hardware-watchdog.nix
     ../common/network-optimizations.nix
     ../common/nfs-backup-mount.nix
+    ../common/elitedesk-fixes.nix
     # Service modules (shared)
     # Backup module
     ../modules/container-backup.nix

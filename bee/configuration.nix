@@ -26,6 +26,11 @@
     dns = [ "8.8.8.8" "1.1.1.1" ];
   };
 
+  # Enable Tailscale
+  services.tailscale.enable = true;
+  # To connect to Tailscale, run: sudo tailscale up
+  # You'll get a URL to authenticate with your Tailscale account
+
   # SSH
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "prohibit-password";
@@ -39,6 +44,9 @@
 
   # Enable zram swap
   zramSwap.enable = true;
+
+  # Increase Nix download buffer size to 256 MiB (default is 64 MiB)
+  nix.settings.download-buffer-size = 268435456;  # 256 MiB
 
   # Required by NixOS
   system.stateVersion = "25.05";

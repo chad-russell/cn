@@ -64,9 +64,10 @@
     # bee configuration - Beelink SER7
     nixosConfigurations.bee = nixpkgs-latest.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit disko opencode; };
+      specialArgs = { inherit disko opencode nixpkgs-unstable; };
       modules = [
         { nixpkgs.config.allowUnfree = true; }
+        ./modules/unstable-packages.nix
         ./bee/configuration.nix
         ./bee/disk-config.nix
         disko.nixosModules.disko
@@ -85,7 +86,7 @@
       system = "x86_64-linux";
       specialArgs = { inherit disko opencode nixpkgs-unstable; };
       modules = [
-	{ nixpkgs.config.allowUnfree = true; }
+        { nixpkgs.config.allowUnfree = true; }
         ./modules/unstable-packages.nix
         ./think/configuration.nix
         ./think/disk-config.nix
