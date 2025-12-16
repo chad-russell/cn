@@ -8,7 +8,7 @@
     ../common/network-optimizations.nix
     ../common/nfs-backup-mount.nix
     ../common/elitedesk-fixes.nix
-    ../common/k3s-ha.nix
+    ../common/k3s-ha
     # Service modules (shared)
     # Backup module
     ../modules/container-backup.nix
@@ -29,18 +29,13 @@
   };
 
   # Open firewall for Caddy reverse proxy
-  networking.firewall.allowedTCPPorts = [ 80 443 6443 2379 2380 10250 10251 10252 10257 10259 ];
-  networking.firewall.allowedUDPPorts = [ 8472 ];
+  networking.firewall.allowedTCPPorts = [ 80 443 ];
 
-  services.k3s = {
+  # k3s HA cluster configuration
+  services.k3sHA = {
     enable = true;
-    role = "server";
+    nodeIP = "192.168.20.62";
     clusterInit = true;
-    extraFlags = [
-      "--tls-san=192.168.20.32"
-      "--node-ip=192.168.20.62"
-      "--advertise-address=192.168.20.62"
-    ];
   };
 
   # Enable the Python backup script timer

@@ -8,7 +8,7 @@
     ../common/network-optimizations.nix
     ../common/nfs-backup-mount.nix
     ../common/elitedesk-fixes.nix
-    ../common/k3s-ha.nix
+    ../common/k3s-ha
     # Backup module
     ../modules/container-backup.nix
   ];
@@ -27,19 +27,13 @@
     dns = [ "8.8.8.8" ];
   };
 
-  networking.firewall.allowedTCPPorts = [ 80 443 6443 2379 2380 10250 10251 10252 10257 10259 ];
-  networking.firewall.allowedUDPPorts = [ 8472 ];
+  networking.firewall.allowedTCPPorts = [ 80 443 ];
 
-  services.k3s = {
+  # k3s HA cluster configuration
+  services.k3sHA = {
     enable = true;
-    role = "server";
-    serverAddr = "https://192.168.20.32:6443";
-    tokenFile = "/var/lib/rancher/k3s/server/node-token";
-    extraFlags = [
-      "--tls-san=192.168.20.32"
-      "--node-ip=192.168.20.63"
-      "--advertise-address=192.168.20.63"
-    ];
+    nodeIP = "192.168.20.63";
+    tokenFile = "/var/lib/rancher/k3s/cluster-token";
   };
 
   # Enable the Python backup script timer

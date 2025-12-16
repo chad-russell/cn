@@ -5,19 +5,3 @@
   # Other modules can access it via config._module.args.pkgsUnstable
   _module.args.pkgsUnstable = nixpkgs-unstable.legacyPackages.${pkgs.system};
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

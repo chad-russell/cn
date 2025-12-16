@@ -1,4 +1,4 @@
-{ config, pkgs, pkgsUnstable, dms, niri, ... }:
+{ config, pkgs, dms, niri, ... }:
 
 {
   # Enable niri compositor

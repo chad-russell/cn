@@ -38,7 +38,7 @@
               content = {
                 type = "filesystem";
                 format = "ext4";
-                mountpoint = "/srv";
+                mountpoint = "/var/lib/longhorn";
               };
             };
           };

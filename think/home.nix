@@ -73,8 +73,8 @@
   # Niri keybinds (via niri home module) to match your existing config
   programs.niri.settings.binds = {
     # Alt-Tab switcher (new in v25.11)
-    "Mod+Tab".action.switch-focus-between-windows = [ ];
-    "Mod+Shift+Tab".action.switch-focus-between-windows = [ ];
+    # "Mod+Tab".action.switch-focus-between-windows = [ ];
+    # "Mod+Shift+Tab".action.switch-focus-between-windows = [ ];
 
     # Window/column navigation
     "Mod+Left".action.focus-column-left = [ ];

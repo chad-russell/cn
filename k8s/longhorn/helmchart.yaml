@@ -1,0 +1,61 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: longhorn
+  namespace: kube-system
+spec:
+  repo: https://charts.longhorn.io
+  chart: longhorn
+  version: 1.7.2
+  targetNamespace: longhorn-system
+  createNamespace: true
+  valuesContent: |-
+    # Use the dedicated 1.8TB SSD on each node
+    defaultSettings:
+      defaultDataPath: /var/lib/longhorn
+      defaultReplicaCount: 2
+      guaranteedInstanceManagerCPU: 5
+      
+    # Set Longhorn as the default StorageClass
+    persistence:
+      defaultClass: true
+      defaultClassReplicaCount: 2
+      reclaimPolicy: Retain
+    
+    # Resource limits for stability
+    longhornManager:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+    
+    longhornDriver:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+    
+    longhornUI:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+    
+    # Enable backups (can configure target later)
+    defaultSettings:
+      backupTarget: ""
+      backupTargetCredentialSecret: ""
+    
+    # Ingress disabled (will configure separately if needed)
+    ingress:
+      enabled: false
+
