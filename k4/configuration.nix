@@ -44,7 +44,7 @@
     dns = [ "8.8.8.8" "1.1.1.1" ];
   };
 
-  networking.firewall.allowedTCPPorts = [ 80 443 ];
+  # networking.firewall.allowedTCPPorts = [ 80 443 ];
 
   # k3s HA cluster configuration
   services.k3sHA = {

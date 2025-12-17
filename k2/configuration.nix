@@ -29,7 +29,7 @@
   };
 
   # Open firewall for Caddy reverse proxy
-  networking.firewall.allowedTCPPorts = [ 80 443 ];
+  # networking.firewall.allowedTCPPorts = [ 80 443 ];
 
   # k3s HA cluster configuration
   services.k3sHA = {

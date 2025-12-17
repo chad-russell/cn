@@ -15,6 +15,9 @@
   systemd.network.enable = true;
   networking.useDHCP = false;
   networking.nameservers = [ "8.8.8.8" "1.1.1.1" ];
+  
+  # Disable firewall entirely for internal cluster communication
+  networking.firewall.enable = false;
 
   # Enable the OpenSSH server.
   services.openssh.enable = true;
