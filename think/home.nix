@@ -46,6 +46,7 @@
     pkgs.pgcli
     pkgs.ripgrep
     pkgs.bat
+    pkgs.jq
 
     opencode.packages.${pkgs.stdenv.hostPlatform.system}.default
 
