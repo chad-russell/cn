@@ -33,6 +33,13 @@ spec:
       labels:
         app: faved
     spec:
+      initContainers:
+        - name: fix-permissions
+          image: busybox
+          command: ["sh", "-c", "chown -R 33:33 /var/www/html/storage && chmod -R 775 /var/www/html/storage"]
+          volumeMounts:
+            - name: storage
+              mountPath: /var/www/html/storage
       containers:
         - name: faved
           image: denho/faved:latest
