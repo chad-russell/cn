@@ -14,6 +14,7 @@
   # Enable systemd-networkd for network management
   systemd.network.enable = true;
   networking.useDHCP = false;
+  networking.nameservers = [ "8.8.8.8" "1.1.1.1" ];
 
   # Enable the OpenSSH server.
   services.openssh.enable = true;
@@ -23,7 +24,7 @@
   services.cockpit.enable = true;
 
   # Enable Tailscale
-  services.tailscale.enable = true;
+  # services.tailscale.enable = true;
   # To connect to Tailscale, run: sudo tailscale up
   # You'll get a URL to authenticate with your Tailscale account
 

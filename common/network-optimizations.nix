@@ -5,7 +5,7 @@
   # Disable various offloading features for better performance/stability
   boot.kernelParams = [
     # Disable GSO (Generic Segmentation Offload)
-    "net.ifnames=0"
+    # "net.ifnames=0" # Removed to avoid interface renaming conflicts with eno1 config
   ];
 
   # Apply ethtool optimizations via systemd service
