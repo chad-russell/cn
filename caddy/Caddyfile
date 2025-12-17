@@ -91,10 +91,15 @@
     handle @jellyseerr {
         reverse_proxy 192.168.20.61:5055
     }
+
+    @faved host faved.internal.crussell.io
+    handle @faved {
+        reverse_proxy 192.168.20.32:30080
+    }
 }
 
 # 2. Public/Root Domain Services: *.crussell.io
-#    These are NOT under .internal but seem to use the same DNS auth method.
+#    These are NOT under .internal but use the same DNS auth method.
 #    We can group them under a second wildcard if you have a wildcard DNS record for *.crussell.io
 #    OR keep them separate if you prefer. Grouping them is cleaner if DNS supports it.
 
