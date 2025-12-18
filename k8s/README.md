@@ -24,6 +24,6 @@ Services exposed via NodePort are routed through Caddy reverse proxy using the c
 | Service | Namespace | NodePort | Domain |
 |---------|-----------|----------|--------|
 | faved   | faved     | 30080    | faved.crussell.io |
-
+| OpenObserve | openobserve | 30081  | logs.crussell.io |
 
 

@@ -27,7 +27,7 @@
   services.cockpit.enable = true;
 
   # Enable Tailscale
-  # services.tailscale.enable = true;
+  services.tailscale.enable = true;
   # To connect to Tailscale, run: sudo tailscale up
   # You'll get a URL to authenticate with your Tailscale account
 

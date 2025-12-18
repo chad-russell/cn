@@ -47,6 +47,8 @@
     pkgs.ripgrep
     pkgs.bat
     pkgs.jq
+    pkgs.terraform
+    pkgs.awscli2
 
     opencode.packages.${pkgs.stdenv.hostPlatform.system}.default
 

@@ -1,0 +1,25 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: openobserve-collector
+  namespace: kube-system
+spec:
+  repo: https://charts.openobserve.ai
+  chart: openobserve-collector
+  version: 0.4.1
+  targetNamespace: openobserve-collector
+  createNamespace: true
+  valuesContent: |-
+    k8sCluster: "k3s-ha"
+    exporters:
+      otlphttp/openobserve:
+        endpoint: "http://openobserve.openobserve.svc.cluster.local:5080/api/default/"
+        headers:
+          Authorization: "Basic [YOUR_BASE64_TOKEN]"
+      otlphttp/openobserve_k8s_events:
+        endpoint: "http://openobserve.openobserve.svc.cluster.local:5080/api/default/"
+        headers:
+          Authorization: "Basic [YOUR_BASE64_TOKEN]"
+          stream-name: k8s_events
+    gateway:
+      enabled: false

@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: databases
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pg-main-superuser
+  namespace: databases
+type: Opaque
+stringData:
+  username: postgres
+  password: Bv5Syw5iBDp4B1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openobserve-db-auth
+  namespace: databases
+type: Opaque
+stringData:
+  username: openobserve
+  password: Bv5Syw5iBDp4B1
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg-main
+  namespace: databases
+spec:
+  instances: 3
+  superuserSecret:
+    name: pg-main-superuser
+  enableSuperuserAccess: true
+  storage:
+    size: 50Gi
+    storageClass: longhorn
+  walStorage:
+    size: 20Gi
+    storageClass: longhorn
+  bootstrap:
+    initdb:
+      database: openobserve
+      owner: openobserve
+      secret:
+        name: openobserve-db-auth
+  monitoring:
+    enablePodMonitor: true
+  postgresql:
+    parameters:
+      shared_buffers: "512MB"
+      max_connections: "200"

@@ -14,7 +14,8 @@ end
 config.enable_wayland = false
 
 -- General appearance
-config.color_scheme = "Earthsong"
+-- config.color_scheme = "Earthsong"
+config.color_scheme = "Catppuccin Frappe"
 config.window_decorations = "RESIZE"
 
 -- Use zsh

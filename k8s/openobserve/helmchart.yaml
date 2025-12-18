@@ -1,0 +1,75 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: openobserve
+  namespace: kube-system
+spec:
+  repo: https://charts.openobserve.ai
+  chart: openobserve
+  version: 0.20.1
+  targetNamespace: openobserve
+  createNamespace: true
+  valuesContent: |-
+    auth:
+      ZO_ROOT_USER_EMAIL: "admin@crussell.io"
+      ZO_ROOT_USER_PASSWORD: "YourSecurePasswordHERE"
+      ZO_ROOT_USER_TOKEN: ""
+      # Point to the shared CNPG cluster (see cnpg-pg-main/cluster.yaml). Make the password match the secret there.
+      ZO_META_POSTGRES_DSN: "postgres://openobserve:Bv5Syw5iBDp4B1@pg-main-rw.databases.svc.cluster.local:5432/openobserve?sslmode=disable"
+      ZO_META_POSTGRES_RO_DSN: "postgres://openobserve:Bv5Syw5iBDp4B1@pg-main-ro.databases.svc.cluster.local:5432/openobserve?sslmode=disable"
+      ZO_S3_ACCESS_KEY: "crussell"
+      ZO_S3_SECRET_KEY: "2c5dxdAlQ@UqHn#%BpF0"
+    
+    config:
+      ZO_TYPE: "s3"
+      ZO_S3_SERVER_URL: "http://192.168.20.31:9000"
+      ZO_S3_BUCKET_NAME: "openobserve"
+      ZO_S3_REGION_NAME: "us-east-1" # MinIO default usually
+
+
+    ingester:
+      persistence:
+        enabled: true
+        size: 20Gi
+        storageClass: longhorn
+
+    querier:
+      persistence:
+        enabled: true
+        size: 20Gi
+        storageClass: longhorn
+
+    alertmanager:
+      persistence:
+        enabled: true
+        size: 20Gi
+        storageClass: longhorn
+
+    alertquerier:
+      persistence:
+        enabled: true
+        size: 20Gi
+        storageClass: longhorn
+
+    # Use an external CNPG cluster instead of creating one inside this chart
+    postgres:
+      enabled: false
+
+    probes:
+      router:
+        enabled: true
+        config:
+          readinessProbe:
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+            terminationGracePeriodSeconds: 30
+          livenessProbe:
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+            terminationGracePeriodSeconds: 30
