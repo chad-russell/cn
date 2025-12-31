@@ -59,6 +59,7 @@
       # v = "${pkgs.neovim}/bin/nvim";
       # vi = "${pkgs.neovim}/bin/nvim";
       nrs = "sudo nixos-rebuild switch --flake /home/crussell/Code/cn#bee";
+      hms = "home-manager switch --flake /home/crussell/Code/cn#bee";
     };
     
     history = {

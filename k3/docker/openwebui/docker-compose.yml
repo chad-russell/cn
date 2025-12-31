@@ -10,7 +10,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      - WEBUI_AUTH=true
+      - WEBUI_AUTH=false
       - ANONYMIZED_TELEMETRY=false
       - DO_NOT_TRACK=true
       - SCARF_NO_ANALYTICS=true

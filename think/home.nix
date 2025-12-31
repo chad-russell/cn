@@ -4,7 +4,6 @@
   llm-agents,
   opencode,
   dms,
-  nixvim-config,
   ...
 }:
 
@@ -13,8 +12,9 @@
     ../modules/wezterm
     ../modules/vicinae
     ../modules/oh-my-posh
-    dms.homeModules.dankMaterialShell.default
-    dms.homeModules.dankMaterialShell.niri
+    ../modules/nixvim
+    dms.homeModules.dank-material-shell
+    dms.homeModules.niri
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
@@ -49,23 +49,22 @@
     pkgs.jq
     pkgs.terraform
     pkgs.awscli2
+    pkgs.yazi
 
     opencode.packages.${pkgs.stdenv.hostPlatform.system}.default
 
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.gemini-cli
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex
-
-    nixvim-config.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 
   # Dank Material Shell with niri integration
-  programs.dankMaterialShell = {
+  programs.dank-material-shell = {
     enable = true;
     systemd = {
       enable = true;
       restartIfChanged = true;
     };
-    enableSystemMonitoring = true;
+    enableSystemMonitoring = false; # Disable to avoid dgop dependency issue
     enableDynamicTheming = true;
     niri = {
       enableKeybinds = false;
@@ -309,6 +308,11 @@
     size = 18;
   };
 
+  # Auto-start xwayland-satellite for X11 app support (e.g., Steam)
+  programs.niri.settings.spawn-at-startup = [
+    { command = [ "xwayland-satellite" ]; }
+  ];
+
   home.enableNixpkgsReleaseCheck = false;
 
   # Zsh shell
@@ -322,9 +326,10 @@
     shellAliases = {
       e = "${pkgs.eza}/bin/eza";
       el = "${pkgs.eza}/bin/eza -alF";
-      v = "${pkgs.neovim}/bin/nvim";
-      vi = "${pkgs.neovim}/bin/nvim";
+      v = "nvim";
+      vi = "nvim";
       nrs = "sudo nixos-rebuild switch --flake /home/crussell/Code/cn#think";
+      hms = "home-manager switch --flake /home/crussell/Code/cn#think";
     };
 
     history = {

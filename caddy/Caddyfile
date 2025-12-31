@@ -31,12 +31,12 @@
 
     @papra host papra.internal.crussell.io
     handle @papra {
-        reverse_proxy localhost:1221
+        reverse_proxy 192.168.20.32:30083
     }
 
     @ntfy host ntfy.internal.crussell.io
     handle @ntfy {
-        reverse_proxy localhost:8090
+        reverse_proxy 192.168.20.32:30085
     }
 
     # --- k3 Services (192.168.20.63) ---
@@ -47,17 +47,12 @@
 
     @searxng host searxng.internal.crussell.io
     handle @searxng {
-        reverse_proxy 192.168.20.63:8080
-    }
-
-    @librechat host librechat.internal.crussell.io
-    handle @librechat {
-        reverse_proxy 192.168.20.63:3080
+        reverse_proxy 192.168.20.32:30084
     }
 
     @openwebui host openwebui.internal.crussell.io
     handle @openwebui {
-        reverse_proxy 192.168.20.63:3001
+        reverse_proxy 192.168.20.32:30082
     }
 
     # --- k4 Services (192.168.20.64) ---

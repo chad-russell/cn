@@ -13,13 +13,13 @@ spec:
     k8sCluster: "k3s-ha"
     exporters:
       otlphttp/openobserve:
-        endpoint: "http://openobserve.openobserve.svc.cluster.local:5080/api/default/"
+        endpoint: "http://openobserve-router.openobserve.svc.cluster.local:5080/api/default/"
         headers:
-          Authorization: "Basic [YOUR_BASE64_TOKEN]"
+          Authorization: "Basic YWRtaW5AY3J1c3NlbGwuaW86WW91clNlY3VyZVBhc3N3b3JkSEVSRQ=="
       otlphttp/openobserve_k8s_events:
-        endpoint: "http://openobserve.openobserve.svc.cluster.local:5080/api/default/"
+        endpoint: "http://openobserve-router.openobserve.svc.cluster.local:5080/api/default/"
         headers:
-          Authorization: "Basic [YOUR_BASE64_TOKEN]"
+          Authorization: "Basic YWRtaW5AY3J1c3NlbGwuaW86WW91clNlY3VyZVBhc3N3b3JkSEVSRQ=="
           stream-name: k8s_events
     gateway:
       enabled: false

@@ -1,4 +1,10 @@
-{ config, pkgs, dms, niri, ... }:
+{
+  config,
+  pkgs,
+  dms,
+  niri,
+  ...
+}:
 
 {
   imports = [
@@ -19,7 +25,8 @@
   # Networking - NetworkManager for laptop (WiFi support)
   networking.networkmanager.enable = true;
   networking.useDHCP = false;
-  
+  networking.firewall.enable = false;
+
   # SSH
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "prohibit-password";
@@ -36,7 +43,10 @@
 
   # Nix settings
   nix.settings = {
-    trusted-users = [ "root" "crussell" ];
+    trusted-users = [
+      "root"
+      "crussell"
+    ];
     substituters = [
       "https://cache.nixos.org"
       "https://numtide.cachix.org"
@@ -79,15 +89,15 @@
       # Battery care - limit charge to 80% for longevity (ThinkPad specific)
       START_CHARGE_THRESH_BAT0 = 40;
       STOP_CHARGE_THRESH_BAT0 = 80;
-      
+
       # CPU performance/power balance
       CPU_SCALING_GOVERNOR_ON_AC = "performance";
       CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
-      
+
       # Enable aggressive power saving on battery
       CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
       CPU_ENERGY_PERF_POLICY_ON_AC = "balance_performance";
-      
+
       # Disable turbo boost on battery for better battery life
       CPU_BOOST_ON_BAT = 0;
       CPU_BOOST_ON_AC = 1;
@@ -105,6 +115,23 @@
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = false; # Don't enable by default to save power
 
+  # Enable printing with CUPS
+  services.printing.enable = true;
+  services.printing.drivers = with pkgs; [
+    gutenprint      # Wide range of printer drivers
+    hplip           # HP printers
+    brlaser         # Brother laser printers
+    brgenml1lpr     # Brother generic drivers
+    cnijfilter2     # Canon printers
+  ];
+
+  # Enable printer discovery on the network
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    openFirewall = true;
+  };
+
   # Hardware video acceleration
   hardware.graphics = {
     enable = true;
@@ -115,13 +142,19 @@
     ];
   };
 
+  # Enable Steam
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true; # Opens ports for Steam Remote Play
+    dedicatedServer.openFirewall = true; # Opens ports for Source Dedicated Server
+  };
+
   # Firmware updates
   services.fwupd.enable = true;
 
   # Increase Nix download buffer size to 256 MiB (default is 64 MiB)
-  nix.settings.download-buffer-size = 268435456;  # 256 MiB
+  nix.settings.download-buffer-size = 268435456; # 256 MiB
 
   # Required by NixOS
   system.stateVersion = "25.05";
 }
-

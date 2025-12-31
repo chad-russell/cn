@@ -18,8 +18,8 @@ config.enable_wayland = false
 config.color_scheme = "Catppuccin Frappe"
 config.window_decorations = "RESIZE"
 
--- Use zsh
-config.default_prog = { '/etc/profiles/per-user/crussell/bin/zsh', '-l' }
+-- Use zsh (managed by Home Manager)
+config.default_prog = { 'zsh', '-l' }
 
 -- Font configuration
 config.font = wezterm.font("JetBrains Mono")

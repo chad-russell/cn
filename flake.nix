@@ -23,16 +23,9 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs-latest";
 
-    # Dank Material Shell
-    dgop = {
-      url = "github:AvengeMedia/dgop";
-      inputs.nixpkgs.follows = "nixpkgs-latest";
-    };
-
     dms = {
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs-latest";
-      inputs.dgop.follows = "dgop";
     };
 
     niri = {
@@ -52,10 +45,11 @@
     llm-agents.url = "github:numtide/llm-agents.nix";
     opencode.url = "github:sst/opencode/dev";
 
-    nixvim-config.url = "path:/home/crussell/Code/nixvim";
+    nixvim.url = "github:nix-community/nixvim/nixos-25.11";
+    nixvim.inputs.nixpkgs.follows = "nixpkgs-latest";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-latest, nixpkgs-unstable, home-manager, dgop, dms, niri, vicinae, disko, nixos-anywhere, llm-agents, opencode, nixvim-config }: {
+  outputs = { self, nixpkgs, nixpkgs-latest, nixpkgs-unstable, home-manager, dms, niri, vicinae, disko, nixos-anywhere, llm-agents, opencode, nixvim }: {
     # k2 configuration
     nixosConfigurations.k2 = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -102,13 +96,6 @@
         ./bee/configuration.nix
         ./bee/disk-config.nix
         disko.nixosModules.disko
-        home-manager.nixosModules.home-manager
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.users.crussell = ./bee/home.nix;
-          home-manager.extraSpecialArgs = { inherit vicinae opencode; };
-        }
       ];
     };
 
@@ -122,14 +109,28 @@
         ./think/configuration.nix
         ./think/disk-config.nix
         disko.nixosModules.disko
-        home-manager.nixosModules.home-manager
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.users.crussell = ./think/home.nix;
-          home-manager.extraSpecialArgs = { inherit vicinae opencode llm-agents dms niri nixvim-config; };
-        }
       ];
+    };
+
+    homeConfigurations.bee = home-manager.lib.homeManagerConfiguration {
+      pkgs = nixpkgs-latest.legacyPackages.x86_64-linux;
+      modules = [
+        { nixpkgs.config.allowUnfree = true; }
+        niri.homeModules.niri
+        ./bee/home.nix
+      ];
+      extraSpecialArgs = { inherit vicinae opencode niri nixvim; };
+    };
+
+    homeConfigurations.think = home-manager.lib.homeManagerConfiguration {
+      pkgs = nixpkgs-latest.legacyPackages.x86_64-linux;
+      modules = [
+        { nixpkgs.config.allowUnfree = true; }
+        niri.homeModules.niri
+        nixvim.homeModules.nixvim
+        ./think/home.nix
+      ];
+      extraSpecialArgs = { inherit vicinae opencode llm-agents dms niri nixvim; };
     };
   };
 }

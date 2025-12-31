@@ -1,0 +1,63 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: kube-prometheus-stack
+  namespace: kube-system
+spec:
+  repo: https://prometheus-community.github.io/helm-charts
+  chart: kube-prometheus-stack
+  version: 56.6.0
+  targetNamespace: monitoring
+  createNamespace: true
+  valuesContent: |-
+    fullnameOverride: "prom-stack"
+    
+    # Alertmanager Configuration
+    alertmanager:
+      enabled: true
+      alertmanagerSpec:
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: longhorn
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 2Gi
+    
+    # Grafana Configuration
+    grafana:
+      enabled: true
+      adminPassword: "prom-operator" 
+      persistence:
+        enabled: true
+        storageClassName: longhorn
+        size: 2Gi
+        accessModes: ["ReadWriteOnce"]
+      
+    # Prometheus Configuration
+    prometheus:
+      enabled: true
+      prometheusSpec:
+        replicas: 1
+        retention: 10d
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: longhorn
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 20Gi
+    
+    # Disable components we might not need immediately for a simple homelab
+    nodeExporter:
+      enabled: true
+    kubeStateMetrics:
+      enabled: true
+
+    prometheusOperator:
+      admissionWebhooks:
+        enabled: false
+        patch:
+          enabled: false

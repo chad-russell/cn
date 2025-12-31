@@ -1,0 +1,42 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: ntfy
+  namespace: kube-system
+spec:
+  chart: oci://codeberg.org/wrenix/helm-charts/ntfy
+  targetNamespace: ntfy
+  createNamespace: true
+  valuesContent: |-
+    # Image configuration
+    image:
+      repository: binwiederhier/ntfy
+      tag: v2.11.0
+      pullPolicy: IfNotPresent
+    
+    # Service configuration
+    service:
+      type: ClusterIP
+      port: 80
+    
+    # Persistence configuration
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      accessMode: ReadWriteOnce
+      size: 2Gi
+    
+    # Environment variables
+    env:
+      - name: TZ
+        value: "America/New_York"
+    
+    # Resource limits
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+

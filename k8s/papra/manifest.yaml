@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: papra
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: papra-data
+  namespace: papra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: papra
+  namespace: papra
+  labels:
+    app: papra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: papra
+  template:
+    metadata:
+      labels:
+        app: papra
+    spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: "OnRootMismatch"
+      containers:
+        - name: papra
+          image: ghcr.io/papra-hq/papra:latest
+          ports:
+            - containerPort: 1221
+              name: http
+          env:
+            - name: APP_BASE_URL
+              value: "https://papra.internal.crussell.io"
+            - name: TZ
+              value: "America/New_York"
+            - name: AUTH_SECRET
+              value: "papra-k8s-auth-secret-change-me-in-production"
+          volumeMounts:
+            - name: data
+              mountPath: /app/app-data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: papra-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: papra
+  namespace: papra
+spec:
+  selector:
+    app: papra
+  ports:
+    - protocol: TCP
+      port: 1221
+      targetPort: 1221
+      nodePort: 30083
+  type: NodePort
+
