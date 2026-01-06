@@ -16,17 +16,17 @@
     # --- Localhost Services (k2 / 192.168.20.62) ---
     @karakeep host karakeep.internal.crussell.io
     handle @karakeep {
-        reverse_proxy localhost:3322
+        reverse_proxy 192.168.20.32:30322
     }
 
-    @karakeep-homedash host karakeep-homedash.internal.crussell.io
-    handle @karakeep-homedash {
-        reverse_proxy localhost:8595
-    }
+    # @karakeep-homedash host karakeep-homedash.internal.crussell.io
+    # handle @karakeep-homedash {
+    #     reverse_proxy localhost:8595
+    # }
 
     @memos host memos.internal.crussell.io
     handle @memos {
-        reverse_proxy localhost:5230
+        reverse_proxy 192.168.20.32:30523
     }
 
     @papra host papra.internal.crussell.io
@@ -42,7 +42,7 @@
     # --- k3 Services (192.168.20.63) ---
     @audiobookshelf host audiobookshelf.internal.crussell.io
     handle @audiobookshelf {
-        reverse_proxy 192.168.20.63:13378
+        reverse_proxy 192.168.20.32:30337
     }
 
     @searxng host searxng.internal.crussell.io
@@ -90,6 +90,16 @@
     @faved host faved.internal.crussell.io
     handle @faved {
         reverse_proxy 192.168.20.32:30080
+    }
+
+    @grafana host grafana.internal.crussell.io
+    handle @grafana {
+        reverse_proxy 192.168.20.32:30086
+    }
+
+    @pulse host pulse.internal.crussell.io
+    handle @pulse {
+        reverse_proxy 192.168.20.32:30087
     }
 }
 

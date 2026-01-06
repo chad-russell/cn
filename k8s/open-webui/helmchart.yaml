@@ -33,6 +33,19 @@ spec:
       type: ClusterIP
       port: 80
       containerPort: 8080
+
+    # External tools: disable everything except OpenAI-compatible API
+    ollama:
+      enabled: false
+    ollamaUrls: []
+    pipelines:
+      enabled: false
+
+    # OpenAI API configuration (single, fixed endpoint)
+    enableOpenaiApi: true
+    openaiBaseApiUrl: "http://192.168.20.41:8000/v1"
+    openaiBaseApiUrls:
+      - "http://192.168.20.41:8000/v1"
     
     # Resource limits (adjust as needed)
     resources:

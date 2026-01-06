@@ -1,27 +1,9 @@
-{ config, lib, pkgs, vicinae, ... }:
+{ config, lib, pkgs, ... }:
 
 {
-  imports = [
-    vicinae.homeManagerModules.default
-  ];
-
-  services.vicinae = {
+  programs.vicinae = {
     enable = true;
-    autoStart = true;
-    package = vicinae.packages.${pkgs.system}.default;
+    systemd.autoStart = true;
   };
-
-  # services.vicinae = {
-  #   autoStart = true;
-  #   settings = {
-  #     font.size = 11;
-  #     theme.name = "vicinae-dark";
-  #     window = {
-  #       csd = true;
-  #       opacity = 0.95;
-  #       rounding = 10;
-  #     };
-  #   };
-  # };
 }
 

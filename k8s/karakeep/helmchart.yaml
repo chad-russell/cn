@@ -1,0 +1,61 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: karakeep
+  namespace: kube-system
+spec:
+  repo: https://self-hosters-by-night.github.io/helm-charts/
+  chart: karakeep
+  targetNamespace: karakeep
+  createNamespace: true
+  valuesContent: |-
+    # Main Karakeep app configuration
+    karakeep:
+      image:
+        repository: ghcr.io/karakeep-app/karakeep
+        tag: release
+      env:
+        DATA_DIR: /data
+        # IMPORTANT: These secrets are committed to git for simplicity
+        # Alternative: Use secrets.yaml (gitignored) and kubectl apply separately
+        NEXTAUTH_SECRET: "AyFOizYzDUnL9do7BDVKtT7RnAxSCJ66hkRhWIEeP7c="
+        NEXTAUTH_URL: "https://karakeep.internal.crussell.io"
+    
+    # Persistence for Karakeep app data
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      accessMode: ReadWriteOnce
+      size: 10Gi
+    
+    # Meilisearch configuration (full-text search)
+    meilisearch:
+      enabled: true
+      image:
+        repository: getmeili/meilisearch
+        tag: v1.10
+      persistence:
+        enabled: true
+        storageClass: longhorn
+        size: 5Gi
+      environment:
+        # IMPORTANT: This secret is committed to git for simplicity
+        MEILI_MASTER_KEY: "ajVs1LEOYOKq4V3ubF/dGAZAc6eXRPCDlC0ZLgX4MDU="
+    
+    # Chrome for web scraping/screenshots
+    chrome:
+      enabled: true
+    
+    # Service configuration
+    service:
+      type: ClusterIP
+      port: 3000
+    
+    # Resource limits
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi

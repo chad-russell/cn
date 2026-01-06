@@ -53,3 +53,9 @@ kubectl logs -n open-webui -l app.kubernetes.io/name=open-webui
 
 
 
+
+
+
+
+
+

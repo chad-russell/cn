@@ -13,6 +13,7 @@
     ../modules/vicinae
     ../modules/oh-my-posh
     ../modules/nixvim
+    ../modules/mango
     dms.homeModules.dank-material-shell
     dms.homeModules.niri
   ];
@@ -50,6 +51,7 @@
     pkgs.terraform
     pkgs.awscli2
     pkgs.yazi
+    pkgs.just
 
     opencode.packages.${pkgs.stdenv.hostPlatform.system}.default
 
@@ -57,7 +59,7 @@
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex
   ];
 
-  # Dank Material Shell with niri integration
+  # Dank Material Shell with niri and mango integration
   programs.dank-material-shell = {
     enable = true;
     systemd = {
@@ -70,6 +72,7 @@
       enableKeybinds = false;
       enableSpawn = false; # Use systemd service instead to avoid double spawn
     };
+    # DMS should also work with mango - keybinds are configured in mango config
   };
 
   # Niri keybinds (via niri home module) to match your existing config
@@ -117,7 +120,7 @@
 
     # Workspace switcher (vicinae)
     "Mod+Space".action.spawn = [
-      "vicinae"
+      "${pkgs.vicinae}/bin/vicinae"
       "toggle"
     ];
 
@@ -299,6 +302,10 @@
     };
   };
 
+  programs.niri.settings.spawn-at-startup = [
+    { command = [ "${pkgs.xwayland-satellite}/bin/xwayland-satellite" ]; }
+  ];
+
   programs.niri.settings.prefer-no-csd = true;
   programs.niri.settings.screenshot-path = "~/Pictures/Screenshots/%Y-%m-%d %H-%M-%S.png";
   programs.niri.settings.hotkey-overlay.skip-at-startup = true;
@@ -308,10 +315,48 @@
     size = 18;
   };
 
-  # Auto-start xwayland-satellite for X11 app support (e.g., Steam)
-  programs.niri.settings.spawn-at-startup = [
-    { command = [ "xwayland-satellite" ]; }
-  ];
+  # Monitor configuration
+  programs.niri.settings.outputs = {
+    # Laptop Screen (AU Optronics) - Scaled at 1.25 for better readability
+    "eDP-1" = {
+      mode = {
+        width = 1920;
+        height = 1200;
+        refresh = 60.0;
+      };
+      scale = 1.25;
+      position = {
+        x = 0;
+        y = 0;
+      };
+    };
+    # First Dell Monitor
+    "DP-3" = {
+      mode = {
+        width = 1920;
+        height = 1080;
+        refresh = 60.0;
+      };
+      scale = 1.0;
+      position = {
+        x = 1536;
+        y = 0;
+      };
+    };
+    # Second Dell Monitor
+    "DP-4" = {
+      mode = {
+        width = 1920;
+        height = 1080;
+        refresh = 60.0;
+      };
+      scale = 1.0;
+      position = {
+        x = 0;
+        y = 0;
+      };
+    };
+  };
 
   home.enableNixpkgsReleaseCheck = false;
 
@@ -371,6 +416,7 @@
 
   # Session environment variables (available in shell sessions)
   home.sessionVariables = {
+    DISPLAY = ":0";
     XCURSOR_THEME = "Bibata-Modern-Classic";
     XCURSOR_SIZE = "18";
     GTK_CURSOR_THEME_NAME = "Bibata-Modern-Classic";

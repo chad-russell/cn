@@ -2,7 +2,7 @@
 
 {
   # Enable GNOME Desktop Environment
-  services.xserver.desktopManager.gnome.enable = true;
+  services.desktopManager.gnome.enable = true;
 
   # Disable power-profiles-daemon (conflicts with TLP in think/configuration.nix)
   services.power-profiles-daemon.enable = false;

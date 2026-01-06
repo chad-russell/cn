@@ -68,6 +68,6 @@ in
 
   # Local development hostnames for k3s ingress
   networking.hosts = {
-    "127.0.0.1" = [ "hb-api.gloo.local" "hb-web.gloo.local" "storyhub.gloo.local" "gpl.gloo.local" "polymer.gloo.local" "minio.gloo.local" ];
+    "127.0.0.1" = [ "hb-api.gloo.local" "hb-web.gloo.local" "storyhub.gloo.local" "gpl.gloo.local" "polymer.gloo.local" "minio.gloo.local" "pgadmin.gloo.local" ];
   };
 }

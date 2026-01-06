@@ -3,15 +3,17 @@
   pkgs,
   dms,
   niri,
+  mango,
   ...
 }:
 
 {
   imports = [
-    dms.nixosModules.dankMaterialShell
+    dms.nixosModules.dank-material-shell
     niri.nixosModules.niri
     ../modules/niri-desktop.nix
     ../modules/gnome-desktop.nix
+    ../modules/mango-desktop.nix
     ../modules/flatpak.nix
     ../modules/containers.nix
     ../modules/k3s.nix
