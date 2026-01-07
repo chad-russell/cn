@@ -15,8 +15,8 @@ spec:
       defaultDataPath: /var/lib/longhorn
       defaultReplicaCount: 2
       guaranteedInstanceManagerCPU: 5
-      backupTarget: ""
-      backupTargetCredentialSecret: ""
+      backupTarget: "s3://crussell-longhorn-backups@us-east-1/"
+      backupTargetCredentialSecret: "longhorn-backup-s3"
       
     # Set Longhorn as the default StorageClass
     persistence:
@@ -52,10 +52,6 @@ spec:
           cpu: 200m
           memory: 256Mi
     
-    # Enable backups (can configure target later)
-    defaultSettings:
-      backupTarget: ""
-      backupTargetCredentialSecret: ""
     
     # Ingress disabled (will configure separately if needed)
     ingress:

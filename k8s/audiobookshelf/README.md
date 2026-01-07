@@ -88,3 +88,8 @@ kubectl -n audiobookshelf logs -l app=audiobookshelf -f
 
 
 
+
+
+
+
+

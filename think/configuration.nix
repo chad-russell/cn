@@ -29,10 +29,6 @@
   networking.useDHCP = false;
   networking.firewall.enable = false;
 
-  # SSH
-  services.openssh.enable = true;
-  services.openssh.settings.PermitRootLogin = "prohibit-password";
-
   # Enable Tailscale
   services.tailscale.enable = true;
   # To connect to Tailscale, run: sudo tailscale up
@@ -42,33 +38,6 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.systemd-boot.configurationLimit = 6; # Keep only last 6 generations
-
-  # Nix settings
-  nix.settings = {
-    trusted-users = [
-      "root"
-      "crussell"
-    ];
-    substituters = [
-      "https://cache.nixos.org"
-      "https://numtide.cachix.org"
-      "https://niri.cachix.org"
-    ];
-    trusted-public-keys = [
-      "numtide.cachix.org-1:2ps1kLBUWjxIneOy1Ik6cQjb41X0iXVXeHigGmycPPE="
-      "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
-    ];
-  };
-
-  # Automatic garbage collection
-  nix.gc = {
-    automatic = true;
-    dates = "weekly";
-    options = "--delete-older-than 30d";
-  };
-
-  # Also limit the number of generations system-wide
-  nix.settings.auto-optimise-store = true; # Optimize store by hardlinking identical files
 
   # Use the latest kernel
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -142,13 +111,6 @@
       intel-vaapi-driver # For older Intel GPUs
       libvdpau-va-gl
     ];
-  };
-
-  # Enable Steam
-  programs.steam = {
-    enable = true;
-    remotePlay.openFirewall = true; # Opens ports for Steam Remote Play
-    dedicatedServer.openFirewall = true; # Opens ports for Source Dedicated Server
   };
 
   # Firmware updates

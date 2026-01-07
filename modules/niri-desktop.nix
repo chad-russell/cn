@@ -23,7 +23,6 @@
   environment.systemPackages = with pkgs; [
     alacritty          # terminal
     fuzzel             # app launcher
-    mako               # notifications
     wl-clipboard       # clipboard
     waybar             # status bar (optional but recommended)
     xwayland-satellite # X11 compatibility for niri
@@ -48,4 +47,3 @@
     GTK_CURSOR_THEME_NAME = "Bibata-Modern-Classic"; # GTK cursor theme
   };
 }
-

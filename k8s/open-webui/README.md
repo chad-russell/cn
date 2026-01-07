@@ -16,6 +16,7 @@ The k3s built-in Helm controller will automatically install the Helm chart.
 
 - **Database**: Uses SQLite (default) stored in a Longhorn-backed PVC
 - **Storage**: 10Gi Longhorn persistent volume
+- **Backups**: Configured via Longhorn UI (S3 target)
 - **Authentication**: Disabled (WEBUI_AUTH=false)
 - **Telemetry**: All telemetry and analytics disabled
 - **NodePort**: 30082
@@ -50,6 +51,9 @@ View logs:
 ```bash
 kubectl logs -n open-webui -l app.kubernetes.io/name=open-webui
 ```
+
+
+
 
 
 

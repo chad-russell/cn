@@ -10,7 +10,6 @@
 
   # Essential Wayland packages for MangoWC
   environment.systemPackages = with pkgs; [
-    mako               # notifications
     wl-clipboard       # clipboard
     bibata-cursors     # modern cursor theme
   ];
@@ -22,5 +21,4 @@
     GTK_CURSOR_THEME_NAME = "Bibata-Modern-Classic";
   };
 }
-
 
