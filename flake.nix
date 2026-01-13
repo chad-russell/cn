@@ -86,7 +86,7 @@
     # bee configuration - Beelink SER7
     nixosConfigurations.bee = nixpkgs-latest.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit disko opencode nixpkgs-unstable dms; };
+      specialArgs = { inherit disko opencode nixpkgs-unstable dms niri mango; };
       modules = [
         { nixpkgs.config.allowUnfree = true; }
         ./modules/unstable-packages.nix
@@ -114,9 +114,10 @@
       modules = [
         { nixpkgs.config.allowUnfree = true; }
         niri.homeModules.niri
+        nixvim.homeModules.nixvim
         ./bee/home.nix
       ];
-      extraSpecialArgs = { inherit opencode niri nixvim; };
+      extraSpecialArgs = { inherit opencode llm-agents dms niri nixvim; };
     };
 
     homeConfigurations.think = home-manager.lib.homeManagerConfiguration {
