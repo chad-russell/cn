@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: searxng-settings-manual
+  namespace: searxng
+data:
+  settings.yml: |
+    use_default_settings: true
+    server:
+      limiter: false
+      secret_key: "default-secret-key-change-me"  # Change this!
+    search:
+      formats:
+        - html
+        - json
+        - csv
+        - rss

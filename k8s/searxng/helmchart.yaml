@@ -18,7 +18,7 @@ spec:
     env:
       SEARXNG_BASE_URL: "https://searxng.internal.crussell.io/"
       SEARXNG_REDIS_URL: "redis://searxng-valkey:6379/0"
-    
+
     # Service configuration
     service:
       type: ClusterIP
@@ -32,10 +32,6 @@ spec:
       limits:
         cpu: 1000m
         memory: 512Mi
-
-
-
-
 
 
 

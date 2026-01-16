@@ -47,7 +47,10 @@
 
     @searxng host searxng.internal.crussell.io
     handle @searxng {
-        reverse_proxy 192.168.20.32:30084
+        reverse_proxy 192.168.20.32:30084 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Real-IP {remote_host}
+        }
     }
 
     @openwebui host openwebui.internal.crussell.io
