@@ -90,19 +90,14 @@
         reverse_proxy 192.168.20.61:5055
     }
 
-    @faved host faved.internal.crussell.io
-    handle @faved {
+    @linkding host linkding.internal.crussell.io
+    handle @linkding {
         reverse_proxy 192.168.20.32:30080
     }
 
     @grafana host grafana.internal.crussell.io
     handle @grafana {
         reverse_proxy 192.168.20.32:30086
-    }
-
-    @pulse host pulse.internal.crussell.io
-    handle @pulse {
-        reverse_proxy 192.168.20.32:30087
     }
 }
 
@@ -135,9 +130,9 @@
         reverse_proxy 192.168.20.63:5678
     }
 
-    @immich host immich.crussell.io
-    handle @immich {
-        reverse_proxy 192.168.20.64:2283
+    @photos host photos.crussell.io
+    handle @photos {
+        reverse_proxy 192.168.20.32:30081
     }
 
     @chex-mix-timer host chex-mix-timer.crussell.io

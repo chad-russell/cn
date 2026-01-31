@@ -25,6 +25,13 @@
     pkgs.just
     pkgs.wev # Wayland event viewer
 
+    # Development tools
+    pkgs.nodePackages.vercel
+    pkgs.unzip
+    pkgs.bun
+    pkgs.nodejs
+    pkgs.python313
+
     opencode.packages.${pkgs.stdenv.hostPlatform.system}.default
 
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.gemini-cli
@@ -400,8 +407,12 @@
     '';
   };
 
-  # Add ~/.local/bin to PATH (for user-installed scripts)
-  home.sessionPath = [ "${config.home.homeDirectory}/.local/bin" ];
+  home.sessionPath = [
+    "${config.home.homeDirectory}/.local/bin"
+    "${config.home.homeDirectory}/.npm-global/bin"
+    "${config.home.homeDirectory}/.cargo/bin"
+    "${config.home.homeDirectory}/.bun/bin"
+  ];
 
   # Session environment variables (available in shell sessions)
   home.sessionVariables = {

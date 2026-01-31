@@ -5,11 +5,12 @@ This directory contains Kubernetes manifests for applications running on the k3s
 ## Structure
 
 - `longhorn/` - Longhorn distributed storage system
-- `faved/` - Faved application
+- `linkding/` - Linkding bookmark manager
 - `open-webui/` - Open WebUI LLM interface
 - `papra/` - Papra personal resource manager
 - `searxng/` - SearXNG privacy-respecting metasearch engine
 - `ntfy/` - Ntfy notification service
+- `immich/` - Immich photo backup solution
 
 ## How it works
 
@@ -27,8 +28,8 @@ Services exposed via NodePort are routed through Caddy reverse proxy using the c
 
 | Service | Namespace | NodePort | Domain |
 |---------|-----------|----------|--------|
-| faved   | faved     | 30080    | faved.crussell.io |
-| OpenObserve | openobserve | 30081  | logs.crussell.io |
+| linkding | linkding | 30080  | linkding.internal.crussell.io |
+| immich | immich | 30081  | photos.crussell.io |
 | open-webui | open-webui | 30082  | openwebui.crussell.io |
 | papra | papra | 30083  | papra.internal.crussell.io |
 | searxng | searxng | 30084  | searxng.internal.crussell.io |
