@@ -24,9 +24,11 @@
     wantedBy = [ "multi-user.target" ];
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
+    unitConfig = {
+      ConditionPathExists = "/sys/class/net/eno1";
+    };
     serviceConfig = {
       Type = "oneshot";
-      ConditionPathExists = "/sys/class/net/eno1";
       ExecStart = pkgs.writeShellScript "ethtool-optimizations" ''
         set -euo pipefail
         # Wait for interface to be up
@@ -43,6 +45,9 @@
 
         # Disable Energy Efficient Ethernet (EEE) if supported
         ${pkgs.ethtool}/bin/ethtool --set-eee eno1 eee off || true
+
+        # Interrupt coalescing to reduce RX pressure (tune if needed)
+        ${pkgs.ethtool}/bin/ethtool -C eno1 rx-usecs 250 rx-frames 256 tx-usecs 250 tx-frames 256 || true
 
         # Increase ring buffers to driver max to reduce RX drops
         max_rx=$(${pkgs.ethtool}/bin/ethtool -g eno1 2>/dev/null | ${pkgs.gawk}/bin/awk '
@@ -64,6 +69,55 @@
         ${pkgs.ethtool}/bin/ethtool -g eno1 || true
       '';
       RemainAfterExit = true;
+    };
+  };
+
+  systemd.services.ethtool-drop-monitor = {
+    description = "Log RX drop/miss deltas for eno1";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    unitConfig = {
+      ConditionPathExists = "/sys/class/net/eno1";
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      StateDirectory = "ethtool-drop-monitor";
+      ExecStart = pkgs.writeShellScript "ethtool-drop-monitor" ''
+        set -euo pipefail
+
+        state_dir="/var/lib/ethtool-drop-monitor"
+        prev_file="$state_dir/prev"
+
+        rx_dropped=$(cat /sys/class/net/eno1/statistics/rx_dropped || echo 0)
+        rx_missed=$(cat /sys/class/net/eno1/statistics/rx_missed_errors || echo 0)
+        rx_no_buffer=$(cat /sys/class/net/eno1/statistics/rx_no_buffer_count || echo 0)
+
+        if [ -f "$prev_file" ]; then
+          read -r prev_dropped prev_missed prev_no_buffer < "$prev_file" || true
+        else
+          prev_dropped=0
+          prev_missed=0
+          prev_no_buffer=0
+        fi
+
+        delta_dropped=$((rx_dropped - prev_dropped))
+        delta_missed=$((rx_missed - prev_missed))
+        delta_no_buffer=$((rx_no_buffer - prev_no_buffer))
+
+        echo "rx_dropped=$rx_dropped (+$delta_dropped) rx_missed=$rx_missed (+$delta_missed) rx_no_buffer=$rx_no_buffer (+$delta_no_buffer)"
+
+        printf "%s %s %s\n" "$rx_dropped" "$rx_missed" "$rx_no_buffer" > "$prev_file"
+      '';
+    };
+  };
+
+  systemd.timers.ethtool-drop-monitor = {
+    description = "Periodic RX drop/miss delta logging for eno1";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec = "2m";
+      OnUnitActiveSec = "1m";
+      Unit = "ethtool-drop-monitor.service";
     };
   };
 }
