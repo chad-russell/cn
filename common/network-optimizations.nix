@@ -45,12 +45,12 @@
         ${pkgs.ethtool}/bin/ethtool --set-eee eno1 eee off || true
 
         # Increase ring buffers to driver max to reduce RX drops
-        max_rx=$(${pkgs.ethtool}/bin/ethtool -g eno1 2>/dev/null | awk '
+        max_rx=$(${pkgs.ethtool}/bin/ethtool -g eno1 2>/dev/null | ${pkgs.gawk}/bin/awk '
           /Pre-set maximums:/ {section=1; next}
           /Current hardware settings:/ {section=0}
           section && $1 == "RX:" {print $2}
         ')
-        max_tx=$(${pkgs.ethtool}/bin/ethtool -g eno1 2>/dev/null | awk '
+        max_tx=$(${pkgs.ethtool}/bin/ethtool -g eno1 2>/dev/null | ${pkgs.gawk}/bin/awk '
           /Pre-set maximums:/ {section=1; next}
           /Current hardware settings:/ {section=0}
           section && $1 == "TX:" {print $2}
