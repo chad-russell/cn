@@ -12,5 +12,5 @@
 #    sudo systemctl enable --now openclaw-node
 # 4. Check logs: sudo journalctl -u openclaw-node -f
 
-# The node will connect to the gateway at ws://192.168.20.32:30086
+# The node will connect to the gateway at ws://192.168.20.32:30087
 # (Cluster VIP NodePort for openclaw-gateway service)

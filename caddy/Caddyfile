@@ -97,7 +97,7 @@
 
     @claw host claw.internal.crussell.io
     handle @claw {
-        reverse_proxy 192.168.20.32:30086 {
+        reverse_proxy 192.168.20.32:30087 {
             header_up Host {upstream_hostport}
         }
     }
@@ -147,4 +147,3 @@
         reverse_proxy 192.168.20.64:8732
     }
 }
-

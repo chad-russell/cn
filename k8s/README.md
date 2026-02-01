@@ -35,7 +35,7 @@ Services exposed via NodePort are routed through Caddy reverse proxy using the c
 | papra | papra | 30083  | papra.internal.crussell.io |
 | searxng | searxng | 30084  | searxng.internal.crussell.io |
 | ntfy | ntfy | 30085  | ntfy.crussell.io |
-| openclaw | openclaw | 30086  | claw.internal.crussell.io |
+| openclaw | openclaw | 30087  | claw.internal.crussell.io |
 
 
 ## Structure
@@ -70,5 +70,4 @@ Services exposed via NodePort are routed through Caddy reverse proxy using the c
 | papra | papra | 30083  | papra.internal.crussell.io |
 | searxng | searxng | 30084  | searxng.internal.crussell.io |
 | ntfy | ntfy | 30085  | ntfy.crussell.io |
-
 

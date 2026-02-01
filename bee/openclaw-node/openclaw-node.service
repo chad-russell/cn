@@ -12,7 +12,7 @@ ExecStart=/usr/bin/podman run --name openclaw-node \
   --cgroup-manager=systemd \
   --sdnotify=conmon \
   -e OPENCLAW_MODE=node \
-  -e OPENCLAW_GATEWAY_URL=ws://192.168.20.32:30086 \
+  -e OPENCLAW_GATEWAY_URL=ws://192.168.20.32:30087 \
   -e NODE_ENV=production \
   -v /var/home/crussell/.openclaw-node/data:/root/.openclaw \
   -v /var/home/crussell/Code:/root/workspace:ro \

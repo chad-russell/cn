@@ -43,7 +43,7 @@ OpenClaw is a personal AI assistant that runs in a hybrid deployment:
 - **05-secret.yaml**: API keys (Anthropic, OpenAI, Discord)
 - **06-pvc.yaml**: Persistent volume claim (50Gi)
 - **07-deployment.yaml**: Gateway container deployment
-- **08-service.yaml**: NodePort service (port 30086)
+- **08-service.yaml**: NodePort service (port 30087)
 - **09-workloads-ns.yaml**: Namespace for ephemeral workloads
 
 ### bee Node

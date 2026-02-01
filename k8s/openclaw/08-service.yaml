@@ -15,5 +15,5 @@ spec:
   - name: gateway
     port: 18789
     targetPort: 18789
-    nodePort: 30086
+    nodePort: 30087
     protocol: TCP
