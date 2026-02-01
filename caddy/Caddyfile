@@ -95,9 +95,16 @@
         reverse_proxy 192.168.20.32:30080
     }
 
+    @claw host claw.internal.crussell.io
+    handle @claw {
+        reverse_proxy 192.168.20.32:30086 {
+            header_up Host {upstream_hostport}
+        }
+    }
+
     @grafana host grafana.internal.crussell.io
     handle @grafana {
-        reverse_proxy 192.168.20.32:30086
+        reverse_proxy 192.168.20.32:30088
     }
 }
 

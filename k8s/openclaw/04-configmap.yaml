@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openclaw-config
+  namespace: openclaw
+  labels:
+    app: openclaw
+    component: gateway
+data:
+  # Base OpenClaw configuration
+  openclaw.json: |
+    {
+      "agents": {
+        "defaults": {
+          "model": {
+            "primary": "anthropic/claude-opus-4-5"
+          },
+          "workspace": "/home/node/.openclaw/workspace",
+          "sandbox": {
+            "mode": "non-main"
+          }
+        }
+      },
+      "gateway": {
+        "mode": "local",
+        "port": 18789,
+        "bind": "0.0.0.0"
+      }
+    }

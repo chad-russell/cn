@@ -82,54 +82,6 @@
         disko.nixosModules.disko
       ];
     };
-
-    # bee configuration - Beelink SER7
-    nixosConfigurations.bee = nixpkgs-latest.lib.nixosSystem {
-      system = "x86_64-linux";
-      specialArgs = { inherit disko opencode nixpkgs-unstable dms niri mango; };
-      modules = [
-        { nixpkgs.config.allowUnfree = true; }
-        ./modules/unstable-packages.nix
-        ./bee/configuration.nix
-        ./bee/disk-config.nix
-        disko.nixosModules.disko
-      ];
-    };
-
-    # think configuration - ThinkPad T14
-    nixosConfigurations.think = nixpkgs-latest.lib.nixosSystem {
-      system = "x86_64-linux";
-      specialArgs = { inherit disko opencode dms niri mango nixpkgs-unstable; };
-      modules = [
-        { nixpkgs.config.allowUnfree = true; }
-        ./modules/unstable-packages.nix
-        ./think/configuration.nix
-        ./think/disk-config.nix
-        disko.nixosModules.disko
-      ];
-    };
-
-    homeConfigurations.bee = home-manager.lib.homeManagerConfiguration {
-      pkgs = nixpkgs-latest.legacyPackages.x86_64-linux;
-      modules = [
-        { nixpkgs.config.allowUnfree = true; }
-        niri.homeModules.niri
-        nixvim.homeModules.nixvim
-        ./bee/home.nix
-      ];
-      extraSpecialArgs = { inherit opencode llm-agents dms niri nixvim; };
-    };
-
-    homeConfigurations.think = home-manager.lib.homeManagerConfiguration {
-      pkgs = nixpkgs-latest.legacyPackages.x86_64-linux;
-      modules = [
-        { nixpkgs.config.allowUnfree = true; }
-        niri.homeModules.niri
-        nixvim.homeModules.nixvim
-        ./think/home.nix
-      ];
-      extraSpecialArgs = { inherit opencode llm-agents dms niri nixvim; };
-    };
   };
 }
 

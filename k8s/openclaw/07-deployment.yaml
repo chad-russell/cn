@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openclaw-gateway
+  namespace: openclaw
+  labels:
+    app: openclaw
+    component: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openclaw
+      component: gateway
+  template:
+    metadata:
+      labels:
+        app: openclaw
+        component: gateway
+    spec:
+      serviceAccountName: openclaw-gateway
+      containers:
+      - name: gateway
+        image: ghcr.io/openclaw/openclaw:latest
+        imagePullPolicy: IfNotPresent
+        command:
+          - node
+          - dist/index.js
+          - gateway
+          - --bind
+          - 0.0.0.0
+          - --port
+          - "18789"
+        ports:
+        - name: gateway
+          containerPort: 18789
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: HOME
+          value: "/home/node"
+        - name: OPENCLAW_HOME
+          value: "/home/node/.openclaw"
+        # Anthropic API Key (from Secret)
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openclaw-secrets
+              key: anthropic-api-key
+        # Optional: OpenAI API Key
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openclaw-secrets
+              key: openai-api-key
+              optional: true
+        # Optional: Discord Bot Token
+        - name: DISCORD_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: openclaw-secrets
+              key: discord-bot-token
+              optional: true
+        volumeMounts:
+        - name: openclaw-data
+          mountPath: /home/node/.openclaw
+        - name: config
+          mountPath: /home/node/.openclaw/openclaw.json
+          subPath: openclaw.json
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 4Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 18789
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 18789
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: openclaw-data
+        persistentVolumeClaim:
+          claimName: openclaw-data
+      - name: config
+        configMap:
+          name: openclaw-config

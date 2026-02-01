@@ -1,0 +1,8 @@
+# Namespace for ephemeral workloads spawned by OpenClaw
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openclaw-workloads
+  labels:
+    app: openclaw
+    component: workloads
