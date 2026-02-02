@@ -17,6 +17,27 @@ services:
       restart_policy:
         condition: on-failure
 
+  adguardhome:
+    image: adguard/adguardhome:latest
+    ports:
+      - "30053:53/tcp"
+      - "30053:53/udp"
+      - "30067:67/udp"
+      - "30068:68/udp"
+      - "30080:80/tcp"
+      - "30054:443/tcp"
+      - "30085:853/tcp"
+      - "30088:3000/tcp"
+    volumes:
+      - adguardhome-work:/opt/adguardhome/work
+      - adguardhome-conf:/opt/adguardhome/conf
+    networks:
+      - dozzle
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+
 networks:
   dozzle:
     driver: overlay
