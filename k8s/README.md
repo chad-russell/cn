@@ -11,7 +11,7 @@ This directory contains Kubernetes manifests for applications running on k3s HA 
 - `searxng/` - SearXNG privacy-respecting metasearch engine
 - `ntfy/` - Ntfy notification service
 - `immich/` - Immich photo backup solution
-- `openclaw/` - OpenClaw personal AI assistant (hybrid deployment)
+
 
 ## How it works
 
@@ -35,7 +35,7 @@ Services exposed via NodePort are routed through Caddy reverse proxy using the c
 | papra | papra | 30083  | papra.internal.crussell.io |
 | searxng | searxng | 30084  | searxng.internal.crussell.io |
 | ntfy | ntfy | 30085  | ntfy.crussell.io |
-| openclaw | openclaw | 30087  | claw.internal.crussell.io |
+
 
 
 ## Structure

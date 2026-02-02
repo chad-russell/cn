@@ -213,3 +213,7 @@ Located in `docker/` directory:
    - Create directory in `kX/docker/<service>/`
    - Add `docker-compose.yml`
    - Create `.env` file (git-ignored) for secrets
+
+## NIC Drop Monitoring
+
+`ethtool-drop-monitor` logs RX drop/miss deltas every minute via a systemd timer; view with `journalctl -u ethtool-drop-monitor -f`. Some NICs may not expose `rx_no_buffer_count`, which is safe to ignore.
