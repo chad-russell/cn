@@ -13,8 +13,6 @@ Nodes:
 
 NAS (TrueNAS):
  - Primary IP: 192.168.20.31
- - Alternate network IP (if applicable): 192.168.10.31
- - Prefer using `NAS_IP=...` env var (see below) so the checker and commands stay consistent.
 
 SSH:
 - Key: `~/.ssh/id_ed25519`
@@ -41,8 +39,6 @@ From the machine where the repo is checked out:
 
 ```bash
 NAS_IP=192.168.20.31 bun scripts/restic_backup_health.ts
-# or (if your NAS is on the .10 subnet)
-NAS_IP=192.168.10.31 bun scripts/restic_backup_health.ts
 ```
 
 It prints a single JSON report with:
