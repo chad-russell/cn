@@ -27,6 +27,7 @@ type NodeReport = {
   checks: Record<string, any>;
   snapshots: Record<string, SnapshotInfo>;
   issues: string[];
+  info: string[];
 };
 
 const NODES: Record<string, string> = {
@@ -161,6 +162,7 @@ async function main(): Promise<number> {
       checks: {},
       snapshots: {},
       issues: [],
+      info: [],
     };
 
     const userAtIp = `crussell@${ip}`;
@@ -191,15 +193,16 @@ async function main(): Promise<number> {
     nodeReport.checks.last_run = { ok: last.ok, out: last.stdout.trim(), err: last.stderr.trim() };
 
     // Flag a failed last run if systemd says it wasn't successful.
+    // Informational only: snapshot freshness is the source of truth.
     if (last.ok) {
       const result = (last.stdout.match(/^Result=(.*)$/m)?.[1] ?? "").trim();
       const statusStr = (last.stdout.match(/^ExecMainStatus=(.*)$/m)?.[1] ?? "").trim();
       const startTs = (last.stdout.match(/^ExecMainStartTimestamp=(.*)$/m)?.[1] ?? "").trim();
       const status = Number.parseInt(statusStr || "0", 10);
 
-      if (result && result !== "success") nodeReport.issues.push("last_run_failed");
-      if (!Number.isNaN(status) && status !== 0) nodeReport.issues.push("last_run_nonzero_exit");
-      if (jobs.length > 0 && (!startTs || startTs === "n/a")) nodeReport.issues.push("no_recorded_last_run");
+      if (result && result !== "success") nodeReport.info.push("last_run_failed");
+      if (!Number.isNaN(status) && status !== 0) nodeReport.info.push("last_run_nonzero_exit");
+      if (jobs.length > 0 && (!startTs || startTs === "n/a")) nodeReport.info.push("no_recorded_last_run");
     }
 
     // Journal tail
@@ -244,11 +247,13 @@ async function main(): Promise<number> {
           stale = ageHours > STALE_HOURS;
         }
 
+        const ageHoursRounded = typeof ageHours === "number" ? Math.round(ageHours * 100) / 100 : undefined;
+
         nodeReport.snapshots[tag] = {
           ok: true,
           id: s0?.short_id ?? s0?.id,
           time: s0?.time,
-          age_hours: ageHours,
+          age_hours: ageHoursRounded,
           stale,
           paths: s0?.paths,
         };
