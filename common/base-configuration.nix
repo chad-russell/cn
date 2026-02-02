@@ -35,6 +35,8 @@
   virtualisation.docker.enable = true;
   virtualisation.docker.enableOnBoot = true;
   virtualisation.docker.daemon.settings = {
+    # Required for Docker Swarm (incompatible with live-restore)
+    live-restore = false;
     # Optional: Configure Docker daemon settings
     # log-driver = "json-file";
     # log-opts = {
