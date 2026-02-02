@@ -20,7 +20,8 @@ let
       exit 1
     fi
 
-    if [ ! -d "$RESTIC_REPOSITORY/config" ]; then
+    # restic stores repo metadata in a *file* named "config".
+    if [ ! -f "$RESTIC_REPOSITORY/config" ]; then
       echo "[$(${pkgs.coreutils}/bin/date +'%Y-%m-%d %H:%M:%S')] restic-backup: init repo" 
       ${pkgs.restic}/bin/restic init
     fi
