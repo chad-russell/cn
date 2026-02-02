@@ -12,13 +12,15 @@ Nodes:
 - k4 = 192.168.20.64
 
 NAS (TrueNAS):
-- IP is usually 192.168.20.31.
-- If you see references to 192.168.10.31 in other docs, treat that as an alternate network; use the IP in the SSH command below.
+ - Primary IP: 192.168.20.31
+ - Alternate network IP (if applicable): 192.168.10.31
+ - Prefer using `NAS_IP=...` env var (see below) so the checker and commands stay consistent.
 
 SSH:
 - Key: `~/.ssh/id_ed25519`
 - Nodes: `ssh -i ~/.ssh/id_ed25519 crussell@<ip> "..."`
 - NAS: `ssh -i ~/.ssh/id_ed25519 root@192.168.20.31 "..."`
+  - Or: `ssh -i ~/.ssh/id_ed25519 root@${NAS_IP} "..."`
 
 Backups:
 - Restic repo (on nodes via NFS): `/mnt/backups/restic`
@@ -38,7 +40,9 @@ Config source of truth:
 From the machine where the repo is checked out:
 
 ```bash
-bun scripts/restic_backup_health.ts
+NAS_IP=192.168.20.31 bun scripts/restic_backup_health.ts
+# or (if your NAS is on the .10 subnet)
+NAS_IP=192.168.10.31 bun scripts/restic_backup_health.ts
 ```
 
 It prints a single JSON report with:
@@ -62,9 +66,10 @@ If `report.ok` is false, summarize the problem, then give exact commands to conf
 Run these directly on the NAS (not via nodes):
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.20.31 "hostname"
-ssh -i ~/.ssh/id_ed25519 root@192.168.20.31 "test -f /mnt/tank/backups/restic/config && echo OK || echo MISSING"
-ssh -i ~/.ssh/id_ed25519 root@192.168.20.31 "df -h /mnt/tank/backups | tail -n 2"
+NAS_IP=192.168.20.31
+ssh -i ~/.ssh/id_ed25519 root@${NAS_IP} "hostname"
+ssh -i ~/.ssh/id_ed25519 root@${NAS_IP} "test -f /mnt/tank/backups/restic/config && echo OK || echo MISSING"
+ssh -i ~/.ssh/id_ed25519 root@${NAS_IP} "df -h /mnt/tank/backups | tail -n 2"
 ```
 
 If the repo is missing on NAS, backups are effectively broken even if nodes look fine.

@@ -104,7 +104,8 @@ in {
   };
 
   config = mkIf cfg.enable {
-    environment.systemPackages = [ resticBackupBin ];
+    # Keep restic on PATH for interactive checks (and for external tooling).
+    environment.systemPackages = [ pkgs.restic resticBackupBin ];
 
     systemd.services.restic-backup = {
       description = "Run Restic backups";

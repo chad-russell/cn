@@ -40,6 +40,7 @@ const SSH_KEY = process.env.SSH_KEY ?? "~/.ssh/id_ed25519";
 
 const REPO = "/mnt/backups/restic";
 const PASS_FILE = "/etc/restic-password";
+const RESTIC_BIN = "/run/current-system/sw/bin/restic";
 
 // threshold: backups should be within ~36h (03:00 + jitter + lock retries)
 const STALE_HOURS = 36;
@@ -189,6 +190,18 @@ async function main(): Promise<number> {
     );
     nodeReport.checks.last_run = { ok: last.ok, out: last.stdout.trim(), err: last.stderr.trim() };
 
+    // Flag a failed last run if systemd says it wasn't successful.
+    if (last.ok) {
+      const result = (last.stdout.match(/^Result=(.*)$/m)?.[1] ?? "").trim();
+      const statusStr = (last.stdout.match(/^ExecMainStatus=(.*)$/m)?.[1] ?? "").trim();
+      const startTs = (last.stdout.match(/^ExecMainStartTimestamp=(.*)$/m)?.[1] ?? "").trim();
+      const status = Number.parseInt(statusStr || "0", 10);
+
+      if (result && result !== "success") nodeReport.issues.push("last_run_failed");
+      if (!Number.isNaN(status) && status !== 0) nodeReport.issues.push("last_run_nonzero_exit");
+      if (jobs.length > 0 && (!startTs || startTs === "n/a")) nodeReport.issues.push("no_recorded_last_run");
+    }
+
     // Journal tail
     const journal = await ssh(userAtIp, "journalctl -u restic-backup.service -n 80 --no-pager");
     nodeReport.checks.journal_tail = { ok: journal.ok, lines: (journal.stdout || "").split("\n").filter(Boolean).slice(-80) };
@@ -199,7 +212,7 @@ async function main(): Promise<number> {
       nodeReport.checks.snapshots = { ok: true, note: "no jobs configured" };
     } else {
       for (const tag of jobs) {
-        const cmd = `sudo restic snapshots --repo ${REPO} --password-file ${PASS_FILE} --tag ${tag} --host ${node} --json --latest 1`;
+        const cmd = `sudo -n ${RESTIC_BIN} snapshots --repo ${REPO} --password-file ${PASS_FILE} --tag ${tag} --host ${node} --json --latest 1`;
         const r = await ssh(userAtIp, cmd, 120_000);
         if (!r.ok) {
           nodeReport.snapshots[tag] = { ok: false, error: (r.stderr.trim() || r.stdout.trim()) };
