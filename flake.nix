@@ -29,7 +29,7 @@
     nixvim.inputs.nixpkgs.follows = "nixpkgs-latest";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-latest, nixpkgs-unstable, home-manager, dms, niri, mango, disko, nixos-anywhere, llm-agents, opencode, nixvim }: {
+  outputs = { self, nixpkgs, nixpkgs-latest, nixpkgs-unstable, home-manager, disko, nixos-anywhere, llm-agents, opencode, nixvim }: {
     # k2 configuration
     nixosConfigurations.k2 = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -67,4 +67,3 @@
     };
   };
 }
-
