@@ -13,6 +13,10 @@ let
     export RESTIC_PASSWORD_FILE="${cfg.passwordFile}"
     export RESTIC_REPOSITORY="${cfg.repository}"
 
+    restic() {
+      "${pkgs.restic}/bin/restic" --retry-lock 5m "$@"
+    }
+
     echo "[$(${pkgs.coreutils}/bin/date +'%Y-%m-%d %H:%M:%S')] restic-backup: start"
 
     if ! ${pkgs.util-linux}/bin/mountpoint -q /mnt/backups; then
@@ -23,7 +27,13 @@ let
     # restic stores repo metadata in a *file* named "config".
     if [ ! -f "$RESTIC_REPOSITORY/config" ]; then
       echo "[$(${pkgs.coreutils}/bin/date +'%Y-%m-%d %H:%M:%S')] restic-backup: init repo" 
-      ${pkgs.restic}/bin/restic init
+      restic init
+    fi
+
+    job_count=$(${pkgs.jq}/bin/jq '.jobs | length' "$CONFIG")
+    if [ "$job_count" -eq 0 ]; then
+      echo "[$(${pkgs.coreutils}/bin/date +'%Y-%m-%d %H:%M:%S')] restic-backup: no jobs configured, exiting"
+      exit 0
     fi
 
     ${pkgs.jq}/bin/jq -c '.jobs[]' "$CONFIG" | while read -r job; do
@@ -42,19 +52,19 @@ let
             echo "[$(${pkgs.coreutils}/bin/date +'%Y-%m-%d %H:%M:%S')] restic-backup: ERROR: volume not found: $target" >&2
             exit 1
           fi
-          ${pkgs.restic}/bin/restic backup "$mountpoint" --tag "$name"
+          restic backup "$mountpoint" --tag "$name"
         else
           if [ ! -e "$target" ]; then
             echo "[$(${pkgs.coreutils}/bin/date +'%Y-%m-%d %H:%M:%S')] restic-backup: WARN: path missing, skipping: $target" >&2
             continue
           fi
-          ${pkgs.restic}/bin/restic backup "$target" --tag "$name"
+          restic backup "$target" --tag "$name"
         fi
       done
     done
 
     echo "[$(${pkgs.coreutils}/bin/date +'%Y-%m-%d %H:%M:%S')] restic-backup: pruning"
-    ${pkgs.restic}/bin/restic forget \
+    restic forget \
       --keep-hourly 24 \
       --keep-daily 7 \
       --keep-weekly 4 \
@@ -110,6 +120,7 @@ in {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = cfg.schedule;
+        RandomizedDelaySec = "30m";
         Persistent = true;
         Unit = "restic-backup.service";
       };
