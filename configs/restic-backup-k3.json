@@ -1,0 +1,23 @@
+{
+  "repository": "/mnt/backups/restic",
+  "passwordFile": "/etc/restic-password",
+  "defaults": {
+    "type": "volume"
+  },
+  "jobs": [
+    {
+      "name": "audiobookshelf",
+      "type": "bind",
+      "targets": ["/mnt/swarm-data/audiobookshelf"],
+      "pre_stop": "audiobookshelf-swarm_audiobookshelf",
+      "post_start": "audiobookshelf-swarm_audiobookshelf"
+    },
+    {
+      "name": "papra",
+      "type": "volume",
+      "targets": ["papra-data"],
+      "pre_stop": "papra-swarm_papra",
+      "post_start": "papra-swarm_papra"
+    }
+  ]
+}

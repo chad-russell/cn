@@ -135,11 +135,19 @@ in {
 
 **Important:** AdGuardHome requires initial setup via Web UI (port 30102) before HTTPS/DoH (port 30054) becomes functional. After setup, you can enable and configure the HTTPS server port.
 
+**Caddy routing note (AdGuardHome):** after AdGuardHome setup completes, the UI often moves from :30102 (installer, container :3000) to :30100 (container :80). To avoid manual flip-flopping, set Caddy upstreams to both ports with first-available behavior.
+
 **Volumes (local driver):**
 - adguardhome-work: /opt/adguardhome/work
 - adguardhome-conf: /opt/adguardhome/conf
 
 **Network:** dozzle (overlay driver)
+
+**Common issues:**
+- Bind mounts: Ensure directories exist and are owned by the correct UID/GID for the container user
+- Check permissions: `ls -la /path/to/data` - container user may not be root
+- Fix ownership: `sudo chown -R <uid>:<gid> /path/to/data`
+- Example: Audiobookshelf uses UID 999, so bind mounts need to be owned by 999:999
 
 ### K8s Resources
 
@@ -246,8 +254,104 @@ For automated SSH operations:
 - Storage: `disk-config.nix` in each machine directory
 
 **Module reuse:**
-- Reusable components: `modules/`
-- Shared cluster settings: `common/`
+  - Reusable components: `modules/`
+  - Shared cluster settings: `common/`
+
+## Restic Backups
+
+Restic provides deduplicated, encrypted backups with flexible retention policies.
+
+**Repository:** `/mnt/backups/restic` (shared across all nodes via NFS)
+**Schedule:** Daily at 3:00 AM (systemd timer)
+**Retention:** 90 days (24 hourly, 7 daily, 4 weekly, 3 monthly, 1 yearly)
+**Backup type:** Entire volume backup for all services (no database dumps needed)
+
+**Password Storage:**
+- Location: `/etc/restic-password` on k2, k3, k4
+- Synced manually (TODO: migrate to sops-nix/agenix)
+- Stored in Bitwarden: Search for "Restic Backup Password - cn"
+- Password: `YEYSW/uT9VxjHfYK4Y4KWqq6be7pztaTDA1jbi8gbPw=` (SAVE THIS NOW!)
+
+**Service Distribution:**
+- **k2:** Linkding, Karakeep, Memos, Papra, Ntfy, AdGuardHome, Caddy, Immich-Postgres, SearXNG
+- **k3:** Audiobookshelf, Papra, n8n
+- **k4:** Immich services (server, microservices, machine-learning)
+
+**Running Backups:**
+```bash
+# Manual backup (k2)
+ssh -i ~/.ssh/id_ed25519 k2 "sudo /opt/restic-backup.sh"
+
+# Manual backup (k3)
+ssh -i ~/.ssh/id_ed25519 k3 "sudo /opt/restic-backup.sh"
+
+# Manual backup (k4)
+ssh -i ~/.ssh/id_ed25519 k4 "sudo /opt/restic-backup.sh"
+
+# Check backup logs
+journalctl -u restic-backup -f
+```
+
+**Restoring:**
+```bash
+# List snapshots for service
+ssh -i ~/.ssh/id_ed25519 k2 "restic snapshots --tag linkding --password-file /etc/restic-password --repo /mnt/backups/restic"
+
+# Interactive restore (on k2)
+ssh -i ~/.ssh/id_ed25519 k2 "sudo /opt/restic-restore.sh linkding"
+
+# Specific snapshot restore (on k2)
+ssh -i ~/.ssh/id_ed25519 k2 "sudo /opt/restic-restore.sh linkding abc123"
+```
+
+**Backup Configuration:**
+- **k2:** `/etc/restic-backup.json` (Linkding, Karakeep, Memos, Papra, Ntfy, AdGuardHome, Caddy, Immich-Postgres, SearXNG)
+- **k3:** `/etc/restic-backup.json` (Audiobookshelf, Papra, n8n)
+- **k4:** `/etc/restic-backup.json` (Immich services with media exclusions)
+
+**Storage Types:**
+- **Volume backups:** Named Docker volumes (e.g., `karakeep-data`, `memos-data`)
+- **Bind backups:** Host directories (e.g., `/mnt/swarm-data/linkding`, `/home/crussell/caddy/Caddyfile`)
+
+**Adding New Services:**
+1. Determine backup type: Check service volume with `docker inspect <container>`
+   - `volume` (named Docker volume): Look for `Type: volume` in mounts
+   - `bind` (host directory): Look for `Type: bind` in mounts
+2. Find volume name or bind mount path:
+   - Volume: Copy `Name` from volume mount (e.g., `karakeep-data`)
+   - Bind: Copy `Source` from bind mount (e.g., `/mnt/swarm-data/linkding`)
+3. Add to `/etc/restic-backup.json` on appropriate node:
+   ```json
+   {
+     "name": "service-name",
+     "type": "volume",
+     "targets": ["volume-name"]
+   }
+   ```
+   Or for bind mounts:
+   ```json
+   {
+     "name": "service-name",
+     "type": "bind",
+     "targets": ["/path/on/host"],
+     "pre_stop": "container-name",
+     "post_start": "container-name"
+   }
+   ```
+4. Test backup: `sudo /opt/restic-backup.sh`
+5. Verify backup: `restic snapshots --tag service-name`
+6. Update AGENTS.md with service details
+
+**Common Issues:**
+- **NFS mount failure:** Check NFS server availability, mount manually: `mount /mnt/backups`
+- **Container not found:** Update `pre_stop`/`post_start` with correct container name (use partial match)
+- **Repository corruption:** Run `restic check --read-data` and `restic repair` if needed
+- **Disk space:** Run aggressive prune: `restic forget --prune`
+
+**Monitoring:**
+- Systemd journal: `journalctl -u restic-backup -f`
+- Backup stats: `restic stats`
+- Repo health: `restic check`
 
 ## Adding New Services
 
@@ -262,10 +366,112 @@ For automated SSH operations:
    - Add route to `caddy/Caddyfile`
    - Add DNS A record to Route53 (managed manually)
 
-3. **For Docker deployment:**
-   - Create directory in `kX/docker/<service>/`
-   - Add `docker-compose.yml`
-   - Create `.env` file (git-ignored) for secrets
+ 3. **For Docker deployment:**
+    - Create directory in `kX/docker/<service>/`
+    - Add `docker-compose.yml`
+    - Create `.env` file (git-ignored) for secrets
+
+ 4. **For Docker Swarm deployment:**
+    - Use `docker stack deploy -c <file> <stack-name>`
+    - Check bind mount permissions: ensure directories exist and are owned by correct UID/GID
+    - Fix permissions: `sudo chown -R <uid>:<gid> /path/to/data`
+    - Troubleshoot: `docker service ps <service>` to see task status and errors
+
+## Restic Backups
+
+Restic provides deduplicated, encrypted backups with flexible retention policies.
+
+**Repository:** `/mnt/backups/restic` (shared across all nodes via NFS)
+**Schedule:** Daily at 3:00 AM (systemd timer)
+**Retention:** 90 days (24 hourly, 7 daily, 4 weekly, 3 monthly, 1 yearly)
+**Backup type:** Entire volume backup for all services (no database dumps needed)
+
+**Password Storage:**
+- Location: `/etc/restic-password` on k2, k3, k4
+- Synced manually (TODO: migrate to sops-nix/agenix)
+- Stored in Bitwarden: Search for "Restic Backup Password - cn"
+- Password: `YEYSW/uT9VxjHfYK4Y4KWqq6be7pztaTDA1jbi8gbPw=` (SAVE THIS NOW!)
+
+**Service Distribution:**
+- **k2:** Linkding, Karakeep, Memos, Papra, Ntfy, AdGuardHome, Caddy, Immich-Postgres
+- **k3:** Audiobookshelf, n8n, OpenWebUI, SearXNG
+- **k4:** Beszel, Immich-App services
+
+**Running Backups:**
+```bash
+# Manual backup (k2)
+ssh -i ~/.ssh/id_ed25519 k2 "sudo /opt/restic-backup.sh"
+
+# Manual backup (k3)
+ssh -i ~/.ssh/id_ed25519 k3 "sudo /opt/restic-backup.sh"
+
+# Manual backup (k4)
+ssh -i ~/.ssh/id_ed25519 k4 "sudo /opt/restic-backup.sh"
+
+# Check backup logs
+journalctl -u restic-backup -f
+```
+
+**Restoring:**
+```bash
+# List snapshots for service
+ssh -i ~/.ssh/id_ed25519 k2 "restic snapshots --tag linkding --password-file /etc/restic-password --repo /mnt/backups/restic"
+
+# Interactive restore (on k2)
+ssh -i ~/.ssh/id_ed25519 k2 "sudo /opt/restic-restore.sh linkding"
+
+# Specific snapshot restore (on k2)
+ssh -i ~/.ssh/id_ed25519 k2 "sudo /opt/restic-restore.sh linkding abc123"
+```
+
+**Backup Configuration:**
+- **k2:** `/etc/restic-backup.json` (Linkding, Karakeep, Memos, Papra, Ntfy, AdGuardHome, Caddy, Immich-Postgres)
+- **k3:** `/etc/restic-backup.json` (Audiobookshelf, n8n, OpenWebUI, SearXNG)
+- **k4:** `/etc/restic-backup.json` (Beszel, Immich-App services)
+
+**Storage Types:**
+- **Volume backups:** Named Docker volumes (e.g., `karakeep-data`, `memos-data`)
+- **Bind backups:** Host directories (e.g., `/mnt/swarm-data/linkding`, `/home/crussell/caddy/Caddyfile`)
+
+**Adding New Services:**
+1. Determine backup type: Check service volume with `docker inspect <container>`
+   - `volume` (named Docker volume): Look for `Type: volume` in mounts
+   - `bind` (host directory): Look for `Type: bind` in mounts
+2. Find volume name or bind mount path:
+   - Volume: Copy `Name` from volume mount (e.g., `karakeep-data`)
+   - Bind: Copy `Source` from bind mount (e.g., `/mnt/swarm-data/linkding`)
+3. Add to `/etc/restic-backup.json` on appropriate node:
+   ```json
+   {
+     "name": "service-name",
+     "type": "volume",
+     "targets": ["volume-name"]
+   }
+   ```
+   Or for bind mounts:
+   ```json
+   {
+     "name": "service-name",
+     "type": "bind",
+     "targets": ["/path/on/host"],
+     "pre_stop": "container-name",
+     "post_start": "container-name"
+   }
+   ```
+4. Test backup: `sudo /opt/restic-backup.sh`
+5. Verify backup: `restic snapshots --tag service-name`
+6. Update AGENTS.md with service details
+
+**Common Issues:**
+- **NFS mount failure:** Check NFS server availability, mount manually: `mount /mnt/backups`
+- **Container not found:** Update `pre_stop`/`post_start` with correct container name (use partial match)
+- **Repository corruption:** Run `restic check --read-data` and `restic repair` if needed
+- **Disk space:** Run aggressive prune: `restic forget --prune`
+
+**Monitoring:**
+- Systemd journal: `journalctl -u restic-backup -f`
+- Backup stats: `restic stats`
+- Repo health: `restic check`
 
 ## NIC Drop Monitoring
 

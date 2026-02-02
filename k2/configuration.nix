@@ -8,8 +8,8 @@
     ../common/network-optimizations.nix
     ../common/nfs-backup-mount.nix
     ../common/elitedesk-fixes.nix
-    # Backup module
-    ../modules/container-backup.nix
+    # Backup system (restic-based)
+    ../modules/restic-backup.nix
   ];
 
   # Set your hostname.
@@ -28,18 +28,14 @@
 
   # Open firewall for Caddy reverse proxy
   # networking.firewall.allowedTCPPorts = [ 80 443 ];
-
-  # k3s HA cluster configuration
-  services.k3sHA = {
+  
+  # Enable restic backups
+  services.resticBackup = {
     enable = true;
-    nodeIP = "192.168.20.62";
-    clusterInit = true;
-  };
-
-  # Enable the Python backup script timer
-  services.containerBackup = {
-    enable = true;
-    scriptPath = "/home/crussell/cn/docker/backup.py";
-    configPath = "/home/crussell/cn/k2/docker/backup-config.json";
+    configPath = "/etc/restic-backup.json";
+    passwordFile = "/etc/restic-password";
+    repository = "/mnt/backups/restic";
+    schedule = "03:00:00";
+    ntfyUrl = "http://192.168.20.62:30085/restic-backup-failures";
   };
 }

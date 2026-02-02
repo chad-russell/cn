@@ -1,0 +1,33 @@
+{
+  "repository": "/mnt/backups/restic",
+  "passwordFile": "/etc/restic-password",
+  "defaults": {
+    "type": "volume"
+  },
+  "jobs": [
+    {
+      "name": "immich-server",
+      "type": "bind",
+      "targets": ["/mnt/nfs/photos"],
+      "pre_stop": "immich-swarm_immich-server",
+      "post_start": "immich-swarm_immich-server",
+      "exclude": [".thumbnails", ".encoded-video", ".thumbs", "*.db", "library/*", "upload/*"]
+    },
+    {
+      "name": "immich-microservices",
+      "type": "bind",
+      "targets": ["/mnt/nfs/photos"],
+      "pre_stop": "immich-swarm_immich-microservices",
+      "post_start": "immich-swarm_immich-microservices",
+      "exclude": [".thumbnails", ".encoded-video", ".thumbs", "*.db", "library/*", "upload/*"]
+    },
+    {
+      "name": "immich-machine-learning",
+      "type": "bind",
+      "targets": ["/mnt/nfs/photos"],
+      "pre_stop": "immich-swarm_machine-learning",
+      "post_start": "immich-swarm_machine-learning",
+      "exclude": [".thumbnails", ".encoded-video", ".thumbs", "*.db", "library/*", "upload/*"]
+    }
+  ]
+}
