@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  linkding:
+    image: sissbruecker/linkding:latest
+    environment:
+      - LD_CSRF_TRUSTED_ORIGINS=https://linkding.internal.crussell.io
+      - LD_DISABLE_BACKGROUND_TASKS=False
+    volumes:
+      - linkding-data:/etc/linkding/data
+    ports:
+      - "30080:9090"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.node.name == k3
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  linkding-data:
+    driver: local

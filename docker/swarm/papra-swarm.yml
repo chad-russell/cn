@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  papra:
+    image: ghcr.io/papra-hq/papra:latest
+    environment:
+      - APP_BASE_URL=https://papra.internal.crussell.io
+      - TZ=America/New_York
+      - AUTH_SECRET=papra-swarm-auth-secret-change-me
+    volumes:
+      - /mnt/swarm-data/papra:/app/app-data
+    ports:
+      - "30091:1221"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k4
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3

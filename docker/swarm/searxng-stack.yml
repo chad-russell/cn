@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  searxng:
+    image: searxng/searxng:latest
+    environment:
+      - SEARXNG_BASE_URL=https://searxng.internal.crussell.io/
+      - SEARXNG_REDIS_URL=redis://searxng-valkey:6379/0
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.node.name == k2
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "30084:8080"
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    volumes:
+      - searxng-valkey-data:/data
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.node.name == k2
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  searxng-valkey-data:
+    driver: local

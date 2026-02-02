@@ -1,0 +1,212 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: ghcr.io/tensorchord/cloudnative-vectorchord:16.9-0.4.3
+    hostname: immich-postgres
+    environment:
+      POSTGRES_DB: immich
+      POSTGRES_USER: immich
+      POSTGRES_PASSWORD: immich_secret_password_change_me
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /tmp/postgresql-immich.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      - immich
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    networks:
+      - immich
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    command: ["start.sh", "immich"]
+    user: "568:568"
+    environment:
+      - DB_HOSTNAME=postgres
+      - DB_USERNAME=immich
+      - DB_PASSWORD=immich_secret_password_change_me
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis
+      - TYPESENSE_ENABLED=false
+      - DISABLE_MACHINE_LEARNING=false
+      - MACHINE_LEARNING_HOST=machine-learning
+      - MACHINE_LEARNING_PORT=3003
+    volumes:
+      - type: bind
+        source: /mnt/nfs/photos
+        target: /usr/src/app/upload
+    networks:
+      - immich
+    depends_on:
+      - postgres
+      - redis
+      - machine-learning
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 1G
+
+  immich-microservices:
+    image: ghcr.io/immich-app/immich-server:release
+    command: ["start.sh", "microservices"]
+    user: "568:568"
+    environment:
+      - DB_HOSTNAME=postgres
+      - DB_USERNAME=immich
+      - DB_PASSWORD=immich_secret_password_change_me
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis
+      - TYPESENSE_ENABLED=false
+      - DISABLE_MACHINE_LEARNING=false
+      - MACHINE_LEARNING_HOST=machine-learning
+      - MACHINE_LEARNING_PORT=3003
+    networks:
+      - immich
+    depends_on:
+      - postgres
+      - redis
+      - machine-learning
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      resources:
+        limits:
+          cpus: "4"
+          memory: 2G
+        reservations:
+          cpus: "1"
+          memory: 512M
+
+  immich-web:
+    image: ghcr.io/immich-app/immich-web:release
+    networks:
+      - immich
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    environment:
+      - DB_HOSTNAME=postgres
+      - DB_USERNAME=immich
+      - DB_PASSWORD=immich_secret_password_change_me
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis
+      - TYPESENSE_ENABLED=false
+    networks:
+      - immich
+    depends_on:
+      - postgres
+      - redis
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 1G
+
+  proxy:
+    image: ghcr.io/immich-app/immich-proxy:release
+    user: "568:568"
+    environment:
+      - UPLOAD_LOCATION=/usr/src/app/upload
+    volumes:
+      - type: bind
+        source: /mnt/nfs/photos
+        target: /usr/src/app/upload
+    ports:
+      - target: 8080
+        published: 30093
+        protocol: tcp
+        mode: host
+    networks:
+      - immich
+    depends_on:
+      - immich-web
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+networks:
+  immich:
+    driver: overlay
+    attachable: true
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/swarm-data/immich/postgres-data

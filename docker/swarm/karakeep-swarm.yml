@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  karakeep:
+    image: ghcr.io/karakeep-app/karakeep:release
+    environment:
+      - DATA_DIR=/data
+      - MEILI_ADDR=http://karakeep-meilisearch:7700
+      - MEILI_MASTER_KEY=CHANGE-ME-OR-USE-A-SECRET
+      - NEXTAUTH_SECRET=CHANGE-ME-OR-USE-A-SECRET
+      - BROWSER_WEB_URL=http://karakeep-chrome:9222
+    volumes:
+      - /mnt/swarm-data/karakeep:/data
+    ports:
+      - "30092:3000"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    depends_on:
+      - karakeep-meilisearch
+      - karakeep-chrome
+
+  karakeep-chrome:
+    image: gcr.io/zenika-hub/alpine-chrome:124
+    command:
+      - --no-sandbox
+      - --disable-gpu
+      - --disable-dev-shm-usage
+      - --remote-debugging-address=0.0.0.0
+      - --remote-debugging-port=9222
+      - --hide-scrollbars
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      restart_policy:
+        condition: on-failure
+
+  karakeep-meilisearch:
+    image: docker.io/getmeili/meilisearch:v1.10
+    environment:
+      - MEILI_MASTER_KEY=karakeep-swarm-master-key-change-me
+    volumes:
+      - /mnt/swarm-data/karakeep-meilisearch:/meili_data
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3

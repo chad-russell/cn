@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  ntfy:
+    image: binwiederhier/ntfy:v2.11.0
+    command: serve
+    environment:
+      - TZ=America/New_York
+      - NTFY_BASE_URL=https://ntfy.internal.crussell.io
+    volumes:
+      - ntfy-data:/var/cache/ntfy
+    ports:
+      - "30085:80"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.node.name == k2
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  ntfy-data:
+    driver: local

@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  linkding:
+    image: sissbruecker/linkding:latest
+    environment:
+      - LD_CSRF_TRUSTED_ORIGINS=https://linkding-swarm.internal.crussell.io
+      - LD_DISABLE_BACKGROUND_TASKS=False
+    volumes:
+      - /mnt/swarm-data/linkding:/etc/linkding/data
+    ports:
+      - "30090:9090"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == k2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
