@@ -87,7 +87,7 @@
 
     @adguard host adguard.internal.crussell.io
     handle @adguard {
-        reverse_proxy 192.168.20.62:30054
+        reverse_proxy 192.168.20.62:30102
     }
 }
 

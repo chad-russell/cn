@@ -8,8 +8,6 @@
     ../common/network-optimizations.nix
     ../common/nfs-backup-mount.nix
     ../common/elitedesk-fixes.nix
-    ../common/k3s-ha
-    # Service modules (shared)
     # Backup module
     ../modules/container-backup.nix
   ];

@@ -114,6 +114,33 @@ in {
 - 30085: ntfy
 - 30086: grafana
 
+### Docker Swarm
+
+**Dozzle stack (docker/swarm/dozzle-stack.yml):**
+- Dozzle: Global deployment across k2, k3, k4
+- AdGuardHome: Replicated deployment (1 instance) on k2 only (for consistent config storage)
+- Deploy/Update: `cd docker/swarm && docker stack deploy -c dozzle-stack.yml dozzle`
+- Check status: `docker service ls | grep dozzle`
+
+**Important:** AdGuardHome must run as a single instance (not global) because each node has its own independent volume for configuration storage. If deployed globally, the load balancer would route to different nodes, each showing the installer.
+
+**Port allocations (dozzle stack):**
+- 8080: Dozzle Web UI
+- 30053: AdGuardHome DNS (TCP/UDP)
+- 30054: AdGuardHome HTTPS/DoH (after initial setup - configure via Web UI first)
+- 30067-30068: AdGuardHome DHCP (UDP)
+- 30100: AdGuardHome HTTP
+- 30101: AdGuardHome DNS-over-TLS
+- 30102: AdGuardHome Web UI (Caddy endpoint: adguard.internal.crussell.io)
+
+**Important:** AdGuardHome requires initial setup via Web UI (port 30102) before HTTPS/DoH (port 30054) becomes functional. After setup, you can enable and configure the HTTPS server port.
+
+**Volumes (local driver):**
+- adguardhome-work: /opt/adguardhome/work
+- adguardhome-conf: /opt/adguardhome/conf
+
+**Network:** dozzle (overlay driver)
+
 ### K8s Resources
 
 **Standard resources include:**
@@ -153,10 +180,25 @@ Caddy routes external traffic to internal services.
 - Internal wildcard: `*.internal.crussell.io`
 - Public domain: `*.crussell.io`
 
+**Caddy runs in Docker container:**
+- Container name: `caddy-proxy` (runs on k2)
+- Config mounted from: `/home/crussell/caddy/Caddyfile` (not `/home/crussell/cn/caddy/Caddyfile`)
+- Update script: `caddy/update_caddy.sh`
+
+**Updating Caddy:**
+```bash
+# Run the update script (copies Caddyfile to k2 and restarts container)
+./caddy/update_caddy.sh
+
+# Or manually:
+cat caddy/Caddyfile | ssh -i ~/.ssh/id_ed25519 k2 "cat > /home/crussell/caddy/Caddyfile"
+ssh -i ~/.ssh/id_ed25519 k2 "docker restart caddy-proxy"
+```
+
 When adding a new service:
 1. Add NodePort in k8s manifest
-2. Add route block in Caddyfile to cluster VIP (192.168.20.32)
-3. Apply Caddy config with `systemctl reload caddy` (on appropriate node)
+2. Add route block in Caddyfile
+3. Run `./caddy/update_caddy.sh` to deploy changes
 
 ## Secrets Management
 
@@ -176,6 +218,17 @@ Located in `docker/` directory:
 - Use f-strings for string formatting
 - Use `subprocess.run()` for command execution
 - Log with timestamps: `datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')`
+
+## SSH Automation
+
+For automated SSH operations:
+- Use `ssh -i ~/.ssh/id_ed25519` to specify key explicitly when piping data
+- Start SSH agent: `eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519`
+- Deploy to k2: `cat file.yml | ssh -i ~/.ssh/id_ed25519 k2 "cat > /path/to/file.yml"`
+- Caddy restart: `ssh -i ~/.ssh/id_ed25519 k2 "docker restart caddy-proxy"`
+- Dozzle stack update: `ssh -i ~/.ssh/id_ed25519 k2 "cd /home/crussell/cn/docker/swarm && docker stack deploy -c dozzle-stack.yml dozzle"`
+
+**Note:** Caddyfile is mounted at `/home/crussell/caddy/Caddyfile` (not `/home/crussell/cn/caddy/Caddyfile`) on k2.
 
 ## Where to Find Answers
 
