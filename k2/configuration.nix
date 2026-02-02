@@ -32,10 +32,9 @@
   # Enable restic backups
   services.resticBackup = {
     enable = true;
-    configPath = "/etc/restic-backup.json";
+    configFile = ../backups/restic/k2.json;
     passwordFile = "/etc/restic-password";
     repository = "/mnt/backups/restic";
     schedule = "03:00:00";
-    ntfyUrl = "http://192.168.20.62:30085/restic-backup-failures";
   };
 }

@@ -87,7 +87,11 @@
 
     @adguard host adguard.internal.crussell.io
     handle @adguard {
-        reverse_proxy 192.168.20.62:30102
+        # AdGuardHome runs the installer on :30102 (container :3000) initially,
+        # then moves to :30100 (container :80) after setup.
+        reverse_proxy 192.168.20.62:30100 192.168.20.62:30102 {
+            lb_policy first
+        }
     }
 }
 

@@ -1,0 +1,29 @@
+{
+  "jobs": [
+    {
+      "name": "karakeep",
+      "type": "bind",
+      "targets": ["/mnt/swarm-data/karakeep"]
+    },
+    {
+      "name": "karakeep-meilisearch",
+      "type": "bind",
+      "targets": ["/mnt/swarm-data/karakeep-meilisearch"]
+    },
+    {
+      "name": "ntfy",
+      "type": "volume",
+      "targets": ["ntfy_ntfy-data"]
+    },
+    {
+      "name": "audiobookshelf",
+      "type": "bind",
+      "targets": ["/mnt/swarm-data/audiobookshelf"]
+    },
+    {
+      "name": "immich-postgres",
+      "type": "volume",
+      "targets": ["immich-swarm_postgres_data"]
+    }
+  ]
+}

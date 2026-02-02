@@ -1,0 +1,9 @@
+{
+  "jobs": [
+    {
+      "name": "papra",
+      "type": "bind",
+      "targets": ["/mnt/swarm-data/papra"]
+    }
+  ]
+}

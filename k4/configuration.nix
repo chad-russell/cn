@@ -8,8 +8,8 @@
     ../common/network-optimizations.nix
     ../common/nfs-backup-mount.nix
     ../common/elitedesk-fixes.nix
-    # Backup module
-    ../modules/container-backup.nix
+    # Backup system (restic-based)
+    ../modules/restic-backup.nix
   ];
 
   # Set your hostname.
@@ -45,17 +45,19 @@
 
   # networking.firewall.allowedTCPPorts = [ 80 443 ];
 
-  # k3s HA cluster configuration
-  services.k3sHA = {
-    enable = true;
-    nodeIP = "192.168.20.64";
-    tokenFile = "/var/lib/rancher/k3s/cluster-token";
-  };
+  # k3s HA cluster configuration (deactivated)
+  # services.k3sHA = {
+  #   enable = true;
+  #   nodeIP = "192.168.20.64";
+  #   tokenFile = "/var/lib/rancher/k3s/cluster-token";
+  # };
 
-  # Enable the Python backup script timer
-  services.containerBackup = {
+  # Enable restic backups
+  services.resticBackup = {
     enable = true;
-    scriptPath = "/home/crussell/cn/docker/backup.py";
-    configPath = "/home/crussell/cn/k4/docker/backup-config.json";
+    configFile = ../backups/restic/k4.json;
+    passwordFile = "/etc/restic-password";
+    repository = "/mnt/backups/restic";
+    schedule = "03:00:00";
   };
 }
