@@ -346,7 +346,7 @@ ssh -i ~/.ssh/id_ed25519 k2 "sudo restic snapshots --repo /mnt/backups/restic --
      "post_start": "container-name"
    }
    ```
-4. Test backup: `sudo /opt/restic-backup.sh`
+4. Test backup
 5. Verify backup: `restic snapshots --tag service-name`
 6. Update AGENTS.md with service details
 

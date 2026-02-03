@@ -1,0 +1,177 @@
+{
+  "name": "Peekaping Monitors",
+  "version": "1.0",
+  "description": "All Caddyfile services for Peekaping monitoring",
+  "base_url": "https://peekaping.internal.crussell.io",
+  "recommended_settings": {
+    "type": "http",
+    "interval_seconds": 30,
+    "timeout_seconds": 10,
+    "retries": 3,
+    "down_threshold": 3,
+    "up_threshold": 2,
+    "resend_interval_minutes": 5
+  },
+  "services": [
+    {
+      "category": "internal",
+      "name": "OpenClaw",
+      "url": "https://openclaw.internal.crussell.io",
+      "description": "AI Gateway",
+      "backend": "100.94.236.19:18789"
+    },
+    {
+      "category": "internal",
+      "name": "Karakeep",
+      "url": "https://karakeep.internal.crussell.io",
+      "description": "Bookmark manager",
+      "backend": "192.168.20.62:30092"
+    },
+    {
+      "category": "internal",
+      "name": "Linkding",
+      "url": "https://linkding.internal.crussell.io",
+      "description": "Bookmark manager",
+      "backend": "192.168.20.62:30090"
+    },
+    {
+      "category": "internal",
+      "name": "Papra",
+      "url": "https://papra.internal.crussell.io",
+      "description": "Habit tracker",
+      "backend": "192.168.20.62:30091"
+    },
+    {
+      "category": "internal",
+      "name": "Ntfy",
+      "url": "https://ntfy.internal.crussell.io",
+      "description": "Push notifications",
+      "backend": "192.168.20.62:30085"
+    },
+    {
+      "category": "internal",
+      "name": "SearXNG",
+      "url": "https://searxng.internal.crussell.io",
+      "description": "Privacy-focused search",
+      "backend": "192.168.20.62:30084"
+    },
+    {
+      "category": "internal",
+      "name": "Peekaping",
+      "url": "https://peekaping.internal.crussell.io",
+      "description": "Uptime monitoring (self)",
+      "backend": "192.168.20.62:30087",
+      "skip_monitoring": true
+    },
+    {
+      "category": "internal",
+      "name": "Dozzle",
+      "url": "https://dozzle.internal.crussell.io",
+      "description": "Docker logs viewer",
+      "backend": "192.168.20.62:8080"
+    },
+    {
+      "category": "internal",
+      "name": "Audiobookshelf",
+      "url": "https://audiobookshelf.internal.crussell.io",
+      "description": "Audiobook server",
+      "backend": "192.168.20.62:30337"
+    },
+    {
+      "category": "internal",
+      "name": "Beszel",
+      "url": "https://beszel.internal.crussell.io",
+      "description": "Server monitoring",
+      "backend": "192.168.20.64:8090"
+    },
+    {
+      "category": "internal",
+      "name": "qBittorrent",
+      "url": "https://qbittorrent.internal.crussell.io",
+      "description": "Torrent client (k1)",
+      "backend": "192.168.20.61:8080"
+    },
+    {
+      "category": "internal",
+      "name": "Sonarr",
+      "url": "https://sonarr.internal.crussell.io",
+      "description": "TV shows manager (k1)",
+      "backend": "192.168.20.61:8989"
+    },
+    {
+      "category": "internal",
+      "name": "Radarr",
+      "url": "https://radarr.internal.crussell.io",
+      "description": "Movies manager (k1)",
+      "backend": "192.168.20.61:7878"
+    },
+    {
+      "category": "internal",
+      "name": "Prowlarr",
+      "url": "https://prowlarr.internal.crussell.io",
+      "description": "Media indexer (k1)",
+      "backend": "192.168.20.61:9696"
+    },
+    {
+      "category": "internal",
+      "name": "Jellyseerr",
+      "url": "https://jellyseerr.internal.crussell.io",
+      "description": "Media requests (k1)",
+      "backend": "192.168.20.61:5055"
+    },
+    {
+      "category": "internal",
+      "name": "AdGuard",
+      "url": "https://adguard.internal.crussell.io",
+      "description": "DNS/Ad blocking",
+      "backend": "192.168.20.62:30100/30102"
+    },
+    {
+      "category": "public",
+      "name": "HomeAssistant",
+      "url": "https://homeassistant.crussell.io",
+      "description": "Smart home automation",
+      "backend": "192.168.20.51:8123"
+    },
+    {
+      "category": "public",
+      "name": "Jellyfin",
+      "url": "https://jellyfin.crussell.io",
+      "description": "Media server",
+      "backend": "192.168.20.61:8096"
+    },
+    {
+      "category": "public",
+      "name": "n8n",
+      "url": "https://n8n.crussell.io",
+      "description": "Workflow automation",
+      "backend": "192.168.20.63:5678"
+    },
+    {
+      "category": "public",
+      "name": "Photos",
+      "url": "https://photos.crussell.io",
+      "description": "Photo management (Immich)",
+      "backend": "192.168.20.62:30093"
+    },
+    {
+      "category": "public",
+      "name": "Chex Mix Timer",
+      "url": "https://chex-mix-timer.crussell.io",
+      "description": "Recipe timer",
+      "backend": "192.168.20.64:8732"
+    }
+  ],
+  "alert_channels": {
+    "telegram": {
+      "enabled": true,
+      "bot_creation": "https://t.me/BotFather",
+      "chat_id_finder": "https://t.me/userinfobot"
+    },
+    "ntfy": {
+      "enabled": true,
+      "server": "https://ntfy.internal.crussell.io",
+      "topics": ["peekaping-alerts", "wavy-dave"]
+    }
+  }
+}

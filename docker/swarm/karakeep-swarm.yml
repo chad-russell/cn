@@ -13,6 +13,12 @@ services:
       - /mnt/swarm-data/karakeep:/data
     ports:
       - "30092:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       replicas: 1
       placement:
@@ -49,6 +55,12 @@ services:
       - MEILI_MASTER_KEY=karakeep-swarm-master-key-change-me
     volumes:
       - /mnt/swarm-data/karakeep-meilisearch:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       replicas: 1
       placement:

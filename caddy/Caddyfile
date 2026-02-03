@@ -44,6 +44,11 @@
         reverse_proxy 192.168.20.62:30084
     }
 
+    @peekaping host peekaping.internal.crussell.io
+    handle @peekaping {
+        reverse_proxy 192.168.20.62:30087
+    }
+
     @dozzle host dozzle.internal.crussell.io
     handle @dozzle {
         reverse_proxy 192.168.20.62:8080

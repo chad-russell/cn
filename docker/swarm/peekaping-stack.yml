@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  peekaping:
+    image: 0xfurai/peekaping-bundle-sqlite:latest
+    environment:
+      - DB_NAME=/app/data/peekaping.db
+      - TZ=America/New_York
+    volumes:
+      - peekaping-data:/app/data
+    ports:
+      - "30087:8383"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.node.name == k2
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8383/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  peekaping-data:
+    driver: local

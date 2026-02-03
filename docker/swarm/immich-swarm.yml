@@ -13,6 +13,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - /tmp/postgresql-immich.conf:/etc/postgresql/postgresql.conf
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U immich -d immich"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - immich
     deploy:
@@ -32,6 +37,11 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     networks:
       - immich
     deploy:
@@ -71,6 +81,12 @@ services:
         published: 30093
         protocol: tcp
         mode: host
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:2283/api/server-info/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - immich
     depends_on:

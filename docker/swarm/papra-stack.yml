@@ -11,6 +11,12 @@ services:
       - papra-data:/app/app-data
     ports:
       - "30083:1221"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:1221/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       mode: replicated
       replicas: 1
