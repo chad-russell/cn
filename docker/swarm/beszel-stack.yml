@@ -24,8 +24,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/beszel-agent:/var/lib/beszel-agent
-    networks:
-      - dozzle
     deploy:
       mode: global
       restart_policy:
@@ -34,7 +32,3 @@ services:
 volumes:
   beszel-data:
     driver: local
-
-networks:
-  dozzle:
-    external: true
