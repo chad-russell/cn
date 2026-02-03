@@ -72,7 +72,7 @@
   services.beszel.agent = {
     enable = true;
     openFirewall = false;
-    smartmon.enable = true;
     environmentFile = /etc/beszel-agent.env;
+    extraPath = [ pkgs.smartmontools ];
   };
 }
