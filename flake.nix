@@ -11,7 +11,7 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     nixpkgs-latest.url = "github:nixos/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     
@@ -31,7 +31,7 @@
 
   outputs = { self, nixpkgs, nixpkgs-latest, nixpkgs-unstable, home-manager, disko, nixos-anywhere, llm-agents, opencode, nixvim }: {
     # k2 configuration
-    nixosConfigurations.k2 = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.k2 = nixpkgs-latest.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit disko; };
       modules = [
@@ -43,7 +43,7 @@
     };
 
     # k3 configuration
-    nixosConfigurations.k3 = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.k3 = nixpkgs-latest.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit disko; };
       modules = [
@@ -55,7 +55,7 @@
     };
 
     # k4 configuration
-    nixosConfigurations.k4 = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.k4 = nixpkgs-latest.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit disko; };
       modules = [
