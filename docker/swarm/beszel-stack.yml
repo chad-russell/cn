@@ -8,7 +8,7 @@ services:
     volumes:
       - beszel-data:/beszel_data
     networks:
-      - dozzle
+      - dozzle_dozzle
     deploy:
       mode: replicated
       replicas: 1
@@ -20,10 +20,14 @@ services:
 
   beszel-agent:
     image: henrygd/beszel-agent:latest
-    network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/beszel-agent:/var/lib/beszel-agent
+    environment:
+      - HUB_URL=http://beszel:8090
+      - LISTEN=0.0.0.0:45876
+    networks:
+      - dozzle_dozzle
     deploy:
       mode: global
       restart_policy:
@@ -32,3 +36,7 @@ services:
 volumes:
   beszel-data:
     driver: local
+
+networks:
+  dozzle_dozzle:
+    external: true
