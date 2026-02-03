@@ -458,3 +458,52 @@ Generated `.desktop` files follow XDG specification:
 - "System" - System utilities
 
 Full list: https://specifications.freedesktop.org/menu-spec/latest/apa.html
+
+## Peekaping (Uptime Monitoring)
+
+**Purpose:** Self-hosted uptime monitoring with REST API for Docker Swarm services
+
+**Deployment:**
+- Stack: `docker/swarm/peekaping-stack.yml`
+- Port: 30087 (internal)
+- URL: https://peekaping.internal.crussell.io
+- Database: SQLite (volume: peekaping-data)
+
+**Skills:**
+- Management skill: `/var/home/linuxbrew/.linuxbrew/lib/node_modules/openclaw/skills/peekaping/SKILL.md`
+- API setup script: `docker/swarm/add-peekaping-monitors-api.sh`
+- Setup guide script: `docker/swarm/setup-peekaping-monitors.sh`
+- Monitor JSON: `docker/swarm/peekaping-monitors.json`
+
+**Services Monitored (22 total):**
+- Internal domain (`*.internal.crussell.io`): 18 services
+- Public domain (`*.crussell.io`): 4 services
+- All services routed through Caddy reverse proxy
+
+**API Credentials:**
+- Key ID: `b3377891-0811-4da3-95d9-147f0c333ce9`
+- Key Secret: `pryKw3pLoYFw9uC0vGu2mezoPDSTrmViD8ljCd9iNwg=`
+
+**Usage:**
+```bash
+# Run API setup script
+cd /home/crussell/Code/cn/docker/swarm
+./add-peekaping-monitors-api.sh
+
+# Check Peekaping status
+curl -s https://peekaping.internal.crussell.io/api/v1/monitors \
+  -H "X-API-Key-ID: b3377891-0811-4da3-95d9-147f0c333ce9" \
+  -H "X-API-Key-Secret: pryKw3pLoYFw9uC0vGu2mezoPDSTrmViD8ljCd9iNwg="
+```
+
+**Alert Channels:**
+- Telegram (recommended): Create bot via @BotFather, add chat ID from https://t.me/userinfobot
+- NTFY (self-hosted): Server: https://ntfy.internal.crussell.io, Topic: peekaping-alerts or wavy-dave
+
+**Docker Health Checks:**
+Added to swarm stacks:
+- Karakeep (main + meilisearch): HTTP health checks
+- Immich (postgres, redis, server): pg_isready, redis-cli ping, HTTP ping
+- SearXNG: HTTP /healthz endpoint
+- Papra: HTTP root endpoint
+- Ntfy: HTTP /v1 API endpoint
