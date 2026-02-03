@@ -36,6 +36,75 @@ This is a collection of infrastructure and configuration files for a homelab env
 | think | - | Custom Bluefin Setup | Laptop | ThinkPad T14 - portable development. Config at `/var/home/crussell/Code/crussell-fin` |
 | Cluster VIP | 192.168.20.32 | Virtual | K3s HA endpoint | kube-vip managed IP |
 
+## Remote Deployment Workflow
+
+When making changes to NixOS configs or Docker Swarm stacks for k2/k3/k4, follow this workflow:
+
+### General Pattern
+
+1. Make changes locally (edit files in `k2/`, `k3/`, `k4/`, or `docker/swarm/`)
+2. Commit and push changes: `git add . && git commit -m "description" && git push`
+3. Pull changes on remote nodes using the helper script
+4. Apply changes (nixos-rebuild switch, docker stack deploy, etc.)
+
+### Helper Scripts
+
+The `scripts/` directory contains helper scripts for remote deployment:
+
+```bash
+# Pull latest changes on all nodes (or specific nodes)
+./scripts/pull-nodes.sh          # Pull on k2, k3, k4
+./scripts/pull-nodes.sh k2 k4    # Pull only on k2 and k4
+
+# Deploy Docker Swarm stack (runs on k2, manages cluster)
+./scripts/deploy-stack.sh dozzle-stack.yml
+./scripts/deploy-stack.sh beszel-stack.yml beszel
+
+# Apply NixOS config to remote nodes
+./scripts/apply-nixos.sh k2
+./scripts/apply-nixos.sh k2 k3 k4
+```
+
+All scripts use SSH key `~/.ssh/id_ed25519` and connect as `crussell` user. They automatically handle proper SSH options to avoid authentication issues.
+
+### Common Deployment Tasks
+
+**Docker Swarm Stacks:**
+- Stack files are located in `docker/swarm/`
+- Deployed from k2 (Swarm manager)
+- All nodes must have latest code before deploying
+- Example: `./scripts/pull-nodes.sh && ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes crussell@192.168.20.62 "cd /home/crussell/cn/docker/swarm && docker stack deploy -c dozzle-stack.yml dozzle"`
+
+**NixOS Configuration Changes:**
+- Node-specific configs: `k2/`, `k3/`, `k4/`
+- Common modules: `common/`, `modules/`
+- Must pull on target node before applying
+- Example: `./scripts/pull-nodes.sh && ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes crussell@192.168.20.62 "cd /home/crussell/cn && sudo nixos-rebuild switch --flake .#k2"`
+
+**Caddy Reverse Proxy:**
+- Config: `caddy/Caddyfile`
+- Update script: `./caddy/update_caddy.sh`
+- Script copies Caddyfile to k2 and restarts container
+
+### SSH Configuration
+
+- SSH key: `~/.ssh/id_ed25519`
+- Username: `crussell` (use `-o IdentitiesOnly=yes` to avoid agent issues)
+- Root access for some operations (prefix with `sudo`)
+- IP addresses: k2=192.168.20.62, k3=192.168.20.63, k4=192.168.20.64
+
+### Troubleshooting
+
+**SSH "Too many authentication failures":**
+Use `-o IdentitiesOnly=yes` with the ssh command to specify the exact key.
+
+**Merge conflicts on pull:**
+Remove untracked files first: `rm <untracked-file>` then pull again.
+
+**Docker Swarm service not starting:**
+Check logs: `docker service logs <service-name>`
+Check task status: `docker service ps <service-name>`
+
 ## Build/Test Commands
 
 This repository uses NixOS and has no traditional unit tests. Key commands:
