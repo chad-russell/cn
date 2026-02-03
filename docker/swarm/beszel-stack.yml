@@ -22,7 +22,7 @@ services:
     image: henrygd/beszel-agent:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/lib/beszel-agent:/var/lib/beszel-agent
+      - beszel-agent-data:/var/lib/beszel-agent
     environment:
       - HUB_URL=http://beszel:8090
       - LISTEN=0.0.0.0:45876
@@ -35,6 +35,8 @@ services:
 
 volumes:
   beszel-data:
+    driver: local
+  beszel-agent-data:
     driver: local
 
 networks:
