@@ -45,7 +45,7 @@
   };
 
   # Enable Beszel agent (monitoring)
-  services.beszel.agent = {
+  services.beszel-agent = {
     enable = true;
     openFirewall = false;
     smartmon.enable = true;
