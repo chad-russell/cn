@@ -58,10 +58,44 @@ ssh root@192.168.20.31 "cd /mnt/tank/docker/beszel && docker compose up -d"
 
 ## Troubleshooting
 
-**Agent shows 401 error:**
+**Agent shows 401 error (Authentication failed):**
 - Verify TOKEN in docker-compose.yml matches what's in Beszel UI
 - Verify KEY matches exactly (copy/paste from this file)
 - Verify HUB_URL is correct: `http://192.168.20.64:8090`
+- **Check system status in Beszel UI**: Verify the "nas" system shows as "Connected"
+- Try regenerating the token in Beszel UI if connection fails
+- If 401 persists, try deleting the system in Beszel UI and re-adding it
+
+**Agent cannot connect to hub:**
+- Check network connectivity: `ssh root@192.168.20.31 "ping 192.168.20.64"`
+- Verify TrueNAS firewall allows connections on port 45876 (outbound to hub) and 8090 (inbound if needed)
+- Check hub is running: `curl http://192.168.20.64:8090`
+
+**Docker socket errors:**
+- Verify TrueNAS Docker is enabled and running
+- Check `/var/run/docker.sock` is accessible on TrueNAS
+- Ensure TrueNAS user running the container has proper Docker permissions
+
+**Viewing agent logs for detailed error info:**
+```bash
+ssh root@192.168.20.31 "docker logs -f beszel-agent"
+```
+
+**Check if agent is running:**
+```bash
+ssh root@192.168.20.31 "docker ps | grep beszel"
+```
+
+**Check connectivity from TrueNAS to hub:**
+```bash
+ssh root@192.168.20.31 "curl -v http://192.168.20.64:8090"
+```
+
+**Common 401 error causes:**
+- Token was regenerated in Beszel UI but not updated in docker-compose.yml
+- System in Beszel UI was deleted and re-added with new token
+- Token has extra whitespace or special characters (copy exactly from Beszel UI)
+- Beszel hub was restarted or upgraded, invalidating old tokens
 
 **Agent cannot connect to hub:**
 - Check network connectivity: `ssh root@192.168.20.31 "ping 192.168.20.64"`
