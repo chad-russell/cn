@@ -60,4 +60,19 @@
     repository = "/mnt/backups/restic";
     schedule = "03:00:00";
   };
+
+  # Enable Beszel hub (monitoring server)
+  services.beszel.hub = {
+    enable = true;
+    host = "0.0.0.0";
+    port = 8090;
+  };
+
+  # Enable Beszel agent on k4 too
+  services.beszel.agent = {
+    enable = true;
+    openFirewall = false;
+    smartmon.enable = true;
+    environmentFile = /etc/beszel-agent.env;
+  };
 }

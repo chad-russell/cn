@@ -37,4 +37,12 @@
     repository = "/mnt/backups/restic";
     schedule = "03:00:00";
   };
+
+  # Enable Beszel agent (monitoring)
+  services.beszel.agent = {
+    enable = true;
+    openFirewall = false;
+    smartmon.enable = true;
+    environmentFile = /etc/beszel-agent.env;
+  };
 }
