@@ -1,0 +1,11 @@
+import brunchConfig from "./brunch.bri";
+
+export const project = {
+  name: "brunch-default",
+  version: "0.0.1",
+  dependencies: {
+    brunch: { path: "../src" },
+  },
+};
+
+export default brunchConfig;

@@ -1,0 +1,45 @@
+import * as std from "std";
+
+export interface BrunchFile {
+  path: string;
+  content: std.RecipeLike<std.File>;
+}
+
+export function makeFiles(
+  files: Record<string, std.RecipeLike<std.File | std.Directory>>,
+): std.Recipe<std.Directory> {
+  const rootEntries: Record<string, std.Recipe<std.Directory | std.File>> = {};
+  const homeEntries: Record<string, std.Recipe<std.Directory | std.File>> = {};
+
+  for (const [path, content] of Object.entries(files)) {
+    const recipe = std.recipe(content);
+
+    if (path.startsWith("/")) {
+      // Absolute path -> root
+      // Strip leading slash for key
+      rootEntries[path.replace(/^\/+/, "")] = recipe;
+    } else {
+      // Relative path -> home
+      homeEntries[path] = recipe;
+    }
+  }
+
+  const dirs: Record<string, std.Recipe<std.Directory>> = {};
+
+  if (Object.keys(rootEntries).length > 0) {
+    dirs["root"] = std.directory(rootEntries);
+  }
+
+  if (Object.keys(homeEntries).length > 0) {
+    dirs["home"] = std.directory(homeEntries);
+  }
+
+  if (Object.keys(dirs).length === 0) {
+    return std.directory({});
+  }
+
+  // Wrap in "files" directory containing "root" and/or "home"
+  return std.directory({
+    files: std.directory(dirs),
+  });
+}

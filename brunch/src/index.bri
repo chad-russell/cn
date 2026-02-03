@@ -1,0 +1,48 @@
+import * as std from "std";
+import { makeDesktopApps, type BrunchDesktopApp } from "./desktop_apps.bri";
+import { makeFiles } from "./files.bri";
+import { makeCliTools, type BrunchCliTool } from "./cli_tools.bri";
+
+export { makeDesktopApps, type BrunchDesktopApp } from "./desktop_apps.bri";
+export { makeFiles } from "./files.bri";
+export { makeCliTools, type BrunchCliTool } from "./cli_tools.bri";
+
+export interface BrunchConfig {
+  /**
+   * Desktop applications to install
+   */
+  desktopApps?: BrunchDesktopApp[];
+
+  /**
+   * CLI tools to install (symlinked to ~/.local/bin)
+   */
+  cliTools?: BrunchCliTool[];
+
+  /**
+   * Files to manage (map of absolute path -> content)
+   * Can be either files or directories
+   */
+  files?: Record<string, std.RecipeLike<std.File | std.Directory>>;
+}
+
+export function makeBrunch(config: BrunchConfig): std.Recipe<std.Directory> {
+  const parts: std.Recipe<std.Directory>[] = [];
+
+  if (config.desktopApps !== undefined && config.desktopApps.length > 0) {
+    parts.push(makeDesktopApps(config.desktopApps));
+  }
+
+  if (config.cliTools !== undefined && config.cliTools.length > 0) {
+    parts.push(makeCliTools(config.cliTools));
+  }
+
+  if (config.files !== undefined && Object.keys(config.files).length > 0) {
+    parts.push(makeFiles(config.files));
+  }
+
+  if (parts.length === 0) {
+    return std.directory({});
+  }
+
+  return std.merge(...parts);
+}

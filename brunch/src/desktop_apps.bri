@@ -1,0 +1,93 @@
+import * as std from "std";
+
+export interface BrunchDesktopApp {
+  /**
+   * Display name for application (shown in desktop menu, window title, etc.)
+   */
+  name: string;
+
+  /**
+   * The executable to run. Should be a runnable directory recipe
+   * (e.g., from `std.bashRunnable`, `cargoBuild`, or any brioche package).
+   * The directory should have a `brioche-run` entry point following Brioche's
+   * runnable convention.
+   */
+  executable: std.RecipeLike<std.Directory>;
+
+  /**
+   * The icon file (SVG or PNG). Will be placed in the standard XDG icon path.
+   */
+  icon: std.RecipeLike<std.File>;
+
+  /**
+   * Optional icon extension override ("svg" or "png").
+   * Defaults to "svg" if not specified.
+   */
+  iconExt?: "svg" | "png";
+
+  /**
+   * Short description/comment for the desktop entry.
+   */
+  comment?: string;
+
+  /**
+   * Desktop entry categories (e.g., "Development", "Utility", "System").
+   * Multiple categories should be separated by semicolons.
+   */
+  categories?: string[];
+}
+
+/**
+ * Create a directory containing desktop application files.
+ *
+ * Generates:
+ * - bin/[app-name] - Executable binary (with execute permissions)
+ * - share/applications/[app-name].desktop - XDG desktop entry file
+ * - share/icons/hicolor/scalable/apps/[app-name].svg (or .png) - Icon file
+ *
+ * Output follows XDG Base Directory specification:
+ * https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+ *
+ * @param apps - Array of desktop app definitions
+ * @returns A directory recipe with the structured output
+ */
+export function makeDesktopApps(apps: BrunchDesktopApp[]): std.Recipe<std.Directory> {
+  const appDirs = apps.map((app) => {
+    // Get the executable directory (should have brioche-run entry point)
+    const executableDirectory = std.recipe(app.executable);
+
+    // Get the icon file
+    const icon = std.recipe(app.icon).pipe(std.castToFile);
+
+    const iconExt = app.iconExt ?? "svg";
+
+    // Generate desktop entry file content
+    const categoriesStr = (app.categories ?? []).join(";");
+    const desktopEntry = std.file(std.indoc`
+      [Desktop Entry]
+      Type=Application
+      Name=${app.name}
+      Comment=${app.comment ?? ""}
+      Exec=${app.name}
+      Icon=${app.name}
+      Terminal=false
+      Categories=${categoriesStr};
+    `);
+
+    // Create a symlink from bin/${app.name} to the executable's brioche-run
+    // The executable directory is included so its contents are available at runtime
+    const targetPath = `../brioche-executables/${app.name}/brioche-run`;
+    const executableSymlink = std.symlink({ target: targetPath });
+
+    // Build the directory structure for this app
+    return std.directory({
+      [`bin/${app.name}`]: executableSymlink,
+      [`brioche-executables/${app.name}`]: executableDirectory,
+      [`share/applications/${app.name}.desktop`]: desktopEntry,
+      [`share/icons/hicolor/scalable/apps/${app.name}.${iconExt}`]: icon,
+    });
+  });
+
+  // Merge all app directories into one
+  return std.merge(...appDirs);
+}

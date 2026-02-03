@@ -1,0 +1,154 @@
+// Niri configuration file
+// Translated from Nix base-desktop-home.nix
+
+input {
+    keyboard {
+        xkb {
+            layout "us"
+            options "caps:swapescape"
+        }
+    }
+
+    touchpad {
+        tap
+        natural-scroll
+        scroll-factor 0.18
+    }
+}
+
+output "eDP-1" {
+    mode "1920x1200@60"
+    scale 1.25
+    position x=0 y=0
+}
+
+output "DP-3" {
+    mode "1920x1080@60"
+    scale 1.0
+    position x=1536 y=0
+}
+
+output "DP-4" {
+    mode "1920x1080@60"
+    scale 1.0
+    position x=0 y=0
+}
+
+layout {
+    gaps 8
+    focus-ring {
+        width 2
+    }
+}
+
+spawn-at-startup "xwayland-satellite"
+spawn-at-startup "vicinae" "server"
+
+prefer-no-csd
+
+screenshot-path "~/Pictures/Screenshots/%Y-%m-%d %H-%M-%S.png"
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+cursor {
+    xcursor-theme "Bibata-Modern-Classic"
+    xcursor-size 18
+}
+
+window-rule {
+    geometry-corner-radius 12
+    clip-to-geometry true
+}
+
+window-rule {
+    match app-id="^firefox$" title="^Picture-in-Picture$"
+    open-floating true
+}
+
+binds {
+    // Window/column navigation
+    Mod+Left  { focus-column-left; }
+    Mod+Down  { focus-window-down; }
+    Mod+Up    { focus-window-up; }
+    Mod+Right { focus-column-right; }
+    Mod+H     { focus-column-left; }
+    Mod+J     { focus-window-down; }
+    Mod+K     { focus-window-up; }
+    Mod+L     { focus-column-right; }
+    Mod+O     { toggle-overview; }
+
+    // Window/column movement
+    Mod+Ctrl+Left  { move-column-left; }
+    Mod+Ctrl+Right { move-column-right; }
+    Mod+Ctrl+H     { move-column-left; }
+    Mod+Ctrl+L     { move-column-right; }
+    Mod+BracketLeft  { consume-or-expel-window-left; }
+    Mod+BracketRight { consume-or-expel-window-right; }
+    Mod+Ctrl+Down { move-column-to-workspace-down; }
+    Mod+Ctrl+J    { move-column-to-workspace-down; }
+    Mod+Ctrl+Up   { move-column-to-workspace-up; }
+    Mod+Ctrl+K    { move-column-to-workspace-up; }
+
+    // Window sizing
+    Mod+Minus { set-column-width "-10%"; }
+    Mod+Equal { set-column-width "+10%"; }
+    Mod+Shift+Minus { set-window-height "-10%"; }
+    Mod+Shift+Equal { set-window-height "+10%"; }
+
+    // Window actions
+    Mod+P { screenshot; }
+    Mod+V { toggle-window-floating; }
+    Mod+Shift+V { switch-focus-between-floating-and-tiling; }
+    Mod+Q { close-window; }
+    Mod+X { maximize-column; }
+    Mod+Shift+F { fullscreen-window; }
+
+    // Workspace switcher (vicinae)
+    Mod+Space { spawn "vicinae" "toggle"; }
+
+    // Monitor navigation
+    Mod+Shift+Left  { focus-monitor-left; }
+    Mod+Shift+H     { focus-monitor-left; }
+    Mod+Shift+Down  { focus-monitor-down; }
+    Mod+Shift+J     { focus-workspace-down; }
+    Mod+Shift+Up    { focus-monitor-up; }
+    Mod+Shift+K     { focus-workspace-up; }
+    Mod+Shift+Right { focus-monitor-right; }
+    Mod+Shift+L     { focus-monitor-right; }
+
+    // Move to monitor
+    Mod+Shift+Ctrl+Left  { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+Down  { move-column-to-monitor-down; }
+    Mod+Shift+Ctrl+Up    { move-column-to-monitor-up; }
+    Mod+Shift+Ctrl+Right { move-column-to-monitor-right; }
+    Mod+Shift+Ctrl+H     { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+J     { move-column-to-monitor-down; }
+    Mod+Shift+Ctrl+K     { move-column-to-monitor-up; }
+    Mod+Shift+Ctrl+L     { move-column-to-monitor-right; }
+
+    // Power Control
+    Mod+Shift+P { power-off-monitors; }
+
+    // DMS keybinds
+    Mod+N     { spawn "dms" "ipc" "notifications" "toggle"; }
+    Mod+Comma { spawn "dms" "ipc" "settings" "toggle"; }
+    Super+Alt+L { spawn "dms" "ipc" "lock" "lock"; }
+    Mod+M     { spawn "dms" "ipc" "processlist" "toggle"; }
+    Mod+Alt+N { spawn "dms" "ipc" "night" "toggle"; }
+    Mod+E     { spawn "dms" "ipc" "powermenu" "toggle"; }
+
+    // Applications
+    Mod+T { spawn "wezterm"; }
+    Mod+B { spawn "flatpak" "run" "app.zen_browser.zen"; }
+    Mod+F { spawn "nautilus" "--new-window"; }
+
+    // Media keys (DMS)
+    XF86AudioRaiseVolume { spawn "dms" "ipc" "audio" "increment" "3"; }
+    XF86AudioLowerVolume { spawn "dms" "ipc" "audio" "decrement" "3"; }
+    XF86AudioMute        { spawn "dms" "ipc" "audio" "mute"; }
+    XF86AudioMicMute     { spawn "dms" "ipc" "audio" "micmute"; }
+    XF86MonBrightnessUp   { spawn "dms" "ipc" "brightness" "increment" "5" ""; }
+    XF86MonBrightnessDown { spawn "dms" "ipc" "brightness" "decrement" "5" ""; }
+}

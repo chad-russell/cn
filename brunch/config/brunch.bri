@@ -1,0 +1,173 @@
+import * as std from "std";
+import { makeBrunch } from "brunch";
+import eza from "eza";
+import oh_my_posh from "oh_my_posh";
+import zoxide from "zoxide";
+
+// ============== Downloads ==============
+
+const appImage = std
+  .runBash`
+    cp "$RAW_APPIMAGE" "$BRIOCHE_OUTPUT"
+    chmod +x "$BRIOCHE_OUTPUT"
+  `
+  .env({ RAW_APPIMAGE: std.download({
+    url: "https://github.com/wezterm/wezterm/releases/download/20240203-110809-5046fc22/WezTerm-20240203-110809-5046fc22-Ubuntu20.04.AppImage",
+    hash: std.sha256Hash(
+      "34010a07076d2272c4d4f94b5e0dae608a679599e8d729446323f88f956c60f0",
+    ),
+  }) })
+  .toFile();
+
+const vicinaeAppImage = std
+  .runBash`
+    cp "$RAW_APPIMAGE" "$BRIOCHE_OUTPUT"
+    chmod +x "$BRIOCHE_OUTPUT"
+  `
+  .env({ RAW_APPIMAGE: std.download({
+    url: "https://github.com/vicinaehq/vicinae/releases/download/v0.19.3/Vicinae-x86_64.AppImage",
+    hash: std.sha256Hash(
+      "72c22d58b6180a96ebeaf511c3ffc68b120c9f49cb49761796e1341538a587db",
+    ),
+  }) })
+  .toFile();
+
+const vicinaeWrapper = std
+  .runBash`
+    cat > "$BRIOCHE_OUTPUT" << 'EOF'
+#!/bin/bash
+export IGNORE_APPIMAGE_WARNING=1
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+exec "$SCRIPT_DIR/vicinae.AppImage" "$@"
+EOF
+    chmod +x "$BRIOCHE_OUTPUT"
+  `
+  .toFile();
+
+const icon = std.download({
+  url: "https://user-images.githubusercontent.com/18397/185704412-007ca0a2-8778-496e-b002-51f324bdd6b7.png",
+  hash: std.sha256Hash(
+    "6bd6832408253ea6ed1f189767184954315acfa6300d50af669fceb1b878315d",
+  ),
+});
+
+// ============== Vendored Zsh Plugins ==============
+
+// zsh-autosuggestions - provides as-you-type command suggestions
+const zshAutosuggestionsSource = Brioche.gitCheckout({
+  repository: "https://github.com/zsh-users/zsh-autosuggestions.git",
+  ref: "v0.7.1",
+});
+
+// zsh-syntax-highlighting - highlights commands as they're typed
+const zshSyntaxHighlightingSource = Brioche.gitCheckout({
+  repository: "https://github.com/zsh-users/zsh-syntax-highlighting.git",
+  ref: "0.8.0",
+});
+
+// ============== Zsh Configuration Files ==============
+
+// Zsh configuration directory (contains zshrc/, conf.d/, etc.)
+const zshConfig = Brioche.includeDirectory("./zsh");
+
+// Merge zsh config with plugins
+const zshConfigWithPlugins = std.merge(
+  zshConfig,
+  std.directory({
+    "zshrc/plugins/zsh-autosuggestions": zshAutosuggestionsSource,
+    "zshrc/plugins/zsh-syntax-highlighting": zshSyntaxHighlightingSource,
+  }),
+);
+
+// .zshenv - Must be in $HOME for zsh to find it (sets ZDOTDIR)
+const zshEnv = Brioche.includeFile("./zsh/.zshenv");
+
+// ============== Other Configuration Files ==============
+
+const weztermConfig = Brioche.includeFile("./wezterm/wezterm.lua");
+const niriConfig = Brioche.includeFile("./niri/config.kdl");
+const ohMyPoshTheme = Brioche.includeFile("./oh-my-posh/config.json");
+
+// ============== Neovim Configuration Files ==============
+
+const nvimConfig = Brioche.includeDirectory("./nvim");
+
+// ============== Main Brunch Configuration ==============
+
+export default function brunchConfig() {
+  return makeBrunch({
+    cliTools: [
+      {
+        name: "eza",
+        executable: eza(),
+      },
+      {
+        name: "oh-my-posh",
+        executable: oh_my_posh(),
+      },
+      {
+        name: "zoxide",
+        executable: zoxide(),
+      },
+      {
+        name: "vicinae",
+        executable: std.directory({
+          "vicinae.AppImage": vicinaeAppImage,
+          "brioche-run": vicinaeWrapper,
+        }),
+      },
+    ],
+    desktopApps: [
+      {
+        name: "wezterm",
+        executable: std.directory({
+          "wezterm.AppImage": appImage,
+          "brioche-run": std.symlink({ target: "wezterm.AppImage" }),
+        }),
+        icon,
+        iconExt: "png",
+        comment: "GPU-accelerated terminal emulator",
+        categories: ["System", "TerminalEmulator"],
+      },
+      {
+        name: "hello-world",
+        executable: std.bashRunnable`
+          echo "Hello, World!"
+          read -p "Press Enter to exit..."
+        `,
+        icon,
+        iconExt: "png",
+        comment: "A simple hello world app",
+        categories: ["Utility"],
+      },
+      {
+        name: "crussell",
+        executable: std.bashRunnable`echo "You are super awesome"`,
+        icon,
+        iconExt: "png",
+        comment: "Testing my Crussell skillz",
+        categories: ["System"],
+      },
+    ],
+    files: {
+      // Zsh configuration
+      // .zshenv must be in $HOME - it sets ZDOTDIR which points to .config/zsh/zshrc/
+      ".zshenv": zshEnv,
+      // Include all other zsh configuration files and directories (with plugins merged in)
+      ".config/zsh": zshConfigWithPlugins,
+
+      // Oh-my-posh theme configuration
+      ".config/oh-my-posh/config.json": ohMyPoshTheme,
+
+      // WezTerm config
+      ".config/wezterm/wezterm.lua": weztermConfig,
+
+      // Niri config
+      ".config/niri/config.kdl": niriConfig,
+
+      // Neovim configuration
+      // Include all nvim configuration files and directories
+      ".config/nvim": nvimConfig,
+    },
+  });
+}

@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "eza": "6babfa1681ce1358d2a48abe5430ac7c53e37242e382ed088587b48cdf4d8cc2",
+    "oh_my_posh": "7ab7c16515c529979dbd39ea1dfa5d493bfb223f1775511894a2f8e6485269ff",
+    "std": "32f765284ddb56c3c6192c9ff700b7d10802977b3653e164671db7994b005267",
+    "zoxide": "3c8fe3e8364d8b9e29dd27ec1d1767d87422f8eb7c1a6fe5c202e249fa2bef63"
+  },
+  "git_refs": {
+    "https://github.com/zsh-users/zsh-autosuggestions.git": {
+      "v0.7.1": "e52ee8ca55bcc56a17c828767a3f98f22a68d4eb"
+    },
+    "https://github.com/zsh-users/zsh-syntax-highlighting.git": {
+      "0.8.0": "db085e4661f6aafd24e5acb5b2e17e4dd5dddf3e"
+    }
+  }
+}

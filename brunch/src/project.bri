@@ -1,0 +1,23 @@
+import * as std from "std";
+import { cargoBuild } from "rust";
+
+export const project = {
+  name: "brunch",
+  version: "0.0.1",
+  repository: "https://github.com/brioche-dev/brioche-packages",
+};
+
+// Build the Rust activator CLI tool
+const activator = cargoBuild({
+  source: Brioche.includeDirectory("activator"),
+  runnable: "bin/brunch",
+  unsafeGenerateLockfile: true,
+});
+
+export default function brunchPackage(): std.Recipe<std.Directory> {
+  return activator;
+}
+
+export { activator };
+export { makeBrunch, makeDesktopApps, makeFiles } from "./index.bri";
+export type { BrunchConfig, BrunchDesktopApp } from "./index.bri";

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "rust": "d4cf545c38e1296628401ac707dfdb6aa87e3adb4062bacdd7fa15f59f925b1f",
+    "std": "32f765284ddb56c3c6192c9ff700b7d10802977b3653e164671db7994b005267"
+  }
+}

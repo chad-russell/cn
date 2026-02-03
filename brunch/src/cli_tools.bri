@@ -1,0 +1,50 @@
+import * as std from "std";
+
+export interface BrunchCliTool {
+  /**
+   * Name of the tool (used for the symlink in bin/)
+   */
+  name: string;
+
+  /**
+   * The executable to run. Should be a runnable directory recipe
+   * (e.g., from `cargoBuild`, `goBuild`, or any brioche package).
+   * The directory should have a `brioche-run` entry point following Brioche's
+   * runnable convention.
+   */
+  executable: std.RecipeLike<std.Directory>;
+}
+
+/**
+ * Create a directory containing CLI tool executables.
+ *
+ * Generates:
+ * - bin/[tool-name] - Symlink to the tool's brioche-run
+ * - brioche-executables/[tool-name]/ - The actual tool directory
+ *
+ * Binaries are placed in the standard XDG bin directory:
+ * https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+ *
+ * @param tools - Array of CLI tool definitions
+ * @returns A directory recipe with the structured output
+ */
+export function makeCliTools(tools: BrunchCliTool[]): std.Recipe<std.Directory> {
+  const toolDirs = tools.map((tool) => {
+    // Get the executable directory (should have brioche-run entry point)
+    const executableDirectory = std.recipe(tool.executable);
+
+    // Create a symlink from bin/${tool.name} to the executable's brioche-run
+    // The executable directory is included so its contents are available at runtime
+    const targetPath = `../brioche-executables/${tool.name}/brioche-run`;
+    const executableSymlink = std.symlink({ target: targetPath });
+
+    // Build the directory structure for this tool
+    return std.directory({
+      [`bin/${tool.name}`]: executableSymlink,
+      [`brioche-executables/${tool.name}`]: executableDirectory,
+    });
+  });
+
+  // Merge all tool directories into one
+  return std.merge(...toolDirs);
+}
