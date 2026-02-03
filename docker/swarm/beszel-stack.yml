@@ -18,25 +18,8 @@ services:
       restart_policy:
         condition: on-failure
 
-  beszel-agent:
-    image: henrygd/beszel-agent:latest
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - beszel-agent-data:/var/lib/beszel-agent
-    environment:
-      - HUB_URL=http://beszel:8090
-      - LISTEN=0.0.0.0:45876
-    networks:
-      - dozzle_dozzle
-    deploy:
-      mode: global
-      restart_policy:
-        condition: on-failure
-
 volumes:
   beszel-data:
-    driver: local
-  beszel-agent-data:
     driver: local
 
 networks:
