@@ -6,7 +6,7 @@ This document provides guidance for AI agents operating in this personal infrast
 
 This is a collection of infrastructure and configuration files for a homelab environment including:
 - NixOS configurations for 4 cluster nodes (k1-k4)
-- Docker Swarm with distributed applications (migrated from K3s Kubernetes in Feb 2026)
+- Docker Swarm with distributed applications
 - Docker compose services for standalone deployments
 - Reverse proxy configuration
 
@@ -15,7 +15,6 @@ This is a collection of infrastructure and configuration files for a homelab env
 ```
 /
 ├── k2/, k3/, k4/          # NixOS configs for cluster nodes (homelab)
-├── k8s/                   # DEPRECATED - Kubernetes manifests (migrated to Docker Swarm Feb 2026)
 ├── caddy/                 # Caddy reverse proxy configuration
 ├── modules/               # Reusable NixOS modules
 ├── common/                # Shared NixOS configuration
@@ -202,41 +201,14 @@ in {
 
 ### Key Modules
 
-> ⚠️ **Note:** k3s modules are no longer actively used (migrated to Docker Swarm in Feb 2026). Preserved for reference or potential rollback.
-
-- `common/k3s-ha/` - **DEPRECATED** - K3s HA cluster configuration with kube-vip
-- `modules/k3s.nix` - **DEPRECATED** - Single-node k3s for local development
 - `modules/restic-backup.nix` - Restic backup automation
 - `modules/nixvim/` - Neovim configuration
 
-## Kubernetes (k8s/)
+## Docker Swarm
 
-> ⚠️ **DEPRECATED**: The Kubernetes deployment method has been **migrated to Docker Swarm** as of February 2026. The k8s/ directory contains legacy configurations that are no longer maintained or used. All services previously running on K3s Kubernetes are now deployed via Docker Swarm stacks in `docker/swarm/`.
+Docker Swarm is the primary deployment method for all services. Stacks are defined in `docker/swarm/` directory.
 
-### Legacy Deployment Pattern (Archived)
-
-> These instructions are preserved for historical reference only. All deployments are now managed via Docker Swarm.
-
-1. Create namespace and resources in a subdirectory (e.g., `k8s/linkding/`)
-2. Use `NodePort` services for external access
-3. Longhorn storage class: `storageClassName: longhorn`
-4. Apply with `kubectl apply -f k8s/<app>/`
-
-**Legacy NodePort allocations (archived):**
-- 30080: linkding
-- 30081: immich (photos.crussell.io)
-- 30082: open-webui
-- 30083: papra
-- 30084: searxng
-- 30085: ntfy
-- 30086: grafana
-- 30337: audiobookshelf (now on Docker Swarm, same port)
-
-### Docker Swarm
-
-Docker Swarm is the primary deployment method for all services (migrated from K3s Kubernetes in Feb 2026). Stacks are defined in `docker/swarm/` directory.
-
-#### Deployment Commands
+### Deployment Commands
 
 ```bash
 # Deploy/update a stack
@@ -262,12 +234,11 @@ docker stack rm <stack-name>
 ssh -i ~/.ssh/id_ed25519 k2 "cd /home/crussell/cn/docker/swarm && docker stack deploy -c audiobookshelf-swarm.yml audiobookshelf"
 ```
 
-#### Audiobookshelf Stack (docker/swarm/audiobookshelf-swarm.yml)
+### Audiobookshelf Stack (docker/swarm/audiobookshelf-swarm.yml)
 
-**Status:** ✅ Active (migrated from k8s in Feb 2026)
 - **Image:** `ghcr.io/advplyr/audiobookshelf:latest`
 - **Placement:** k2 node only (replica: 1)
-- **Port:** 30337 (NodePort)
+- **Port:** 30337
 - **Environment:**
   - `TZ=America/New_York`
   - `AUDIOBOOKSHELF_HOSTNAME=audiobookshelf`
@@ -277,14 +248,12 @@ ssh -i ~/.ssh/id_ed25519 k2 "cd /home/crussell/cn/docker/swarm && docker stack d
 - **Check:** `docker service ls | grep audiobookshelf`
 - **UID:** Container runs as UID 999 (ensure bind mounts are owned by 999:999)
 
-#### Dozzle Stack (docker/swarm/dozzle-stack.yml)
+### Dozzle Stack (docker/swarm/dozzle-stack.yml)
 
 - Dozzle: Global deployment across k2, k3, k4
 - AdGuardHome: Replicated deployment (1 instance) on k2 only (for consistent config storage)
 - Deploy/Update: `docker stack deploy -c dozzle-stack.yml dozzle`
 - Check status: `docker service ls | grep dozzle`
-
-Note: k2, k3, k4 are NixOS machines; use SSH to execute commands remotely.
 
 **Important:** AdGuardHome must run as a single instance (not global) because each node has its own independent volume for configuration storage. If deployed globally, the load balancer would route to different nodes, each showing the installer.
 
@@ -312,20 +281,6 @@ Note: k2, k3, k4 are NixOS machines; use SSH to execute commands remotely.
 - Check permissions: `ls -la /path/to/data` - container user may not be root
 - Fix ownership: `sudo chown -R <uid>:<gid> /path/to/data`
 - Example: Audiobookshelf uses UID 999, so bind mounts need to be owned by 999:999
-
-### K8s Resources
-
-**Standard resources include:**
-- Namespace (separated per app)
-- PersistentVolumeClaim (using Longhorn)
-- Deployment (with resource limits)
-- Service (NodePort type)
-
-**Resource limits guideline (archived):**
-> This section is preserved for historical reference only. Resource limits for Docker Swarm follow similar patterns but are specified differently in stack files.
-
-- Small services: 100m CPU / 256Mi RAM request, 500m CPU / 512Mi RAM limit
-- Medium services: 500m CPU / 512Mi RAM request, 2 CPU / 2Gi RAM limit
 
 ## Docker Compose
 
@@ -379,10 +334,6 @@ When adding a new service:
 - NEVER commit secrets to git
 - Use environment files (`.env`) for Docker compose
 
-## Python Scripts
-
-(Deprecated) legacy backup scripts previously lived under `docker/`; backups are now handled by `modules/restic-backup.nix`.
-
 ## SSH Automation
 
 For automated SSH operations:
@@ -396,16 +347,9 @@ For automated SSH operations:
 
 ## Where to Find Answers
 
-> ⚠️ **Note:** k8s configurations are deprecated (migrated to Docker Swarm Feb 2026). Legacy info preserved for reference.
-
-**Cluster issues (archived):**
-- K8s manifests and deployment info: `k8s/README.md` (legacy)
-- Cluster node configurations: `k2/`, `k3/`, `k4/`
-- Common cluster config: `common/k3s-ha/` (deprecated)
-
-**Current Service Management:**
+**Service Management:**
 - Docker Swarm stacks: `docker/swarm/`
-- Stack deployment guide: See "## Docker Swarm" section above
+- Stack deployment guide: See "Docker Swarm" section above
 - Service monitoring: Docker Swarm commands and Peekaping
 
 **Service routing:**
@@ -418,7 +362,7 @@ For automated SSH operations:
 
 **Module reuse:**
   - Reusable components: `modules/`
-  - Shared cluster settings: `common/`
+  - Shared settings: `common/`
 
 ## Restic Backups
 

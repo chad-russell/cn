@@ -28,13 +28,6 @@
 
   # networking.firewall.allowedTCPPorts = [ 80 443 ];
 
-  # k3s HA cluster configuration (deactivated)
-  # services.k3sHA = {
-  #   enable = true;
-  #   nodeIP = "192.168.20.63";
-  #   tokenFile = "/var/lib/rancher/k3s/cluster-token";
-  # };
-
   # Enable restic backups
   services.resticBackup = {
     enable = true;

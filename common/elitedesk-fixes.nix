@@ -3,7 +3,7 @@
 {
   # EliteDesk 800 G3 Intel I219-LM NIC fixes
   # This module addresses the notorious "Detected Hardware Unit Hang" error
-  # that occurs with the e1000e driver under high packet loads (Kubernetes, etc.)
+  # that occurs with the e1000e driver under high packet loads
 
   # 1. Kernel boot parameters to prevent PCIe power management issues
   boot.kernelParams = [
