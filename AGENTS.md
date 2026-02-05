@@ -47,6 +47,36 @@ When making changes to NixOS configs or Docker Swarm stacks for k2/k3/k4, follow
 3. Pull changes on remote nodes using the helper script
 4. Apply changes (nixos-rebuild switch, docker stack deploy, etc.)
 
+### Preferred Docker Swarm Deployment Workflow
+
+For Docker Swarm stack changes, use this streamlined workflow:
+
+**Step 1: Commit and push to main**
+```bash
+git add .
+git commit -m "description of changes"
+git push origin main
+```
+
+**Step 2: Pull on k2 (Swarm manager)**
+```bash
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes crussell@192.168.20.62 "cd /home/crussell/cn && git pull"
+```
+
+**Step 3: Deploy using Docker Swarm on k2**
+```bash
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes crussell@192.168.20.62 "cd /home/crussell/cn/docker/swarm && docker stack deploy -c <stack-file> <stack-name>"
+```
+
+**Example for SearXNG:**
+```bash
+git add docker/swarm/searxng-stack.yml docker/swarm/searxng-settings.yml
+git commit -m "Add JSON support to SearXNG"
+git push origin main
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes crussell@192.168.20.62 "cd /home/crussell/cn && git pull"
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes crussell@192.168.20.62 "cd /home/crussell/cn/docker/swarm && docker stack deploy -c searxng-stack.yml searxng"
+```
+
 ### Helper Scripts
 
 The `scripts/` directory contains helper scripts for remote deployment:
