@@ -19,4 +19,4 @@ server:
   limiter: false
 
 valkey:
-  url: redis://searxng-valkey:6379/0
+  url: redis://searxng_valkey:6379/0
