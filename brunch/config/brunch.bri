@@ -1,5 +1,5 @@
 import * as std from "std";
-import { makeBrunch } from "brunch";
+import { makeBrunch, makeWebAppExecutable } from "brunch";
 import eza from "eza";
 import oh_my_posh from "oh_my_posh";
 import zoxide from "zoxide";
@@ -51,6 +51,27 @@ const icon = std.download({
   ),
 });
 
+// Cursor: https://cursor.com/download
+const cursorAppImage = std
+  .runBash`
+    cp "$RAW_APPIMAGE" "$BRIOCHE_OUTPUT"
+    chmod +x "$BRIOCHE_OUTPUT"
+  `
+  .env({ RAW_APPIMAGE: std.download({
+    url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/2.4",
+    hash: std.sha256Hash(
+      "54076996d8327da8e625d28a8845c863a233909020efdd0b599ace36412790d7",
+    ),
+  }) })
+  .toFile();
+
+const cursorIcon = std.download({
+  url: "https://cursor.com/marketing-static/_next/image?url=%2Fmarketing-static%2Fdownload%2Fapp-icon-25d-dark.png&w=256&q=70&dpl=dpl_5dEMW8Em3fXxuK8BsP5EQDCtuvig",
+  hash: std.sha256Hash(
+    "e2fb845a8da426ba120f81dd1eecf5544315fb8395d1643e3b7dced76c3b87b8",
+  ),
+});
+
 // ============== Vendored Zsh Plugins ==============
 
 // zsh-autosuggestions - provides as-you-type command suggestions
@@ -87,6 +108,10 @@ const zshEnv = Brioche.includeFile("./zsh/.zshenv");
 const weztermConfig = Brioche.includeFile("./wezterm/wezterm.lua");
 const niriConfig = Brioche.includeFile("./niri/config.kdl");
 const ohMyPoshTheme = Brioche.includeFile("./oh-my-posh/config.json");
+
+// ============== Icons ==============
+
+const opencodeIcon = Brioche.includeFile("./static/opencode-logo-dark.svg");
 
 // ============== Neovim Configuration Files ==============
 
@@ -128,6 +153,25 @@ export default function brunchConfig() {
         iconExt: "png",
         comment: "GPU-accelerated terminal emulator",
         categories: ["System", "TerminalEmulator"],
+      },
+      {
+        name: "cursor",
+        executable: std.directory({
+          "cursor.AppImage": cursorAppImage,
+          "brioche-run": std.symlink({ target: "cursor.AppImage" }),
+        }),
+        icon: cursorIcon,
+        iconExt: "png",
+        comment: "AI-powered code editor",
+        categories: ["Development"],
+      },
+      {
+        name: "opencode-desktop",
+        executable: makeWebAppExecutable("http://localhost:4096"),
+        icon: opencodeIcon,
+        iconExt: "svg",
+        comment: "Interactive CLI tool for software engineering",
+        categories: ["Development"],
       },
       {
         name: "hello-world",

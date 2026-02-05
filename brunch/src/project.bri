@@ -19,5 +19,5 @@ export default function brunchPackage(): std.Recipe<std.Directory> {
 }
 
 export { activator };
-export { makeBrunch, makeDesktopApps, makeFiles } from "./index.bri";
+export { makeBrunch, makeDesktopApps, makeWebAppExecutable, makeFiles } from "./index.bri";
 export type { BrunchConfig, BrunchDesktopApp } from "./index.bri";

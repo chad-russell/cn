@@ -3,7 +3,7 @@ import { makeDesktopApps, type BrunchDesktopApp } from "./desktop_apps.bri";
 import { makeFiles } from "./files.bri";
 import { makeCliTools, type BrunchCliTool } from "./cli_tools.bri";
 
-export { makeDesktopApps, type BrunchDesktopApp } from "./desktop_apps.bri";
+export { makeDesktopApps, makeWebAppExecutable, type BrunchDesktopApp } from "./desktop_apps.bri";
 export { makeFiles } from "./files.bri";
 export { makeCliTools, type BrunchCliTool } from "./cli_tools.bri";
 

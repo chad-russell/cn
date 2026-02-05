@@ -6,8 +6,7 @@ This document provides guidance for AI agents operating in this personal infrast
 
 This is a collection of infrastructure and configuration files for a homelab environment including:
 - NixOS configurations for 4 cluster nodes (k1-k4)
-- K3s HA Kubernetes cluster with distributed applications
-- Docker compose services
+- Docker swarm services
 - Reverse proxy configuration
 
 ## Repository Structure
@@ -15,11 +14,10 @@ This is a collection of infrastructure and configuration files for a homelab env
 ```
 /
 ├── k2/, k3/, k4/          # NixOS configs for cluster nodes (homelab)
-├── k8s/                   # Kubernetes manifests for K3s cluster
 ├── caddy/                 # Caddy reverse proxy configuration
 ├── modules/               # Reusable NixOS modules
 ├── common/                # Shared NixOS configuration
-├── docker/                # Docker compose files (deprecated, migrating to k8s)
+├── docker/                # Docker swarm config
 └── k2/docker/, k3/docker/, k4/docker/  # Per-machine docker services
 ```
 
@@ -165,24 +163,6 @@ in {
 - `modules/restic-backup.nix` - Restic backup automation
 - `modules/nixvim/` - Neovim configuration
 
-## Kubernetes (k8s/)
-
-### Deployment Pattern
-
-1. Create namespace and resources in a subdirectory (e.g., `k8s/linkding/`)
-2. Use `NodePort` services for external access
-3. Longhorn storage class: `storageClassName: longhorn`
-4. Apply with `kubectl apply -f k8s/<app>/`
-
-**NodePort allocations (from k8s/README.md):**
-- 30080: linkding
-- 30081: immich (photos.crussell.io)
-- 30082: open-webui
-- 30083: papra
-- 30084: searxng
-- 30085: ntfy
-- 30086: grafana
-
 ### Docker Swarm
 
 **Dozzle stack (docker/swarm/dozzle-stack.yml):**
@@ -218,18 +198,6 @@ in {
 - Fix ownership: `sudo chown -R <uid>:<gid> /path/to/data`
 - Example: Audiobookshelf uses UID 999, so bind mounts need to be owned by 999:999
 
-### K8s Resources
-
-**Standard resources include:**
-- Namespace (separated per app)
-- PersistentVolumeClaim (using Longhorn)
-- Deployment (with resource limits)
-- Service (NodePort type)
-
-**Resource limits guideline:**
-- Small services: 100m CPU / 256Mi RAM request, 500m CPU / 512Mi RAM limit
-- Medium services: 500m CPU / 512Mi RAM request, 2 CPU / 2Gi RAM limit
-
 ## Docker Compose
 
 Docker compose files are located in per-machine directories:
@@ -243,8 +211,6 @@ cd k2/docker/<service>
 docker compose up -d
 docker compose logs -f
 ```
-
-Most services are being migrated to Kubernetes.
 
 ## Caddy Reverse Proxy
 
@@ -273,17 +239,14 @@ ssh -i ~/.ssh/id_ed25519 k2 "docker restart caddy-proxy"
 ```
 
 When adding a new service:
-1. Add NodePort in k8s manifest
+1. Prefer adding to docker swarm
 2. Add route block in Caddyfile
 3. Run `./caddy/update_caddy.sh` to deploy changes
 
 ## Secrets Management
 
-- Never commit secrets to git
+- NEVER commit secrets to git
 - Use environment files (`.env`) for Docker compose
-- Use Kubernetes secrets for k8s deployments
-- Git-crypt is enabled for encrypted secrets in repository
-- `.gitignore` blocks: `env.*`, `*.env`, `**/secrets.yaml`
 
 ## Python Scripts
 
@@ -301,15 +264,6 @@ For automated SSH operations:
 **Note:** Caddyfile is mounted at `/home/crussell/caddy/Caddyfile` (not `/home/crussell/cn/caddy/Caddyfile`) on k2.
 
 ## Where to Find Answers
-
-**Cluster issues:**
-- K8s manifests and deployment info: `k8s/README.md`
-- Cluster node configurations: `k2/`, `k3/`, `k4/`
-- Common cluster config: `common/k3s-ha/`
-
-**Service routing:**
-- Service to port mappings: `k8s/README.md` table
-- Caddy routes: `caddy/Caddyfile`
 
 **Machine-specific config:**
 - Network config: Each machine's `configuration.nix` has systemd.network settings
@@ -409,23 +363,11 @@ ssh -i ~/.ssh/id_ed25519 k2 "sudo restic snapshots --repo /mnt/backups/restic --
 
 ## Adding New Services
 
-1. **For Kubernetes deployment:**
-   - Create directory in `k8s/<service>/`
-   - Add `manifest.yaml` with Namespace, PVC, Deployment, Service
-   - Use Longhorn storage class
-   - Allocate unused NodePort (check k8s/README.md)
-   - Apply: `kubectl apply -f k8s/<service>/`
-
-2. **For external access:**
+ 1. **For external access:**
    - Add route to `caddy/Caddyfile`
    - Add DNS A record to Route53 (managed manually)
 
- 3. **For Docker deployment:**
-    - Create directory in `kX/docker/<service>/`
-    - Add `docker-compose.yml`
-    - Create `.env` file (git-ignored) for secrets
-
- 4. **For Docker Swarm deployment:**
+ 2. **For Docker Swarm deployment:**
     - Use `docker stack deploy -c <file> <stack-name>`
     - Check bind mount permissions: ensure directories exist and are owned by correct UID/GID
     - Fix permissions: `sudo chown -R <uid>:<gid> /path/to/data`
@@ -434,3 +376,85 @@ ssh -i ~/.ssh/id_ed25519 k2 "sudo restic snapshots --repo /mnt/backups/restic --
 ## NIC Drop Monitoring
 
 `ethtool-drop-monitor` logs RX drop/miss deltas every minute via a systemd timer; view with `journalctl -u ethtool-drop-monitor -f`. Some NICs may not expose `rx_no_buffer_count`, which is safe to ignore.
+
+## Creating Desktop Web Apps
+
+For creating desktop apps from websites (e.g., web apps, localhost services), use the Brunch configuration system in `~/Code/cn/brunch/`.
+
+### Architecture
+
+Brunch uses `makeWebAppExecutable(url)` which creates a wrapper that launches Chrome in app mode:
+```
+flatpak run com.google.Chrome --app=<url>
+```
+
+This creates a standalone desktop entry file (`.desktop`) that launches the website as a native-looking application.
+
+### Adding a New Web App
+
+1. **Find or create an icon:**
+   - Download favicon or icon from the website
+   - Copy to `brunch/config/static/<app-name>-icon.svg` (or `.png`)
+
+2. **Add to brunch configuration (`brunch/config/brunch.bri`):**
+   ```typescript
+   import { makeBrunch, makeWebAppExecutable } from "brunch";
+
+   // Import the icon
+   const appIcon = Brioche.includeFile("./static/app-icon.svg");
+
+   export default function() {
+     return makeBrunch({
+       desktopApps: [
+         {
+           name: "app-name",  // Used for desktop entry and symlink
+           executable: makeWebAppExecutable("https://example.com"),
+           icon: appIcon,
+           iconExt: "svg",    // or "png"
+           comment: "Short description",
+           categories: ["Development"],  // See freedesktop.org categories
+         },
+       ],
+     });
+   }
+   ```
+
+3. **Rebuild and apply brunch:**
+   ```bash
+   cd ~/Code/cn/brunch/src && brioche install -p .
+   cd ~/Code/cn/brunch && ~/.local/share/brioche/installed/bin/brunch apply ./config
+   ```
+
+### Example: Opencode App
+
+Located in `brunch/config/brunch.bri`:
+```typescript
+const opencodeIcon = Brioche.includeFile("./static/opencode-logo-dark.svg");
+
+{
+  name: "opencode",
+  executable: makeWebAppExecutable("http://localhost:4096"),
+  icon: opencodeIcon,
+  iconExt: "svg",
+  comment: "Interactive CLI tool for software engineering",
+  categories: ["Development"],
+}
+```
+
+### Desktop Entry Details
+
+Generated `.desktop` files follow XDG specification:
+- Location: `~/.local/share/applications/<app-name>.desktop`
+- Icon: `~/.local/share/icons/hicolor/scalable/apps/<app-name>.<ext>`
+- Executable: `~/.local/bin/<app-name>` (symlink to brioche-run)
+
+### Common Desktop Categories
+
+- "Development" - Programming tools
+- "Network" - Web browsers and network apps
+- "Utility" - General-purpose apps
+- "Graphics" - Image/graphics editors
+- "Office" - Productivity apps
+- "System" - System utilities
+
+Full list: https://specifications.freedesktop.org/menu-spec/latest/apa.html

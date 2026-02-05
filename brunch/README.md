@@ -174,6 +174,31 @@ interface BrunchDesktopApp {
 }
 ```
 
+### `makeWebAppExecutable(url: string): std.Recipe<std.Directory>`
+
+Create an executable that launches a web app using Chrome in app mode.
+
+```typescript
+import { makeWebAppExecutable } from "brunch";
+
+export default function() {
+  return makeBrunch({
+    desktopApps: [
+      {
+        name: "linear",
+        executable: makeWebAppExecutable("https://linear.app"),
+        icon: std.download({ url: "...", hash: "..." }),
+        iconExt: "png",
+        comment: "Issue tracking",
+        categories: ["Development"],
+      },
+    ],
+  });
+}
+```
+
+Uses `flatpak run com.google.Chrome --app=<url>` to launch websites as standalone applications.
+
 ## Development
 
 ### Building the Activator into a local directory

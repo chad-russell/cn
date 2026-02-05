@@ -38,6 +38,21 @@ export interface BrunchDesktopApp {
 }
 
 /**
+ * Create an executable that launches a web app using Chrome in app mode.
+ *
+ * Uses `flatpak run com.google.Chrome --app=<url>` to launch the website
+ * as a standalone application.
+ *
+ * @param url - The website URL to launch (e.g., "https://linear.app")
+ * @returns A runnable directory recipe compatible with BrunchDesktopApp.executable
+ */
+export function makeWebAppExecutable(url: string): std.Recipe<std.Directory> {
+  return std.bashRunnable`
+    flatpak run com.google.Chrome --app="${url}"
+  `;
+}
+
+/**
  * Create a directory containing desktop application files.
  *
  * Generates:
