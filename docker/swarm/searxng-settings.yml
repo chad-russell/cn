@@ -15,7 +15,7 @@ search:
     - json
 
 server:
-  secret_key: "ultrasecretkey"
+  secret_key: "30d4cf69b8b8c2d990bd8f778a499fb90f5e337c4a966b911d02152c59aebff9"
   limiter: false
 
 valkey:
