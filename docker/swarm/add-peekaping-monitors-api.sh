@@ -4,8 +4,8 @@
 # Uses the REST API to add all Caddyfile services
 
 PEEKAPING_URL="https://peekaping.internal.crussell.io/api/v1"
-API_ID="b3377891-0811-4da3-95d9-147f0c333ce9"
-API_KEY="pryKw3pLoYFw9uC0vGu2mezoPDSTrmViD8ljCd9iNwg="
+API_KEY="pk_eyJpZCI6IjY1N2IyZTc3LTBmYmQtNDI5Yi1hNmI4LTJkYjVmYzBmMWE1YyIsImtleSI6ImRuOFVGc0hqcGp0ZEVYaEpjN1o1VEd5QWhTUTc4RGlNaEs2MVpmdkpSTHc9In0="
+NOTIFICATION_ID="f299ccf6-0ecf-40f0-9247-ec4f13604770"
 
 # Color output
 GREEN='\033[0;32m'
@@ -24,22 +24,33 @@ add_monitor() {
 
   echo -e "${YELLOW}Adding monitor: $name${NC}"
 
+  # Build config JSON with redirects enabled
+  config=$(jq -n \
+    --arg url "$url" \
+    '{url: $url, method: "GET", headers: "{}", encoding: "text", accepted_statuscodes: ["2XX", "3XX"], authMethod: "none", max_redirects: 10}')
+
   response=$(curl -s -X POST "$PEEKAPING_URL/monitors" \
-    -H "X-API-Key-ID: $API_ID" \
-    -H "X-API-Key-Secret: $API_KEY" \
+    -H "X-API-Key: $API_KEY" \
     -H "Content-Type: application/json" \
     -d "{
       \"name\": \"$name\",
       \"type\": \"$type\",
       \"url\": \"$url\",
       \"interval\": 30,
-      \"timeout\": 10,
-      \"retries\": 3,
-      \"active\": true
+      \"timeout\": 30,
+      \"max_retries\": 3,
+      \"retry_interval\": 30,
+      \"resend_interval\": 60,
+      \"notification_ids\": [\"$NOTIFICATION_ID\"],
+      \"active\": true,
+      \"config\": $(echo "$config" | jq -sR .)
     }")
 
   # Check if response contains error
-  if echo "$response" | grep -q "error"; then
+  if echo "$response" | grep -q '"error"'; then
+    echo -e "${RED}  ✗ Failed to add $name${NC}"
+    echo "$response" | head -c 200
+  elif echo "$response" | grep -q '"message":"error"'; then
     echo -e "${RED}  ✗ Failed to add $name${NC}"
     echo "$response" | head -c 200
   else
@@ -71,7 +82,6 @@ echo ""
 echo "=== Adding Public Domain Services ==="
 add_monitor "HomeAssistant" "https://homeassistant.crussell.io"
 add_monitor "Jellyfin" "https://jellyfin.crussell.io"
-add_monitor "n8n" "https://n8n.crussell.io"
 add_monitor "Photos" "https://photos.crussell.io"
 add_monitor "Chex Mix Timer" "https://chex-mix-timer.crussell.io"
 

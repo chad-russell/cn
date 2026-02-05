@@ -124,11 +124,6 @@
         reverse_proxy 192.168.20.61:8096
     }
 
-    @n8n host n8n.crussell.io
-    handle @n8n {
-        reverse_proxy 192.168.20.63:5678
-    }
-
     @photos host photos.crussell.io
     handle @photos {
         reverse_proxy 192.168.20.62:30093
