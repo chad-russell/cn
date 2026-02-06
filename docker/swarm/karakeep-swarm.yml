@@ -6,7 +6,7 @@ services:
     environment:
       - DATA_DIR=/data
       - MEILI_ADDR=http://karakeep-meilisearch:7700
-      - MEILI_MASTER_KEY=CHANGE-ME-OR-USE-A-SECRET
+      - MEILI_MASTER_KEY=karakeep-swarm-master-key-change-me
       - NEXTAUTH_SECRET=CHANGE-ME-OR-USE-A-SECRET
       - BROWSER_WEB_URL=http://karakeep-chrome:9222
     volumes:
@@ -53,14 +53,9 @@ services:
     image: docker.io/getmeili/meilisearch:v1.10
     environment:
       - MEILI_MASTER_KEY=karakeep-swarm-master-key-change-me
+      - MEILI_NO_ANALYTICS=true
     volumes:
       - /mnt/swarm-data/karakeep-meilisearch:/meili_data
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "--header", "Authorization: Bearer karakeep-swarm-master-key-change-me", "http://localhost:7700/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 90s
     deploy:
       replicas: 1
       placement:
