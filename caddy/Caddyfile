@@ -31,7 +31,7 @@
 
     @papra host papra.internal.crussell.io
     handle @papra {
-        reverse_proxy 192.168.20.62:30091
+        reverse_proxy 192.168.20.63:30083
     }
 
     @ntfy host ntfy.internal.crussell.io
