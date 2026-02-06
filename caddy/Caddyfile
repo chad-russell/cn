@@ -133,4 +133,9 @@
     handle @chex-mix-timer {
         reverse_proxy 192.168.20.64:8732
     }
+
+    @pelicans host pelicans.crussell.io
+    handle @pelicans {
+        reverse_proxy 192.168.20.105:3002
+    }
 }
