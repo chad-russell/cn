@@ -25,7 +25,7 @@ services:
         constraints:
           - node.hostname == k2
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 5s
         max_attempts: 3
     depends_on:
@@ -47,7 +47,7 @@ services:
         constraints:
           - node.hostname == k2
       restart_policy:
-        condition: on-failure
+        condition: any
 
   karakeep-meilisearch:
     image: docker.io/getmeili/meilisearch:v1.10
@@ -62,6 +62,6 @@ services:
         constraints:
           - node.hostname == k2
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 5s
         max_attempts: 3
