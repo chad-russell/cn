@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import confetti from 'canvas-confetti'
 import { SPECIAL_WORDS, GRID, type Cell, type FoundWord } from './game/types'
 import { isSpecialWord, isValidBonusWord, isValidWord } from './game/grid'
@@ -6,6 +6,7 @@ import { WordBoard } from './components/WordBoard'
 
 const TUTORIAL_STORAGE_KEY = 'stumpdle-tutorial-seen'
 const PARTY_DURATION_MS = 5000
+const PARTY_FADE_OUT_MS = 850
 const PARTY_EMOJIS = ['💖', '❤️', '😍', '🍆', '🍑', '💘']
 
 type TutorialExample = {
@@ -37,8 +38,10 @@ function App() {
   const [tutorialMessage, setTutorialMessage] = useState<string | null>(null)
   const [tutorialMessageTone, setTutorialMessageTone] = useState<'success' | 'error'>('error')
   const [showParty, setShowParty] = useState(false)
+  const [partyFadingOut, setPartyFadingOut] = useState(false)
   const partyStopTimeoutRef = useRef<number | null>(null)
   const partyBurstIntervalRef = useRef<number | null>(null)
+  const partyFadeTimeoutRef = useRef<number | null>(null)
   const prevHasWonRef = useRef(false)
 
   const foundWordsSet = useMemo(() => new Set(foundWords.map(fw => fw.word)), [foundWords])
@@ -66,7 +69,7 @@ function App() {
     }))
   }, [])
 
-  const stopParty = useCallback(() => {
+  const stopParty = useCallback((withFadeOut = false) => {
     if (partyBurstIntervalRef.current) {
       window.clearInterval(partyBurstIntervalRef.current)
       partyBurstIntervalRef.current = null
@@ -75,9 +78,26 @@ function App() {
       window.clearTimeout(partyStopTimeoutRef.current)
       partyStopTimeoutRef.current = null
     }
+    if (partyFadeTimeoutRef.current) {
+      window.clearTimeout(partyFadeTimeoutRef.current)
+      partyFadeTimeoutRef.current = null
+    }
+
+    if (withFadeOut && showParty) {
+      setPartyFadingOut(true)
+      partyFadeTimeoutRef.current = window.setTimeout(() => {
+        setShowParty(false)
+        setPartyFadingOut(false)
+        partyFadeTimeoutRef.current = null
+      }, PARTY_FADE_OUT_MS)
+      confetti.reset()
+      return
+    }
+
+    setPartyFadingOut(false)
     setShowParty(false)
     confetti.reset()
-  }, [])
+  }, [showParty])
 
   const triggerParty = useCallback(() => {
     stopParty()
@@ -86,7 +106,7 @@ function App() {
 
     const launchBurst = () => {
       if (Date.now() >= endTime) {
-        stopParty()
+        stopParty(true)
         return
       }
 
@@ -105,7 +125,7 @@ function App() {
 
     launchBurst()
     partyBurstIntervalRef.current = window.setInterval(launchBurst, 220)
-    partyStopTimeoutRef.current = window.setTimeout(stopParty, PARTY_DURATION_MS)
+    partyStopTimeoutRef.current = window.setTimeout(() => stopParty(true), PARTY_DURATION_MS)
   }, [stopParty])
 
   useEffect(() => {
@@ -113,7 +133,7 @@ function App() {
       triggerParty()
     }
     prevHasWonRef.current = hasWon
-  }, [hasWon])
+  }, [hasWon, triggerParty])
 
   useEffect(() => {
     return () => {
@@ -190,7 +210,13 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
       {showParty && (
-        <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
+        <div
+          className={`
+            fixed inset-0 z-[60] pointer-events-none overflow-hidden transition-opacity
+            ${partyFadingOut ? 'opacity-0' : 'opacity-100'}
+          `}
+          style={{ transitionDuration: `${PARTY_FADE_OUT_MS}ms` }}
+        >
           <div className="absolute inset-0 bg-gradient-to-b from-rose-400/25 via-pink-300/20 to-fuchsia-400/25" />
           {partyDrops.map(drop => (
             <span
@@ -201,8 +227,8 @@ function App() {
                 animationDelay: `${drop.delay}s`,
                 animationDuration: `${drop.duration}s`,
                 fontSize: `${drop.size}px`,
-                ['--party-rotate' as string]: `${drop.rotate}deg`,
-              }}
+                '--party-rotate': `${drop.rotate}deg`,
+              } as CSSProperties}
             >
               {drop.emoji}
             </span>
