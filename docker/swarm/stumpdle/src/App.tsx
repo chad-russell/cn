@@ -201,7 +201,7 @@ function App() {
                 animationDelay: `${drop.delay}s`,
                 animationDuration: `${drop.duration}s`,
                 fontSize: `${drop.size}px`,
-                '--party-rotate': `${drop.rotate}deg`,
+                ['--party-rotate' as string]: `${drop.rotate}deg`,
               }}
             >
               {drop.emoji}
