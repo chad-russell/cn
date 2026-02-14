@@ -353,8 +353,8 @@ function App() {
         </button>
       </div>
 
-      <h1 className="text-3xl font-bold text-gray-800 mb-2">Stumpdle</h1>
-      <p className="text-gray-500 mb-6 text-sm">Find all the hidden words</p>
+      <h1 className="text-3xl font-bold text-gray-800 mb-2 shrink-0">Stumpdle</h1>
+      <p className="text-gray-500 mb-6 text-sm shrink-0">Find all the hidden words</p>
 
       {message && (
         <div className="fixed top-8 left-1/2 -translate-x-1/2 bg-white shadow-lg rounded-full px-6 py-3 text-lg font-medium z-50 animate-bounce">
@@ -365,60 +365,62 @@ function App() {
       <WordBoard
         grid={GRID}
         onWordSubmit={handleMainWordSubmit}
-        className="bg-white rounded-2xl shadow-lg p-4 mb-8"
+        className="bg-white rounded-2xl shadow-lg p-4 mb-6 shrink-0"
       />
 
-      <div className="w-full max-w-md space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-700 mb-3">
-            Special Words ({specialWordsFound.length}/{SPECIAL_WORDS.length})
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {SPECIAL_WORDS.map(word => {
-              const found = foundWordsSet.has(word)
-              return (
-                <span
-                  key={word}
-                  className={`
-                    px-3 py-1.5 rounded-full text-sm font-medium
-                    ${found
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-gray-200 text-gray-400'
-                    }
-                  `}
+      <div className="w-full max-w-md flex-1 min-h-0 overflow-y-auto overscroll-contain px-1 pb-4">
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-700 mb-3">
+              Special Words ({specialWordsFound.length}/{SPECIAL_WORDS.length})
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {SPECIAL_WORDS.map(word => {
+                const found = foundWordsSet.has(word)
+                return (
+                  <span
+                    key={word}
+                    className={`
+                      px-3 py-1.5 rounded-full text-sm font-medium
+                      ${found
+                        ? 'bg-rose-500 text-white'
+                        : 'bg-gray-200 text-gray-400'
+                      }
+                    `}
+                  >
+                    {found ? word : '•••••'}
+                  </span>
+                )
+              })}
+              {hasWon && (
+                <button
+                  type="button"
+                  className="px-3 py-1.5 rounded-full text-sm font-medium bg-rose-100 text-rose-700 border border-rose-300 hover:bg-rose-200"
+                  onClick={triggerParty}
                 >
-                  {found ? word : '•••••'}
-                </span>
-              )
-            })}
-            {hasWon && (
-              <button
-                type="button"
-                className="px-3 py-1.5 rounded-full text-sm font-medium bg-rose-100 text-rose-700 border border-rose-300 hover:bg-rose-200"
-                onClick={triggerParty}
-              >
-                Replay Party
-              </button>
-            )}
+                  Replay Party
+                </button>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div>
-          <h2 className="text-lg font-semibold text-gray-700 mb-3">
-            Bonus Words ({bonusWordsFound.length})
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {bonusWordsFound.map(fw => (
-              <span
-                key={fw.word}
-                className="px-3 py-1.5 rounded-full text-sm font-medium bg-emerald-100 text-emerald-700"
-              >
-                {fw.word}
-              </span>
-            ))}
-            {bonusWordsFound.length === 0 && (
-              <span className="text-gray-400 text-sm">Find bonus words to see them here</span>
-            )}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-700 mb-3">
+              Bonus Words ({bonusWordsFound.length})
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {bonusWordsFound.map(fw => (
+                <span
+                  key={fw.word}
+                  className="px-3 py-1.5 rounded-full text-sm font-medium bg-emerald-100 text-emerald-700"
+                >
+                  {fw.word}
+                </span>
+              ))}
+              {bonusWordsFound.length === 0 && (
+                <span className="text-gray-400 text-sm">Find bonus words to see them here</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
