@@ -5,6 +5,7 @@ import { isSpecialWord, isValidBonusWord, isValidWord } from './game/grid'
 import { WordBoard } from './components/WordBoard'
 
 const TUTORIAL_STORAGE_KEY = 'stumpdle-tutorial-seen'
+const PROGRESS_STORAGE_KEY = 'stumpdle-progress'
 const PARTY_DURATION_MS = 5000
 const PARTY_FADE_OUT_MS = 850
 const PARTY_EMOJIS = ['💖', '❤️', '😍', '🍆', '🍑', '💘']
@@ -50,6 +51,15 @@ function App() {
     const tutorialSeen = localStorage.getItem(TUTORIAL_STORAGE_KEY)
     if (!tutorialSeen) {
       setShowTutorial(true)
+    }
+
+    const savedProgress = localStorage.getItem(PROGRESS_STORAGE_KEY)
+    if (savedProgress) {
+      try {
+        const parsed = JSON.parse(savedProgress) as FoundWord[]
+        setFoundWords(parsed)
+      } catch {
+      }
     }
   }, [])
 
@@ -143,6 +153,12 @@ function App() {
       stopParty()
     }
   }, [stopParty])
+
+  useEffect(() => {
+    if (foundWords.length > 0) {
+      localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(foundWords))
+    }
+  }, [foundWords])
 
   const flashGameMessage = (text: string, timeout = 1500) => {
     setMessage(text)
