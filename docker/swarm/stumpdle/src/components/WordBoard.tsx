@@ -145,10 +145,8 @@ export function WordBoard({
                 return (
                   <div
                     key={`${rowIdx}-${colIdx}`}
-                    className={`
-                      ${cellSizeClassName} rounded-lg border border-gray-200 bg-gray-100
-                      opacity-70
-                    `}
+                    className={`${cellSizeClassName} pointer-events-none`}
+                    aria-hidden="true"
                   />
                 )
               }
@@ -171,10 +169,10 @@ export function WordBoard({
                     text-xl font-bold rounded-lg cursor-pointer select-none
                     transition-all duration-100
                     ${isSelected
-                      ? 'bg-red-500 text-white scale-110 shadow-lg'
+                      ? 'bg-rose-500 text-white scale-110 shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }
-                    ${isStart ? 'ring-2 ring-red-300 ring-offset-2' : ''}
+                    ${isStart ? 'ring-2 ring-rose-300 ring-offset-2' : ''}
                   `}
                   onMouseDown={() => handleStart(rowIdx, colIdx)}
                   onMouseEnter={() => handleMove(rowIdx, colIdx)}
@@ -204,7 +202,7 @@ export function WordBoard({
         </div>
       </div>
       {selectedCells.length >= 2
-        ? renderPath(selectedCells, 'rgba(239, 68, 68, 0.6)')
+        ? renderPath(selectedCells, 'rgba(244, 63, 94, 0.6)')
         : renderPath(solvedPathCells, solvedPathColor)}
     </div>
   )

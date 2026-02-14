@@ -83,25 +83,27 @@ function App() {
       partyFadeTimeoutRef.current = null
     }
 
-    if (withFadeOut && showParty) {
+    if (withFadeOut) {
       setPartyFadingOut(true)
       partyFadeTimeoutRef.current = window.setTimeout(() => {
         setShowParty(false)
         setPartyFadingOut(false)
+        confetti.reset()
         partyFadeTimeoutRef.current = null
       }, PARTY_FADE_OUT_MS)
-      confetti.reset()
       return
     }
 
     setPartyFadingOut(false)
     setShowParty(false)
     confetti.reset()
-  }, [showParty])
+  }, [])
 
   const triggerParty = useCallback(() => {
     stopParty()
     setShowParty(true)
+    const isMobile = window.matchMedia('(max-width: 768px)').matches
+    const particleCount = isMobile ? 34 : 62
     const endTime = Date.now() + PARTY_DURATION_MS
 
     const launchBurst = () => {
@@ -111,10 +113,11 @@ function App() {
       }
 
       confetti({
-        particleCount: 70,
+        particleCount,
         spread: 95,
-        startVelocity: 30,
-        ticks: 180,
+        startVelocity: isMobile ? 26 : 32,
+        ticks: isMobile ? 130 : 170,
+        disableForReducedMotion: false,
         origin: {
           x: 0.15 + Math.random() * 0.7,
           y: 0.42 + Math.random() * 0.25,
@@ -124,7 +127,7 @@ function App() {
     }
 
     launchBurst()
-    partyBurstIntervalRef.current = window.setInterval(launchBurst, 220)
+    partyBurstIntervalRef.current = window.setInterval(launchBurst, isMobile ? 280 : 220)
     partyStopTimeoutRef.current = window.setTimeout(() => stopParty(true), PARTY_DURATION_MS)
   }, [stopParty])
 
@@ -237,7 +240,7 @@ function App() {
             <div className="rounded-3xl bg-white/90 shadow-2xl border border-rose-200 px-6 py-4 text-center">
               <p className="text-3xl mb-1">💖😍🍆🍑😍💖</p>
               <p className="text-2xl font-black text-rose-600">You Found All 7!</p>
-              <p className="text-sm font-semibold text-rose-500">Valentine party mode activated</p>
+              <p className="text-sm font-semibold text-rose-500">LOVE YOU BABE 😘</p>
             </div>
           </div>
         </div>
@@ -272,7 +275,7 @@ function App() {
               <p
                 className={`
                   text-center text-sm font-semibold mb-3
-                  ${tutorialMessageTone === 'success' ? 'text-emerald-600' : 'text-red-600'}
+                  ${tutorialMessageTone === 'success' ? 'text-emerald-600' : 'text-rose-600'}
                 `}
               >
                 {tutorialMessage}
@@ -295,8 +298,8 @@ function App() {
                   className={`
                     flex-1 rounded-xl px-4 py-2.5 font-semibold transition-colors
                     ${currentStepSolved
-                      ? 'bg-red-500 text-white hover:bg-red-600'
-                      : 'bg-red-200 text-red-100 cursor-not-allowed'
+                      ? 'bg-rose-500 text-white hover:bg-rose-600'
+                      : 'bg-rose-200 text-rose-100 cursor-not-allowed'
                     }
                   `}
                   onClick={() => setTutorialStep(prev => prev + 1)}
@@ -310,8 +313,8 @@ function App() {
                   className={`
                     flex-1 rounded-xl px-4 py-2.5 font-semibold transition-colors
                     ${currentStepSolved
-                      ? 'bg-red-500 text-white hover:bg-red-600'
-                      : 'bg-red-200 text-red-100 cursor-not-allowed'
+                      ? 'bg-rose-500 text-white hover:bg-rose-600'
+                      : 'bg-rose-200 text-rose-100 cursor-not-allowed'
                     }
                   `}
                   onClick={closeTutorial}
@@ -325,15 +328,6 @@ function App() {
       )}
 
       <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
-        {hasWon && (
-          <button
-            type="button"
-            className="rounded-full bg-rose-500 text-white shadow-md border border-rose-600 px-3 py-1.5 text-sm font-semibold hover:bg-rose-600"
-            onClick={triggerParty}
-          >
-            Replay Party
-          </button>
-        )}
         <button
           type="button"
           className="rounded-full bg-white/95 shadow-md border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100"
@@ -372,7 +366,7 @@ function App() {
                   className={`
                     px-3 py-1.5 rounded-full text-sm font-medium
                     ${found
-                      ? 'bg-red-500 text-white'
+                      ? 'bg-rose-500 text-white'
                       : 'bg-gray-200 text-gray-400'
                     }
                   `}
@@ -381,6 +375,15 @@ function App() {
                 </span>
               )
             })}
+            {hasWon && (
+              <button
+                type="button"
+                className="px-3 py-1.5 rounded-full text-sm font-medium bg-rose-100 text-rose-700 border border-rose-300 hover:bg-rose-200"
+                onClick={triggerParty}
+              >
+                Replay Party
+              </button>
+            )}
           </div>
         </div>
 
