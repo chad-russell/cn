@@ -1,7 +1,7 @@
 import { GRID, SPECIAL_WORDS, type Cell } from './types';
-import FINDABLE_WORDS from './findable-words.json';
+import { FINDABLE_WORDS } from './findable-words';
 
-const FINDABLE_SET = new Set(FINDABLE_WORDS);
+const FINDABLE_SET = new Set(FINDABLE_WORDS.map(w => w.toUpperCase()));
 
 export function getNonEmptyCells(): Cell[] {
   const cells: Cell[] = [];
