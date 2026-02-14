@@ -1,6 +1,9 @@
 { config, lib, pkgs, llm-agents, opencode, dms, ... }:
 
 {
+  imports = [
+    ./opencode
+  ];
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = [
@@ -32,7 +35,7 @@
     pkgs.nodejs
     pkgs.python313
 
-    opencode.packages.${pkgs.stdenv.hostPlatform.system}.default
+
 
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.gemini-cli
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex

@@ -18,18 +18,18 @@ input {
 
 output "eDP-1" {
     mode "1920x1200@60"
-    scale 1.25
-    position x=0 y=0
+    scale 1.1
+    position x=2100 y=1080
 }
 
-output "DP-3" {
-    mode "1920x1080@60"
+output "DP-5" {
+    mode "2560x1440@59.951"
     scale 1.0
-    position x=1536 y=0
+    position x=1920 y=0
 }
 
-output "DP-4" {
-    mode "1920x1080@60"
+output "DP-6" {
+    mode "2560x1440@59.951"
     scale 1.0
     position x=0 y=0
 }
@@ -102,6 +102,7 @@ binds {
     Mod+V { toggle-window-floating; }
     Mod+Shift+V { switch-focus-between-floating-and-tiling; }
     Mod+Q { close-window; }
+    Mod+W { toggle-column-tabbed-display; }
     Mod+X { maximize-column; }
     Mod+Shift+F { fullscreen-window; }
 
@@ -152,3 +153,5 @@ binds {
     XF86MonBrightnessUp   { spawn "dms" "ipc" "brightness" "increment" "5" ""; }
     XF86MonBrightnessDown { spawn "dms" "ipc" "brightness" "decrement" "5" ""; }
 }
+
+include "dms/outputs.kdl"

@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  stumpdle:
+    build:
+      context: /var/home/crussell/Code/valentines_2026/stumpdle
+      dockerfile: Dockerfile
+    image: stumpdle:latest
+    container_name: stumpdle
+    ports:
+      - "3177:80"
+    restart: unless-stopped
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == k2
