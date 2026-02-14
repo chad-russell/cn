@@ -135,7 +135,7 @@ export function WordBoard({
   }
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative touch-none ${className}`}>
       <div className="flex justify-center">
         <div className="inline-grid gap-2" style={{ gridTemplateColumns: `repeat(${columnCount}, auto)` }}>
           {grid.map((row, rowIdx) =>

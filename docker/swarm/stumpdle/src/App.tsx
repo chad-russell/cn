@@ -208,7 +208,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
+    <div className="h-dvh overflow-hidden bg-gray-50 flex flex-col items-center py-8 px-4">
       {showParty && (
         <div
           className={`
