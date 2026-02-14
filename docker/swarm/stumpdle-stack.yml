@@ -3,7 +3,7 @@ version: '3.8'
 services:
   stumpdle:
     build:
-      context: /var/home/crussell/Code/valentines_2026/stumpdle
+      context: /home/crussell/cn/docker/swarm/stumpdle
       dockerfile: Dockerfile
     image: stumpdle:latest
     container_name: stumpdle
