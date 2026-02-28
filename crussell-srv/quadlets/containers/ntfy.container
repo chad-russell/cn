@@ -1,0 +1,23 @@
+[Unit]
+Description=Ntfy Push Notifications
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/binwiederhier/ntfy:v2.11.0
+PublishPort=30085:80
+Volume=/srv/ntfy/cache:/var/cache/ntfy
+Environment=TZ=America/New_York
+Environment=NTFY_BASE_URL=https://ntfy.internal.crussell.io
+Exec=serve
+HealthCmd=/usr/bin/wget --quiet --tries=1 --spider http://localhost:80/v1
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=40s
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

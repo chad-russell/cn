@@ -1,0 +1,11 @@
+[Unit]
+Description=SearXNG Search Engine Pod
+After=network-online.target
+Wants=network-online.target
+
+[Kube]
+Yaml=searxng.yml
+PublishPort=30084:8080
+
+[Install]
+WantedBy=default.target

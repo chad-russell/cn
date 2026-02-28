@@ -1,0 +1,11 @@
+[Unit]
+Description=Karakeep Bookmarking Pod
+After=network-online.target
+Wants=network-online.target
+
+[Kube]
+Yaml=karakeep.yml
+PublishPort=30092:3000
+
+[Install]
+WantedBy=default.target

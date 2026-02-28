@@ -1,0 +1,18 @@
+[Unit]
+Description=Linkding Bookmark Manager
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/sissbruecker/linkding:latest
+PublishPort=30080:9090
+Volume=/srv/linkding/data:/etc/linkding/data
+Environment=LD_CSRF_TRUSTED_ORIGINS=https://linkding.internal.crussell.io
+Environment=LD_DISABLE_BACKGROUND_TASKS=False
+
+[Service]
+Restart=unless-stopped
+RestartSec=5
+
+[Install]
+WantedBy=default.target

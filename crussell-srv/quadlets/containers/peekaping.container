@@ -1,0 +1,22 @@
+[Unit]
+Description=Peekaping Uptime Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/0xfurai/peekaping-bundle-sqlite:latest
+PublishPort=30087:8383
+Volume=/srv/peekaping/data:/app/data
+Environment=DB_NAME=/app/data/peekaping.db
+Environment=TZ=America/New_York
+HealthCmd=/usr/bin/wget --quiet --tries=1 --spider http://localhost:8383/
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=40s
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

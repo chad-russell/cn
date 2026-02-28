@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: immich
+spec:
+  containers:
+    - name: postgres
+      image: docker.io/pgvector/pgvector:pg16
+      env:
+        - name: POSTGRES_DB
+          value: immich
+        - name: POSTGRES_USER
+          value: immich
+        - name: POSTGRES_PASSWORD
+          value: "immich_secret_password_change_me"
+      volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+      livenessProbe:
+        exec:
+          command:
+            - pg_isready
+            - -U
+            - immich
+            - -d
+            - immich
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 5
+
+    - name: redis
+      image: docker.io/redis:7-alpine
+      args:
+        - redis-server
+        - --save
+        - "60"
+        - "1"
+        - --loglevel
+        - warning
+      livenessProbe:
+        exec:
+          command:
+            - redis-cli
+            - ping
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 3
+        failureThreshold: 5
+
+    - name: server
+      image: ghcr.io/immich-app/immich-server:release
+      args:
+        - start.sh
+        - immich
+      env:
+        - name: DB_HOSTNAME
+          value: localhost
+        - name: DB_USERNAME
+          value: immich
+        - name: DB_PASSWORD
+          value: "immich_secret_password_change_me"
+        - name: DB_DATABASE_NAME
+          value: immich
+        - name: REDIS_HOSTNAME
+          value: localhost
+        - name: TYPESENSE_ENABLED
+          value: "false"
+        - name: DISABLE_MACHINE_LEARNING
+          value: "false"
+        - name: MACHINE_LEARNING_HOST
+          value: localhost
+        - name: MACHINE_LEARNING_PORT
+          value: "3003"
+      volumeMounts:
+        - name: photos
+          mountPath: /usr/src/app/upload
+      livenessProbe:
+        httpGet:
+          path: /api/server-info/ping
+          port: 2283
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        timeoutSeconds: 10
+        failureThreshold: 3
+
+    - name: microservices
+      image: ghcr.io/immich-app/immich-server:release
+      args:
+        - start.sh
+        - microservices
+      env:
+        - name: DB_HOSTNAME
+          value: localhost
+        - name: DB_USERNAME
+          value: immich
+        - name: DB_PASSWORD
+          value: "immich_secret_password_change_me"
+        - name: DB_DATABASE_NAME
+          value: immich
+        - name: REDIS_HOSTNAME
+          value: localhost
+        - name: TYPESENSE_ENABLED
+          value: "false"
+        - name: DISABLE_MACHINE_LEARNING
+          value: "false"
+        - name: MACHINE_LEARNING_HOST
+          value: localhost
+        - name: MACHINE_LEARNING_PORT
+          value: "3003"
+      volumeMounts:
+        - name: photos
+          mountPath: /usr/src/app/upload
+
+    - name: machine-learning
+      image: ghcr.io/immich-app/immich-machine-learning:release
+      env:
+        - name: DB_HOSTNAME
+          value: localhost
+        - name: DB_USERNAME
+          value: immich
+        - name: DB_PASSWORD
+          value: "immich_secret_password_change_me"
+        - name: DB_DATABASE_NAME
+          value: immich
+        - name: REDIS_HOSTNAME
+          value: localhost
+        - name: TYPESENSE_ENABLED
+          value: "false"
+      volumeMounts:
+        - name: photos
+          mountPath: /usr/src/app/upload
+
+  volumes:
+    - name: postgres-data
+      persistentVolumeClaim:
+        claimName: immich-postgres-data
+    - name: photos
+      hostPath:
+        path: /mnt/nas/photos
+        type: Directory

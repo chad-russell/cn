@@ -1,0 +1,18 @@
+[Unit]
+Description=Papra Document Manager
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/papra-hq/papra:latest
+PublishPort=30083:1221
+Volume=/srv/papra/data:/app/app-data
+Environment=AUTH_SECRET=papra-auth-secret-change-me
+Environment=APP_BASE_URL=https://papra.internal.crussell.io
+Environment=TZ=America/New_York
+
+[Service]
+Restart=unless-stopped
+
+[Install]
+WantedBy=default.target

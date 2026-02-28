@@ -1,0 +1,21 @@
+[Unit]
+Description=AdGuardHome DNS Server
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/adguard/adguardhome:latest
+PublishPort=30053:53/tcp
+PublishPort=30053:53/udp
+PublishPort=30100:80/tcp
+PublishPort=30054:443/tcp
+PublishPort=30101:853/tcp
+PublishPort=30102:3000/tcp
+Volume=/srv/adguardhome/work:/opt/adguardhome/work
+Volume=/srv/adguardhome/conf:/opt/adguardhome/conf
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,22 @@
+# SearXNG settings with JSON support enabled
+# See: https://docs.searxng.org/admin/settings/settings.html
+
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "SearXNG"
+
+search:
+  safe_search: 0
+  autocomplete: 'duckduckgo'
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: "30d4cf69b8b8c2d990bd8f778a499fb90f5e337c4a966b911d02152c59aebff9"
+  limiter: false
+
+valkey:
+  url: redis://localhost:6379/0
