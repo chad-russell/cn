@@ -1,0 +1,7 @@
+# NEVER commit these - private key material
+*.key
+pki/
+nebula-ca.tar.gz.gpg
+
+# OS artifacts
+.DS_Store

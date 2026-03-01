@@ -841,48 +841,29 @@ echo "  systemctl --user start searxng karakeep immich"
 
 ## Caddy Updates
 
-After migration, update Caddyfile routes to point to new IP `192.168.20.105`:
+**Status: ✅ COMPLETE** - Caddy migrated from k2 to crussell-srv (2026-02-28)
 
+Caddy now runs as a system-level Quadlet on crussell-srv and handles:
+- `*.internal.crussell.io` → Internal services
+- `*.crussell.io` → Public services (proxied through Hetzner via Nebula)
+
+**Config Location:** `crussell-srv/caddy/Caddyfile`
+**Quadlet:** `/etc/containers/systemd/caddy.container`
+**Image:** `localhost/caddy-route53:latest` (custom build with Route53 DNS challenge)
+
+**Public Traffic Flow:**
 ```
-# In caddy/Caddyfile, update all internal routes:
-linkding.internal.crussell.io {
-    reverse_proxy 192.168.20.105:30080
-}
-
-papra.internal.crussell.io {
-    reverse_proxy 192.168.20.105:30083
-}
-
-ntfy.internal.crussell.io {
-    reverse_proxy 192.168.20.105:30085
-}
-
-peekaping.internal.crussell.io {
-    reverse_proxy 192.168.20.105:30087
-}
-
-audiobookshelf.internal.crussell.io {
-    reverse_proxy 192.168.20.105:30337
-}
-
-adguard.internal.crussell.io {
-    reverse_proxy 192.168.20.105:30102
-}
-
-searxng.internal.crussell.io {
-    reverse_proxy 192.168.20.105:30084
-}
-
-karakeep.internal.crussell.io {
-    reverse_proxy 192.168.20.105:30092
-}
-
-immich.internal.crussell.io {
-    reverse_proxy 192.168.20.105:30093
-}
+Internet → Hetzner nginx (SSL passthrough) → Nebula → crussell-srv Caddy
 ```
 
-Then deploy with: `./caddy/update_caddy.sh`
+**Manage:**
+```bash
+# Reload config
+sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
+
+# Validate
+sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile
+```
 
 ---
 

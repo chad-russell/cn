@@ -12,16 +12,28 @@ Personal homelab infrastructure configuration using:
 ## Current Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
+                              Internet
+                                  │
+                    ┌─────────────▼─────────────┐
+                    │      Hetzner VPS          │
+                    │  178.156.171.212          │
+                    │  (nginx: SSL passthrough) │
+                    │  Nebula: 10.10.0.2        │
+                    └─────────────┬─────────────┘
+                                  │ Nebula VPN
+┌─────────────────────────────────▼───────────────────────────────┐
 │                        crussell-srv                              │
 │                   (192.168.20.105 - This Machine)                │
+│                     Nebula: 10.10.0.1 (lighthouse)               │
 │                                                                  │
 │  Podman Quadlets (rootless):                                     │
 │  • Linkding    • Ntfy           • Papra                          │
 │  • Peekaping   • Audiobookshelf • AdGuardHome                    │
 │  • Immich      • Karakeep       • SearXNG                        │
 │                                                                  │
-│  Also runs: Caddy reverse proxy                                  │
+│  Caddy reverse proxy (system Quadlet):                           │
+│  • *.internal.crussell.io → internal services                    │
+│  • *.crussell.io → public services (via Hetzner)                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
                     ┌─────────┴─────────┐
@@ -72,6 +84,7 @@ Personal homelab infrastructure configuration using:
 | **crussell-srv** | 192.168.20.105 | Fedora Atomic | Main server | Podman Quadlets, Caddy |
 | k1 | 192.168.20.61 | Fedora Server | Media server | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr |
 | nas | 192.168.20.31 | TrueNAS | Network storage | NFS, Beszel agent |
+| hetzner | 178.156.171.212 | Fedora | Public gateway/VPS | nginx (SSL passthrough → crussell-srv via Nebula), Nebula lighthouse |
 | bee | 192.168.20.105 | Bluefin | Personal desktop | Beelink SER7 (same machine as crussell-srv) |
 | think | - | Bluefin | Laptop | ThinkPad T14 |
 
@@ -137,23 +150,34 @@ systemctl --user status <service>
 
 ## Caddy Reverse Proxy
 
-Caddy routes traffic to internal services.
+Caddy handles all reverse proxy routing on crussell-srv.
 
-**Config:** `caddy/Caddyfile`
+**Config:** `crussell-srv/caddy/Caddyfile`
+**Running as:** System-level Podman Quadlet (`/etc/containers/systemd/caddy.container`)
+**Network:** Host mode (required to access 127.0.0.1 backends)
+
 **Routes:**
-- `*.internal.crussell.io` → Internal services
-- `*.crussell.io` → Public services
+- `*.internal.crussell.io` → Internal services (linkding, immich, etc.)
+- `*.crussell.io` → Public services (jellyfin, photos, homeassistant, etc.)
 
-**Running on:** This machine (crussell-srv)
-
-**Update Caddy:**
-```bash
-# If there's an update script
-./caddy/update_caddy.sh
-
-# Or manually
-sudo systemctl restart caddy
+**Public Traffic Flow:**
 ```
+Internet → Hetzner (nginx SSL passthrough) → Nebula → crussell-srv Caddy
+```
+
+**Manage Caddy:**
+```bash
+# Reload config
+sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
+
+# Validate config
+sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile
+
+# View logs
+journalctl -u caddy -f
+```
+
+**Image:** Custom build with Route53 DNS challenge support (`localhost/caddy-route53:latest`)
 
 ## Restic Backups
 

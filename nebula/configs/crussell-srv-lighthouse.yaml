@@ -1,0 +1,43 @@
+# Lighthouse - crussell-srv (192.168.20.105)
+# Standalone lighthouse for now, will add Hetzner later
+
+pki:
+  ca: /etc/nebula/ca.crt
+  cert: /etc/nebula/crussell-srv.crt
+  key: /etc/nebula/crussell-srv.key
+
+# Self-reference for lighthouse mode
+static_host_map:
+  "10.10.0.1": ["192.168.20.105:4242"]
+
+lighthouse:
+  am_lighthouse: true
+  # No hosts to query - we ARE the lighthouse
+
+listen:
+  host: 0.0.0.0
+  port: 4242
+
+punchy:
+  punch: true
+  respond: true
+
+tun:
+  dev: nebula0
+
+firewall:
+  conntrack:
+    tcp_timeout: 120h
+    udp_timeout: 3m
+    default_timeout: 10m
+    max_connections: 100000
+  
+  outbound:
+    - port: any
+      proto: any
+      host: any
+  
+  inbound:
+    - port: any
+      proto: any
+      host: any

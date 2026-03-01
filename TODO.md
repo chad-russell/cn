@@ -28,3 +28,5 @@
 - [x] Archive Docker Swarm configs - migrated to Podman Quadlets
 - [x] Consolidate archived files into archived/ folder
 - [x] Update AGENTS.md to reflect simplified architecture
+- [x] Caddy migration from k2 to crussell-srv - handles both internal (*.internal) and public (*.crussell.io) routes
+- [x] Hetzner nginx switched from Tailscale to Nebula for backend proxying

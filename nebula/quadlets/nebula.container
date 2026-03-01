@@ -1,0 +1,19 @@
+[Unit]
+Description=Nebula Overlay Network
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/slackhq/nebula:1.9.5
+ContainerName=nebula
+Volume=/etc/nebula:/etc/nebula:Z
+PublishPort=4242:4242/udp
+# Privileged needed for TUN device creation
+Privileged=true
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

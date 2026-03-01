@@ -1,0 +1,52 @@
+# Nebula host configuration template
+# Copy and customize for each host
+
+pki:
+  ca: /etc/nebula/ca.crt
+  cert: /etc/nebula/<HOSTNAME>.crt
+  key: /etc/nebula/<HOSTNAME>.key
+
+# Static mapping to lighthouses
+static_host_map:
+  "10.10.0.1": ["<HETZNER_PUBLIC_IP>:4242"]  # Lighthouse #1
+  "10.10.0.2": ["192.168.20.105:4242"]       # Lighthouse #2
+
+lighthouse:
+  # Query both lighthouses for resilience
+  hosts:
+    - "10.10.0.1"
+    - "10.10.0.2"
+
+listen:
+  host: 0.0.0.0
+  port: 4242
+
+# NAT hole punching
+punchy:
+  punch: true
+  respond: true
+
+# Connection tracking
+firewall:
+  conntrack:
+    tcp_timeout: 120h
+    udp_timeout: 3m
+    default_timeout: 10m
+    max_connections: 100000
+  
+  outbound:
+    - port: any
+      proto: any
+      host: any
+  
+  inbound:
+    # Allow all from nebula network
+    - port: any
+      proto: any
+      host: any
+    # Or restrict by group:
+    # - port: any
+    #   proto: any
+    #   groups:
+    #     - servers
+    #     - lighthouse

@@ -1,0 +1,137 @@
+{
+    email chaddouglasrussell@gmail.com
+}
+
+# Internal services only - *.internal.crussell.io
+# Public routes (*.crussell.io) handled by external proxy
+
+*.internal.crussell.io {
+    tls {
+        dns route53 {
+            hosted_zone_id Z0225258330LLQ5BK81Z0
+        }
+        propagation_timeout 5m
+    }
+
+    # --- crussell-srv Services (192.168.20.105 / 10.10.0.1) ---
+    @karakeep host karakeep.internal.crussell.io
+    handle @karakeep {
+        reverse_proxy 127.0.0.1:30092
+    }
+
+    @linkding host linkding.internal.crussell.io
+    handle @linkding {
+        reverse_proxy 127.0.0.1:30080
+    }
+
+    @papra host papra.internal.crussell.io
+    handle @papra {
+        reverse_proxy 127.0.0.1:30083
+    }
+
+    @ntfy host ntfy.internal.crussell.io
+    handle @ntfy {
+        reverse_proxy 127.0.0.1:30085
+    }
+
+    @searxng host searxng.internal.crussell.io
+    handle @searxng {
+        reverse_proxy 127.0.0.1:30084
+    }
+
+    @peekaping host peekaping.internal.crussell.io
+    handle @peekaping {
+        reverse_proxy 127.0.0.1:30087
+    }
+
+    @audiobookshelf host audiobookshelf.internal.crussell.io
+    handle @audiobookshelf {
+        reverse_proxy 127.0.0.1:30337
+    }
+
+    @adguard host adguard.internal.crussell.io
+    handle @adguard {
+        reverse_proxy 127.0.0.1:30100 127.0.0.1:30102 {
+            lb_policy first
+        }
+    }
+
+    # --- k1 Services (192.168.20.61) ---
+    @qbittorrent host qbittorrent.internal.crussell.io
+    handle @qbittorrent {
+        reverse_proxy 192.168.20.61:8080
+    }
+
+    @sonarr host sonarr.internal.crussell.io
+    handle @sonarr {
+        reverse_proxy 192.168.20.61:8989
+    }
+
+    @radarr host radarr.internal.crussell.io
+    handle @radarr {
+        reverse_proxy 192.168.20.61:7878
+    }
+
+    @prowlarr host prowlarr.internal.crussell.io
+    handle @prowlarr {
+        reverse_proxy 192.168.20.61:9696
+    }
+
+    @jellyseerr host jellyseerr.internal.crussell.io
+    handle @jellyseerr {
+        reverse_proxy 192.168.20.61:5055
+    }
+
+    # --- k2 Services (192.168.20.62) ---
+    @dozzle host dozzle.internal.crussell.io
+    handle @dozzle {
+        reverse_proxy 192.168.20.62:8080
+    }
+
+    # --- TrueNAS (192.168.20.31 / 10.10.0.3) ---
+    @beszel host beszel.internal.crussell.io
+    handle @beszel {
+        reverse_proxy 192.168.20.64:8090
+    }
+}
+
+# Public routes - *.crussell.io
+*.crussell.io {
+    tls {
+        dns route53 {
+            hosted_zone_id Z0225258330LLQ5BK81Z0
+        }
+        propagation_timeout 15m
+        resolvers 8.8.8.8 1.1.1.1
+    }
+
+    @homeassistant host homeassistant.crussell.io
+    handle @homeassistant {
+        reverse_proxy 192.168.20.51:8123
+    }
+
+    @jellyfin host jellyfin.crussell.io
+    handle @jellyfin {
+        reverse_proxy 192.168.20.61:8096
+    }
+
+    @photos host photos.crussell.io
+    handle @photos {
+        reverse_proxy 127.0.0.1:30093
+    }
+
+    @chex-mix-timer host chex-mix-timer.crussell.io
+    handle @chex-mix-timer {
+        reverse_proxy 192.168.20.64:8732
+    }
+
+    @stumpdle host stumpdle.crussell.io
+    handle @stumpdle {
+        reverse_proxy 192.168.20.62:3177
+    }
+
+    @pelicans host pelicans.crussell.io
+    handle @pelicans {
+        reverse_proxy 127.0.0.1:3002
+    }
+}

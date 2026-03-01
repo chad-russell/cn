@@ -1,0 +1,19 @@
+[Unit]
+Description=Caddy Reverse Proxy (Internal Services)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/caddy-route53:latest
+Network=host
+Volume=/var/home/crussell/Code/cn/crussell-srv/caddy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+Volume=caddy_data:/data
+Volume=caddy_config:/config
+EnvironmentFile=/var/home/crussell/Code/cn/crussell-srv/caddy/aws.env
+
+[Service]
+Restart=unless-stopped
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

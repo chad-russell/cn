@@ -1,0 +1,9 @@
+# Build Caddy with Route 53 DNS challenge module
+FROM docker.io/library/caddy:2.8.4-builder AS builder
+
+RUN xcaddy build \
+    --with github.com/caddy-dns/route53@v1.5.1
+
+FROM docker.io/library/caddy:2.8.4-alpine
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
