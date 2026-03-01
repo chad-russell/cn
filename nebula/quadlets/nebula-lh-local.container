@@ -1,0 +1,17 @@
+[Unit]
+Description=Nebula Local Lighthouse (10.10.0.1)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/nebulaoss/nebula:1.10.3
+ContainerName=nebula-lh-local
+Volume=/etc/nebula-lh:/config:Z
+PublishPort=4243:4243/udp
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

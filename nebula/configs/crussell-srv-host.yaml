@@ -1,15 +1,14 @@
-# Nebula config for TrueNAS (10.10.0.3)
-# Dual lighthouses with split identity on crussell-srv:
-# - 10.10.0.1 local lighthouse (LAN, UDP 4243)
-# - 10.10.0.2 Hetzner public lighthouse
+# Primary Nebula host for crussell-srv services
+# This is the service endpoint identity (Caddy/backends), not a lighthouse.
+
 pki:
   ca: /etc/nebula/ca.crt
-  cert: /etc/nebula/host.crt
-  key: /etc/nebula/host.key
+  cert: /etc/nebula/crussell-srv-host.crt
+  key: /etc/nebula/crussell-srv-host.key
 
 static_host_map:
-  "10.10.0.1": ["192.168.20.105:4243"]
   "10.10.0.2": ["178.156.171.212:4242"]
+  "10.10.0.1": ["127.0.0.1:4243", "192.168.20.105:4243"]
 
 lighthouse:
   am_lighthouse: false
@@ -25,7 +24,6 @@ listen:
 punchy:
   punch: true
   respond: true
-  delay: 1s
 
 relay:
   am_relay: false
@@ -33,16 +31,11 @@ relay:
   relays:
     - "10.10.0.2"
 
+tun:
+  dev: nebula0
+
 preferred_ranges:
   - "192.168.20.0/24"
-
-tun:
-  disabled: false
-  dev: nebula0
-  drop_local_broadcast: false
-  drop_multicast: false
-  tx_queue: 500
-  mtu: 1300
 
 logging:
   level: info
@@ -50,7 +43,7 @@ logging:
 
 firewall:
   conntrack:
-    tcp_timeout: 12m
+    tcp_timeout: 120h
     udp_timeout: 3m
     default_timeout: 10m
     max_connections: 100000

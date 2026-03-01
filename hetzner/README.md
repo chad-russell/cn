@@ -16,9 +16,9 @@ Internet (*.crussell.io)
     ▼
 Hetzner nginx (SSL passthrough :443)
     │
-    ▼ stream proxy to 10.10.0.1:443
+    ▼ stream proxy to 10.10.0.6:443
     │
-crussell-srv (Nebula 10.10.0.1)
+crussell-srv host (Nebula 10.10.0.6)
     │
     ▼
 Caddy → backend services
@@ -31,11 +31,11 @@ Caddy → backend services
 ```nginx
 stream {
     upstream homelab_https {
-        server 10.10.0.1:443;  # crussell-srv via Nebula
+        server 10.10.0.6:443;  # crussell-srv host via Nebula
     }
 
     upstream homelab_http {
-        server 10.10.0.1:80;
+        server 10.10.0.6:80;
     }
 
     server {
@@ -80,14 +80,15 @@ ufw allow 4242/udp  # Nebula
 
 ## Nebula
 
-Hetzner runs as Nebula lighthouse #2, providing connectivity for roaming devices (phone, laptop).
+Hetzner runs as Nebula lighthouse + relay, providing connectivity for roaming devices (phone, laptop).
 
-- **Config:** `/etc/nebula/config.yaml`
+- **Nebula IP:** 10.10.0.2
+- **Config:** `/etc/nebula/hetzner-lh.yaml`
 - **Service:** `systemctl status nebula`
-- **IP:** 10.10.0.2
+
+**Full Nebula docs:** See `nebula/README.md` for topology, cert management, and client configuration.
 
 ## Notes
 
 - SSH requires ssh-agent with passphrase-protected key
 - Access via Hetzner Cloud Console if locked out
-- Traffic switched from Tailscale (100.121.155.14) to Nebula (10.10.0.1) on 2026-02-28

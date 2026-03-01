@@ -1,8 +1,30 @@
-# Phone config - uses both lighthouses for LAN and roaming
+# Phone Nebula Config - Complete single file with fresh key
+# Updated: 2026-03-01 - Dual-lighthouse split identity
+# - 10.10.0.1 = local lighthouse (LAN, UDP 4243)
+# - 10.10.0.6 = crussell-srv service endpoint (Caddy/backends)
+
+pki:
+  ca: |
+    -----BEGIN NEBULA CERTIFICATE V2-----
+    MIGJoCOAEkNydXNzZWxsIE5lYnVsYSBDQYQB/4UEaaOMYYYEfG+PYYIgKWBZ3tuX
+    m57OmK0UC3DdiNb8iLAfPxMNWZdvYGXLBXmDQPtmsRgfwhpzyhKkioJQlKmumtTo
+    Vzq6Y6MnO98XRTtMnE6eRJ7nMyASPAVYVugcG3kN2RxCrN61WMEtto/HWwM=
+    -----END NEBULA CERTIFICATE V2-----
+  cert: |
+    -----BEGIN NEBULA CERTIFICATE V2-----
+    MIGuoEiABXBob25loQcEBQoKAAsYowgMBmNsaWVudIUEaaSF4YYEfG+PYIcguUYC
+    V19/A2awO+HMuxOxrLM5joQODJ0dS0Fl4FOBiWGCIJgMetbwGlmqp/3/MfTPKnr2
+    zyFci1aPc2laehEZitsMg0BTGkpBQ9zdUe6BEo0jtI98URSeSHvpxvDZ/GeRLHyY
+    ITpeJ4EzkHUopRKj60w3Yucseb2sz2iuOcIh/E4k3HYL
+    -----END NEBULA CERTIFICATE V2-----
+  key: |
+    -----BEGIN NEBULA X25519 PRIVATE KEY-----
+    pH4pc0vH2HpBrGPmjMMpEd0cyAyUgx4fYskPLoOzA08=
+    -----END NEBULA X25519 PRIVATE KEY-----
 
 static_host_map:
-  "10.10.0.1": ["192.168.20.105:4242"]
-  "10.10.0.2": ["178.156.171.212:4242"]
+  "10.10.0.1": ["192.168.20.105:4243"]  # local lighthouse (LAN only)
+  "10.10.0.2": ["178.156.171.212:4242"] # Hetzner lighthouse+relay (public)
 
 lighthouse:
   am_lighthouse: false
@@ -19,16 +41,25 @@ punchy:
   punch: true
   respond: true
 
-tun:
-  mtu: 1300
-  unsafe_routes:
-    - route: 192.168.20.0/24
-      via: 10.10.0.1
+relay:
+  use_relays: true
+  relays:
+    - "10.10.0.2"
 
-logging:
-  level: info
+tun:
+  unsafe_routes:
+    - route: "192.168.20.0/24"
+      via: "10.10.0.6"
+
+preferred_ranges:
+  - "192.168.20.0/24"
 
 firewall:
+  conntrack:
+    tcp_timeout: 120h
+    udp_timeout: 3m
+    default_timeout: 10m
+    max_connections: 100000
   outbound:
     - port: any
       proto: any

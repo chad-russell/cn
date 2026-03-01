@@ -1,29 +1,37 @@
-# Lighthouse - crussell-srv (192.168.20.105)
-# Standalone lighthouse for now, will add Hetzner later
+# Local Lighthouse - crussell-srv (container)
+# Nebula IP 10.10.0.1 is reserved for this dedicated lighthouse identity.
+# Uses UDP 4243 so it can coexist with the primary Nebula host instance on 4242.
 
 pki:
-  ca: /etc/nebula/ca.crt
-  cert: /etc/nebula/crussell-srv.crt
-  key: /etc/nebula/crussell-srv.key
+  ca: /config/ca.crt
+  cert: /config/crussell-lh-local.crt
+  key: /config/crussell-lh-local.key
 
-# Self-reference for lighthouse mode
-static_host_map:
-  "10.10.0.1": ["192.168.20.105:4242"]
+static_host_map: {}
 
 lighthouse:
   am_lighthouse: true
-  # No hosts to query - we ARE the lighthouse
+  interval: 60
+  hosts: []
 
 listen:
   host: 0.0.0.0
-  port: 4242
+  port: 4243
 
 punchy:
   punch: true
   respond: true
 
+relay:
+  am_relay: false
+  use_relays: false
+
 tun:
-  dev: nebula0
+  disabled: true
+
+logging:
+  level: info
+  format: text
 
 firewall:
   conntrack:

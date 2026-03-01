@@ -1,0 +1,54 @@
+# llama-swap YAML configuration
+
+healthCheckTimeout: 60
+
+# logLevel: standard info level for general operation.
+logLevel: info
+
+# startPort: A good starting point for internal proxy ports.
+startPort: 10001
+
+# 'llama-cmd': A reusable command prefix for all models.
+# Path is CORRECTED to: /usr/bin/llama-server
+macros:
+  "llama-cmd": >
+    /usr/bin/llama-server
+    --port ${PORT}
+    --host 127.0.0.1
+    -ngl 999
+    -m 
+
+models:
+  "gpt-oss-120b":
+    name: "GPT-OSS 120B F16"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_gpt-oss-120b-GGUF_gpt-oss-120b-F16.gguf --jinja --ctx-size 50000
+  "gpt-oss-20b":
+    name: "GPT-OSS 20B F16"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_gpt-oss-20b-GGUF_gpt-oss-20b-F16.gguf --jinja --ctx-size 50000
+  "qwen3.5-35b-a3b":
+    name: "Qwen3.5-35B-A3B-UD-Q8_K_XL"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-35B-A3B-GGUF_Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --jinja --ctx-size 50000
+  "qwen3.5-27b":
+    name: "Qwen3.5-27B-UD-Q8_K_XL"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-27B-GGUF_Qwen3.5-27B-UD-Q8_K_XL.gguf --jinja --ctx-size 50000
+  "qwen3-4b-thinking":
+    name: "Qwen3-4B-Thinking-Q8_K_XL"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3-4B-Thinking-2507-GGUF_Qwen3-4B-Thinking-2507-UD-Q8_K_XL.gguf --jinja --ctx-size 50000
+  "qwen3-4b-instruct":
+    name: "Qwen3-4B-Instruct-Q4_K_M"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3-4B-Instruct-2507-GGUF_Qwen3-4B-Instruct-2507-Q4_K_M.gguf --jinja --ctx-size 50000
+  "cydonia-24b":
+    name: "Cydonia-24B-Q6_K_L"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/bartowski_TheDrummer_Cydonia-24B-v4.2.0-GGUF_TheDrummer_Cydonia-24B-v4.2.0-Q6_K_L.gguf --jinja --ctx-size 50000
+  "dolphin-mistral":
+    name: "Dolphin Mistral"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/bartowski_cognitivecomputations_Dolphin-Mistral-24B-Venice-Edition-GGUF_cognitivecomputations_Dolphin-Mistral-24B-Venice-Edition-bf16.gguf --jinja --ctx-size 50000
+  "hermes-4":
+    name: "Hermes-4.3-36B-Q8_0"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/NousResearch_Hermes-4.3-36B-GGUF_hermes-4_3_36b-Q8_0.gguf --jinja --ctx-size 50000
+  "glm-4.7-flash":
+    name: "GLM-4.7-Flash-Q8_K_XL"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_GLM-4.7-Flash-GGUF_GLM-4.7-Flash-UD-Q8_K_XL.gguf --jinja --ctx-size 131072 --temp 1.0 --top-p 0.95 --min-p 0.01 --fit on --repeat-penalty 1.0
+  "nomic-embed-text-v2":
+    name: "Nomic-Embed-Text-V2"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/ggml-org_Nomic-Embed-Text-V2-GGUF_nomic-embed-text-v2-moe-q8_0.gguf --embeddings --ctx-size 50000

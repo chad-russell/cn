@@ -1,11 +1,12 @@
-# Nebula config for TrueNAS (10.10.0.3)
-# Dual lighthouses with split identity on crussell-srv:
-# - 10.10.0.1 local lighthouse (LAN, UDP 4243)
-# - 10.10.0.2 Hetzner public lighthouse
+# Nebula config for ThinkPad laptop (roaming client)
+# Uses dual lighthouses:
+# - 10.10.0.1 local lighthouse on LAN (192.168.20.105:4243)
+# - 10.10.0.2 Hetzner lighthouse+relay (178.156.171.212:4242)
+
 pki:
   ca: /etc/nebula/ca.crt
-  cert: /etc/nebula/host.crt
-  key: /etc/nebula/host.key
+  cert: /etc/nebula/laptop.crt
+  key: /etc/nebula/laptop.key
 
 static_host_map:
   "10.10.0.1": ["192.168.20.105:4243"]
@@ -20,12 +21,11 @@ lighthouse:
 
 listen:
   host: 0.0.0.0
-  port: 4242
+  port: 0
 
 punchy:
   punch: true
   respond: true
-  delay: 1s
 
 relay:
   am_relay: false
@@ -33,16 +33,12 @@ relay:
   relays:
     - "10.10.0.2"
 
-preferred_ranges:
-  - "192.168.20.0/24"
-
 tun:
   disabled: false
   dev: nebula0
-  drop_local_broadcast: false
-  drop_multicast: false
-  tx_queue: 500
-  mtu: 1300
+
+preferred_ranges:
+  - "192.168.20.0/24"
 
 logging:
   level: info
@@ -50,7 +46,7 @@ logging:
 
 firewall:
   conntrack:
-    tcp_timeout: 12m
+    tcp_timeout: 120h
     udp_timeout: 3m
     default_timeout: 10m
     max_connections: 100000

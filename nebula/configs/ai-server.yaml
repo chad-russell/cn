@@ -1,15 +1,16 @@
-# Nebula config for TrueNAS (10.10.0.3)
+# Nebula config for AI Server (10.10.0.5) - hostname: bees
 # Dual lighthouses with split identity on crussell-srv:
 # - 10.10.0.1 local lighthouse (LAN, UDP 4243)
 # - 10.10.0.2 Hetzner public lighthouse
+
 pki:
   ca: /etc/nebula/ca.crt
   cert: /etc/nebula/host.crt
   key: /etc/nebula/host.key
 
 static_host_map:
-  "10.10.0.1": ["192.168.20.105:4243"]
-  "10.10.0.2": ["178.156.171.212:4242"]
+  "10.10.0.1": ["192.168.20.105:4243"]       # crussell-srv local lighthouse
+  "10.10.0.2": ["178.156.171.212:4242"]      # Hetzner public lighthouse
 
 lighthouse:
   am_lighthouse: false

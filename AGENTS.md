@@ -24,7 +24,9 @@ Personal homelab infrastructure configuration using:
 ┌─────────────────────────────────▼───────────────────────────────┐
 │                        crussell-srv                              │
 │                   (192.168.20.105 - This Machine)                │
-│                     Nebula: 10.10.0.1 (lighthouse)               │
+│                     Nebula split identity:                        │
+│                     • 10.10.0.1 local lighthouse                 │
+│                     • 10.10.0.6 host/services endpoint           │
 │                                                                  │
 │  Podman Quadlets (rootless):                                     │
 │  • Linkding    • Ntfy           • Papra                          │
@@ -84,7 +86,7 @@ Personal homelab infrastructure configuration using:
 | **crussell-srv** | 192.168.20.105 | Fedora Atomic | Main server | Podman Quadlets, Caddy |
 | k1 | 192.168.20.61 | Fedora Server | Media server | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr |
 | nas | 192.168.20.31 | TrueNAS | Network storage | NFS, Beszel agent |
-| hetzner | 178.156.171.212 | Fedora | Public gateway/VPS | nginx (SSL passthrough → crussell-srv via Nebula), Nebula lighthouse |
+| hetzner | 178.156.171.212 | Fedora | Public gateway/VPS | nginx (SSL passthrough → crussell-srv via Nebula), Nebula lighthouse + relay |
 | bee | 192.168.20.105 | Bluefin | Personal desktop | Beelink SER7 (same machine as crussell-srv) |
 | think | - | Bluefin | Laptop | ThinkPad T14 |
 
@@ -162,7 +164,7 @@ Caddy handles all reverse proxy routing on crussell-srv.
 
 **Public Traffic Flow:**
 ```
-Internet → Hetzner (nginx SSL passthrough) → Nebula → crussell-srv Caddy
+Internet → Hetzner (nginx SSL passthrough) → Nebula 10.10.0.6 → crussell-srv Caddy
 ```
 
 **Manage Caddy:**
@@ -178,6 +180,18 @@ journalctl -u caddy -f
 ```
 
 **Image:** Custom build with Route53 DNS challenge support (`localhost/caddy-route53:latest`)
+
+## Nebula
+
+Nebula provides the mesh VPN for secure connectivity between all nodes.
+
+**Key facts:**
+- Local lighthouse on `crussell-srv`: `10.10.0.1` (UDP 4243, discovery-only)
+- crussell-srv host identity: `10.10.0.6` (Caddy/backend endpoint)
+- Hetzner lighthouse + relay: `10.10.0.2` (public, UDP 4242)
+- Internal DNS (`*.internal.crussell.io`) points to `10.10.0.6`
+
+**Full details:** See `nebula/README.md` for topology, config files, cert management, and troubleshooting.
 
 ## Restic Backups
 
