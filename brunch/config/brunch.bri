@@ -19,31 +19,6 @@ const appImage = std
   }) })
   .toFile();
 
-const vicinaeAppImage = std
-  .runBash`
-    cp "$RAW_APPIMAGE" "$BRIOCHE_OUTPUT"
-    chmod +x "$BRIOCHE_OUTPUT"
-  `
-  .env({ RAW_APPIMAGE: std.download({
-    url: "https://github.com/vicinaehq/vicinae/releases/download/v0.19.3/Vicinae-x86_64.AppImage",
-    hash: std.sha256Hash(
-      "72c22d58b6180a96ebeaf511c3ffc68b120c9f49cb49761796e1341538a587db",
-    ),
-  }) })
-  .toFile();
-
-const vicinaeWrapper = std
-  .runBash`
-    cat > "$BRIOCHE_OUTPUT" << 'EOF'
-#!/bin/bash
-export IGNORE_APPIMAGE_WARNING=1
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-exec "$SCRIPT_DIR/vicinae.AppImage" "$@"
-EOF
-    chmod +x "$BRIOCHE_OUTPUT"
-  `
-  .toFile();
-
 const icon = std.download({
   url: "https://user-images.githubusercontent.com/18397/185704412-007ca0a2-8778-496e-b002-51f324bdd6b7.png",
   hash: std.sha256Hash(
@@ -108,6 +83,7 @@ const zshEnv = Brioche.includeFile("./zsh/.zshenv");
 const weztermConfig = Brioche.includeFile("./wezterm/wezterm.lua");
 const niriConfig = Brioche.includeFile("./niri/config.kdl");
 const ohMyPoshTheme = Brioche.includeFile("./oh-my-posh/config.json");
+const ghosttyConfig = Brioche.includeFile("./ghostty/config");
 
 // ============== Icons ==============
 
@@ -133,13 +109,6 @@ export default function brunchConfig() {
       {
         name: "zoxide",
         executable: zoxide(),
-      },
-      {
-        name: "vicinae",
-        executable: std.directory({
-          "vicinae.AppImage": vicinaeAppImage,
-          "brioche-run": vicinaeWrapper,
-        }),
       },
     ],
     desktopApps: [
@@ -212,6 +181,9 @@ export default function brunchConfig() {
       // Neovim configuration
       // Include all nvim configuration files and directories
       ".config/nvim": nvimConfig,
+
+      // Ghostty configuration
+      ".config/ghostty/config": ghosttyConfig,
     },
   });
 }
