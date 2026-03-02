@@ -7,8 +7,11 @@
       "config": {
         "url": "https://linkding.internal.crussell.io",
         "method": "GET",
+        "headers": "{}",
+        "encoding": "text",
         "accepted_statuscodes": ["2XX", "3XX"],
-        "max_redirects": 10
+        "max_redirects": 10,
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -24,7 +27,10 @@
       "config": {
         "url": "https://ntfy.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -40,7 +46,10 @@
       "config": {
         "url": "https://papra.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -56,7 +65,10 @@
       "config": {
         "url": "https://audiobookshelf.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -72,7 +84,10 @@
       "config": {
         "url": "https://adguard.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX", "3XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX", "3XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -88,7 +103,10 @@
       "config": {
         "url": "https://photos.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -104,7 +122,10 @@
       "config": {
         "url": "https://karakeep.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -120,7 +141,10 @@
       "config": {
         "url": "https://searxng.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -136,7 +160,10 @@
       "config": {
         "url": "https://jellyfin.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -152,7 +179,10 @@
       "config": {
         "url": "https://jellyseerr.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -168,7 +198,10 @@
       "config": {
         "url": "https://radarr.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -184,7 +217,10 @@
       "config": {
         "url": "https://sonarr.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -200,7 +236,10 @@
       "config": {
         "url": "https://prowlarr.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -216,8 +255,11 @@
       "config": {
         "url": "https://qbittorrent.internal.crussell.io",
         "method": "GET",
+        "headers": "{}",
+        "encoding": "text",
         "accepted_statuscodes": ["2XX", "3XX"],
-        "max_redirects": 10
+        "max_redirects": 10,
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -233,7 +275,10 @@
       "config": {
         "url": "https://homeassistant.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
@@ -249,7 +294,10 @@
       "config": {
         "url": "https://beszel.internal.crussell.io",
         "method": "GET",
-        "accepted_statuscodes": ["2XX"]
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
       },
       "interval": 30,
       "timeout": 30,
