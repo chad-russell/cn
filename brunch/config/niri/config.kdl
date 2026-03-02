@@ -142,7 +142,7 @@ binds {
 
     // Applications
     Mod+T { spawn "wezterm"; }
-    Mod+B { spawn "flatpak" "run" "app.zen_browser.zen"; }
+    Mod+B { spawn "flatpak" "run" "com.google.Chrome"; }
     Mod+F { spawn "nautilus" "--new-window"; }
 
     // Media keys (DMS)

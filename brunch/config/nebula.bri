@@ -1,0 +1,28 @@
+import * as std from "std";
+
+const NEBULA_VERSION = "1.10.3";
+
+const nebulaArchive = std.download({
+  url: `https://github.com/slackhq/nebula/releases/download/v${NEBULA_VERSION}/nebula-linux-amd64.tar.gz`,
+  hash: std.sha256Hash(
+    "99ac335caeb69d02a6b6b00a3d4b5d0a36ec3971df480a1cc50e6db378342955",
+  ),
+});
+
+const extractedNebula = std
+  .runBash`
+    mkdir -p "$BRIOCHE_OUTPUT/bin"
+    tar -xzf "$ARCHIVE" -C "$BRIOCHE_OUTPUT/bin" nebula nebula-cert
+    chmod +x "$BRIOCHE_OUTPUT/bin/nebula" "$BRIOCHE_OUTPUT/bin/nebula-cert"
+  `
+  .env({ ARCHIVE: nebulaArchive })
+  .toDirectory();
+
+export default function () {
+  return std.merge(
+    extractedNebula,
+    std.directory({
+      "brioche-run": std.symlink({ target: "bin/nebula" }),
+    }),
+  );
+}

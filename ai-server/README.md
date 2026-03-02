@@ -14,20 +14,20 @@ AMD Strix Halo APU machine running llama.cpp for local LLM inference.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      bees (192.168.20.41)                    │
+│                      bees (192.168.20.41)                   │
 │                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │              llama-vulkan-radv toolbox               │   │
-│  │  ┌──────────────────────────────────────────────┐   │   │
-│  │  │  llama-swap (port 8000)                       │   │   │
-│  │  │  - Dynamic model loading/swapping             │   │   │
-│  │  │  - Proxies to llama-server instances          │   │   │
-│  │  └──────────────────────────────────────────────┘   │   │
-│  │                                                      │   │
-│  │  llama-server (Vulkan/RADV backend)                  │   │
-│  │  - Uses RADV (Mesa) Vulkan driver                    │   │
-│  │  - AMD GFX1151 (Strix Halo)                          │   │
-│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              llama-vulkan-radv toolbox              │    │
+│  │  ┌──────────────────────────────────────────────┐   │    │
+│  │  │  llama-swap (port 8000)                      │   │    │
+│  │  │  - Dynamic model loading/swapping            │   │    │
+│  │  │  - Proxies to llama-server instances         │   │    │
+│  │  └──────────────────────────────────────────────┘   │    │
+│  │                                                     │    │
+│  │  llama-server (Vulkan/RADV backend)                 │    │
+│  │  - Uses RADV (Mesa) Vulkan driver                   │    │
+│  │  - AMD GFX1151 (Strix Halo)                         │    │
+│  └─────────────────────────────────────────────────────┘    │
 │                                                             │
 │  Models: ~/.cache/llama.cpp/                                │
 │  Config: ~/Code/config.yaml                                 │

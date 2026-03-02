@@ -3,6 +3,7 @@ import { makeBrunch, makeWebAppExecutable } from "brunch";
 import eza from "eza";
 import oh_my_posh from "oh_my_posh";
 import zoxide from "zoxide";
+import nebula from "./nebula.bri";
 
 // ============== Downloads ==============
 
@@ -110,6 +111,10 @@ export default function brunchConfig() {
         name: "zoxide",
         executable: zoxide(),
       },
+      {
+        name: "nebula",
+        executable: nebula(),
+      },
     ],
     desktopApps: [
       {
@@ -152,15 +157,7 @@ export default function brunchConfig() {
         iconExt: "png",
         comment: "A simple hello world app",
         categories: ["Utility"],
-      },
-      {
-        name: "crussell",
-        executable: std.bashRunnable`echo "You are super awesome"`,
-        icon,
-        iconExt: "png",
-        comment: "Testing my Crussell skillz",
-        categories: ["System"],
-      },
+      }
     ],
     files: {
       // Zsh configuration
