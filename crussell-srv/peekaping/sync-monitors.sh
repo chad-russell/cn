@@ -18,7 +18,7 @@ MONITORS_FILE="${SCRIPT_DIR}/monitors.json"
 
 # Configuration
 PEEKAPING_URL="${PEEKAPING_URL:-https://peekaping.internal.crussell.io}"
-PEEKAPING_API_KEY="${PEEKAPING_API_KEY:-}"
+PEEKAPING_API_KEY="pk_eyJpZCI6IjBhY2ZlYWQ3LTZlZTQtNDY2Yy04NDM0LWZjM2ZmN2IwMGM2YSIsImtleSI6IlA3dHNXaU1wUjBOOTI2LTMwQjhqdHV2WnhDckZmaHdlb2lNLWROeDZJY1k9In0="
 
 # Check for dry-run mode
 DRY_RUN=false
