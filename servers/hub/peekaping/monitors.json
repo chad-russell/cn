@@ -9,6 +9,7 @@
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
+        "authMethod": "none",
         "accepted_statuscodes": ["2XX", "3XX"],
         "max_redirects": 10,
         "authMethod": "none"
@@ -86,8 +87,9 @@
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
+        "authMethod": "none",
         "accepted_statuscodes": ["2XX", "3XX"],
-        "authMethod": "none"
+        "max_redirects": 10
       },
       "interval": 30,
       "timeout": 30,
@@ -124,8 +126,9 @@
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
-        "accepted_statuscodes": ["2XX"],
-        "authMethod": "none"
+        "authMethod": "none",
+        "accepted_statuscodes": ["2XX", "3XX"],
+        "max_redirects": 10
       },
       "interval": 30,
       "timeout": 30,
@@ -143,8 +146,8 @@
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
-        "accepted_statuscodes": ["2XX"],
-        "authMethod": "none"
+        "authMethod": "none",
+        "accepted_statuscodes": ["2XX"]
       },
       "interval": 30,
       "timeout": 30,
@@ -158,12 +161,12 @@
       "name": "Jellyfin",
       "type": "http",
       "config": {
-        "url": "https://jellyfin.internal.crussell.io",
+        "url": "https://jellyfin.crussell.io/web/",
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
-        "accepted_statuscodes": ["2XX"],
-        "authMethod": "none"
+        "authMethod": "none",
+        "accepted_statuscodes": ["2XX"]
       },
       "interval": 30,
       "timeout": 30,
@@ -177,12 +180,12 @@
       "name": "Jellyseerr",
       "type": "http",
       "config": {
-        "url": "https://jellyseerr.internal.crussell.io",
+        "url": "https://jellyseerr.crussell.io",
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
-        "accepted_statuscodes": ["2XX"],
-        "authMethod": "none"
+        "authMethod": "none",
+        "accepted_statuscodes": ["2XX"]
       },
       "interval": 30,
       "timeout": 30,
@@ -196,12 +199,12 @@
       "name": "Radarr",
       "type": "http",
       "config": {
-        "url": "https://radarr.internal.crussell.io",
+        "url": "https://radarr.crussell.io",
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
-        "accepted_statuscodes": ["2XX"],
-        "authMethod": "none"
+        "authMethod": "none",
+        "accepted_statuscodes": ["2XX"]
       },
       "interval": 30,
       "timeout": 30,
@@ -215,12 +218,12 @@
       "name": "Sonarr",
       "type": "http",
       "config": {
-        "url": "https://sonarr.internal.crussell.io",
+        "url": "https://sonarr.crussell.io",
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
-        "accepted_statuscodes": ["2XX"],
-        "authMethod": "none"
+        "authMethod": "none",
+        "accepted_statuscodes": ["2XX"]
       },
       "interval": 30,
       "timeout": 30,
@@ -234,12 +237,12 @@
       "name": "Prowlarr",
       "type": "http",
       "config": {
-        "url": "https://prowlarr.internal.crussell.io",
+        "url": "https://prowlarr.crussell.io",
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
-        "accepted_statuscodes": ["2XX"],
-        "authMethod": "none"
+        "authMethod": "none",
+        "accepted_statuscodes": ["2XX"]
       },
       "interval": 30,
       "timeout": 30,
@@ -253,10 +256,11 @@
       "name": "qBittorrent",
       "type": "http",
       "config": {
-        "url": "https://qbittorrent.internal.crussell.io",
+        "url": "https://qbittorrent.crussell.io",
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
+        "authMethod": "none",
         "accepted_statuscodes": ["2XX", "3XX"],
         "max_redirects": 10,
         "authMethod": "none"
@@ -277,8 +281,8 @@
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
-        "accepted_statuscodes": ["2XX"],
-        "authMethod": "none"
+        "authMethod": "none",
+        "accepted_statuscodes": ["2XX"]
       },
       "interval": 30,
       "timeout": 30,
@@ -296,8 +300,8 @@
         "method": "GET",
         "headers": "{}",
         "encoding": "text",
-        "accepted_statuscodes": ["2XX"],
-        "authMethod": "none"
+        "authMethod": "none",
+        "accepted_statuscodes": ["2XX"]
       },
       "interval": 30,
       "timeout": 30,

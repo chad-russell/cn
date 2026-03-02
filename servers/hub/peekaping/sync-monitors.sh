@@ -3,7 +3,14 @@
 # Sync Peekaping monitors from declarative JSON configuration
 #
 # Usage:
-#   ./sync-monitors.sh [--dry-run]
+#   ./sync-monitors.sh [--dry-run] [--clean]
+#
+# Flags:
+#   --dry-run  Show what would change without making any modifications
+#   --clean    Delete ALL existing monitors before syncing (loses history)
+#
+# By default, monitors not in the JSON config are deleted, existing monitors
+# are updated, and new monitors are created. Use --clean for a full reset.
 #
 # Environment variables:
 #   PEEKAPING_URL  - Peekaping base URL (default: https://peekaping.internal.crussell.io)
@@ -20,12 +27,21 @@ MONITORS_FILE="${SCRIPT_DIR}/monitors.json"
 PEEKAPING_URL="${PEEKAPING_URL:-https://peekaping.internal.crussell.io}"
 PEEKAPING_API_KEY="pk_eyJpZCI6IjBhY2ZlYWQ3LTZlZTQtNDY2Yy04NDM0LWZjM2ZmN2IwMGM2YSIsImtleSI6IlA3dHNXaU1wUjBOOTI2LTMwQjhqdHV2WnhDckZmaHdlb2lNLWROeDZJY1k9In0="
 
-# Check for dry-run mode
+# Parse arguments
 DRY_RUN=false
-if [[ "${1:-}" == "--dry-run" ]]; then
-    DRY_RUN=true
-    echo "=== DRY RUN MODE - No changes will be made ==="
-fi
+CLEAN=false
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run)
+            DRY_RUN=true
+            echo "=== DRY RUN MODE - No changes will be made ==="
+            ;;
+        --clean)
+            CLEAN=true
+            echo "=== CLEAN MODE - All existing monitors will be deleted ==="
+            ;;
+    esac
+done
 
 # Validate API key
 if [[ -z "$PEEKAPING_API_KEY" ]]; then
@@ -57,9 +73,9 @@ api_call() {
     curl "${args[@]}" "${PEEKAPING_URL}${endpoint}"
 }
 
-# Get existing monitors from API
+# Get existing monitors from API (use high limit to get all)
 echo "Fetching existing monitors..."
-EXISTING_MONITORS=$(api_call GET "/api/v1/monitors")
+EXISTING_MONITORS=$(api_call GET "/api/v1/monitors?limit=1000")
 
 if echo "$EXISTING_MONITORS" | jq -e '.data == null' &> /dev/null; then
     echo "Error: Failed to fetch monitors. Response:"
@@ -67,18 +83,77 @@ if echo "$EXISTING_MONITORS" | jq -e '.data == null' &> /dev/null; then
     exit 1
 fi
 
-# Build associative array of existing monitors by name
-declare -A EXISTING_BY_NAME
-declare -A EXISTING_BY_ID
+# Build tracking structures - support multiple monitors with same name (duplicates)
+declare -A EXISTING_BY_NAME   # name -> first id found (for updates)
+declare -A EXISTING_BY_ID     # id -> name
+DUPLICATE_IDS=()              # ids that are duplicates (to be deleted)
 
 while IFS= read -r monitor; do
     name=$(echo "$monitor" | jq -r '.name')
     id=$(echo "$monitor" | jq -r '.id')
-    EXISTING_BY_NAME["$name"]="$id"
     EXISTING_BY_ID["$id"]="$name"
+    
+    if [[ -n "${EXISTING_BY_NAME[$name]:-}" ]]; then
+        DUPLICATE_IDS+=("$id")
+    else
+        EXISTING_BY_NAME["$name"]="$id"
+    fi
 done < <(echo "$EXISTING_MONITORS" | jq -c '.data[]')
 
-echo "Found ${#EXISTING_BY_NAME[@]} existing monitors"
+total_monitors=${#EXISTING_BY_ID[@]}
+unique_names=${#EXISTING_BY_NAME[@]}
+duplicate_count=${#DUPLICATE_IDS[@]}
+
+echo "Found $total_monitors existing monitors ($unique_names unique names, $duplicate_count duplicates)"
+
+# Delete duplicates first (before --clean or normal sync)
+if [[ ${#DUPLICATE_IDS[@]} -gt 0 ]]; then
+    echo ""
+    echo "Deleting duplicate monitors..."
+    for id in "${DUPLICATE_IDS[@]}"; do
+        name="${EXISTING_BY_ID[$id]}"
+        echo "[DELETE DUPLICATE] $name (id: $id)"
+        
+        if [[ "$DRY_RUN" == "true" ]]; then
+            echo "  Would delete duplicate monitor"
+        else
+            result=$(api_call DELETE "/api/v1/monitors/$id")
+            if echo "$result" | jq -e '.data' &> /dev/null || echo "$result" | jq -e '.message' | grep -qi "success\|deleted" &> /dev/null; then
+                echo "  Deleted successfully"
+                unset "EXISTING_BY_ID[$id]"
+            else
+                echo "  Error deleting: $(echo "$result" | jq -r '.message // .')"
+            fi
+        fi
+    done
+fi
+
+# If --clean flag is set, delete all existing monitors first
+if [[ "$CLEAN" == "true" ]]; then
+    echo ""
+    echo "Deleting all existing monitors..."
+    for id in "${!EXISTING_BY_ID[@]}"; do
+        name="${EXISTING_BY_ID[$id]}"
+        echo "[DELETE] $name (id: $id)"
+        
+        if [[ "$DRY_RUN" == "true" ]]; then
+            echo "  Would delete monitor $name"
+        else
+            result=$(api_call DELETE "/api/v1/monitors/$id")
+            if echo "$result" | jq -e '.data' &> /dev/null || echo "$result" | jq -e '.message' | grep -qi "success\|deleted" &> /dev/null; then
+                echo "  Deleted successfully"
+            else
+                echo "  Error deleting: $(echo "$result" | jq -r '.message // .')"
+            fi
+        fi
+    done
+    
+    # Clear the tracking arrays since everything is deleted
+    EXISTING_BY_NAME=()
+    EXISTING_BY_ID=()
+    echo "Clean complete. All monitors will be recreated from config."
+    echo ""
+fi
 
 # Read desired monitors from JSON
 DESIRED_COUNT=$(jq '.monitors | length' "$MONITORS_FILE")

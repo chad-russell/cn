@@ -1,0 +1,17 @@
+[Unit]
+Description=Beszel Server Monitoring Hub
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/henrygd/beszel:latest
+PublishPort=8090:8090
+Volume=/srv/beszel/data:/beszel_data
+Environment=PORT=8090
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

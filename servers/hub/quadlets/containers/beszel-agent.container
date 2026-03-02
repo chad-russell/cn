@@ -1,0 +1,20 @@
+[Unit]
+Description=Beszel Agent for crussell-srv
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/henrygd/beszel-agent:latest
+Network=host
+Volume=/srv/beszel/agent:/var/lib/beszel-agent
+Environment=LISTEN=45876
+Environment=KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBSF6CQSQRZYRw5VkfmTwAQt0KkHLDhx9ukqNzryWLv1"
+Environment=HUB_URL=http://127.0.0.1:8090
+Environment=TOKEN=2c13eff1-0f6f-4b1c-b216-aa61c0fec712
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

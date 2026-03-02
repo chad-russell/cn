@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenChamber Web Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h
+ExecStart=/home/crussell/.bun/bin/openchamber --port 4096
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
