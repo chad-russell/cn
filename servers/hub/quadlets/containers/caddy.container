@@ -6,10 +6,10 @@ Wants=network-online.target
 [Container]
 Image=localhost/caddy-route53:latest
 Network=host
-Volume=/var/home/crussell/Code/cn/crussell-srv/caddy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+Volume=/var/home/crussell/Code/cn/servers/hub/caddy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
 Volume=caddy_data:/data
 Volume=caddy_config:/config
-EnvironmentFile=/var/home/crussell/Code/cn/crussell-srv/caddy/aws.env
+EnvironmentFile=/var/home/crussell/Code/servers/cn/hub/caddy/aws.env
 
 [Service]
 Restart=unless-stopped

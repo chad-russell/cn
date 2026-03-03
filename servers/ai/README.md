@@ -108,19 +108,7 @@ toolbox run --container llama-vulkan-radv <command>
 
 ## Current Models (as of 2026-02-28)
 
-| Model ID | Name | Size | Quant |
-|----------|------|------|-------|
-| gpt-oss-120b | GPT-OSS 120B F16 | ~240GB | F16 |
-| gpt-oss-20b | GPT-OSS 20B F16 | ~40GB | F16 |
-| qwen3.5-35b-a3b | Qwen3.5-35B-A3B-UD-Q8_K_XL | ~35GB | UD-Q8_K_XL |
-| qwen3.5-27b | Qwen3.5-27B-UD-Q8_K_XL | ~30GB | UD-Q8_K_XL |
-| qwen3-4b-thinking | Qwen3-4B-Thinking-Q8_K_XL | ~5GB | Q8_K_XL |
-| qwen3-4b-instruct | Qwen3-4B-Instruct-Q4_K_M | ~2.4GB | Q4_K_M |
-| cydonia-24b | Cydonia-24B-Q6_K_L | ~20GB | Q6_K_L |
-| dolphin-mistral | Dolphin Mistral 24B | ~48GB | BF16 |
-| hermes-4 | Hermes-4.3-36B-Q8_0 | ~40GB | Q8_0 |
-| glm-4.7-flash | GLM-4.7-Flash-Q8_K_XL | ~18GB | Q8_K_XL |
-| nomic-embed-text-v2 | Nomic-Embed-Text-V2 | ~0.5GB | Q8_0 |
+See `@config.yaml`
 
 ## Useful Commands
 

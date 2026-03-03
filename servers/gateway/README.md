@@ -6,7 +6,7 @@
 
 ## Role
 
-Public gateway for `*.crussell.io` traffic. Forwards all HTTPS to crussell-srv via Nebula mesh VPN.
+Public gateway for `*.crussell.io` traffic. Forwards all HTTPS to hub via Nebula mesh VPN.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ Hetzner nginx (SSL passthrough :443)
     │
     ▼ stream proxy to 10.10.0.6:443
     │
-crussell-srv host (Nebula 10.10.0.6)
+hub host (Nebula 10.10.0.6)
     │
     ▼
 Caddy → backend services
@@ -31,7 +31,7 @@ Caddy → backend services
 ```nginx
 stream {
     upstream homelab_https {
-        server 10.10.0.6:443;  # crussell-srv host via Nebula
+        server 10.10.0.6:443;  # hub host via Nebula
     }
 
     upstream homelab_http {
@@ -50,7 +50,7 @@ stream {
 }
 ```
 
-**Key Point:** nginx doesn't terminate SSL - it passes through to Caddy on crussell-srv which handles certificates via Route53 DNS challenge.
+**Key Point:** nginx doesn't terminate SSL - it passes through to Caddy on hub which handles certificates via Route53 DNS challenge.
 
 ## Management
 
@@ -80,10 +80,10 @@ ufw allow 4242/udp  # Nebula
 
 ## Nebula
 
-Hetzner runs as Nebula lighthouse + relay, providing connectivity for roaming devices (phone, laptop).
+Hetzner runs as Nebula lighthouse + relay, providing connectivity for roaming devices (phone, thinkpad).
 
 - **Nebula IP:** 10.10.0.2
-- **Config:** `/etc/nebula/hetzner-lh.yaml`
+- **Config:** `/etc/nebula/config.yaml`
 - **Service:** `systemctl status nebula`
 
 **Full Nebula docs:** See `nebula/README.md` for topology, cert management, and client configuration.

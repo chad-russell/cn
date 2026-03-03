@@ -1,7 +1,7 @@
 # Phone Nebula Config - Complete single file with fresh key
 # Updated: 2026-03-01 - Dual-lighthouse split identity
 # - 10.10.0.1 = local lighthouse (LAN, UDP 4243)
-# - 10.10.0.6 = crussell-srv service endpoint (Caddy/backends)
+# - 10.10.0.6 = hub service endpoint (Caddy/backends)
 
 pki:
   ca: |
@@ -23,7 +23,7 @@ pki:
     -----END NEBULA X25519 PRIVATE KEY-----
 
 static_host_map:
-  "10.10.0.1": ["192.168.20.105:4243"]  # local lighthouse (LAN only)
+  "10.10.0.1": ["192.168.20.105:4243"] # local lighthouse (LAN only)
   "10.10.0.2": ["178.156.171.212:4242"] # Hetzner lighthouse+relay (public)
 
 lighthouse:

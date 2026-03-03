@@ -14,16 +14,15 @@ It is written for both humans and coding agents and focuses on current state, op
 
 Overlay CIDR: `10.10.0.0/24`
 
-- `10.10.0.1` - local lighthouse identity on `crussell-srv` (container, UDP `4243`, discovery-only)
+- `10.10.0.1` - local lighthouse identity on `hub` (container, UDP `4243`, discovery-only)
 - `10.10.0.2` - Hetzner lighthouse + relay (public, UDP `4242`)
 - `10.10.0.3` - TrueNAS host
-- `10.10.0.4` - k1 host (planned)
-- `10.10.0.5` - AI server host (`bees`)
-- `10.10.0.6` - `crussell-srv` host/services endpoint (Caddy/backends)
-- `10.10.0.10` - laptop (template)
+- `10.10.0.5` - AI server host
+- `10.10.0.6` - `hub` host/services endpoint (Caddy/backends)
+- `10.10.0.10` - thinkpad
 - `10.10.0.11` - phone
 
-Important split identity on `crussell-srv`:
+Important split identity on `hub`:
 
 - Local lighthouse: `10.10.0.1`
 - Service host identity: `10.10.0.6`
@@ -54,22 +53,22 @@ Internal DNS (`*.internal.crussell.io`):
 
 Repo:
 
-- `nebula/configs/crussell-srv-host.yaml` - main `crussell-srv` host config (`10.10.0.6`)
-- `nebula/configs/crussell-srv-lighthouse.yaml` - local lighthouse config (`10.10.0.1`)
-- `nebula/configs/hetzner-lh.yaml` - Hetzner public lighthouse/relay config
+- `nebula/configs/hub-host.yaml` - main `hub` host config (`10.10.0.6`)
+- `nebula/configs/hub-lighthouse.yaml` - local lighthouse config (`10.10.0.1`)
+- `nebula/configs/gateway.yaml` - Hetzner public lighthouse/relay config
 - `nebula/configs/phone.yaml` - phone config (embedded cert/key)
-- `nebula/configs/laptop.yaml` - laptop template
-- `nebula/configs/truenas.yaml` - TrueNAS config
-- `nebula/configs/ai-server.yaml` - AI server config
+- `nebula/configs/thinkpad.yaml` - laptop template
+- `nebula/configs/nas.yaml` - TrueNAS config
+- `nebula/configs/ai.yaml` - AI server config
 - `nebula/quadlets/nebula-lh-local.container` - local lighthouse quadlet
 - `nebula/pki/` - CA and host cert/key material
 - `nebula/scripts/nebula` and `nebula/scripts/nebula-cert` - local binaries
 
-Live on `crussell-srv`:
+Live on `hub`:
 
 - `/etc/nebula/config.yaml` - active host config for `10.10.0.6`
 - `/etc/nebula/*.crt|*.key` - active host certs/keys
-- `/etc/nebula-lh/config.yml` - local lighthouse config
+- `/etc/nebula-lh/config.yaml` - local lighthouse config
 - `/etc/nebula-lh/*.crt|*.key` - local lighthouse certs/keys
 - `/etc/containers/systemd/nebula-lh-local.container` - quadlet source
 
@@ -82,7 +81,7 @@ Live on Hetzner:
 
 ## Active Services
 
-On `crussell-srv`:
+On `hub`:
 
 - `nebula.service` (binary/systemd) -> host identity `10.10.0.6` on UDP `4242`
 - `nebula-lh-local.service` (quadlet-generated) -> local lighthouse identity `10.10.0.1` on UDP `4243`
@@ -101,7 +100,7 @@ CA files:
 Required cert identities:
 
 - `crussell-lh-local` -> `10.10.0.1/24`, groups: `lighthouse`
-- `crussell-srv-host` -> `10.10.0.6/24`, groups: `servers,lighthouse`, unsafe networks: `192.168.20.0/24`
+- `hub-host` -> `10.10.0.6/24`, groups: `servers,lighthouse`, unsafe networks: `192.168.20.0/24`
 - `hetzner-lighthouse` -> `10.10.0.2/24`, groups: at least `lighthouse,client`
 
 Generate cert examples:
@@ -119,27 +118,27 @@ cd /var/home/crussell/Code/cn/nebula/pki
   -out-crt crussell-lh-local.crt \
   -out-key crussell-lh-local.key
 
-# crussell-srv host/services
+# hub host/services
 ../scripts/nebula-cert sign \
   -ca-crt ca.crt \
   -ca-key ca.key \
-  -name "crussell-srv-host" \
+  -name "hub-host" \
   -networks "10.10.0.6/24" \
   -groups "servers,lighthouse" \
   -unsafe-networks "192.168.20.0/24" \
-  -out-crt crussell-srv-host.crt \
-  -out-key crussell-srv-host.key
+  -out-crt hub-host.crt \
+  -out-key hub-host.key
 ```
 
 ## Deploy / Update Workflow
 
-### Update `crussell-srv` host (`10.10.0.6`)
+### Update `hub` host (`10.10.0.6`)
 
 ```bash
-sudo cp /var/home/crussell/Code/cn/nebula/configs/crussell-srv-host.yaml /etc/nebula/config.yaml
+sudo cp /var/home/crussell/Code/cn/nebula/configs/hub-host.yaml /etc/nebula/config.yaml
 sudo cp /var/home/crussell/Code/cn/nebula/pki/ca.crt /etc/nebula/ca.crt
-sudo cp /var/home/crussell/Code/cn/nebula/pki/crussell-srv-host.crt /etc/nebula/crussell-srv-host.crt
-sudo cp /var/home/crussell/Code/cn/nebula/pki/crussell-srv-host.key /etc/nebula/crussell-srv-host.key
+sudo cp /var/home/crussell/Code/cn/nebula/pki/hub-host.crt /etc/nebula/hub-host.crt
+sudo cp /var/home/crussell/Code/cn/nebula/pki/hub-host.key /etc/nebula/hub-host.key
 sudo systemctl restart nebula
 ```
 
@@ -147,7 +146,7 @@ sudo systemctl restart nebula
 
 ```bash
 sudo mkdir -p /etc/nebula-lh
-sudo cp /var/home/crussell/Code/cn/nebula/configs/crussell-srv-lighthouse.yaml /etc/nebula-lh/config.yml
+sudo cp /var/home/crussell/Code/cn/nebula/configs/hub-lighthouse.yaml /etc/nebula-lh/config.yaml
 sudo cp /var/home/crussell/Code/cn/nebula/pki/ca.crt /etc/nebula-lh/ca.crt
 sudo cp /var/home/crussell/Code/cn/nebula/pki/crussell-lh-local.crt /etc/nebula-lh/crussell-lh-local.crt
 sudo cp /var/home/crussell/Code/cn/nebula/pki/crussell-lh-local.key /etc/nebula-lh/crussell-lh-local.key
@@ -157,7 +156,7 @@ sudo systemctl daemon-reload
 sudo systemctl restart nebula-lh-local.service
 ```
 
-Firewall requirement on `crussell-srv`:
+Firewall requirement on `hub`:
 
 ```bash
 sudo firewall-cmd --permanent --add-port=4242/udp
@@ -199,7 +198,7 @@ Phone template currently follows this pattern in `nebula/configs/phone.yaml`.
 
 ## Testing Checklist
 
-On `crussell-srv`:
+On `hub`:
 
 ```bash
 ping -c 3 10.10.0.2
@@ -220,7 +219,7 @@ Away from home (cellular/public Wi-Fi):
 
 ## Troubleshooting
 
-On `crussell-srv`:
+On `hub`:
 
 ```bash
 sudo journalctl -u nebula --no-pager -n 100

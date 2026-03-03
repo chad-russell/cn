@@ -1,10 +1,10 @@
-# Primary Nebula host for crussell-srv services
+# Primary Nebula host for hub services
 # This is the service endpoint identity (Caddy/backends), not a lighthouse.
 
 pki:
   ca: /etc/nebula/ca.crt
-  cert: /etc/nebula/crussell-srv-host.crt
-  key: /etc/nebula/crussell-srv-host.key
+  cert: /etc/nebula/host.crt
+  key: /etc/nebula/host.key
 
 static_host_map:
   "10.10.0.2": ["178.156.171.212:4242"]

@@ -96,7 +96,7 @@ PEEKAPING_API_KEY="pk_xxx" ./sync-monitors.sh            # Apply changes
 
 ## Current Monitors
 
-### crussell-srv (192.168.20.105)
+### hub (192.168.20.105)
 
 | Service | URL | Type |
 |---------|-----|------|

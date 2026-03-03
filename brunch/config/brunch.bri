@@ -85,6 +85,8 @@ const weztermConfig = Brioche.includeFile("./wezterm/wezterm.lua");
 const niriConfig = Brioche.includeFile("./niri/config.kdl");
 const ohMyPoshTheme = Brioche.includeFile("./oh-my-posh/config.json");
 const ghosttyConfig = Brioche.includeFile("./ghostty/config");
+const cursorKeybindings = Brioche.includeFile("./cursor/keybindings.json");
+const cursorSettings = Brioche.includeFile("./cursor/settings.json");
 
 // ============== Icons ==============
 
@@ -181,6 +183,10 @@ export default function brunchConfig() {
 
       // Ghostty configuration
       ".config/ghostty/config": ghosttyConfig,
+
+      // Cursor configuration
+      ".config/Cursor/User/keybindings.json": cursorKeybindings,
+      ".config/Cursor/User/settings.json": cursorSettings
     },
   });
 }

@@ -58,7 +58,7 @@ Complete plan for migrating from Docker Swarm to Podman Quadlets on a single ser
 ## Directory Structure
 
 ```
-crussell-srv/
+hub/
 ├── quadlets/
 │   ├── setup-quadlets.sh
 │   ├── migrate-data.sh
@@ -841,19 +841,19 @@ echo "  systemctl --user start searxng karakeep immich"
 
 ## Caddy Updates
 
-**Status: ✅ COMPLETE** - Caddy migrated from k2 to crussell-srv (2026-02-28)
+**Status: ✅ COMPLETE** - Caddy migrated from k2 to hub (2026-02-28)
 
-Caddy now runs as a system-level Quadlet on crussell-srv and handles:
+Caddy now runs as a system-level Quadlet on hub and handles:
 - `*.internal.crussell.io` → Internal services
 - `*.crussell.io` → Public services (proxied through Hetzner via Nebula)
 
-**Config Location:** `crussell-srv/caddy/Caddyfile`
+**Config Location:** `hub/caddy/Caddyfile`
 **Quadlet:** `/etc/containers/systemd/caddy.container`
 **Image:** `localhost/caddy-route53:latest` (custom build with Route53 DNS challenge)
 
 **Public Traffic Flow:**
 ```
-Internet → Hetzner nginx (SSL passthrough) → Nebula → crussell-srv Caddy
+Internet → Hetzner nginx (SSL passthrough) → Nebula → hub Caddy
 ```
 
 **Manage:**
@@ -870,7 +870,7 @@ sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile
 ## Migration Checklist
 
 ### Phase 1: Prep (no downtime)
-- [ ] Build crussell-srv image on new machine
+- [ ] Build hub image on new machine
 - [ ] Run `just build && just switch` to apply image
 - [ ] Reboot into new system
 - [ ] Run `setup-quadlets.sh` to create directories and copy quadlet files

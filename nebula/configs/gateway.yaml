@@ -1,18 +1,17 @@
-# Nebula config for TrueNAS (10.10.0.3)
-# Local-only node using crussell-srv local lighthouse (10.10.0.1)
+# Hetzner Lighthouse + Relay (178.156.171.212)
+# Public-facing lighthouse that also acts as relay for roaming clients
+
 pki:
   ca: /etc/nebula/ca.crt
   cert: /etc/nebula/host.crt
   key: /etc/nebula/host.key
 
-static_host_map:
-  "10.10.0.1": ["192.168.20.105:4243"]
+static_host_map: {} # No static entries needed - nodes connect to us
 
 lighthouse:
-  am_lighthouse: false
+  am_lighthouse: true
   interval: 60
-  hosts:
-    - "10.10.0.1"
+  hosts: [] # We are a lighthouse, no others to query
 
 listen:
   host: 0.0.0.0
@@ -21,14 +20,10 @@ listen:
 punchy:
   punch: true
   respond: true
-  delay: 1s
 
 relay:
-  am_relay: false
-  use_relays: false
-
-preferred_ranges:
-  - "192.168.20.0/24"
+  am_relay: true # ENABLE RELAY - this is key for roaming
+  use_relays: false # Don't use other relays
 
 tun:
   disabled: false

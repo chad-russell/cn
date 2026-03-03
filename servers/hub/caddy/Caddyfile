@@ -13,7 +13,7 @@
         propagation_timeout 5m
     }
 
-    # --- crussell-srv Services (192.168.20.105 / 10.10.0.1) ---
+    # --- hub Services (192.168.20.105 / 10.10.0.1) ---
     @karakeep host karakeep.internal.crussell.io
     handle @karakeep {
         reverse_proxy 127.0.0.1:30092

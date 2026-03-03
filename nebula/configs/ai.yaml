@@ -1,17 +1,19 @@
-# Hetzner Lighthouse + Relay (178.156.171.212)
-# Public-facing lighthouse that also acts as relay for roaming clients
+# Nebula config for AI Server (10.10.0.5) - hostname: bees
+# Local-only node using hub local lighthouse (10.10.0.1)
 
 pki:
   ca: /etc/nebula/ca.crt
-  cert: /etc/nebula/hetzner-lh.crt
-  key: /etc/nebula/hetzner-lh.key
+  cert: /etc/nebula/host.crt
+  key: /etc/nebula/host.key
 
-static_host_map: {}  # No static entries needed - nodes connect to us
+static_host_map:
+  "10.10.0.1": ["192.168.20.105:4243"]
 
 lighthouse:
-  am_lighthouse: true
+  am_lighthouse: false
   interval: 60
-  hosts: []  # We are a lighthouse, no others to query
+  hosts:
+    - "10.10.0.1"
 
 listen:
   host: 0.0.0.0
@@ -20,10 +22,14 @@ listen:
 punchy:
   punch: true
   respond: true
+  delay: 1s
 
 relay:
-  am_relay: true    # ENABLE RELAY - this is key for roaming
-  use_relays: false # Don't use other relays
+  am_relay: false
+  use_relays: false
+
+preferred_ranges:
+  - "192.168.20.0/24"
 
 tun:
   disabled: false

@@ -1,1 +1,0 @@
-[{"XDG_CONFIG_HOME": "HOME/.config"}, ["d \"$PLUGIN_DIR"], ["f \"$INDEX_FILE"], {"\\./src/plugin": "a import { GoogleOAuthPlugin"}]

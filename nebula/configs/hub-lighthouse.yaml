@@ -1,11 +1,11 @@
-# Local Lighthouse - crussell-srv (container)
+# Local Lighthouse - hub (container)
 # Nebula IP 10.10.0.1 is reserved for this dedicated lighthouse identity.
 # Uses UDP 4243 so it can coexist with the primary Nebula host instance on 4242.
 
 pki:
   ca: /config/ca.crt
-  cert: /config/crussell-lh-local.crt
-  key: /config/crussell-lh-local.key
+  cert: /config/host.crt
+  key: /config/host.key
 
 static_host_map: {}
 
@@ -39,12 +39,12 @@ firewall:
     udp_timeout: 3m
     default_timeout: 10m
     max_connections: 100000
-  
+
   outbound:
     - port: any
       proto: any
       host: any
-  
+
   inbound:
     - port: any
       proto: any

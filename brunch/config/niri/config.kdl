@@ -141,7 +141,7 @@ binds {
     Mod+E     { spawn "dms" "ipc" "powermenu" "toggle"; }
 
     // Applications
-    Mod+T { spawn "wezterm"; }
+    Mod+T { spawn "ghostty"; }
     Mod+B { spawn "flatpak" "run" "com.google.Chrome"; }
     Mod+F { spawn "nautilus" "--new-window"; }
 
