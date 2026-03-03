@@ -1,5 +1,5 @@
 # Nebula config for AI Server (10.10.0.5) - hostname: bees
-# Local-only node using hub local lighthouse (10.10.0.1)
+# Uses dual lighthouses for roaming client access
 
 pki:
   ca: /etc/nebula/ca.crt
@@ -8,12 +8,14 @@ pki:
 
 static_host_map:
   "10.10.0.1": ["192.168.20.105:4243"]
+  "10.10.0.2": ["178.156.171.212:4242"]
 
 lighthouse:
   am_lighthouse: false
   interval: 60
   hosts:
     - "10.10.0.1"
+    - "10.10.0.2"
 
 listen:
   host: 0.0.0.0
@@ -26,7 +28,9 @@ punchy:
 
 relay:
   am_relay: false
-  use_relays: false
+  use_relays: true
+  relays:
+    - "10.10.0.2"
 
 preferred_ranges:
   - "192.168.20.0/24"

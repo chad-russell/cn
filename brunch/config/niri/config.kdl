@@ -43,6 +43,7 @@ layout {
 
 spawn-at-startup "xwayland-satellite"
 spawn-at-startup "vicinae" "server"
+spawn-at-startup "voxtype" "daemon"
 
 prefer-no-csd
 
@@ -144,6 +145,7 @@ binds {
     Mod+T { spawn "ghostty"; }
     Mod+B { spawn "flatpak" "run" "com.google.Chrome"; }
     Mod+F { spawn "nautilus" "--new-window"; }
+    Mod+R { spawn "voxtype" "record" "toggle"; }
 
     // Media keys (DMS)
     XF86AudioRaiseVolume { spawn "dms" "ipc" "audio" "increment" "3"; }

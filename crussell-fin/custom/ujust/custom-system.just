@@ -105,7 +105,7 @@ set-default-browser:
 [group('System')]
 swap-caps-escape-gnome:
     #!/usr/bin/env bash
-	gsettings set org.gnome.desktop.input-sources xkb-options "['caps:swapescape']"
+    gsettings set org.gnome.desktop.input-sources xkb-options "['caps:swapescape']"
 
 # Configure "1570 A" WiFi network DNS (primary: 192.168.20.32, fallback: Google/Cloudflare)
 [group('Network')]
