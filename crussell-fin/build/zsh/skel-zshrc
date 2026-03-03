@@ -1,0 +1,23 @@
+# Default Zsh configuration
+# Customize this file to change defaults for new users
+
+# History settings
+HISTSIZE=10000
+SAVEHIST=10000
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt SHARE_HISTORY
+
+# Basic completion
+autoload -Uz compinit
+compinit
+
+# Better prompt
+PS1='%n@%m:%~%# '
+
+# Useful aliases
+alias ll='ls -lah'
+alias la='ls -A'
+alias l='ls -CF'
+alias ..='cd ..'
+alias ...='cd ../..'
