@@ -22,6 +22,7 @@ Use this file for global context. For implementation details, open the subsystem
 | NAS monitoring agent | `servers/nas/README.md` | Beszel agent deployment on TrueNAS |
 | Uptime monitoring | `servers/hub/peekaping/README.md` | Declarative monitor config and sync flow |
 | Desktop config tooling | `brunch/README.md` | Brunch/Brioche desktop generation management |
+| Custom Fedora Atomic image | `crussell-fin/AGENTS.md` | bootc image template for building personalized workstation images (based on finpilot/Bluefin) |
 
 ### Config-First Directories (No README Yet)
 
@@ -75,6 +76,8 @@ Use this file for global context. For implementation details, open the subsystem
 ├── AGENTS.md
 ├── brunch/
 │   └── README.md
+├── crussell-fin/
+│   └── AGENTS.md
 ├── nebula/
 │   ├── README.md
 │   ├── configs/
