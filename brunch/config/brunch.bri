@@ -36,7 +36,7 @@ const cursorAppImage = std
   .env({ RAW_APPIMAGE: std.download({
     url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/2.4",
     hash: std.sha256Hash(
-      "54076996d8327da8e625d28a8845c863a233909020efdd0b599ace36412790d7",
+      "85a0ee4389ef02c906737d5c9e06693c20c2a1077a4f461da3f65a802a382a73",
     ),
   }) })
   .toFile();
