@@ -1,0 +1,33 @@
+# Disk image configuration for bootc-image-builder
+# Used for QCOW2 and RAW disk images
+
+[install]
+# Add packages to install at build time (optional)
+# packages = []
+
+[customizations]
+# Hostname
+hostname = "crussell-srv"
+
+# Timezone
+timezone = "America/New_York"
+
+# Locale
+locale = "en_US.UTF-8"
+
+# Keyboard layout
+keyboard = "us"
+
+# User configuration ( uncomment and customize )
+# [[customizations.user]]
+# name = "crussell"
+# key = "ssh-ed25519 AAAA..."
+# groups = ["wheel"]
+
+# Firewall
+# [[customizations.firewall]]
+# ports = ["22:tcp", "80:tcp", "443:tcp"]
+
+# Services to enable
+# [[customizations.services]]
+# enabled = ["podman.socket", "tailscaled", "firewalld"]

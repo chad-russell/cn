@@ -1,0 +1,29 @@
+# ISO image configuration for bootc-image-builder
+# Used for building bootable ISOs
+
+[install]
+# Add packages to install at build time (optional)
+# packages = []
+
+[customizations]
+# Hostname
+hostname = "crussell-srv"
+
+# Timezone
+timezone = "America/New_York"
+
+# Locale
+locale = "en_US.UTF-8"
+
+# Keyboard layout
+keyboard = "us"
+
+# Live ISO user (for installation)
+# [[customizations.user]]
+# name = "live"
+# key = "ssh-ed25519 AAAA..."
+# groups = ["wheel"]
+
+# Firewall
+# [[customizations.firewall]]
+# ports = ["22:tcp"]
