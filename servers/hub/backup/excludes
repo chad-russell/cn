@@ -1,0 +1,11 @@
+*.tmp
+*.log
+*.log.*
+*.bak
+.cache
+__pycache__
+node_modules
+.tmp
+/srv/audiobookshelf/audiobooks
+/srv/audiobookshelf/podcasts
+/srv/ntfy/cache

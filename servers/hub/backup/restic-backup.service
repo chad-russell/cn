@@ -1,0 +1,14 @@
+[Unit]
+Description=Restic Backup
+After=network-online.target var-mnt-tank-backups.mount
+Wants=network-online.target
+Requires=var-mnt-tank-backups.mount
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/restic-backup.sh
+Nice=19
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=default.target

@@ -9,7 +9,7 @@ Network=host
 Volume=/var/home/crussell/Code/cn/servers/hub/caddy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
 Volume=caddy_data:/data
 Volume=caddy_config:/config
-EnvironmentFile=/var/home/crussell/Code/servers/cn/hub/caddy/aws.env
+EnvironmentFile=/var/home/crussell/Code/cn/servers/hub/caddy/aws.env
 
 [Service]
 Restart=unless-stopped

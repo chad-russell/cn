@@ -49,8 +49,8 @@
         reverse_proxy 127.0.0.1:30337
     }
 
-    @excalidraw host excalidraw.internal.crussell.io
-    handle @excalidraw {
+    @openwebui host openwebui.internal.crussell.io
+    handle @openwebui {
         reverse_proxy 127.0.0.1:30088
     }
 

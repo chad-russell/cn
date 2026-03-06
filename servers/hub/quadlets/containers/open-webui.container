@@ -1,0 +1,19 @@
+[Unit]
+Description=Open WebUI
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/open-webui/open-webui:latest
+PublishPort=30088:8080
+Volume=/srv/open-webui/data:/app/backend/data
+Environment=WEBUI_SECRET_KEY=bccad2bc0fb4fc88eebed58f51a350b17d28fba39b55a8ceeabadb49243ed2c3
+Environment=DATA_DIR=/app/backend/data
+Environment=OPENAI_API_BASE_URL=http://192.168.20.41:8000/v1
+
+[Service]
+Restart=unless-stopped
+RestartSec=5
+
+[Install]
+WantedBy=default.target

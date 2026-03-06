@@ -12,6 +12,7 @@ startPort: 10001
 # Path is CORRECTED to: /usr/bin/llama-server
 macros:
   "llama-cmd": >
+    toolbox run --container llama-vulkan-radv
     /usr/bin/llama-server
     --port ${PORT}
     --host 127.0.0.1
@@ -21,16 +22,22 @@ macros:
 models:
   "qwen3.5-35b-a3b":
     name: "Qwen3.5-35B-A3B-UD-Q8_K_XL"
-    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-35B-A3B-GGUF_Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --jinja --ctx-size 50000
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-35B-A3B-GGUF_Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --mmproj /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-35B-A3B-GGUF_mmproj-BF16.gguf --jinja --ctx-size 50000
   "qwen3.5-27b":
     name: "Qwen3.5-27B-UD-Q8_K_XL"
-    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-27B-GGUF_Qwen3.5-27B-UD-Q8_K_XL.gguf --jinja --ctx-size 50000
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-27B-GGUF_Qwen3.5-27B-UD-Q8_K_XL.gguf --mmproj /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-27B-GGUF_mmproj-BF16.gguf --jinja --ctx-size 50000
   "qwen3.5-9b":
     name: "Qwen3.5-9B-UD-Q8_K_XL"
-    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-9B-GGUF_Qwen3.5-9B-UD-Q8_K_XL.gguf --jinja --ctx-size 50000
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-9B-GGUF_Qwen3.5-9B-UD-Q8_K_XL.gguf --mmproj /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-9B-GGUF_mmproj-BF16.gguf --jinja --ctx-size 50000
   "qwen3.5-4b":
     name: "Qwen3.5-4B-UD-Q8_K_XL"
-    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-4B-GGUF_Qwen3.5-4B-UD-Q8_K_XL.gguf --jinja --ctx-size 50000
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-4B-GGUF_Qwen3.5-4B-UD-Q8_K_XL.gguf --mmproj /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-4B-GGUF_mmproj-BF16.gguf --jinja --ctx-size 50000
+  "qwen3.5-0.8b":
+    name: "Qwen3.5-0.8B-UD-Q8_K_XL"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-0.8B-GGUF_Qwen3.5-0.8B-UD-Q8_K_XL.gguf --mmproj /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-0.8B-GGUF_mmproj-F16.gguf --jinja --ctx-size 32000
+  "qwen3.5-2b":
+    name: "Qwen3.5-2B-UD-Q8_K_XL"
+    cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-2B-GGUF_Qwen3.5-2B-UD-Q8_K_XL.gguf --mmproj /home/crussell/.cache/llama.cpp/unsloth_Qwen3.5-2B-GGUF_mmproj-F16.gguf --jinja --ctx-size 50000
   "dolphin-mistral":
     name: "Dolphin Mistral"
     cmd: ${llama-cmd} /home/crussell/.cache/llama.cpp/bartowski_cognitivecomputations_Dolphin-Mistral-24B-Venice-Edition-GGUF_cognitivecomputations_Dolphin-Mistral-24B-Venice-Edition-bf16.gguf --jinja --ctx-size 50000

@@ -21,6 +21,7 @@ Use this file for global context. For implementation details, open the subsystem
 | AI host (`bees`) | `servers/ai/README.md` | llama.cpp + llama-swap operations |
 | NAS monitoring agent | `servers/nas/README.md` | Beszel agent deployment on TrueNAS |
 | Uptime monitoring | `servers/hub/peekaping/README.md` | Declarative monitor config and sync flow |
+| Backup system | `servers/hub/backup/README.md` | Restic backups to NAS with ntfy notifications |
 | Desktop config tooling | `brunch/README.md` | Brunch/Brioche desktop generation management |
 | Custom Fedora Atomic image | `crussell-fin/AGENTS.md` | bootc image template for building personalized workstation images (based on finpilot/Bluefin) |
 
@@ -52,21 +53,26 @@ Use this file for global context. For implementation details, open the subsystem
 │  Podman Quadlets (rootless):                                   │
 │  • Linkding    • Ntfy           • Papra                        │
 │  • Peekaping   • Audiobookshelf • AdGuardHome                  │
-│  • Immich      • Karakeep       • SearXNG                      │
+│  • Beszel      • Open-WebUI                                    │
+│                                                                │
+│  Backup (Restic → NFS → NAS):                                  │
+│  • Daily snapshots of /srv/* volumes                           │
+│  • Retention: 7d/4w/12m                                        │
 │                                                                │
 │  Caddy reverse proxy:                                          │
 │  • *.internal.crussell.io → internal services                  │
 │  • *.crussell.io → public services (via Hetzner)               │
-└────────────────────────────────────────────────────────────────┘
-                              │
-                    ┌─────────┴─────────┐
-                    ▼                   ▼
-          ┌─────────────────┐  ┌─────────────────┐
-          │      media      │  │       nas       │
-          │ 192.168.20.61   │  │ 192.168.20.31   │
-          │ Fedora Server   │  │   TrueNAS       │
-          │ Podman stack    │  │ NFS + Beszel    │
-          └─────────────────┘  └─────────────────┘
+└─────────────────────────────────┬──────────────────────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ▼                           ▼
+          ┌─────────────────┐        ┌─────────────────┐
+          │      media      │        │       nas       │
+          │ 192.168.20.61   │        │ 192.168.20.31   │
+          │ Fedora Server   │        │   TrueNAS       │
+          │ Podman stack    │        │ NFS + Beszel    │
+          └─────────────────┘        │ + Backup target │
+                                     └─────────────────┘
 ```
 
 ## Repository Structure
@@ -89,6 +95,8 @@ Use this file for global context. For implementation details, open the subsystem
 │   │   └── README.md
 │   ├── hub/
 │   │   ├── MIGRATION.md
+│   │   ├── backup/
+│   │   │   └── README.md
 │   │   ├── caddy/
 │   │   ├── peekaping/
 │   │   │   └── README.md
