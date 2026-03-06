@@ -1,0 +1,16 @@
+[Unit]
+Description=Excalidraw Whiteboard
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/excalidraw/excalidraw:latest
+PublishPort=30088:80
+Environment=TZ=America/New_York
+
+[Service]
+Restart=unless-stopped
+RestartSec=5
+
+[Install]
+WantedBy=default.target

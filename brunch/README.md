@@ -95,6 +95,97 @@ When you apply a new generation:
 - New files are symlinked.
 - Files removed from the configuration are automatically unlinked (cleaned up), provided they were managed by Brunch.
 
+### Managing Systemd Units
+
+Brunch can declaratively manage systemd services and timers for both user and system scopes. This provides a NixOS-like experience for defining units in TypeScript.
+
+```typescript
+import * as std from "std";
+import { makeBrunch } from "brunch";
+
+const backupScript = std.bashRunnable`
+  echo "Running backup at $(date)"
+  # Your backup logic here
+`;
+
+export default function() {
+  return makeBrunch({
+    desktopApps: [...],
+    files: {...},
+    systemdUnits: {
+      // User-level units (no root required)
+      user: {
+        services: {
+          "my-backup": {
+            description: "Run backup script",
+            serviceConfig: {
+              execStart: backupScript,  // Can be a Brioche runnable or string path
+              type: "oneshot",
+            },
+          },
+        },
+        timers: {
+          "my-backup": {
+            description: "Run backup hourly",
+            timerConfig: {
+              onCalendar: "hourly",
+              persistent: true,
+            },
+          },
+        },
+      },
+      // System-level units (requires sudo on apply)
+      system: {
+        services: {
+          "custom-monitor": {
+            description: "Custom system monitor",
+            after: ["network.target"],
+            serviceConfig: {
+              execStart: "/usr/local/bin/monitor",
+              restart: "on-failure",
+              restartSec: 5,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+```
+
+**How it works:**
+- User units are symlinked to `~/.config/systemd/user/`
+- System units are symlinked to `/etc/systemd/system/` (prompts for sudo)
+- When applying a new generation, units removed from config are disabled and unlinked
+- All standard systemd unit options are supported via TypeScript interfaces
+
+**Common service options:**
+```typescript
+serviceConfig: {
+  execStart: std.bashRunnable`...`,  // Brioche runnable
+  execStartPre: "/path/to/pre-script",
+  execStop: "/path/to/stop-script",
+  type: "simple" | "oneshot" | "forking" | "notify",
+  restart: "on-failure" | "always" | "no",
+  restartSec: 5,  // seconds
+  environment: { FOO: "bar", BAZ: "qux" },
+  workingDirectory: "/home/user",
+  user: "username",
+  group: "groupname",
+}
+```
+
+**Common timer options:**
+```typescript
+timerConfig: {
+  onCalendar: "hourly" | "daily" | "*-*-* 00:00:00",
+  onBootSec: "5min",  // Run 5 min after boot
+  onUnitActiveSec: "1h",  // Run hourly after last run
+  persistent: true,  // Catch up missed runs
+  randomizedDelaySec: "5m",
+}
+```
+
 ### Generation Management
 
 Brunch manages state in `~/.local/state/brunch/`:
@@ -157,6 +248,9 @@ Build a complete Brunch configuration artifact.
 ```typescript
 interface BrunchConfig {
   desktopApps?: BrunchDesktopApp[];
+  cliTools?: BrunchCliTool[];
+  files?: Record<string, std.RecipeLike<std.File | std.Directory>>;
+  systemdUnits?: BrunchSystemdConfig;
 }
 ```
 
@@ -227,7 +321,7 @@ brioche-packages/packages/brunch/
 ## Future Roadmap
 
 - [x] Add `switch-generation` command for easy rollbacks
-- [ ] Support for systemd units
+- [x] Support for systemd units (services and timers)
 - [x] Support for config files (`.config/`, `~/.bashrc`, etc.)
 - [ ] Add `remove-generation` command to clean up old generations
 - [ ] Add `diff` command to see changes between generations

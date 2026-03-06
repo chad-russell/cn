@@ -1,0 +1,417 @@
+import * as std from "std";
+
+export interface BrunchServiceConfig {
+  description?: string;
+  documentation?: string | string[];
+  requires?: string[];
+  after?: string[];
+  before?: string[];
+  wants?: string[];
+  wantedBy?: string[];
+  partOf?: string[];
+  conflicts?: string[];
+  serviceConfig: {
+    execStart?: std.RecipeLike<std.Directory> | string;
+    execStartPre?: string | string[];
+    execStartPost?: string | string[];
+    execStop?: string | string[];
+    execReload?: string | string[];
+    type?: "simple" | "forking" | "oneshot" | "dbus" | "notify" | "idle";
+    restart?: "no" | "on-success" | "on-failure" | "on-abnormal" | "on-watchdog" | "on-abort" | "always";
+    restartSec?: string | number;
+    environment?: Record<string, string>;
+    environmentFile?: string;
+    workingDirectory?: string;
+    user?: string;
+    group?: string;
+    nice?: number;
+    timeoutStartSec?: string | number;
+    timeoutStopSec?: string | number;
+    remainAfterExit?: boolean;
+    standardOutput?: string;
+    standardError?: string;
+    privateTmp?: boolean;
+    protectSystem?: string;
+    protectHome?: string;
+    noNewPrivileges?: boolean;
+  };
+}
+
+export interface BrunchTimerConfig {
+  description?: string;
+  documentation?: string | string[];
+  requires?: string[];
+  after?: string[];
+  before?: string[];
+  wants?: string[];
+  wantedBy?: string[];
+  partOf?: string[];
+  conflicts?: string[];
+  timerConfig: {
+    onCalendar?: string;
+    onBootSec?: string;
+    onStartupSec?: string;
+    onUnitActiveSec?: string;
+    onUnitInactiveSec?: string;
+    persistent?: boolean;
+    accuracySec?: string;
+    randomizedDelaySec?: string;
+    unit?: string;
+  };
+}
+
+type ServiceScope = "user" | "system";
+
+function formatList(value: string | string[] | undefined): string {
+  if (value === undefined) {
+    return "";
+  }
+  if (Array.isArray(value)) {
+    return value.join(" ");
+  }
+  return value;
+}
+
+function formatSeconds(value: string | number | undefined): string {
+  if (value === undefined) {
+    return "";
+  }
+  if (typeof value === "number") {
+    return `${value}s`;
+  }
+  return value;
+}
+
+function formatBoolean(value: boolean | undefined): string {
+  if (value === undefined) {
+    return "";
+  }
+  return value ? "yes" : "no";
+}
+
+function buildUnitSection(config: {
+  description?: string;
+  documentation?: string | string[];
+  requires?: string[];
+  after?: string[];
+  before?: string[];
+  wants?: string[];
+  wantedBy?: string[];
+  partOf?: string[];
+  conflicts?: string[];
+}): string[] {
+  const lines: string[] = ["[Unit]"];
+
+  if (config.description) {
+    lines.push(`Description=${config.description}`);
+  }
+
+  if (config.documentation) {
+    lines.push(`Documentation=${formatList(config.documentation)}`);
+  }
+
+  if (config.requires && config.requires.length > 0) {
+    lines.push(`Requires=${config.requires.join(" ")}`);
+  }
+
+  if (config.after && config.after.length > 0) {
+    lines.push(`After=${config.after.join(" ")}`);
+  }
+
+  if (config.before && config.before.length > 0) {
+    lines.push(`Before=${config.before.join(" ")}`);
+  }
+
+  if (config.wants && config.wants.length > 0) {
+    lines.push(`Wants=${config.wants.join(" ")}`);
+  }
+
+  if (config.wantedBy && config.wantedBy.length > 0) {
+    lines.push(`WantedBy=${config.wantedBy.join(" ")}`);
+  }
+
+  if (config.partOf && config.partOf.length > 0) {
+    lines.push(`PartOf=${config.partOf.join(" ")}`);
+  }
+
+  if (config.conflicts && config.conflicts.length > 0) {
+    lines.push(`Conflicts=${config.conflicts.join(" ")}`);
+  }
+
+  return lines;
+}
+
+function makeServiceUnitInternal(
+  name: string,
+  config: BrunchServiceConfig,
+  scope: ServiceScope
+): std.Recipe<std.File> {
+  const lines: string[] = [];
+
+  lines.push(...buildUnitSection(config));
+
+  lines.push("");
+  lines.push("[Service]");
+
+  const sc = config.serviceConfig;
+
+  if (sc.execStart !== undefined) {
+    if (typeof sc.execStart === "string") {
+      lines.push(`ExecStart=${sc.execStart}`);
+    } else {
+      if (scope === "user") {
+        lines.push(`ExecStart=%h/.local/state/brunch/current/systemd/user/executables/${name}/brioche-run`);
+      } else {
+        lines.push(`# NOTE: ExecStart for system services with Brioche runnables not yet supported`);
+        lines.push(`# Use a string path for execStart instead`);
+      }
+    }
+  }
+
+  if (sc.execStartPre !== undefined) {
+    const pres = Array.isArray(sc.execStartPre) ? sc.execStartPre : [sc.execStartPre];
+    for (const pre of pres) {
+      lines.push(`ExecStartPre=${pre}`);
+    }
+  }
+
+  if (sc.execStartPost !== undefined) {
+    const posts = Array.isArray(sc.execStartPost) ? sc.execStartPost : [sc.execStartPost];
+    for (const post of posts) {
+      lines.push(`ExecStartPost=${post}`);
+    }
+  }
+
+  if (sc.execStop !== undefined) {
+    const stops = Array.isArray(sc.execStop) ? sc.execStop : [sc.execStop];
+    for (const stop of stops) {
+      lines.push(`ExecStop=${stop}`);
+    }
+  }
+
+  if (sc.execReload !== undefined) {
+    const reloads = Array.isArray(sc.execReload) ? sc.execReload : [sc.execReload];
+    for (const reload of reloads) {
+      lines.push(`ExecReload=${reload}`);
+    }
+  }
+
+  if (sc.type !== undefined) {
+    lines.push(`Type=${sc.type}`);
+  }
+
+  if (sc.restart !== undefined) {
+    lines.push(`Restart=${sc.restart}`);
+  }
+
+  if (sc.restartSec !== undefined) {
+    lines.push(`RestartSec=${formatSeconds(sc.restartSec)}`);
+  }
+
+  if (sc.environment !== undefined) {
+    for (const [key, value] of Object.entries(sc.environment)) {
+      lines.push(`Environment="${key}=${value}"`);
+    }
+  }
+
+  if (sc.environmentFile !== undefined) {
+    lines.push(`EnvironmentFile=${sc.environmentFile}`);
+  }
+
+  if (sc.workingDirectory !== undefined) {
+    lines.push(`WorkingDirectory=${sc.workingDirectory}`);
+  }
+
+  if (sc.user !== undefined) {
+    lines.push(`User=${sc.user}`);
+  }
+
+  if (sc.group !== undefined) {
+    lines.push(`Group=${sc.group}`);
+  }
+
+  if (sc.nice !== undefined) {
+    lines.push(`Nice=${sc.nice}`);
+  }
+
+  if (sc.timeoutStartSec !== undefined) {
+    lines.push(`TimeoutStartSec=${formatSeconds(sc.timeoutStartSec)}`);
+  }
+
+  if (sc.timeoutStopSec !== undefined) {
+    lines.push(`TimeoutStopSec=${formatSeconds(sc.timeoutStopSec)}`);
+  }
+
+  if (sc.remainAfterExit !== undefined) {
+    lines.push(`RemainAfterExit=${formatBoolean(sc.remainAfterExit)}`);
+  }
+
+  if (sc.standardOutput !== undefined) {
+    lines.push(`StandardOutput=${sc.standardOutput}`);
+  }
+
+  if (sc.standardError !== undefined) {
+    lines.push(`StandardError=${sc.standardError}`);
+  }
+
+  if (sc.privateTmp !== undefined) {
+    lines.push(`PrivateTmp=${formatBoolean(sc.privateTmp)}`);
+  }
+
+  if (sc.protectSystem !== undefined) {
+    lines.push(`ProtectSystem=${sc.protectSystem}`);
+  }
+
+  if (sc.protectHome !== undefined) {
+    lines.push(`ProtectHome=${sc.protectHome}`);
+  }
+
+  if (sc.noNewPrivileges !== undefined) {
+    lines.push(`NoNewPrivileges=${formatBoolean(sc.noNewPrivileges)}`);
+  }
+
+  lines.push("");
+  lines.push("[Install]");
+  if (config.wantedBy && config.wantedBy.length > 0) {
+    lines.push(`WantedBy=${config.wantedBy.join(" ")}`);
+  } else {
+    lines.push("WantedBy=default.target");
+  }
+
+  return std.file(lines.join("\n"));
+}
+
+export function makeServiceUnit(
+  name: string,
+  config: BrunchServiceConfig
+): std.Recipe<std.File> {
+  return makeServiceUnitInternal(name, config, "user");
+}
+
+export function makeTimerUnit(
+  name: string,
+  config: BrunchTimerConfig
+): std.Recipe<std.File> {
+  const lines: string[] = [];
+
+  lines.push(...buildUnitSection(config));
+
+  lines.push("");
+  lines.push("[Timer]");
+
+  const tc = config.timerConfig;
+
+  if (tc.onCalendar !== undefined) {
+    lines.push(`OnCalendar=${tc.onCalendar}`);
+  }
+
+  if (tc.onBootSec !== undefined) {
+    lines.push(`OnBootSec=${formatSeconds(tc.onBootSec)}`);
+  }
+
+  if (tc.onStartupSec !== undefined) {
+    lines.push(`OnStartupSec=${formatSeconds(tc.onStartupSec)}`);
+  }
+
+  if (tc.onUnitActiveSec !== undefined) {
+    lines.push(`OnUnitActiveSec=${formatSeconds(tc.onUnitActiveSec)}`);
+  }
+
+  if (tc.onUnitInactiveSec !== undefined) {
+    lines.push(`OnUnitInactiveSec=${formatSeconds(tc.onUnitInactiveSec)}`);
+  }
+
+  if (tc.persistent !== undefined) {
+    lines.push(`Persistent=${formatBoolean(tc.persistent)}`);
+  }
+
+  if (tc.accuracySec !== undefined) {
+    lines.push(`AccuracySec=${tc.accuracySec}`);
+  }
+
+  if (tc.randomizedDelaySec !== undefined) {
+    lines.push(`RandomizedDelaySec=${tc.randomizedDelaySec}`);
+  }
+
+  if (tc.unit !== undefined) {
+    lines.push(`Unit=${tc.unit}`);
+  }
+
+  lines.push("");
+  lines.push("[Install]");
+  if (config.wantedBy && config.wantedBy.length > 0) {
+    lines.push(`WantedBy=${config.wantedBy.join(" ")}`);
+  } else {
+    lines.push("WantedBy=timers.target");
+  }
+
+  return std.file(lines.join("\n"));
+}
+
+export interface BrunchSystemdConfig {
+  user?: {
+    services?: Record<string, BrunchServiceConfig>;
+    timers?: Record<string, BrunchTimerConfig>;
+  };
+  system?: {
+    services?: Record<string, BrunchServiceConfig>;
+    timers?: Record<string, BrunchTimerConfig>;
+  };
+}
+
+export function makeSystemdUnits(
+  config: BrunchSystemdConfig
+): std.Recipe<std.Directory> {
+  const dirs: Record<string, std.Recipe<std.Directory>> = {};
+
+  const userEntries: Record<string, std.Recipe<std.File | std.Directory>> = {};
+  const systemEntries: Record<string, std.Recipe<std.File | std.Directory>> = {};
+
+  if (config.user?.services) {
+    for (const [name, serviceConfig] of Object.entries(config.user.services)) {
+      userEntries[`${name}.service`] = makeServiceUnitInternal(name, serviceConfig, "user");
+
+      if (typeof serviceConfig.serviceConfig.execStart !== "string" && serviceConfig.serviceConfig.execStart !== undefined) {
+        const execDir = std.recipe(serviceConfig.serviceConfig.execStart);
+        userEntries[`executables/${name}`] = execDir;
+      }
+    }
+  }
+
+  if (config.user?.timers) {
+    for (const [name, timerConfig] of Object.entries(config.user.timers)) {
+      userEntries[`${name}.timer`] = makeTimerUnit(name, timerConfig);
+    }
+  }
+
+  if (config.system?.services) {
+    for (const [name, serviceConfig] of Object.entries(config.system.services)) {
+      systemEntries[`${name}.service`] = makeServiceUnitInternal(name, serviceConfig, "system");
+
+      if (typeof serviceConfig.serviceConfig.execStart !== "string" && serviceConfig.serviceConfig.execStart !== undefined) {
+        const execDir = std.recipe(serviceConfig.serviceConfig.execStart);
+        systemEntries[`executables/${name}`] = execDir;
+      }
+    }
+  }
+
+  if (config.system?.timers) {
+    for (const [name, timerConfig] of Object.entries(config.system.timers)) {
+      systemEntries[`${name}.timer`] = makeTimerUnit(name, timerConfig);
+    }
+  }
+
+  if (Object.keys(userEntries).length > 0) {
+    dirs["user"] = std.directory(userEntries);
+  }
+
+  if (Object.keys(systemEntries).length > 0) {
+    dirs["system"] = std.directory(systemEntries);
+  }
+
+  if (Object.keys(dirs).length === 0) {
+    return std.directory({});
+  }
+
+  return std.directory({ systemd: std.directory(dirs) });
+}

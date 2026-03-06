@@ -1,7 +1,9 @@
 use crate::{next_generation, state_dir, symlink_atomic};
 use anyhow::{Context, Result};
 use dirs;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 pub fn run(project_path: &Path) -> Result<()> {
     let project_path = std::fs::canonicalize(project_path)
@@ -31,6 +33,13 @@ pub fn run(project_path: &Path) -> Result<()> {
         anyhow::bail!("Brioche build failed");
     }
 
+    let has_system_units = gen_path.join("systemd/system").exists();
+    let elevated = if has_system_units {
+        prompt_for_elevation()?
+    } else {
+        false
+    };
+
     let old_current = if current.exists() {
         std::fs::read_link(&current).ok()
     } else {
@@ -39,14 +48,230 @@ pub fn run(project_path: &Path) -> Result<()> {
 
     symlink_atomic(&gen_path, &current).context("Failed to update current symlink")?;
 
+    if let Some(ref old_path) = old_current {
+        cleanup_systemd(old_path, &gen_path, elevated)
+            .context("Failed to cleanup old systemd units")?;
+    }
+
+    link_systemd(&current, elevated).context("Failed to link systemd units")?;
+
     link_desktop_assets(&current).context("Failed to link desktop assets")?;
     link_files(&current).context("Failed to link home files")?;
 
-    if let Some(old_path) = old_current {
-        cleanup_files(&old_path, &gen_path).context("Failed to cleanup old files")?;
+    if let Some(ref old_path) = old_current {
+        cleanup_files(old_path, &gen_path).context("Failed to cleanup old files")?;
     }
 
     println!("Applied generation {}", gen_num);
+    Ok(())
+}
+
+fn prompt_for_elevation() -> Result<bool> {
+    println!("System-level systemd units detected.");
+    print!("Apply with elevated privileges? [y/N]: ");
+    io::stdout().flush()?;
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+
+    Ok(input.trim().to_lowercase() == "y")
+}
+
+fn run_elevated_command(args: &[&str]) -> Result<()> {
+    let status = Command::new("pkexec")
+        .args(args)
+        .status()
+        .or_else(|_| Command::new("sudo").args(args).status())?;
+
+    if !status.success() {
+        log::warn!("Elevated command failed: {:?}", args);
+    }
+    Ok(())
+}
+
+pub fn link_systemd(current: &Path, elevated: bool) -> Result<()> {
+    let systemd_dir = current.join("systemd");
+    if !systemd_dir.exists() {
+        return Ok(());
+    }
+
+    let user_dir = systemd_dir.join("user");
+    if user_dir.exists() {
+        let config_dir = dirs::config_dir()
+            .context("Failed to get config directory")?;
+        let target_dir = config_dir.join("systemd/user");
+        link_systemd_dir(&user_dir, &target_dir, &user_dir, false)?;
+    }
+
+    if elevated {
+        let system_dir = systemd_dir.join("system");
+        if system_dir.exists() {
+            let target_dir = PathBuf::from("/etc/systemd/system");
+            link_systemd_dir_elevated(&system_dir, &target_dir, &system_dir)?;
+        }
+    } else if systemd_dir.join("system").exists() {
+        log::warn!("System units present but no elevated privileges - skipping system units");
+    }
+
+    Ok(())
+}
+
+fn link_systemd_dir(
+    source_root: &Path,
+    target_root: &Path,
+    _expected_link_base: &Path,
+    _is_system: bool,
+) -> Result<()> {
+    for entry in walkdir::WalkDir::new(source_root) {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.ends_with("executables") {
+            continue;
+        }
+
+        if !entry.file_type().is_file() && !entry.file_type().is_symlink() {
+            continue;
+        }
+
+        let rel_path = path.strip_prefix(source_root)?;
+        let target_sys_path = target_root.join(rel_path);
+
+        symlink_atomic(path, &target_sys_path).context(format!(
+            "Failed to link systemd unit {} -> {}",
+            path.display(),
+            target_sys_path.display()
+        ))?;
+    }
+    Ok(())
+}
+
+fn link_systemd_dir_elevated(
+    source_root: &Path,
+    target_root: &Path,
+    _expected_link_base: &Path,
+) -> Result<()> {
+    for entry in walkdir::WalkDir::new(source_root) {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.ends_with("executables") {
+            continue;
+        }
+
+        if !entry.file_type().is_file() && !entry.file_type().is_symlink() {
+            continue;
+        }
+
+        let rel_path = path.strip_prefix(source_root)?;
+        let target_sys_path = target_root.join(rel_path);
+        let parent = target_sys_path.parent().context("No parent directory")?;
+
+        let mkdir_cmd = format!("mkdir -p '{}'", parent.display());
+        let ln_cmd = format!("ln -sf '{}' '{}'", path.display(), target_sys_path.display());
+
+        run_elevated_command(&["sh", "-c", &format!("{} && {}", mkdir_cmd, ln_cmd)])?;
+    }
+    Ok(())
+}
+
+pub fn cleanup_systemd(old_gen: &Path, new_gen: &Path, elevated: bool) -> Result<()> {
+    let old_systemd_dir = old_gen.join("systemd");
+    let new_systemd_dir = new_gen.join("systemd");
+
+    if !old_systemd_dir.exists() {
+        return Ok(());
+    }
+
+    let config_dir = dirs::config_dir().context("Failed to get config directory")?;
+
+    cleanup_systemd_dir(
+        &old_systemd_dir.join("user"),
+        &new_systemd_dir.join("user"),
+        &config_dir.join("systemd/user"),
+        &old_systemd_dir.join("user"),
+        false,
+    )?;
+
+    if elevated {
+        cleanup_systemd_dir(
+            &old_systemd_dir.join("system"),
+            &new_systemd_dir.join("system"),
+            &PathBuf::from("/etc/systemd/system"),
+            &old_systemd_dir.join("system"),
+            true,
+        )?;
+    }
+
+    Ok(())
+}
+
+fn cleanup_systemd_dir(
+    old_root: &Path,
+    new_root: &Path,
+    target_root: &Path,
+    expected_link_base: &Path,
+    is_system: bool,
+) -> Result<()> {
+    if !old_root.exists() {
+        return Ok(());
+    }
+
+    for entry in walkdir::WalkDir::new(old_root) {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.ends_with("executables") {
+            continue;
+        }
+
+        if !entry.file_type().is_file() && !entry.file_type().is_symlink() {
+            continue;
+        }
+
+        let rel_path = path.strip_prefix(old_root)?;
+        let new_path = new_root.join(rel_path);
+
+        if !new_path.exists() {
+            let target_sys_path = target_root.join(rel_path);
+            let expected_target = expected_link_base.join(rel_path);
+
+            log::debug!("Checking cleanup for: {}", target_sys_path.display());
+
+            if target_sys_path.is_symlink() {
+                if let Ok(target) = std::fs::read_link(&target_sys_path) {
+                    log::debug!("  Target: {}", target.display());
+                    log::debug!("  Expected: {}", expected_target.display());
+
+                    if target == expected_target {
+                        log::info!("Removing managed systemd unit: {}", target_sys_path.display());
+
+                        let unit_name = rel_path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("");
+
+                        if is_system {
+                            let _ = run_elevated_command(&[
+                                "systemctl",
+                                "disable",
+                                "--now",
+                                unit_name,
+                            ]);
+                            let rm_cmd = format!("rm -f '{}'", target_sys_path.display());
+                            let _ = run_elevated_command(&["sh", "-c", &rm_cmd]);
+                        } else {
+                            let _ = Command::new("systemctl")
+                                .args(["--user", "disable", "--now", unit_name])
+                                .status();
+                            std::fs::remove_file(&target_sys_path)
+                                .context("Failed to remove old unit symlink")?;
+                        }
+                    }
+                }
+            }
+        }
+    }
     Ok(())
 }
 

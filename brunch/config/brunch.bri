@@ -34,9 +34,9 @@ const cursorAppImage = std
     chmod +x "$BRIOCHE_OUTPUT"
   `
   .env({ RAW_APPIMAGE: std.download({
-    url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/2.4",
+    url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/2.6",
     hash: std.sha256Hash(
-      "85a0ee4389ef02c906737d5c9e06693c20c2a1077a4f461da3f65a802a382a73",
+      "fee1b06bd015f7574d7df85fd78e9bd0c524de47ff0efd8af2995945cdb49e24",
     ),
   }) })
   .toFile();
@@ -95,6 +95,15 @@ const opencodeIcon = Brioche.includeFile("./static/opencode-logo-dark.svg");
 // ============== Neovim Configuration Files ==============
 
 const nvimConfig = Brioche.includeDirectory("./nvim");
+
+// ============== Systemd Units (Example) ==============
+
+// Example: User timer that runs a backup script hourly
+// Uncomment to use:
+// const backupScript = std.bashRunnable`
+//   echo "Running backup at $(date)"
+//   # Add your backup logic here
+// `;
 
 // ============== Main Brunch Configuration ==============
 
@@ -188,5 +197,29 @@ export default function brunchConfig() {
       ".config/Cursor/User/keybindings.json": cursorKeybindings,
       ".config/Cursor/User/settings.json": cursorSettings
     },
+
+    // Example: Systemd units (uncomment to use)
+    // systemdUnits: {
+    //   user: {
+    //     services: {
+    //       "my-backup": {
+    //         description: "Run backup script",
+    //         serviceConfig: {
+    //           execStart: backupScript,
+    //           type: "oneshot",
+    //         },
+    //       },
+    //     },
+    //     timers: {
+    //       "my-backup": {
+    //         description: "Run backup hourly",
+    //         timerConfig: {
+    //           onCalendar: "hourly",
+    //           persistent: true,
+    //         },
+    //       },
+    //     },
+    //   },
+    // },
   });
 }

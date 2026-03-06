@@ -49,6 +49,11 @@
         reverse_proxy 127.0.0.1:30337
     }
 
+    @excalidraw host excalidraw.internal.crussell.io
+    handle @excalidraw {
+        reverse_proxy 127.0.0.1:30088
+    }
+
     @adguard host adguard.internal.crussell.io
     handle @adguard {
         reverse_proxy 127.0.0.1:30100 127.0.0.1:30102 {

@@ -21,7 +21,7 @@ require("lazy").setup({
     {
       "catppuccin/nvim",
       name = "catppuccin",
-      priority = 1000, -- Load first
+      priority = 1000,
     },
 
     -- Icons
@@ -29,6 +29,92 @@ require("lazy").setup({
       "nvim-tree/nvim-web-devicons",
       name = "nvim-web-devicons",
       priority = 999,
+    },
+
+    -- Mason: Portable package manager for LSP servers
+    {
+      "williamboman/mason.nvim",
+      name = "mason",
+      build = ":MasonUpdate",
+      config = function()
+        require("mason").setup({
+          ui = {
+            border = "rounded",
+            icons = {
+              package_installed = "✓",
+              package_pending = "➜",
+              package_uninstalled = "✗",
+            },
+          },
+        })
+      end,
+    },
+
+    -- Mason-lspconfig bridge
+    {
+      "williamboman/mason-lspconfig.nvim",
+      name = "mason-lspconfig",
+      dependencies = { "mason" },
+    },
+
+    -- LSP configuration
+    {
+      "neovim/nvim-lspconfig",
+      name = "nvim-lspconfig",
+      dependencies = {
+        "mason",
+        "mason-lspconfig",
+        "hrsh7th/cmp-nvim-lsp",
+      },
+      config = function()
+        require("plugins.lsp")
+      end,
+    },
+
+    -- Autocompletion
+    {
+      "hrsh7th/nvim-cmp",
+      name = "nvim-cmp",
+      event = "InsertEnter",
+      dependencies = {
+        "hrsh7th/cmp-nvim-lsp",
+        "hrsh7th/cmp-buffer",
+        "hrsh7th/cmp-path",
+        "L3MON4D3/LuaSnip",
+        "saadparwaiz1/cmp_luasnip",
+        "rafamadriz/friendly-snippets",
+      },
+      config = function()
+        require("plugins.cmp")
+      end,
+    },
+
+    -- Snippet engine
+    {
+      "L3MON4D3/LuaSnip",
+      name = "LuaSnip",
+      build = "make install_jsregexp",
+    },
+
+    -- Code formatting
+    {
+      "stevearc/conform.nvim",
+      name = "conform",
+      event = "BufWritePre",
+      config = function()
+        require("plugins.conform")
+      end,
+    },
+
+    -- Diagnostics list
+    {
+      "folke/trouble.nvim",
+      name = "trouble",
+      dependencies = { "nvim-web-devicons" },
+      cmd = { "TroubleToggle", "Trouble" },
+      config = function()
+        require("plugins.trouble")
+      end,
     },
 
     -- File explorer

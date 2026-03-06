@@ -2,10 +2,12 @@ import * as std from "std";
 import { makeDesktopApps, type BrunchDesktopApp } from "./desktop_apps.bri";
 import { makeFiles } from "./files.bri";
 import { makeCliTools, type BrunchCliTool } from "./cli_tools.bri";
+import { makeSystemdUnits, type BrunchSystemdConfig, type BrunchServiceConfig, type BrunchTimerConfig } from "./systemd.bri";
 
 export { makeDesktopApps, makeWebAppExecutable, type BrunchDesktopApp } from "./desktop_apps.bri";
 export { makeFiles } from "./files.bri";
 export { makeCliTools, type BrunchCliTool } from "./cli_tools.bri";
+export { makeSystemdUnits, makeServiceUnit, makeTimerUnit, type BrunchSystemdConfig, type BrunchServiceConfig, type BrunchTimerConfig } from "./systemd.bri";
 
 export interface BrunchConfig {
   /**
@@ -23,6 +25,11 @@ export interface BrunchConfig {
    * Can be either files or directories
    */
   files?: Record<string, std.RecipeLike<std.File | std.Directory>>;
+
+  /**
+   * Systemd units to manage (user and system scope)
+   */
+  systemdUnits?: BrunchSystemdConfig;
 }
 
 export function makeBrunch(config: BrunchConfig): std.Recipe<std.Directory> {
@@ -38,6 +45,10 @@ export function makeBrunch(config: BrunchConfig): std.Recipe<std.Directory> {
 
   if (config.files !== undefined && Object.keys(config.files).length > 0) {
     parts.push(makeFiles(config.files));
+  }
+
+  if (config.systemdUnits !== undefined) {
+    parts.push(makeSystemdUnits(config.systemdUnits));
   }
 
   if (parts.length === 0) {
