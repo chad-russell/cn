@@ -1,5 +1,11 @@
+# Environment files (decrypted)
 env.*
 .env
 *.env
 
+# Decrypted secrets
+secrets/*.yml
+secrets/*.env
+
+# Archive
 .archived

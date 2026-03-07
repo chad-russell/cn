@@ -9,9 +9,8 @@ Image=docker.io/henrygd/beszel-agent:latest
 Network=host
 Volume=%h/beszel-agent/data:/var/lib/beszel-agent
 Environment=LISTEN=45876
-Environment=KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBSF6CQSQRZYRw5VkfmTwAQt0KkHLDhx9ukqNzryWLv1"
 Environment=HUB_URL=http://192.168.20.105:8090
-Environment=TOKEN=55f10155-7a92-4e2b-9fd4-4b08d5436ab1
+EnvironmentFile=/srv/beszel/secrets.env
 AutoUpdate=registry
 
 [Service]

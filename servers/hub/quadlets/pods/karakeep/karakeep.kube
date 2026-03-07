@@ -6,6 +6,7 @@ Wants=network-online.target
 [Kube]
 Yaml=karakeep.yml
 PublishPort=30092:3000
+EnvironmentFile=/srv/karakeep/secrets.env
 
 [Install]
 WantedBy=default.target

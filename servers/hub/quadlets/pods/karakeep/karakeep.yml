@@ -14,9 +14,9 @@ spec:
         - name: BROWSER_WEB_URL
           value: http://localhost:9222
         - name: MEILI_MASTER_KEY
-          value: "karakeep-master-key-change-me"
+          value: "${MEILI_MASTER_KEY}"
         - name: NEXTAUTH_SECRET
-          value: "change-me-or-use-a-secret"
+          value: "${NEXTAUTH_SECRET}"
       volumeMounts:
         - name: data
           mountPath: /data
@@ -38,7 +38,7 @@ spec:
       image: docker.io/getmeili/meilisearch:v1.10
       env:
         - name: MEILI_MASTER_KEY
-          value: "karakeep-master-key-change-me"
+          value: "${MEILI_MASTER_KEY}"
         - name: MEILI_NO_ANALYTICS
           value: "true"
       volumeMounts:

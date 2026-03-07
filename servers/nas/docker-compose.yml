@@ -9,12 +9,11 @@ services:
     volumes:
       - ./beszel_agent_data:/var/lib/beszel-agent
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      # Monitor TrueNAS storage pools
       - /mnt/tank:/extra/tank:ro
       - /mnt/tank/photos:/extra/photos:ro
       - /mnt/tank/backups:/extra/backups:ro
+    env_file:
+      - ./secrets/beszel-nas.env
     environment:
       - LISTEN=45876
-      - KEY=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN+X1Fi/I3MpOgj58S5Kxn0zmC2yMvhXxkCs+lkx1tpC
       - HUB_URL=http://192.168.20.64:8090
-      - TOKEN=104a3a19-98b8-4334-8260-a2f9c72bf6ce

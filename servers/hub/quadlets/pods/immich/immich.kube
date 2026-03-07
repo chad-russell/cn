@@ -6,6 +6,7 @@ Wants=network-online.target
 [Kube]
 Yaml=immich.yml
 PublishPort=30093:2283
+EnvironmentFile=/srv/immich/secrets.env
 
 [Install]
 WantedBy=default.target

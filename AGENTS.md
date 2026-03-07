@@ -154,6 +154,19 @@ sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile
 sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
+### Secret Management
+
+Secrets are encrypted with [age](https://github.com/FiloSottile/age) and stored in `servers/hub/quadlets/secrets/*.age`. They are decrypted during setup by `setup-quadlets.sh`.
+
+**Prerequisites:**
+- Age key at `~/.config/age/key.txt`
+- Age binary installed (`~/.local/bin/age` or system-wide)
+
+See `servers/hub/quadlets/secrets/README.md` for:
+- List of encrypted files and their contents
+- Manual decryption commands
+- Instructions for rotating secrets
+
 ## Adding or Updating a Hub Service
 
 1. Add or edit a quadlet in `servers/hub/quadlets/containers/`.

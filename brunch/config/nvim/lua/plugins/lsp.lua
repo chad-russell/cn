@@ -157,6 +157,19 @@ vim.lsp.config.lua_ls = {
   },
 }
 
+vim.lsp.config.markdown_oxide = {
+  cmd = { vim.fn.stdpath("data") .. "/mason/bin/markdown-oxide" },
+  filetypes = { "markdown" },
+  root_markers = { ".git", ".obsidian" },
+  capabilities = vim.tbl_deep_extend("force", capabilities, {
+    workspace = {
+      didChangeWatchedFiles = {
+        dynamicRegistration = true,
+      },
+    },
+  }),
+}
+
 -- Auto-start LSP servers when opening matching filetypes
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
@@ -183,5 +196,12 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = "lua",
   callback = function()
     vim.lsp.start(vim.lsp.config.lua_ls)
+  end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "markdown",
+  callback = function()
+    vim.lsp.start(vim.lsp.config.markdown_oxide)
   end,
 })

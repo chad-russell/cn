@@ -36,7 +36,7 @@ const cursorAppImage = std
   .env({ RAW_APPIMAGE: std.download({
     url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/2.6",
     hash: std.sha256Hash(
-      "fee1b06bd015f7574d7df85fd78e9bd0c524de47ff0efd8af2995945cdb49e24",
+      "7aa3994212164617c1381e28c1c2c3b757c8f5802ee2e458970e87107bad4cc9",
     ),
   }) })
   .toFile();
@@ -96,14 +96,11 @@ const opencodeIcon = Brioche.includeFile("./static/opencode-logo-dark.svg");
 
 const nvimConfig = Brioche.includeDirectory("./nvim");
 
-// ============== Systemd Units (Example) ==============
+// ============== Systemd Units ==============
 
-// Example: User timer that runs a backup script hourly
-// Uncomment to use:
-// const backupScript = std.bashRunnable`
-//   echo "Running backup at $(date)"
-//   # Add your backup logic here
-// `;
+const opencodeWebRunnable = std.bashRunnable`
+  exec /home/linuxbrew/.linuxbrew/bin/opencode web --hostname 0.0.0.0
+`;
 
 // ============== Main Brunch Configuration ==============
 
@@ -198,28 +195,21 @@ export default function brunchConfig() {
       ".config/Cursor/User/settings.json": cursorSettings
     },
 
-    // Example: Systemd units (uncomment to use)
-    // systemdUnits: {
-    //   user: {
-    //     services: {
-    //       "my-backup": {
-    //         description: "Run backup script",
-    //         serviceConfig: {
-    //           execStart: backupScript,
-    //           type: "oneshot",
-    //         },
-    //       },
-    //     },
-    //     timers: {
-    //       "my-backup": {
-    //         description: "Run backup hourly",
-    //         timerConfig: {
-    //           onCalendar: "hourly",
-    //           persistent: true,
-    //         },
-    //       },
-    //     },
-    //   },
-    // },
+    systemdUnits: {
+      user: {
+        services: {
+          "opencode-web": {
+            description: "OpenCode Web Server",
+            serviceConfig: {
+              execStart: opencodeWebRunnable,
+              type: "simple",
+              restart: "on-failure",
+              restartSec: 5,
+              workingDirectory: "%h",
+            },
+          },
+        },
+      },
+    },
   });
 }

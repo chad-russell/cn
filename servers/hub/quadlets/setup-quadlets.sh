@@ -3,12 +3,13 @@ set -euo pipefail
 
 echo "=== Creating /srv directory structure ==="
 
-sudo mkdir -p /srv/{linkding,papra,ntfy,peekaping,audiobookshelf,adguardhome,searxng,karakeep,immich}/
+sudo mkdir -p /srv/{linkding,papra,ntfy,peekaping,audiobookshelf,adguardhome,searxng,karakeep,immich,beszel}/
 sudo mkdir -p /srv/audiobookshelf/{audiobooks,config,metadata,podcasts}
 sudo mkdir -p /srv/adguardhome/{work,conf}
 sudo mkdir -p /srv/karakeep/{data,meilisearch}
 sudo mkdir -p /srv/searxng/valkey
 sudo mkdir -p /srv/immich/postgres
+sudo mkdir -p /srv/beszel
 
 sudo chown -R $(id -u):$(id -g) /srv/
 
@@ -22,6 +23,32 @@ if ! grep -q "/mnt/nas/photos" /etc/fstab; then
 fi
 
 sudo mount /mnt/nas/photos || echo "Mount may already exist or network not ready"
+
+echo "=== Decrypting secrets ==="
+
+AGE_KEY="${HOME}/.config/age/key.txt"
+SECRETS_DIR="${SCRIPT_DIR}/secrets"
+
+if [[ ! -f "$AGE_KEY" ]]; then
+    echo "ERROR: Age key not found at $AGE_KEY"
+    echo "Please create an age key first or copy your existing key to that location."
+    exit 1
+fi
+
+if ! command -v age &>/dev/null; then
+    echo "ERROR: age command not found. Please install age:"
+    echo "  https://github.com/FiloSottile/age#installation"
+    exit 1
+fi
+
+age -d -i "$AGE_KEY" "$SECRETS_DIR/immich.env.age" > /srv/immich/secrets.env
+age -d -i "$AGE_KEY" "$SECRETS_DIR/karakeep.env.age" > /srv/karakeep/secrets.env
+age -d -i "$AGE_KEY" "$SECRETS_DIR/beszel-hub.env.age" > /srv/beszel/secrets.env
+age -d -i "$AGE_KEY" "$SECRETS_DIR/searxng-settings.yml.age" > /srv/searxng/settings.yml
+
+chmod 600 /srv/immich/secrets.env
+chmod 600 /srv/karakeep/secrets.env
+chmod 600 /srv/beszel/secrets.env
 
 echo "=== Copying quadlet files ==="
 
@@ -38,7 +65,6 @@ cp "$SCRIPT_DIR"/pods/karakeep/* ~/.config/containers/systemd/pods/karakeep/
 cp "$SCRIPT_DIR"/pods/immich/* ~/.config/containers/systemd/pods/immich/
 
 cp "$SCRIPT_DIR"/config/immich-postgresql.conf /srv/immich/postgresql.conf
-cp "$SCRIPT_DIR"/config/searxng-settings.yml /srv/searxng/settings.yml
 
 echo "=== Enabling lingering for user services ==="
 sudo loginctl enable-linger $(whoami)
