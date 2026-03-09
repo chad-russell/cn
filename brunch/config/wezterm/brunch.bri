@@ -1,0 +1,39 @@
+import * as std from "std";
+import { BrunchConfig } from "brunch";
+import { placeholderPngIcon } from "../icons.bri";
+
+const appImage = std.runBash`
+  cp "$RAW_APPIMAGE" "$BRIOCHE_OUTPUT"
+  chmod +x "$BRIOCHE_OUTPUT"
+  `
+  .env({
+    RAW_APPIMAGE: std.download({
+      url: "https://github.com/wezterm/wezterm/releases/download/20240203-110809-5046fc22/WezTerm-20240203-110809-5046fc22-Ubuntu20.04.AppImage",
+      hash: std.sha256Hash(
+        "34010a07076d2272c4d4f94b5e0dae608a679599e8d729446323f88f956c60f0",
+      ),
+    }),
+  })
+  .toFile();
+
+const configFile = Brioche.includeFile("./wezterm.lua");
+
+export const brunchConfig: BrunchConfig = {
+  desktopApps: [
+    {
+      name: "wezterm",
+      executable: std.directory({
+        "wezterm.AppImage": appImage,
+        "brioche-run": std.symlink({ target: "wezterm.AppImage" }),
+      }),
+      icon: placeholderPngIcon,
+      iconExt: "png",
+      comment: "GPU-accelerated terminal emulator",
+      categories: ["System", "TerminalEmulator"],
+    },
+  ],
+  files: {
+    // WezTerm config
+    ".config/wezterm/wezterm.lua": configFile,
+  },
+};

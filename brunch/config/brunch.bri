@@ -1,44 +1,27 @@
 import * as std from "std";
-import { makeBrunch, makeWebAppExecutable } from "brunch";
+import { BrunchConfig, makeBrunch, makeWebAppExecutable, mergeBrunch } from "brunch";
 import eza from "eza";
 import oh_my_posh from "oh_my_posh";
 import zoxide from "zoxide";
 import nebula from "./nebula.bri";
+import { placeholderPngIcon } from "./icons.bri";
+import { brunchConfig as weztermConfig } from "./wezterm/brunch.bri";
 
 // ============== Downloads ==============
 
-const appImage = std
-  .runBash`
-    cp "$RAW_APPIMAGE" "$BRIOCHE_OUTPUT"
-    chmod +x "$BRIOCHE_OUTPUT"
-  `
-  .env({ RAW_APPIMAGE: std.download({
-    url: "https://github.com/wezterm/wezterm/releases/download/20240203-110809-5046fc22/WezTerm-20240203-110809-5046fc22-Ubuntu20.04.AppImage",
-    hash: std.sha256Hash(
-      "34010a07076d2272c4d4f94b5e0dae608a679599e8d729446323f88f956c60f0",
-    ),
-  }) })
-  .toFile();
-
-const icon = std.download({
-  url: "https://user-images.githubusercontent.com/18397/185704412-007ca0a2-8778-496e-b002-51f324bdd6b7.png",
-  hash: std.sha256Hash(
-    "6bd6832408253ea6ed1f189767184954315acfa6300d50af669fceb1b878315d",
-  ),
-});
-
 // Cursor: https://cursor.com/download
-const cursorAppImage = std
-  .runBash`
-    cp "$RAW_APPIMAGE" "$BRIOCHE_OUTPUT"
-    chmod +x "$BRIOCHE_OUTPUT"
+const cursorAppImage = std.runBash`
+  cp "$RAW_APPIMAGE" "$BRIOCHE_OUTPUT"
+  chmod +x "$BRIOCHE_OUTPUT"
   `
-  .env({ RAW_APPIMAGE: std.download({
-    url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/2.6",
-    hash: std.sha256Hash(
-      "7aa3994212164617c1381e28c1c2c3b757c8f5802ee2e458970e87107bad4cc9",
-    ),
-  }) })
+  .env({
+    RAW_APPIMAGE: std.download({
+      url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/2.6",
+      hash: std.sha256Hash(
+        "7aa3994212164617c1381e28c1c2c3b757c8f5802ee2e458970e87107bad4cc9",
+      ),
+    }),
+  })
   .toFile();
 
 const cursorIcon = std.download({
@@ -81,7 +64,6 @@ const zshEnv = Brioche.includeFile("./zsh/.zshenv");
 
 // ============== Other Configuration Files ==============
 
-const weztermConfig = Brioche.includeFile("./wezterm/wezterm.lua");
 const niriConfig = Brioche.includeFile("./niri/config.kdl");
 const ohMyPoshTheme = Brioche.includeFile("./oh-my-posh/config.json");
 const ghosttyConfig = Brioche.includeFile("./ghostty/config");
@@ -100,116 +82,104 @@ const nvimConfig = Brioche.includeDirectory("./nvim");
 
 const opencodeWebRunnable = std.bashRunnable`
   exec /home/linuxbrew/.linuxbrew/bin/opencode web --hostname 0.0.0.0
-`;
+  `;
 
 // ============== Main Brunch Configuration ==============
 
-export default function brunchConfig() {
-  return makeBrunch({
-    cliTools: [
-      {
-        name: "eza",
-        executable: eza(),
-      },
-      {
-        name: "oh-my-posh",
-        executable: oh_my_posh(),
-      },
-      {
-        name: "zoxide",
-        executable: zoxide(),
-      },
-      {
-        name: "nebula",
-        executable: nebula(),
-      },
-    ],
-    desktopApps: [
-      {
-        name: "wezterm",
-        executable: std.directory({
-          "wezterm.AppImage": appImage,
-          "brioche-run": std.symlink({ target: "wezterm.AppImage" }),
-        }),
-        icon,
-        iconExt: "png",
-        comment: "GPU-accelerated terminal emulator",
-        categories: ["System", "TerminalEmulator"],
-      },
-      {
-        name: "cursor",
-        executable: std.directory({
-          "cursor.AppImage": cursorAppImage,
-          "brioche-run": std.symlink({ target: "cursor.AppImage" }),
-        }),
-        icon: cursorIcon,
-        iconExt: "png",
-        comment: "AI-powered code editor",
-        categories: ["Development"],
-      },
-      {
-        name: "opencode-desktop",
-        executable: makeWebAppExecutable("http://localhost:4096"),
-        icon: opencodeIcon,
-        iconExt: "svg",
-        comment: "Interactive CLI tool for software engineering",
-        categories: ["Development"],
-      },
-      {
-        name: "hello-world",
-        executable: std.bashRunnable`
-          echo "Hello, World!"
-          read -p "Press Enter to exit..."
-        `,
-        icon,
-        iconExt: "png",
-        comment: "A simple hello world app",
-        categories: ["Utility"],
-      }
-    ],
-    files: {
-      // Zsh configuration
-      // .zshenv must be in $HOME - it sets ZDOTDIR which points to .config/zsh/zshrc/
-      ".zshenv": zshEnv,
-      // Include all other zsh configuration files and directories (with plugins merged in)
-      ".config/zsh": zshConfigWithPlugins,
-
-      // Oh-my-posh theme configuration
-      ".config/oh-my-posh/config.json": ohMyPoshTheme,
-
-      // WezTerm config
-      ".config/wezterm/wezterm.lua": weztermConfig,
-
-      // Niri config
-      ".config/niri/config.kdl": niriConfig,
-
-      // Neovim configuration
-      // Include all nvim configuration files and directories
-      ".config/nvim": nvimConfig,
-
-      // Ghostty configuration
-      ".config/ghostty/config": ghosttyConfig,
-
-      // Cursor configuration
-      ".config/Cursor/User/keybindings.json": cursorKeybindings,
-      ".config/Cursor/User/settings.json": cursorSettings
+const defaultConfig: BrunchConfig = {
+  cliTools: [
+    {
+      name: "eza",
+      executable: eza(),
     },
+    {
+      name: "oh-my-posh",
+      executable: oh_my_posh(),
+    },
+    {
+      name: "zoxide",
+      executable: zoxide(),
+    },
+    {
+      name: "nebula",
+      executable: nebula(),
+    },
+  ],
+  desktopApps: [
+    {
+      name: "cursor",
+      executable: std.directory({
+        "cursor.AppImage": cursorAppImage,
+        "brioche-run": std.symlink({ target: "cursor.AppImage" }),
+      }),
+      icon: cursorIcon,
+      iconExt: "png",
+      comment: "AI-powered code editor",
+      categories: ["Development"],
+    },
+    {
+      name: "opencode-desktop",
+      executable: makeWebAppExecutable("http://localhost:4096"),
+      icon: opencodeIcon,
+      iconExt: "svg",
+      comment: "Interactive CLI tool for software engineering",
+      categories: ["Development"],
+    },
+    {
+      name: "hello-world",
+      executable: std.bashRunnable`
+        echo "Hello, World!"
+        read -p "Press Enter to exit..."
+        `,
+      icon: placeholderPngIcon,
+      iconExt: "png",
+      comment: "A simple hello world app",
+      categories: ["Utility"],
+    },
+  ],
+  files: {
+    // Zsh configuration
+    // .zshenv must be in $HOME - it sets ZDOTDIR which points to .config/zsh/zshrc/
+    ".zshenv": zshEnv,
+    // Include all other zsh configuration files and directories (with plugins merged in)
+    ".config/zsh": zshConfigWithPlugins,
 
-    systemdUnits: {
-      user: {
-        services: {
-          "opencode-web": {
-            description: "OpenCode Web Server",
-            serviceConfig: {
-              execStart: opencodeWebRunnable,
-              type: "simple",
-              restart: "on-failure",
-              restartSec: 5,
-              workingDirectory: "%h",
-            },
+    // Oh-my-posh theme configuration
+    ".config/oh-my-posh/config.json": ohMyPoshTheme,
+
+    // Niri config
+    ".config/niri/config.kdl": niriConfig,
+
+    // Neovim configuration
+    // Include all nvim configuration files and directories
+    ".config/nvim": nvimConfig,
+
+    // Ghostty configuration
+    ".config/ghostty/config": ghosttyConfig,
+
+    // Cursor configuration
+    ".config/Cursor/User/keybindings.json": cursorKeybindings,
+    ".config/Cursor/User/settings.json": cursorSettings,
+  },
+
+  systemdUnits: {
+    user: {
+      services: {
+        "opencode-web": {
+          description: "OpenCode Web Server",
+          serviceConfig: {
+            execStart: opencodeWebRunnable,
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 5,
+            workingDirectory: "%h",
           },
         },
       },
     },
-  });
+  },
+};
+
+export default function brunchConfig() {
+  return makeBrunch(mergeBrunch(defaultConfig, weztermConfig));
 }

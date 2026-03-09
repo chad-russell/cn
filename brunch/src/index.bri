@@ -32,6 +32,135 @@ export interface BrunchConfig {
   systemdUnits?: BrunchSystemdConfig;
 }
 
+export function mergeBrunch(...configs: BrunchConfig[]): BrunchConfig {
+  if (configs.length === 0) {
+    return {};
+  }
+
+  return configs.reduce((acc, config, configIndex) => {
+    const merged: BrunchConfig = { ...acc };
+
+    if (config.desktopApps !== undefined && config.desktopApps.length > 0) {
+      const existingNames = new Set(acc.desktopApps?.map((a) => a.name) ?? []);
+      const duplicates = config.desktopApps.filter((a) => existingNames.has(a.name));
+      if (duplicates.length > 0) {
+        const names = duplicates.map((d) => d.name).join(", ");
+        throw new Error(
+          `mergeBrunch: duplicate desktopApps detected: ${names} (in config ${configIndex})`
+        );
+      }
+      merged.desktopApps = [...(acc.desktopApps ?? []), ...config.desktopApps];
+    }
+
+    if (config.cliTools !== undefined && config.cliTools.length > 0) {
+      const existingNames = new Set(acc.cliTools?.map((t) => t.name) ?? []);
+      const duplicates = config.cliTools.filter((t) => existingNames.has(t.name));
+      if (duplicates.length > 0) {
+        const names = duplicates.map((d) => d.name).join(", ");
+        throw new Error(
+          `mergeBrunch: duplicate cliTools detected: ${names} (in config ${configIndex})`
+        );
+      }
+      merged.cliTools = [...(acc.cliTools ?? []), ...config.cliTools];
+    }
+
+    if (config.files !== undefined && Object.keys(config.files).length > 0) {
+      const existingPaths = new Set(Object.keys(acc.files ?? {}));
+      const duplicates = Object.keys(config.files).filter((p) => existingPaths.has(p));
+      if (duplicates.length > 0) {
+        throw new Error(
+          `mergeBrunch: duplicate file paths detected: ${duplicates.join(", ")} (in config ${configIndex})`
+        );
+      }
+      merged.files = { ...acc.files, ...config.files };
+    }
+
+    if (config.systemdUnits !== undefined) {
+      merged.systemdUnits = mergeSystemdConfigs(
+        acc.systemdUnits,
+        config.systemdUnits,
+        configIndex
+      );
+    }
+
+    return merged;
+  }, {} as BrunchConfig);
+}
+
+function mergeSystemdConfigs(
+  a: BrunchSystemdConfig | undefined,
+  b: BrunchSystemdConfig | undefined,
+  configIndex: number
+): BrunchSystemdConfig {
+  if (!a && !b) return {};
+  if (!a) return b!;
+  if (!b) return a;
+
+  const merged: BrunchSystemdConfig = {};
+
+  const userServicesA = Object.keys(a.user?.services ?? {});
+  const userServicesB = Object.keys(b.user?.services ?? {});
+  const userServiceConflicts = userServicesA.filter((k) => userServicesB.includes(k));
+  if (userServiceConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd user services detected: ${userServiceConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
+  const userTimersA = Object.keys(a.user?.timers ?? {});
+  const userTimersB = Object.keys(b.user?.timers ?? {});
+  const userTimerConflicts = userTimersA.filter((k) => userTimersB.includes(k));
+  if (userTimerConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd user timers detected: ${userTimerConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
+  const systemServicesA = Object.keys(a.system?.services ?? {});
+  const systemServicesB = Object.keys(b.system?.services ?? {});
+  const systemServiceConflicts = systemServicesA.filter((k) => systemServicesB.includes(k));
+  if (systemServiceConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd system services detected: ${systemServiceConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
+  const systemTimersA = Object.keys(a.system?.timers ?? {});
+  const systemTimersB = Object.keys(b.system?.timers ?? {});
+  const systemTimerConflicts = systemTimersA.filter((k) => systemTimersB.includes(k));
+  if (systemTimerConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd system timers detected: ${systemTimerConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
+  if (
+    userServicesA.length > 0 ||
+    userServicesB.length > 0 ||
+    userTimersA.length > 0 ||
+    userTimersB.length > 0
+  ) {
+    merged.user = {
+      services: { ...a.user?.services, ...b.user?.services },
+      timers: { ...a.user?.timers, ...b.user?.timers },
+    };
+  }
+
+  if (
+    systemServicesA.length > 0 ||
+    systemServicesB.length > 0 ||
+    systemTimersA.length > 0 ||
+    systemTimersB.length > 0
+  ) {
+    merged.system = {
+      services: { ...a.system?.services, ...b.system?.services },
+      timers: { ...a.system?.timers, ...b.system?.timers },
+    };
+  }
+
+  return merged;
+}
+
 export function makeBrunch(config: BrunchConfig): std.Recipe<std.Directory> {
   const parts: std.Recipe<std.Directory>[] = [];
 

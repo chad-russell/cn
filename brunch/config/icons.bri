@@ -1,0 +1,8 @@
+import * as std from "std";
+
+export const placeholderPngIcon = std.download({
+  url: "https://user-images.githubusercontent.com/18397/185704412-007ca0a2-8778-496e-b002-51f324bdd6b7.png",
+  hash: std.sha256Hash(
+    "6bd6832408253ea6ed1f189767184954315acfa6300d50af669fceb1b878315d",
+  ),
+});
