@@ -53,7 +53,7 @@ Use this file for global context. For implementation details, open the subsystem
 │  Podman Quadlets (rootless):                                   │
 │  • Linkding    • Ntfy           • Papra                        │
 │  • Peekaping   • Audiobookshelf • AdGuardHome                  │
-│  • Beszel      • Open-WebUI                                    │
+│  • Beszel      • Open-WebUI      • Mastra • Mastra-UI          │
 │                                                                │
 │  Backup (Restic → NFS → NAS):                                  │
 │  • Daily snapshots of /srv/* volumes                           │

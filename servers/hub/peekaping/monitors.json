@@ -99,6 +99,44 @@
       "notification_ids": []
     },
     {
+      "name": "Mastra",
+      "type": "http",
+      "config": {
+        "url": "https://mastra.internal.crussell.io/health",
+        "method": "GET",
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
+      },
+      "interval": 30,
+      "timeout": 30,
+      "max_retries": 3,
+      "retry_interval": 30,
+      "resend_interval": 300,
+      "active": true,
+      "notification_ids": []
+    },
+    {
+      "name": "Mastra UI",
+      "type": "http",
+      "config": {
+        "url": "https://mastra-ui.internal.crussell.io",
+        "method": "GET",
+        "headers": "{}",
+        "encoding": "text",
+        "accepted_statuscodes": ["2XX"],
+        "authMethod": "none"
+      },
+      "interval": 30,
+      "timeout": 30,
+      "max_retries": 3,
+      "retry_interval": 30,
+      "resend_interval": 300,
+      "active": true,
+      "notification_ids": []
+    },
+    {
       "name": "AdGuard",
       "type": "http",
       "config": {

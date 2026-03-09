@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "=== Creating /srv directory structure ==="
 
-sudo mkdir -p /srv/{linkding,papra,ntfy,peekaping,audiobookshelf,adguardhome,searxng,karakeep,immich,beszel}/
+sudo mkdir -p /srv/{linkding,papra,ntfy,peekaping,audiobookshelf,adguardhome,searxng,karakeep,immich,beszel,mastra}/
 sudo mkdir -p /srv/audiobookshelf/{audiobooks,config,metadata,podcasts}
 sudo mkdir -p /srv/adguardhome/{work,conf}
 sudo mkdir -p /srv/karakeep/{data,meilisearch}
 sudo mkdir -p /srv/searxng/valkey
 sudo mkdir -p /srv/immich/postgres
 sudo mkdir -p /srv/beszel
+sudo mkdir -p /srv/mastra/data
 
 sudo chown -R $(id -u):$(id -g) /srv/
 
@@ -45,16 +48,16 @@ age -d -i "$AGE_KEY" "$SECRETS_DIR/immich.env.age" > /srv/immich/secrets.env
 age -d -i "$AGE_KEY" "$SECRETS_DIR/karakeep.env.age" > /srv/karakeep/secrets.env
 age -d -i "$AGE_KEY" "$SECRETS_DIR/beszel-hub.env.age" > /srv/beszel/secrets.env
 age -d -i "$AGE_KEY" "$SECRETS_DIR/searxng-settings.yml.age" > /srv/searxng/settings.yml
+age -d -i "$AGE_KEY" "$SECRETS_DIR/peekaping.env.age" > /srv/peekaping/secrets.env
 
 chmod 600 /srv/immich/secrets.env
 chmod 600 /srv/karakeep/secrets.env
 chmod 600 /srv/beszel/secrets.env
+chmod 600 /srv/peekaping/secrets.env
 
 echo "=== Copying quadlet files ==="
 
 mkdir -p ~/.config/containers/systemd/pods/{searxng,karakeep,immich}
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 for f in "$SCRIPT_DIR"/containers/*.container; do
     [ -f "$f" ] && cp "$f" ~/.config/containers/systemd/

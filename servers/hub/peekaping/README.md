@@ -62,8 +62,15 @@ Monitors are defined in `monitors.json` and synced via the `sync-monitors.sh` sc
 2. Run the sync script:
 
 ```bash
+# Option A: pass key inline
 PEEKAPING_API_KEY="pk_xxx" ./sync-monitors.sh --dry-run  # Preview changes
 PEEKAPING_API_KEY="pk_xxx" ./sync-monitors.sh            # Apply changes
+
+# Option B: store key on disk
+mkdir -p /srv/peekaping
+printf 'PEEKAPING_API_KEY=pk_xxx\n' > /srv/peekaping/secrets.env
+chmod 600 /srv/peekaping/secrets.env
+./sync-monitors.sh --dry-run
 ```
 
 ### Monitor Configuration Schema
@@ -108,6 +115,8 @@ PEEKAPING_API_KEY="pk_xxx" ./sync-monitors.sh            # Apply changes
 | Immich | https://photos.crussell.io | HTTP |
 | Karakeep | https://karakeep.internal.crussell.io | HTTP |
 | SearXNG | https://searxng.internal.crussell.io | HTTP |
+| Mastra | https://mastra.internal.crussell.io/health | HTTP |
+| Mastra UI | https://mastra-ui.internal.crussell.io | HTTP |
 
 ### k1 (192.168.20.61)
 
@@ -145,6 +154,9 @@ export PEEKAPING_API_KEY="pk_xxx"
 
 # Or pass directly
 PEEKAPING_API_KEY="pk_xxx" ./sync-monitors.sh
+
+# Or load from file (default path)
+cat /srv/peekaping/secrets.env
 ```
 
 ### API Endpoints

@@ -20,6 +20,7 @@ age1uhmefj4e0jhf4nza9efsdz9qa8fq08sf04c3jh268cf3uhmlypfqh60u2v
 | `karakeep.env.age` | `/srv/karakeep/secrets.env` | `MEILI_MASTER_KEY`, `NEXTAUTH_SECRET` |
 | `beszel-hub.env.age` | `/srv/beszel/secrets.env` | `BESZEL_TOKEN`, `BESZEL_KEY` |
 | `searxng-settings.yml.age` | `/srv/searxng/settings.yml` | Full SearXNG settings file |
+| `peekaping.env.age` | `/srv/peekaping/secrets.env` | `PEEKAPING_API_KEY` |
 
 ## Manual Decryption
 

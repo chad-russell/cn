@@ -54,6 +54,21 @@
         reverse_proxy 127.0.0.1:30088
     }
 
+    @excalidraw host excalidraw.internal.crussell.io
+    handle @excalidraw {
+        reverse_proxy 127.0.0.1:30089
+    }
+
+    @mastra host mastra.internal.crussell.io
+    handle @mastra {
+        reverse_proxy 127.0.0.1:30411
+    }
+
+    @mastraui host mastra-ui.internal.crussell.io
+    handle @mastraui {
+        reverse_proxy 127.0.0.1:30412
+    }
+
     @adguard host adguard.internal.crussell.io
     handle @adguard {
         reverse_proxy 127.0.0.1:30100 127.0.0.1:30102 {

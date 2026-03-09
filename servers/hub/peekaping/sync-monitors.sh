@@ -15,6 +15,7 @@
 # Environment variables:
 #   PEEKAPING_URL  - Peekaping base URL (default: https://peekaping.internal.crussell.io)
 #   PEEKAPING_API_KEY - API key for authentication (required)
+#   PEEKAPING_ENV_FILE - Optional env file (default: /srv/peekaping/secrets.env)
 #
 # The API key can be created in the Peekaping UI under Settings -> API Keys
 
@@ -25,7 +26,13 @@ MONITORS_FILE="${SCRIPT_DIR}/monitors.json"
 
 # Configuration
 PEEKAPING_URL="${PEEKAPING_URL:-https://peekaping.internal.crussell.io}"
-PEEKAPING_API_KEY="pk_eyJpZCI6IjBhY2ZlYWQ3LTZlZTQtNDY2Yy04NDM0LWZjM2ZmN2IwMGM2YSIsImtleSI6IlA3dHNXaU1wUjBOOTI2LTMwQjhqdHV2WnhDckZmaHdlb2lNLWROeDZJY1k9In0="
+PEEKAPING_ENV_FILE="${PEEKAPING_ENV_FILE:-/srv/peekaping/secrets.env}"
+PEEKAPING_API_KEY="${PEEKAPING_API_KEY:-}"
+
+if [[ -z "$PEEKAPING_API_KEY" && -f "$PEEKAPING_ENV_FILE" ]]; then
+    # shellcheck disable=SC1090
+    source "$PEEKAPING_ENV_FILE"
+fi
 
 # Parse arguments
 DRY_RUN=false
@@ -46,6 +53,7 @@ done
 # Validate API key
 if [[ -z "$PEEKAPING_API_KEY" ]]; then
     echo "Error: PEEKAPING_API_KEY environment variable is required"
+    echo "Looked for key in: $PEEKAPING_ENV_FILE"
     echo "Create an API key in Peekaping UI: Settings -> API Keys"
     exit 1
 fi

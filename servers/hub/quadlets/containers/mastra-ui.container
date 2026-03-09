@@ -1,0 +1,20 @@
+[Unit]
+Description=Mastra Custom UI
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/mastra-ui:latest
+PublishPort=30412:80
+HealthCmd=/usr/bin/wget --quiet --tries=1 --spider http://localhost:80/
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=20s
+
+[Service]
+Restart=unless-stopped
+RestartSec=5
+
+[Install]
+WantedBy=default.target
