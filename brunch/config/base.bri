@@ -1,0 +1,33 @@
+import * as std from "std";
+import { BrunchConfig } from "brunch";
+import { placeholderPngIcon } from "./icons.bri";
+
+const niriConfig = Brioche.includeFile("./niri/config.kdl");
+const ghosttyConfig = Brioche.includeFile("./ghostty/config");
+const nvimConfig = Brioche.includeDirectory("./nvim");
+
+export const brunchConfig: BrunchConfig = {
+  desktopApps: [
+    {
+      name: "hello-world",
+      executable: std.bashRunnable`
+        echo "Hello, World!"
+        read -p "Press Enter to exit..."
+        `,
+      icon: placeholderPngIcon,
+      iconExt: "png",
+      comment: "A simple hello world app",
+      categories: ["Utility"],
+    },
+  ],
+  files: {
+    // Niri config
+    ".config/niri/config.kdl": niriConfig,
+
+    // Neovim configuration
+    ".config/nvim": nvimConfig,
+
+    // Ghostty configuration
+    ".config/ghostty/config": ghosttyConfig,
+  },
+};

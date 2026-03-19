@@ -1,0 +1,47 @@
+import * as std from "std";
+import { BrunchConfig } from "brunch";
+
+// Cursor: https://cursor.com/download
+const cursorAppImage = std.runBash`
+  cp "$RAW_APPIMAGE" "$BRIOCHE_OUTPUT"
+  chmod +x "$BRIOCHE_OUTPUT"
+  `
+  .env({
+    RAW_APPIMAGE: std.download({
+      url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/2.6",
+      hash: std.sha256Hash(
+        "7aa3994212164617c1381e28c1c2c3b757c8f5802ee2e458970e87107bad4cc9",
+      ),
+    }),
+  })
+  .toFile();
+
+const cursorIcon = std.download({
+  url: "https://cursor.com/marketing-static/_next/image?url=%2Fmarketing-static%2Fdownload%2Fapp-icon-25d-dark.png&w=256&q=70&dpl=dpl_5dEMW8Em3fXxuK8BsP5EQDCtuvig",
+  hash: std.sha256Hash(
+    "e2fb845a8da426ba120f81dd1eecf5544315fb8395d1643e3b7dced76c3b87b8",
+  ),
+});
+
+const cursorKeybindings = Brioche.includeFile("./keybindings.json");
+const cursorSettings = Brioche.includeFile("./settings.json");
+
+export const brunchConfig: BrunchConfig = {
+  desktopApps: [
+    {
+      name: "cursor",
+      executable: std.directory({
+        "cursor.AppImage": cursorAppImage,
+        "brioche-run": std.symlink({ target: "cursor.AppImage" }),
+      }),
+      icon: cursorIcon,
+      iconExt: "png",
+      comment: "AI-powered code editor",
+      categories: ["Development"],
+    },
+  ],
+  files: {
+    ".config/Cursor/User/keybindings.json": cursorKeybindings,
+    ".config/Cursor/User/settings.json": cursorSettings,
+  },
+};

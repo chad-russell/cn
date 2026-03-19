@@ -4,8 +4,8 @@
 export HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
 
 # History limits
-HISTSIZE="50000"
-SAVEHIST="50000"
+HISTSIZE="100000"
+SAVEHIST="100000"
 
 # Use fcntl lock for better performance
 setopt HIST_FCNTL_LOCK
@@ -28,3 +28,31 @@ for opt in "${disabled_opts[@]}"; do
   unsetopt "$opt"
 done
 unset opt disabled_opts
+
+alias -- hist='history 1'
+
+function hgrep {
+  history 1 | command grep --color=auto "$@"
+}
+
+if command -v fzf &>/dev/null; then
+  function fzf-history-widget {
+    local selected command
+
+    selected=$(
+      history 1 | awk '!seen[$0]++' | fzf \
+        --height=40% \
+        --layout=reverse \
+        --border \
+        --prompt='History> ' \
+        --query="$LBUFFER" \
+        --scheme=history
+    ) || return
+
+    command=$(print -r -- "$selected" | sed -E 's/^[[:space:]]*[0-9]+[* ]?[[:space:]]*//')
+    LBUFFER=$command
+    zle redisplay
+  }
+
+  zle -N fzf-history-widget
+fi
