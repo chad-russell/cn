@@ -64,16 +64,16 @@
         reverse_proxy 127.0.0.1:30411
     }
 
-    @mastraui host mastra-ui.internal.crussell.io
-    handle @mastraui {
-        reverse_proxy 127.0.0.1:30412
-    }
-
     @adguard host adguard.internal.crussell.io
     handle @adguard {
         reverse_proxy 127.0.0.1:30100 127.0.0.1:30102 {
             lb_policy first
         }
+    }
+
+    @openclaw host openclaw.internal.crussell.io
+    handle @openclaw {
+        reverse_proxy 127.0.0.1:30110
     }
 
     # --- k1 Services (192.168.20.61) ---

@@ -1,0 +1,10 @@
+[Unit]
+Description=Restic Copy to S3
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/restic-s3-copy.sh
+Nice=19
+IOSchedulingClass=idle

@@ -21,6 +21,7 @@ Use this file for global context. For implementation details, open the subsystem
 | AI host (`bees`) | `servers/ai/README.md` | llama.cpp + llama-swap operations |
 | NAS monitoring agent | `servers/nas/README.md` | Beszel agent deployment on TrueNAS |
 | Uptime monitoring | `servers/hub/peekaping/README.md` | Declarative monitor config and sync flow |
+| OpenClaw gateway | `servers/hub/openclaw/README.md` | Dedicated rootless OpenClaw deployment on hub |
 | Backup system | `servers/hub/backup/README.md` | Restic backups to NAS with ntfy notifications |
 | Desktop config tooling | `brunch/README.md` | Brunch/Brioche desktop generation management |
 | Custom Fedora Atomic image | `crussell-fin/AGENTS.md` | bootc image template for building personalized workstation images (based on finpilot/Bluefin) |

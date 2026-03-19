@@ -1,0 +1,80 @@
+{
+  session: {
+    dmScope: "per-channel-peer",
+  },
+
+  channels: {
+    telegram: {
+      enabled: true,
+      dmPolicy: "pairing",
+      groups: {
+        "*": {
+          requireMention: true,
+        },
+      },
+    },
+  },
+
+  agents: {
+    defaults: {
+      workspace: "/srv/openclaw/workspace",
+      maxConcurrent: 2,
+      sandbox: {
+        mode: "all",
+        scope: "session",
+        workspaceAccess: "rw",
+        workspaceRoot: "/srv/openclaw/sandboxes",
+        docker: {
+          image: "openclaw-sandbox:bookworm-slim",
+          workdir: "/workspace",
+          readOnlyRoot: true,
+          tmpfs: ["/tmp", "/var/tmp", "/run"],
+          network: "bridge",
+          user: "0:0",
+          capDrop: ["ALL"],
+          env: {
+            LANG: "C.UTF-8",
+          },
+          pidsLimit: 256,
+          memory: "2g",
+          memorySwap: "4g",
+          cpus: 2,
+        },
+        browser: {
+          enabled: true,
+          image: "openclaw-sandbox-browser:bookworm-slim",
+          network: "bridge",
+          allowHostControl: false,
+          autoStart: true,
+          autoStartTimeoutMs: 15000,
+        },
+        prune: {
+          idleHours: 24,
+          maxAgeDays: 7,
+        },
+      },
+    },
+  },
+
+  tools: {
+    sandbox: {
+      tools: {
+        allow: [],
+        deny: [],
+      },
+    },
+  },
+
+  gateway: {
+    mode: "local",
+    bind: "lan",
+    port: 18789,
+    auth: {
+      mode: "token",
+      token: "${OPENCLAW_GATEWAY_TOKEN}",
+    },
+    controlUi: {
+      allowedOrigins: ["https://openclaw.internal.crussell.io"],
+    },
+  },
+}

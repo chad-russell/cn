@@ -116,7 +116,6 @@ chmod 600 /srv/peekaping/secrets.env
 | Karakeep | https://karakeep.internal.crussell.io | HTTP |
 | SearXNG | https://searxng.internal.crussell.io | HTTP |
 | Mastra | https://mastra.internal.crussell.io/health | HTTP |
-| Mastra UI | https://mastra-ui.internal.crussell.io | HTTP |
 
 ### k1 (192.168.20.61)
 
