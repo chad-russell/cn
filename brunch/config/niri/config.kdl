@@ -42,7 +42,6 @@ layout {
 }
 
 spawn-at-startup "xwayland-satellite"
-spawn-at-startup "vicinae" "server"
 spawn-at-startup "voxtype" "daemon"
 
 prefer-no-csd

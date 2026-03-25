@@ -113,6 +113,59 @@ require("lazy").setup({
       end,
     },
 
+    -- Git signs and hunk actions
+    {
+      "lewis6991/gitsigns.nvim",
+      name = "gitsigns",
+      event = { "BufReadPre", "BufNewFile" },
+      config = function()
+        require("plugins.gitsigns")
+      end,
+    },
+
+    -- Comment toggling
+    {
+      "numToStr/Comment.nvim",
+      name = "comment",
+      keys = { "gc", "gb" },
+      config = function()
+        require("plugins.comment")
+      end,
+    },
+
+    -- Fast jumping
+    {
+      "folke/flash.nvim",
+      name = "flash",
+      event = "VeryLazy",
+      config = function()
+        require("plugins.flash")
+      end,
+    },
+
+    -- Session persistence
+    {
+      "folke/persistence.nvim",
+      name = "persistence",
+      event = "BufReadPre",
+      config = function()
+        require("plugins.persistence")
+      end,
+    },
+
+    -- Code outline
+    {
+      "stevearc/aerial.nvim",
+      name = "aerial",
+      dependencies = {
+        "nvim-treesitter",
+        "nvim-web-devicons",
+      },
+      config = function()
+        require("plugins.aerial")
+      end,
+    },
+
     -- Diagnostics list
     {
       "folke/trouble.nvim",
@@ -165,6 +218,41 @@ require("lazy").setup({
     {
       "itchyny/lightline.vim",
       name = "lightline",
+      init = function()
+        vim.g.lightline = {
+          enable = {
+            tabline = 0,
+          },
+        }
+      end,
+    },
+
+    -- Bufferline (VSCode-like tabs)
+    {
+      "akinsho/bufferline.nvim",
+      name = "bufferline",
+      version = "*",
+      dependencies = { "nvim-web-devicons" },
+      config = function()
+        require("bufferline").setup({
+          options = {
+            mode = "buffers",
+            separator_style = "thin",
+            always_show_bufferline = true,
+            show_buffer_close_icons = true,
+            show_close_icon = false,
+            diagnostics = "nvim_lsp",
+            offsets = {
+              {
+                filetype = "neo-tree",
+                text = "File Explorer",
+                highlight = "Directory",
+                text_align = "left",
+              },
+            },
+          },
+        })
+      end,
     },
 
     {

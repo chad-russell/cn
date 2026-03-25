@@ -37,6 +37,7 @@ opt.termguicolors = true
 opt.scrolloff = 8
 opt.signcolumn = "yes"
 opt.cmdheight = 1
+opt.showtabline = 2
 
 -- Performance and timing
 opt.updatetime = 50

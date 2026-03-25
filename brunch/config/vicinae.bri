@@ -1,0 +1,26 @@
+import * as std from "std";
+import { BrunchConfig } from "brunch";
+
+const vicinaeServerRunnable = std.bashRunnable`
+  exec vicinae server
+  `;
+
+export const brunchConfig: BrunchConfig = {
+  systemdUnits: {
+    user: {
+      services: {
+        "vicinae-server": {
+          description: "Vicinae Server",
+          after: ["graphical-session.target"],
+          wants: ["graphical-session.target"],
+          serviceConfig: {
+            execStart: vicinaeServerRunnable,
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 5,
+          },
+        },
+      },
+    },
+  },
+};
