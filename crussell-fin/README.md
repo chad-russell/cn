@@ -8,7 +8,8 @@ This image is based on [Silverblue Main](https://github.com/ublue-os/bluefin) an
 
 ### Added Packages (Build-time)
 - **Vicinae** - Application launcher installed natively via COPR (quadratech188/vicinae)
-- **Desktop Environment**: niri (scrollable-tiling Wayland compositor), Noctalia Shell, Ghostty terminal
+- **Desktop Sessions**: GNOME (base image), niri (scrollable-tiling Wayland compositor), COSMIC (Fedora packages)
+- **Shell/Desktop Utilities**: Noctalia Shell, Ghostty terminal
 - **Utilities**: fuzzel, swaybg, swaylock, mako, cliphist, matugen, cava
 - **Development**: gcc, gcc-c++, make
 - **Networking**: Tailscale with auto-configuration
@@ -21,9 +22,10 @@ This image is based on [Silverblue Main](https://github.com/ublue-os/bluefin) an
 ### Configuration Changes
 - **Default shell**: Zsh configured as default shell
 - **Systemd services enabled**: podman.socket, brew-setup/update/upgrade, tailscaled
+- **Session chooser**: GDM offers GNOME, niri, and COSMIC from the login screen
 - **niri defaults**: Default config copied to /etc/xdg/niri/config.kdl
 
-*Last updated: 2026-03-27*
+*Last updated: 2026-04-02*
 
 ---
 

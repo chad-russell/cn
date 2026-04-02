@@ -45,6 +45,12 @@ echo "::endgroup::"
 
 echo "::group:: Install Packages"
 
+# Install COSMIC alongside the Silverblue GNOME session so GDM can offer both.
+# Fedora 43 ships current COSMIC packages directly in the main repositories.
+dnf5 -y install \
+    cosmic-session \
+    cosmic-edit
+
 # Install niri (scrollable-tiling Wayland compositor) from COPR
 copr_install_isolated "yalter/niri" niri
 

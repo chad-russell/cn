@@ -26,6 +26,7 @@ const zshConfigWithPlugins = std.merge(
   }),
 );
 const zshEnv = Brioche.includeFile("./zsh/.zshenv");
+const gitConfig = Brioche.includeFile("./git/.gitconfig");
 const ohMyPoshTheme = Brioche.includeFile("./oh-my-posh/config.json");
 
 export const brunchConfig: BrunchConfig = {
@@ -48,6 +49,9 @@ export const brunchConfig: BrunchConfig = {
     },
   ],
   files: {
+    // Git configuration
+    ".gitconfig": gitConfig,
+
     // Zsh configuration
     // .zshenv must be in $HOME - it sets ZDOTDIR which points to .config/zsh/zshrc/
     ".zshenv": zshEnv,
