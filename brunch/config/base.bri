@@ -6,6 +6,10 @@ const niriConfig = Brioche.includeFile("./niri/config.kdl");
 const ghosttyConfig = Brioche.includeFile("./ghostty/config");
 const nvimConfig = Brioche.includeDirectory("./nvim");
 
+const noctaliaRunnable = std.bashRunnable`
+  exec qs -c noctalia-shell
+  `;
+
 export const brunchConfig: BrunchConfig = {
   desktopApps: [
     {
@@ -29,5 +33,24 @@ export const brunchConfig: BrunchConfig = {
 
     // Ghostty configuration
     ".config/ghostty/config": ghosttyConfig,
+  },
+  systemdUnits: {
+    user: {
+      services: {
+        noctalia: {
+          description: "Noctalia Shell",
+          after: ["graphical-session.target"],
+          wants: ["graphical-session.target"],
+          partOf: ["graphical-session.target"],
+          wantedBy: ["graphical-session.target"],
+          serviceConfig: {
+            execStart: noctaliaRunnable,
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 5,
+          },
+        },
+      },
+    },
   },
 };

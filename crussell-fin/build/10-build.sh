@@ -51,24 +51,10 @@ copr_install_isolated "yalter/niri" niri
 # Install Ghostty terminal emulator from COPR
 copr_install_isolated "scottames/ghostty" ghostty
 
-# Install DankMaterialShell (DMS) stable release with companion packages
-# Note: Manually handling COPRs here because dms depends on danklinux repo
-echo "Installing DMS and dependencies..."
-dnf5 -y copr enable avengemedia/danklinux
-dnf5 -y copr enable avengemedia/dms
-
-# Install packages
+# Install supporting packages used by the shell environment.
 dnf5 -y install \
-    dms \
-    quickshell \
-    cliphist \
-    matugen \
     wl-clipboard \
     cava
-
-# Disable COPRs to ensure they don't persist
-dnf5 -y copr disable avengemedia/dms
-dnf5 -y copr disable avengemedia/danklinux
 
 echo "::endgroup::"
 
@@ -146,15 +132,30 @@ cp /ctx/build/zsh/skel-zshrc /etc/skel/.zshrc
 
 echo "::endgroup::"
 
-echo "::group:: System Configuration"
+echo "::group:: Install Noctalia Shell"
 
-# Enable/disable systemd services
-systemctl enable podman.socket
-systemctl enable brew-setup.service
-systemctl enable brew-update.timer
-systemctl enable brew-upgrade.timer
-systemctl enable tailscaled.service
-# Example: systemctl mask unwanted-service
+# Add Terra repository for the current Fedora release.
+# Fyralabs no longer publishes a shared terra-release.repo file, so define the
+# repo directly against the versioned baseurl.
+FEDORA_VERSION=$(rpm -E %fedora)
+
+cat > /etc/yum.repos.d/terra.repo <<EOF
+[terra]
+name=Terra ${FEDORA_VERSION}
+baseurl=https://repos.fyralabs.com/terra${FEDORA_VERSION}/
+enabled=0
+gpgcheck=1
+gpgkey=https://repos.fyralabs.com/terra${FEDORA_VERSION}/key.asc
+EOF
+
+# Install noctalia-shell and Terra-hosted companion packages.
+dnf5 install -y --enablerepo=terra \
+    noctalia-shell \
+    cliphist \
+    matugen
+
+# Disable the repository to prevent accidental updates
+dnf5 config-manager setopt terra.enabled=0
 
 echo "::endgroup::"
 
