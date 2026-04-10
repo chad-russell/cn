@@ -3,6 +3,7 @@ import * as std from "std";
 export interface BrunchServiceConfig {
   description?: string;
   documentation?: string | string[];
+  enabled?: boolean;
   requires?: string[];
   after?: string[];
   before?: string[];
@@ -12,6 +13,7 @@ export interface BrunchServiceConfig {
   conflicts?: string[];
   serviceConfig: {
     execStart?: std.RecipeLike<std.Directory> | string;
+    execCondition?: string | string[];
     execStartPre?: string | string[];
     execStartPost?: string | string[];
     execStop?: string | string[];
@@ -40,6 +42,7 @@ export interface BrunchServiceConfig {
 export interface BrunchTimerConfig {
   description?: string;
   documentation?: string | string[];
+  enabled?: boolean;
   requires?: string[];
   after?: string[];
   before?: string[];
@@ -126,10 +129,6 @@ function buildUnitSection(config: {
     lines.push(`Wants=${config.wants.join(" ")}`);
   }
 
-  if (config.wantedBy && config.wantedBy.length > 0) {
-    lines.push(`WantedBy=${config.wantedBy.join(" ")}`);
-  }
-
   if (config.partOf && config.partOf.length > 0) {
     lines.push(`PartOf=${config.partOf.join(" ")}`);
   }
@@ -165,6 +164,13 @@ function makeServiceUnitInternal(
         lines.push(`# NOTE: ExecStart for system services with Brioche runnables not yet supported`);
         lines.push(`# Use a string path for execStart instead`);
       }
+    }
+  }
+
+  if (sc.execCondition !== undefined) {
+    const conditions = Array.isArray(sc.execCondition) ? sc.execCondition : [sc.execCondition];
+    for (const condition of conditions) {
+      lines.push(`ExecCondition=${condition}`);
     }
   }
 
@@ -288,6 +294,35 @@ export function makeServiceUnit(
   return makeServiceUnitInternal(name, config, "user");
 }
 
+function makeEnablementMetadata(config: {
+  services?: Record<string, BrunchServiceConfig>;
+  timers?: Record<string, BrunchTimerConfig>;
+}): std.Recipe<std.Directory> {
+  const enabledUnits: string[] = [];
+  const disabledUnits: string[] = [];
+
+  for (const [name, serviceConfig] of Object.entries(config.services ?? {})) {
+    if (serviceConfig.enabled === true) {
+      enabledUnits.push(`${name}.service`);
+    } else if (serviceConfig.enabled === false) {
+      disabledUnits.push(`${name}.service`);
+    }
+  }
+
+  for (const [name, timerConfig] of Object.entries(config.timers ?? {})) {
+    if (timerConfig.enabled === true) {
+      enabledUnits.push(`${name}.timer`);
+    } else if (timerConfig.enabled === false) {
+      disabledUnits.push(`${name}.timer`);
+    }
+  }
+
+  return std.directory({
+    "enabled.units": std.file(enabledUnits.join("\n")),
+    "disabled.units": std.file(disabledUnits.join("\n")),
+  });
+}
+
 export function makeTimerUnit(
   name: string,
   config: BrunchTimerConfig
@@ -363,6 +398,7 @@ export function makeSystemdUnits(
   config: BrunchSystemdConfig
 ): std.Recipe<std.Directory> {
   const dirs: Record<string, std.Recipe<std.Directory>> = {};
+  const stateDirs: Record<string, std.Recipe<std.Directory>> = {};
 
   const userEntries: Record<string, std.Recipe<std.File | std.Directory>> = {};
   const systemEntries: Record<string, std.Recipe<std.File | std.Directory>> = {};
@@ -403,15 +439,26 @@ export function makeSystemdUnits(
 
   if (Object.keys(userEntries).length > 0) {
     dirs["user"] = std.directory(userEntries);
+    stateDirs["user"] = makeEnablementMetadata({
+      services: config.user?.services,
+      timers: config.user?.timers,
+    });
   }
 
   if (Object.keys(systemEntries).length > 0) {
     dirs["system"] = std.directory(systemEntries);
+    stateDirs["system"] = makeEnablementMetadata({
+      services: config.system?.services,
+      timers: config.system?.timers,
+    });
   }
 
   if (Object.keys(dirs).length === 0) {
     return std.directory({});
   }
 
-  return std.directory({ systemd: std.directory(dirs) });
+  return std.directory({
+    systemd: std.directory(dirs),
+    "systemd-state": std.directory(stateDirs),
+  });
 }

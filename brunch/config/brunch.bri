@@ -1,12 +1,13 @@
 import { makeBrunch, mergeBrunch } from "brunch";
 import { brunchConfig as baseConfig } from "./base.bri";
 import { brunchConfig as shellConfig } from "./shell.bri";
+import { brunchConfig as vicinaeConfig } from "./vicinae.bri";
 import { brunchConfig as cursorConfig } from "./cursor/brunch.bri";
 import { brunchConfig as opencodeConfig } from "./opencode.bri";
 import { brunchConfig as weztermConfig } from "./wezterm/brunch.bri";
 
 export default function brunchConfig() {
   return makeBrunch(
-    mergeBrunch(baseConfig, shellConfig, cursorConfig, opencodeConfig, weztermConfig),
+    mergeBrunch(baseConfig, shellConfig, vicinaeConfig, cursorConfig, opencodeConfig, weztermConfig),
   );
 }

@@ -11,6 +11,9 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Apply { project_path } => commands::apply::run(&project_path),
         Commands::ListGenerations => commands::list_generations::run(),
+        Commands::PruneGenerations { specs, dry_run } => {
+            commands::prune_generations::run(&specs, dry_run)
+        }
         Commands::SwitchGeneration { gen_num } => commands::switch_generation::run(gen_num),
     }
 }
@@ -32,6 +35,16 @@ enum Commands {
     },
     #[command(about = "List all generations and mark the current one")]
     ListGenerations,
+    #[command(about = "Remove specific generations or generation ranges")]
+    PruneGenerations {
+        #[arg(
+            value_name = "GEN_SPEC",
+            help = "Generation numbers or ranges, e.g. 3 5-8 10,12"
+        )]
+        specs: Vec<String>,
+        #[arg(long, help = "Show which generations would be removed without deleting them")]
+        dry_run: bool,
+    },
     #[command(about = "Switch to a specific generation")]
     SwitchGeneration {
         #[arg(value_name = "GEN_NUM", help = "Generation number to switch to")]
@@ -134,4 +147,30 @@ pub fn current_generation(state_dir: &Path) -> Result<Option<u32>> {
 
     let gen = gen_str.parse::<u32>().ok();
     Ok(gen)
+}
+
+pub fn list_generation_numbers(generations_dir: &Path) -> Result<Vec<u32>> {
+    if !generations_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut gens = Vec::new();
+    for entry in std::fs::read_dir(generations_dir)
+        .context("Failed to read generations directory")?
+    {
+        let entry = entry.context("Failed to read directory entry")?;
+        let path = entry.path();
+        let filename = path
+            .file_name()
+            .context("Path has no filename")?
+            .to_str()
+            .context("Filename not valid UTF-8")?;
+
+        if let Ok(num) = filename.parse::<u32>() {
+            gens.push(num);
+        }
+    }
+
+    gens.sort_unstable();
+    Ok(gens)
 }

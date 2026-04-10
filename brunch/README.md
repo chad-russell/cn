@@ -118,6 +118,7 @@ export default function() {
         services: {
           "my-backup": {
             description: "Run backup script",
+            enabled: true,
             serviceConfig: {
               execStart: backupScript,  // Can be a Brioche runnable or string path
               type: "oneshot",
@@ -127,6 +128,7 @@ export default function() {
         timers: {
           "my-backup": {
             description: "Run backup hourly",
+            enabled: true,
             timerConfig: {
               onCalendar: "hourly",
               persistent: true,
@@ -163,6 +165,7 @@ export default function() {
 ```typescript
 serviceConfig: {
   execStart: std.bashRunnable`...`,  // Brioche runnable
+  execCondition: "/usr/bin/test -n \"$WAYLAND_DISPLAY\"",
   execStartPre: "/path/to/pre-script",
   execStop: "/path/to/stop-script",
   type: "simple" | "oneshot" | "forking" | "notify",
@@ -219,6 +222,11 @@ List all generations with the current one marked.
 
 #### `brunch switch-generation <GEN_NUM>`
 Switch to a specific generation, updating the `current` symlink and re-linking desktop assets.
+
+#### `brunch prune-generations <GEN_SPEC>...`
+Remove specific generations or ranges, for example `brunch prune-generations 3 5-8 10,12`.
+
+Use `--dry-run` to preview what would be removed.
 
 ### Atomic Symlink Updates
 
@@ -323,6 +331,6 @@ brioche-packages/packages/brunch/
 - [x] Add `switch-generation` command for easy rollbacks
 - [x] Support for systemd units (services and timers)
 - [x] Support for config files (`.config/`, `~/.bashrc`, etc.)
-- [ ] Add `remove-generation` command to clean up old generations
+- [x] Add `prune-generations` command to clean up old generations
 - [ ] Add `diff` command to see changes between generations
 - [ ] Support for non-asset resources (environment variables, PATH additions)

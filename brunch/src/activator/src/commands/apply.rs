@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub fn run(project_path: &Path) -> Result<()> {
-    let project_path = std::fs::canonicalize(project_path)
-        .context("Failed to resolve project path")?;
+    let project_path =
+        std::fs::canonicalize(project_path).context("Failed to resolve project path")?;
 
     let state = state_dir()?;
     let generations = state.join("generations");
@@ -91,16 +91,18 @@ fn run_elevated_command(args: &[&str]) -> Result<()> {
 
 pub fn link_systemd(current: &Path, elevated: bool) -> Result<()> {
     let systemd_dir = current.join("systemd");
+    let systemd_state_dir = current.join("systemd-state");
     if !systemd_dir.exists() {
         return Ok(());
     }
 
     let user_dir = systemd_dir.join("user");
     if user_dir.exists() {
-        let config_dir = dirs::config_dir()
-            .context("Failed to get config directory")?;
+        let config_dir = dirs::config_dir().context("Failed to get config directory")?;
         let target_dir = config_dir.join("systemd/user");
         link_systemd_dir(&user_dir, &target_dir, &user_dir, false)?;
+        daemon_reload(false)?;
+        reconcile_enablement(&systemd_state_dir.join("user"), false)?;
     }
 
     if elevated {
@@ -108,6 +110,8 @@ pub fn link_systemd(current: &Path, elevated: bool) -> Result<()> {
         if system_dir.exists() {
             let target_dir = PathBuf::from("/etc/systemd/system");
             link_systemd_dir_elevated(&system_dir, &target_dir, &system_dir)?;
+            daemon_reload(true)?;
+            reconcile_enablement(&systemd_state_dir.join("system"), true)?;
         }
     } else if systemd_dir.join("system").exists() {
         log::warn!("System units present but no elevated privileges - skipping system units");
@@ -146,6 +150,77 @@ fn link_systemd_dir(
     Ok(())
 }
 
+fn daemon_reload(is_system: bool) -> Result<()> {
+    if is_system {
+        run_elevated_command(&["systemctl", "daemon-reload"])?;
+    } else {
+        let status = Command::new("systemctl")
+            .args(["--user", "daemon-reload"])
+            .status()
+            .context("Failed to reload user systemd daemon")?;
+
+        if !status.success() {
+            anyhow::bail!("User systemd daemon-reload failed");
+        }
+    }
+
+    Ok(())
+}
+
+fn read_units_list(path: &Path) -> Result<Vec<String>> {
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let contents = std::fs::read_to_string(path)
+        .context(format!("Failed to read unit state file {}", path.display()))?;
+
+    Ok(contents
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect())
+}
+
+fn reconcile_enablement(state_dir: &Path, is_system: bool) -> Result<()> {
+    if !state_dir.exists() {
+        return Ok(());
+    }
+
+    for unit in read_units_list(&state_dir.join("enabled.units"))? {
+        if is_system {
+            run_elevated_command(&["systemctl", "enable", &unit])?;
+        } else {
+            let status = Command::new("systemctl")
+                .args(["--user", "enable", &unit])
+                .status()
+                .context(format!("Failed to enable user unit {}", unit))?;
+
+            if !status.success() {
+                anyhow::bail!("Failed to enable user unit {}", unit);
+            }
+        }
+    }
+
+    for unit in read_units_list(&state_dir.join("disabled.units"))? {
+        if is_system {
+            run_elevated_command(&["systemctl", "disable", &unit])?;
+        } else {
+            let status = Command::new("systemctl")
+                .args(["--user", "disable", &unit])
+                .status()
+                .context(format!("Failed to disable user unit {}", unit))?;
+
+            if !status.success() {
+                anyhow::bail!("Failed to disable user unit {}", unit);
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn link_systemd_dir_elevated(
     source_root: &Path,
     target_root: &Path,
@@ -168,7 +243,11 @@ fn link_systemd_dir_elevated(
         let parent = target_sys_path.parent().context("No parent directory")?;
 
         let mkdir_cmd = format!("mkdir -p '{}'", parent.display());
-        let ln_cmd = format!("ln -sf '{}' '{}'", path.display(), target_sys_path.display());
+        let ln_cmd = format!(
+            "ln -sf '{}' '{}'",
+            path.display(),
+            target_sys_path.display()
+        );
 
         run_elevated_command(&["sh", "-c", &format!("{} && {}", mkdir_cmd, ln_cmd)])?;
     }
@@ -244,20 +323,16 @@ fn cleanup_systemd_dir(
                     log::debug!("  Expected: {}", expected_target.display());
 
                     if target == expected_target {
-                        log::info!("Removing managed systemd unit: {}", target_sys_path.display());
+                        log::info!(
+                            "Removing managed systemd unit: {}",
+                            target_sys_path.display()
+                        );
 
-                        let unit_name = rel_path
-                            .file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or("");
+                        let unit_name = rel_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
                         if is_system {
-                            let _ = run_elevated_command(&[
-                                "systemctl",
-                                "disable",
-                                "--now",
-                                unit_name,
-                            ]);
+                            let _ =
+                                run_elevated_command(&["systemctl", "disable", "--now", unit_name]);
                             let rm_cmd = format!("rm -f '{}'", target_sys_path.display());
                             let _ = run_elevated_command(&["sh", "-c", &rm_cmd]);
                         } else {
@@ -296,9 +371,7 @@ pub fn link_desktop_assets(current: &Path) -> Result<()> {
         for entry in std::fs::read_dir(&gen_bin).context("Failed to read gen bin")? {
             let entry = entry.context("Failed to read directory entry")?;
             let src = entry.path();
-            let name = src
-                .file_name()
-                .context("Path has no filename")?;
+            let name = src.file_name().context("Path has no filename")?;
             let dest = local_bin.join(name);
 
             symlink_atomic(&src, &dest).context(format!(
@@ -313,9 +386,7 @@ pub fn link_desktop_assets(current: &Path) -> Result<()> {
         for entry in std::fs::read_dir(&gen_apps).context("Failed to read gen apps")? {
             let entry = entry.context("Failed to read directory entry")?;
             let src = entry.path();
-            let name = src
-                .file_name()
-                .context("Path has no filename")?;
+            let name = src.file_name().context("Path has no filename")?;
             let dest = apps_dir.join(name);
 
             symlink_atomic(&src, &dest).context(format!(
@@ -330,9 +401,7 @@ pub fn link_desktop_assets(current: &Path) -> Result<()> {
         for entry in std::fs::read_dir(&gen_icons).context("Failed to read gen icons")? {
             let entry = entry.context("Failed to read directory entry")?;
             let src = entry.path();
-            let name = src
-                .file_name()
-                .context("Path has no filename")?;
+            let name = src.file_name().context("Path has no filename")?;
             let dest = icons_dir.join(name);
 
             symlink_atomic(&src, &dest).context(format!(
@@ -401,7 +470,7 @@ pub fn cleanup_files(old_gen: &Path, new_gen: &Path) -> Result<()> {
         &old_files_dir.join("root"),
         &new_files_dir.join("root"),
         &PathBuf::from("/"),
-        &current_link.join("files/root")
+        &current_link.join("files/root"),
     )?;
 
     let home = std::env::var("HOME").ok();
@@ -410,14 +479,19 @@ pub fn cleanup_files(old_gen: &Path, new_gen: &Path) -> Result<()> {
             &old_files_dir.join("home"),
             &new_files_dir.join("home"),
             &PathBuf::from(home_path),
-            &current_link.join("files/home")
+            &current_link.join("files/home"),
         )?;
     }
 
     Ok(())
 }
 
-fn cleanup_dir_recursive(old_root: &Path, new_root: &Path, target_root: &Path, expected_link_base: &Path) -> Result<()> {
+fn cleanup_dir_recursive(
+    old_root: &Path,
+    new_root: &Path,
+    target_root: &Path,
+    expected_link_base: &Path,
+) -> Result<()> {
     if !old_root.exists() {
         return Ok(());
     }
@@ -430,22 +504,23 @@ fn cleanup_dir_recursive(old_root: &Path, new_root: &Path, target_root: &Path, e
 
         let path = entry.path();
         let rel_path = path.strip_prefix(old_root)?;
-        
+
         let new_path = new_root.join(rel_path);
         if !new_path.exists() {
             let target_sys_path = target_root.join(rel_path);
             let expected_target = expected_link_base.join(rel_path);
-            
+
             log::debug!("Checking cleanup for: {}", target_sys_path.display());
 
             if target_sys_path.is_symlink() {
                 if let Ok(target) = std::fs::read_link(&target_sys_path) {
                     log::debug!("  Target: {}", target.display());
                     log::debug!("  Expected: {}", expected_target.display());
-                    
+
                     if target == expected_target {
                         log::info!("Removing managed file: {}", target_sys_path.display());
-                        std::fs::remove_file(&target_sys_path).context("Failed to remove old symlink")?;
+                        std::fs::remove_file(&target_sys_path)
+                            .context("Failed to remove old symlink")?;
                     }
                 }
             }
