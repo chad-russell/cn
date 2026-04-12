@@ -115,7 +115,6 @@ chmod 600 /srv/peekaping/secrets.env
 | Immich | https://photos.crussell.io | HTTP |
 | Karakeep | https://karakeep.internal.crussell.io | HTTP |
 | SearXNG | https://searxng.internal.crussell.io | HTTP |
-| Mastra | https://mastra.internal.crussell.io/health | HTTP |
 
 ### k1 (192.168.20.61)
 

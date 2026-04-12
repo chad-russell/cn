@@ -1,0 +1,48 @@
+[Unit]
+Description=Gloo Polymer app
+After=dev-network.service dev-postgres.service gloo-rustfs.service gloo-buckets.service gloo-host-gateway.service gloo-node24-dev-build.service gloo-polymer-deps.service
+Requires=dev-network.service dev-postgres.service gloo-rustfs.service gloo-buckets.service gloo-host-gateway.service gloo-node24-dev-build.service gloo-polymer-deps.service gloo-pnpm-store-volume.service gloo-polymer-node-modules-volume.service
+AssertPathExists=%h/Gloo/360-polymer/package.json
+ConditionPathExists=%h/Gloo/gloo-control-plane/envs/polymer.env
+PartOf=gloo-polymer.service
+
+[Container]
+ContainerName=gloo-polymer-app
+Image=gloo-node24-dev.build
+Pull=never
+Network=dev.network
+PublishPort=127.0.0.1:3001:3001
+EnvironmentFile=%h/Gloo/gloo-control-plane/envs/polymer.env
+Environment=COREPACK_HOME=/pnpm-store/corepack
+Environment=PNPM_STORE_DIR=/pnpm-store
+Notify=healthy
+HealthCmd=/bin/bash -lc ': > /dev/tcp/127.0.0.1/3001'
+HealthInterval=30s
+HealthRetries=3
+HealthStartupInterval=5s
+HealthStartupRetries=60
+HealthTimeout=5s
+PodmanArgs=--security-opt label=disable
+PodmanArgs=--add-host=gpl.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=hb-api.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=hb-web.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=polymer.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=rustfs.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=rustfs-console.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=pgadmin.gloo.local:${GLOO_HOST_IP}
+Volume=%h/Gloo/360-polymer:/workspace
+Volume=gloo_polymer_node_modules:/workspace/node_modules
+Volume=gloo_pnpm_store:/pnpm-store
+WorkingDir=/workspace
+Exec=sh -lc 'rm -f /workspace/apps/polymer/.next/dev/lock && cd /workspace/apps/polymer && exec corepack pnpm exec next dev --turbo --hostname 0.0.0.0 --port 3001'
+
+[Service]
+EnvironmentFile=%h/Gloo/gloo-control-plane/envs/host-gateway.env
+Restart=on-failure
+RestartSec=3
+StartupCPUWeight=1000
+CPUWeight=250
+MemoryHigh=2500M
+MemoryMax=4G
+TasksMax=512
+TimeoutStartSec=10min

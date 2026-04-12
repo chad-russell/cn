@@ -1,5 +1,6 @@
 {
     email chaddouglasrussell@gmail.com
+    admin 127.0.0.1:2020
 }
 
 # Internal services only - *.internal.crussell.io
@@ -12,6 +13,9 @@
         }
         propagation_timeout 5m
     }
+
+    # Brunch-managed internal routes live under ~/.config/caddy/routes/internal/
+    import /etc/caddy/imports/routes/internal/*.caddy
 
     # --- hub Services (192.168.20.105 / 10.10.0.1) ---
     @karakeep host karakeep.internal.crussell.io
@@ -54,16 +58,6 @@
         reverse_proxy 127.0.0.1:30088
     }
 
-    @excalidraw host excalidraw.internal.crussell.io
-    handle @excalidraw {
-        reverse_proxy 127.0.0.1:30089
-    }
-
-    @mastra host mastra.internal.crussell.io
-    handle @mastra {
-        reverse_proxy 127.0.0.1:30411
-    }
-
     @adguard host adguard.internal.crussell.io
     handle @adguard {
         reverse_proxy 127.0.0.1:30100 127.0.0.1:30102 {
@@ -73,6 +67,7 @@
 
     @openclaw host openclaw.internal.crussell.io
     handle @openclaw {
+        redir / /control permanent
         reverse_proxy 127.0.0.1:30110
     }
 

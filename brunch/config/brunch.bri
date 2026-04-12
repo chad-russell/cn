@@ -1,13 +1,11 @@
 import { makeBrunch, mergeBrunch } from "brunch";
-import { brunchConfig as baseConfig } from "./base.bri";
-import { brunchConfig as shellConfig } from "./shell.bri";
-import { brunchConfig as vicinaeConfig } from "./vicinae.bri";
-import { brunchConfig as cursorConfig } from "./cursor/brunch.bri";
-import { brunchConfig as opencodeConfig } from "./opencode.bri";
-import { brunchConfig as weztermConfig } from "./wezterm/brunch.bri";
+import { sharedBrunchConfig } from "./modules/shared.bri";
+import { devInfraBrunchConfig } from "./modules/dev-infra.bri";
+import { buildspaceBrunchConfig } from "./modules/buildspace.bri";
+import { glooBrunchConfig } from "./modules/gloo.bri";
 
-export default function brunchConfig() {
-  return makeBrunch(
-    mergeBrunch(baseConfig, shellConfig, vicinaeConfig, cursorConfig, opencodeConfig, weztermConfig),
-  );
-}
+export const thinkpad = makeBrunch(sharedBrunchConfig);
+
+export const hub = makeBrunch(mergeBrunch(devInfraBrunchConfig, buildspaceBrunchConfig, glooBrunchConfig));
+
+export default thinkpad;

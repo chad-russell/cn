@@ -1,0 +1,16 @@
+import { mergeBrunch, BrunchConfig } from "brunch";
+import { brunchConfig as baseConfig } from "../base.bri";
+import { brunchConfig as shellConfig } from "../shell.bri";
+import { brunchConfig as vicinaeConfig } from "../vicinae.bri";
+import { brunchConfig as cursorConfig } from "../cursor/brunch.bri";
+import { brunchConfig as opencodeConfig } from "../opencode.bri";
+import { brunchConfig as weztermConfig } from "../wezterm/brunch.bri";
+
+export const sharedBrunchConfig: BrunchConfig = mergeBrunch(
+  baseConfig,
+  shellConfig,
+  vicinaeConfig,
+  cursorConfig,
+  opencodeConfig,
+  weztermConfig,
+);

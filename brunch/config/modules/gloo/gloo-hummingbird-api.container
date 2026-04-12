@@ -1,0 +1,49 @@
+[Unit]
+Description=Gloo Hummingbird API
+After=dev-network.service dev-postgres.service gloo-rustfs.service gloo-buckets.service gloo-host-gateway.service gloo-node20-dev-build.service gloo-hummingbird-deps.service
+Requires=dev-network.service dev-postgres.service gloo-rustfs.service gloo-buckets.service gloo-host-gateway.service gloo-node20-dev-build.service gloo-hummingbird-deps.service gloo-pnpm-store-volume.service gloo-hb-node-modules-volume.service gloo-hb-api-node-modules-volume.service
+AssertPathExists=%h/Gloo/360-hummingbird/package.json
+ConditionPathExists=%h/Gloo/gloo-control-plane/envs/hb-api.env
+PartOf=gloo-hummingbird.service
+
+[Container]
+ContainerName=gloo-hummingbird-api
+Image=gloo-node20-dev.build
+Pull=never
+Network=dev.network
+PublishPort=127.0.0.1:8000:8000
+EnvironmentFile=%h/Gloo/gloo-control-plane/envs/hb-api.env
+Environment=COREPACK_HOME=/pnpm-store/corepack
+Environment=PNPM_STORE_DIR=/pnpm-store
+Notify=healthy
+HealthCmd=/bin/bash -lc ': > /dev/tcp/127.0.0.1/8000'
+HealthInterval=30s
+HealthRetries=3
+HealthStartupInterval=5s
+HealthStartupRetries=60
+HealthTimeout=5s
+PodmanArgs=--security-opt label=disable
+PodmanArgs=--add-host=gpl.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=hb-api.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=hb-web.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=polymer.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=rustfs.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=rustfs-console.gloo.local:${GLOO_HOST_IP}
+PodmanArgs=--add-host=pgadmin.gloo.local:${GLOO_HOST_IP}
+Volume=%h/Gloo/360-hummingbird:/workspace
+Volume=gloo_hb_node_modules:/workspace/node_modules
+Volume=gloo_hb_api_node_modules:/workspace/api/node_modules
+Volume=gloo_pnpm_store:/pnpm-store
+WorkingDir=/workspace
+Exec=corepack pnpm --filter api dev
+
+[Service]
+EnvironmentFile=%h/Gloo/gloo-control-plane/envs/host-gateway.env
+Restart=on-failure
+RestartSec=3
+StartupCPUWeight=600
+CPUWeight=150
+MemoryHigh=1G
+MemoryMax=2G
+TasksMax=512
+TimeoutStartSec=10min

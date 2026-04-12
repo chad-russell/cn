@@ -22,7 +22,6 @@ hub → NFS mount → /var/mnt/tank/backups/hub-restic (on NAS)
 | `/srv/adguardhome/conf` | Bind mount | DNS rules |
 | `/srv/beszel/data` | Bind mount | Monitoring data |
 | `/srv/open-webui/data` | Bind mount | Chat history |
-| `/srv/mastra/data` | Bind mount | Studio traces and storage |
 | `caddy_data` | Named volume | Certs (exported) |
 | `caddy_config` | Named volume | Config (exported) |
 | `/home/crussell/.config/containers/systemd` | Config | Quadlet files |

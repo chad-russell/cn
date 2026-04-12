@@ -1,0 +1,5 @@
+[Unit]
+Description=Shared dev Postgres data volume
+
+[Volume]
+VolumeName=dev_postgres_data

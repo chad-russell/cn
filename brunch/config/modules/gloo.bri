@@ -1,0 +1,170 @@
+import { BrunchConfig } from "brunch";
+import { makeStackEntrypointService } from "./dev-services.bri";
+
+const glooControlPlaneDir = "%h/Gloo/gloo-control-plane";
+const glooCaddyRoutes = Brioche.includeFile("./gloo/gloo.caddy");
+const glooNode20Build = Brioche.includeFile("./gloo/dev-node20.build");
+const glooNode24Build = Brioche.includeFile("./gloo/dev-node24.build");
+const glooPnpmStoreVolume = Brioche.includeFile("./gloo/gloo-pnpm-store.volume");
+const glooGplNodeModulesVolume = Brioche.includeFile("./gloo/gloo-gpl-node-modules.volume");
+const glooGplStateVolume = Brioche.includeFile("./gloo/gloo-gpl-state.volume");
+const glooHbNodeModulesVolume = Brioche.includeFile("./gloo/gloo-hb-node-modules.volume");
+const glooHbApiNodeModulesVolume = Brioche.includeFile("./gloo/gloo-hb-api-node-modules.volume");
+const glooHbWebNodeModulesVolume = Brioche.includeFile("./gloo/gloo-hb-web-node-modules.volume");
+const glooHbStateVolume = Brioche.includeFile("./gloo/gloo-hb-state.volume");
+const glooPolymerNodeModulesVolume = Brioche.includeFile("./gloo/gloo-polymer-node-modules.volume");
+const glooPolymerStateVolume = Brioche.includeFile("./gloo/gloo-polymer-state.volume");
+const glooRustfsDataVolume = Brioche.includeFile("./gloo/gloo-rustfs-data.volume");
+const glooRustfsLogsVolume = Brioche.includeFile("./gloo/gloo-rustfs-logs.volume");
+const glooPgadminDataVolume = Brioche.includeFile("./gloo/gloo-pgadmin-data.volume");
+const glooRustfsQuadlet = Brioche.includeFile("./gloo/gloo-rustfs.container");
+const glooPgadminQuadlet = Brioche.includeFile("./gloo/gloo-pgadmin.container");
+const glooGplAppQuadlet = Brioche.includeFile("./gloo/gloo-gpl-app.container");
+const glooHummingbirdApiQuadlet = Brioche.includeFile("./gloo/gloo-hummingbird-api.container");
+const glooHummingbirdWebQuadlet = Brioche.includeFile("./gloo/gloo-hummingbird-web.container");
+const glooPolymerAppQuadlet = Brioche.includeFile("./gloo/gloo-polymer-app.container");
+
+function makeGlooDepsService(description: string, repoDir: string, scriptName: string, buildService: string, requiredVolumes: string[]) {
+  return {
+    description,
+    after: [buildService],
+    requires: [buildService, ...requiredVolumes],
+    conditionPathExists: [
+      `${repoDir}/package.json`,
+      `${glooControlPlaneDir}/scripts/${scriptName}`,
+    ],
+    serviceConfig: {
+      execStart: `${glooControlPlaneDir}/scripts/${scriptName}`,
+      type: "oneshot" as const,
+      workingDirectory: glooControlPlaneDir,
+      timeoutStartSec: "45min",
+    },
+  };
+}
+
+export const glooBrunchConfig: BrunchConfig = {
+  files: {
+    ".config/caddy/routes/internal/gloo.caddy": glooCaddyRoutes,
+    ".config/containers/systemd/gloo-node20-dev.build": glooNode20Build,
+    ".config/containers/systemd/gloo-node24-dev.build": glooNode24Build,
+    ".config/containers/systemd/gloo-pnpm-store.volume": glooPnpmStoreVolume,
+    ".config/containers/systemd/gloo-gpl-node-modules.volume": glooGplNodeModulesVolume,
+    ".config/containers/systemd/gloo-gpl-state.volume": glooGplStateVolume,
+    ".config/containers/systemd/gloo-hb-node-modules.volume": glooHbNodeModulesVolume,
+    ".config/containers/systemd/gloo-hb-api-node-modules.volume": glooHbApiNodeModulesVolume,
+    ".config/containers/systemd/gloo-hb-web-node-modules.volume": glooHbWebNodeModulesVolume,
+    ".config/containers/systemd/gloo-hb-state.volume": glooHbStateVolume,
+    ".config/containers/systemd/gloo-polymer-node-modules.volume": glooPolymerNodeModulesVolume,
+    ".config/containers/systemd/gloo-polymer-state.volume": glooPolymerStateVolume,
+    ".config/containers/systemd/gloo-rustfs-data.volume": glooRustfsDataVolume,
+    ".config/containers/systemd/gloo-rustfs-logs.volume": glooRustfsLogsVolume,
+    ".config/containers/systemd/gloo-pgadmin-data.volume": glooPgadminDataVolume,
+    ".config/containers/systemd/gloo-rustfs.container": glooRustfsQuadlet,
+    ".config/containers/systemd/gloo-pgadmin.container": glooPgadminQuadlet,
+    ".config/containers/systemd/gloo-gpl-app.container": glooGplAppQuadlet,
+    ".config/containers/systemd/gloo-hummingbird-api.container": glooHummingbirdApiQuadlet,
+    ".config/containers/systemd/gloo-hummingbird-web.container": glooHummingbirdWebQuadlet,
+    ".config/containers/systemd/gloo-polymer-app.container": glooPolymerAppQuadlet,
+  },
+  systemdUnits: {
+    user: {
+      services: {
+        "gloo-host-gateway": {
+          description: "Write Gloo host gateway env",
+          conditionPathExists: [`${glooControlPlaneDir}/scripts/write-host-gateway-env.sh`],
+          serviceConfig: {
+            execStart: `${glooControlPlaneDir}/scripts/write-host-gateway-env.sh`,
+            type: "oneshot",
+            workingDirectory: glooControlPlaneDir,
+            remainAfterExit: true,
+          },
+        },
+        "gloo-buckets": {
+          description: "Initialize Gloo RustFS buckets",
+          after: ["gloo-rustfs.service"],
+          requires: ["gloo-rustfs.service"],
+          conditionPathExists: [`${glooControlPlaneDir}/scripts/init-buckets.sh`],
+          serviceConfig: {
+            execStart: `${glooControlPlaneDir}/scripts/init-buckets.sh`,
+            type: "oneshot",
+            workingDirectory: glooControlPlaneDir,
+            environment: {
+              GLOO_NETWORK: "dev",
+            },
+          },
+        },
+        "gloo-gpl-deps": {
+          ...makeGlooDepsService(
+            "Bootstrap GPL dependencies",
+            "%h/Gloo/360-gpl",
+            "bootstrap-gpl.sh",
+            "gloo-node20-dev-build.service",
+            [
+              "gloo-pnpm-store-volume.service",
+              "gloo-gpl-node-modules-volume.service",
+              "gloo-gpl-state-volume.service",
+            ],
+          ),
+          partOf: ["gloo-gpl.service"],
+        },
+        "gloo-hummingbird-deps": {
+          ...makeGlooDepsService(
+            "Bootstrap Hummingbird dependencies",
+            "%h/Gloo/360-hummingbird",
+            "bootstrap-hummingbird.sh",
+            "gloo-node20-dev-build.service",
+            [
+              "gloo-pnpm-store-volume.service",
+              "gloo-hb-node-modules-volume.service",
+              "gloo-hb-api-node-modules-volume.service",
+              "gloo-hb-web-node-modules-volume.service",
+              "gloo-hb-state-volume.service",
+            ],
+          ),
+          partOf: ["gloo-hummingbird.service"],
+        },
+        "gloo-polymer-deps": {
+          ...makeGlooDepsService(
+            "Bootstrap Polymer dependencies",
+            "%h/Gloo/360-polymer",
+            "bootstrap-polymer.sh",
+            "gloo-node24-dev-build.service",
+            [
+              "gloo-pnpm-store-volume.service",
+              "gloo-polymer-node-modules-volume.service",
+              "gloo-polymer-state-volume.service",
+            ],
+          ),
+          partOf: ["gloo-polymer.service"],
+        },
+        "gloo-hummingbird": {
+          ...makeStackEntrypointService("Gloo Hummingbird stack", [
+            "gloo-hummingbird-api.service",
+            "gloo-hummingbird-web.service",
+          ]),
+          partOf: ["gloo-gpl.service"],
+        },
+        "gloo-gpl": {
+          ...makeStackEntrypointService("Gloo GPL stack", [
+            "gloo-hummingbird.service",
+            "gloo-gpl-app.service",
+          ]),
+          partOf: ["gloo-all.service"],
+        },
+        "gloo-polymer": {
+          ...makeStackEntrypointService("Gloo Polymer stack", ["gloo-polymer-app.service"]),
+          partOf: ["gloo-all.service"],
+        },
+        "gloo-admin": {
+          ...makeStackEntrypointService("Gloo admin services", ["gloo-pgadmin.service"]),
+          partOf: ["gloo-all.service"],
+        },
+        "gloo-all": makeStackEntrypointService("All Gloo local services", [
+          "gloo-gpl.service",
+          "gloo-polymer.service",
+          "gloo-admin.service",
+        ]),
+      },
+    },
+  },
+};

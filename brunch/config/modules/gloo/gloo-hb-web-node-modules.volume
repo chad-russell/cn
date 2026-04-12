@@ -1,0 +1,5 @@
+[Unit]
+Description=Gloo Hummingbird web node_modules volume
+
+[Volume]
+VolumeName=gloo_hb_web_node_modules

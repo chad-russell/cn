@@ -1,4 +1,4 @@
-import brunchConfig from "./brunch.bri";
+import brunchConfig, { hub, thinkpad } from "./brunch.bri";
 
 export const project = {
   name: "brunch-default",
@@ -7,5 +7,7 @@ export const project = {
     brunch: { path: "../src" },
   },
 };
+
+export { thinkpad, hub };
 
 export default brunchConfig;

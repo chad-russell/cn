@@ -1,4 +1,9 @@
-use crate::{state_dir, symlink_atomic, commands::apply::{link_desktop_assets, link_files, cleanup_files, link_systemd, cleanup_systemd}};
+use crate::{
+    commands::apply::{
+        cleanup_files, cleanup_systemd, link_desktop_assets, link_files, link_systemd,
+    },
+    state_dir, symlink_atomic,
+};
 use anyhow::{Context, Result};
 use std::io::{self, Write};
 

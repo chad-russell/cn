@@ -1,6 +1,0 @@
-.mastra/
-node_modules/
-.env
-.env.*
-mastra.db
-mastra.db-*

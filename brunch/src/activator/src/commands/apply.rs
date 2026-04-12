@@ -5,9 +5,13 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn run(project_path: &Path) -> Result<()> {
+pub fn run(project_path: &Path, target: Option<&str>) -> Result<()> {
     let project_path =
         std::fs::canonicalize(project_path).context("Failed to resolve project path")?;
+    let build_target = match target {
+        Some(target) => format!("{}^{}", project_path.display(), target),
+        None => project_path.display().to_string(),
+    };
 
     let state = state_dir()?;
     let generations = state.join("generations");
@@ -18,12 +22,11 @@ pub fn run(project_path: &Path) -> Result<()> {
     let gen_num = next_generation(&generations).context("Failed to get next generation number")?;
     let gen_path = generations.join(gen_num.to_string());
 
-    log::info!("Building project: {}", project_path.display());
+    log::info!("Building project: {}", build_target);
 
     let status = std::process::Command::new("brioche")
         .arg("build")
-        .arg("-p")
-        .arg(&project_path)
+        .arg(&build_target)
         .arg("-o")
         .arg(&gen_path)
         .status()

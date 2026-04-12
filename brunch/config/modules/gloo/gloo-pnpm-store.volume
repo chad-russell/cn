@@ -1,0 +1,5 @@
+[Unit]
+Description=Gloo shared pnpm store volume
+
+[Volume]
+VolumeName=gloo_pnpm_store

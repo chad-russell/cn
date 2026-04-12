@@ -1,0 +1,5 @@
+[Unit]
+Description=Gloo RustFS logs volume
+
+[Volume]
+VolumeName=gloo_rustfs_logs

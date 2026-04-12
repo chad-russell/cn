@@ -64,13 +64,6 @@ dump_sqlite_dbs() {
         log "  Dumped open-webui database"
     fi
 
-    if [[ -f "/srv/mastra/data/mastra.db" ]]; then
-        podman run --rm --security-opt label=disable \
-            -v /srv/mastra/data:/data:ro "$sqlite_img" \
-            sh -c "apk add --no-cache sqlite >/dev/null 2>&1 && sqlite3 /data/mastra.db .dump" \
-            > "$dump_dir/mastra.sql"
-        log "  Dumped mastra database"
-    fi
 }
 
 backup_podman_volumes() {
@@ -106,7 +99,6 @@ run_backup() {
         /srv/adguardhome/conf \
         /srv/beszel/data \
         /srv/open-webui/data \
-        /srv/mastra/data \
         /var/tmp/restic-sqlite-dumps \
         /var/tmp/restic-volume-exports \
         /etc/restic \

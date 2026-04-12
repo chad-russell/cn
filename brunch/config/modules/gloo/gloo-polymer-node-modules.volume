@@ -1,0 +1,5 @@
+[Unit]
+Description=Gloo Polymer node_modules volume
+
+[Volume]
+VolumeName=gloo_polymer_node_modules

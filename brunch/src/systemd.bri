@@ -3,6 +3,8 @@ import * as std from "std";
 export interface BrunchServiceConfig {
   description?: string;
   documentation?: string | string[];
+  conditionPathExists?: string[];
+  assertPathExists?: string[];
   enabled?: boolean;
   requires?: string[];
   after?: string[];
@@ -42,6 +44,8 @@ export interface BrunchServiceConfig {
 export interface BrunchTimerConfig {
   description?: string;
   documentation?: string | string[];
+  conditionPathExists?: string[];
+  assertPathExists?: string[];
   enabled?: boolean;
   requires?: string[];
   after?: string[];
@@ -95,6 +99,8 @@ function formatBoolean(value: boolean | undefined): string {
 function buildUnitSection(config: {
   description?: string;
   documentation?: string | string[];
+  conditionPathExists?: string[];
+  assertPathExists?: string[];
   requires?: string[];
   after?: string[];
   before?: string[];
@@ -111,6 +117,18 @@ function buildUnitSection(config: {
 
   if (config.documentation) {
     lines.push(`Documentation=${formatList(config.documentation)}`);
+  }
+
+  if (config.conditionPathExists && config.conditionPathExists.length > 0) {
+    for (const path of config.conditionPathExists) {
+      lines.push(`ConditionPathExists=${path}`);
+    }
+  }
+
+  if (config.assertPathExists && config.assertPathExists.length > 0) {
+    for (const path of config.assertPathExists) {
+      lines.push(`AssertPathExists=${path}`);
+    }
   }
 
   if (config.requires && config.requires.length > 0) {

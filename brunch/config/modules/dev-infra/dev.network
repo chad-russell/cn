@@ -1,0 +1,5 @@
+[Unit]
+Description=Shared dev Podman network
+
+[Network]
+NetworkName=dev

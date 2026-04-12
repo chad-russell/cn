@@ -1,0 +1,37 @@
+@gloo-gpl host gpl.gloo.internal.crussell.io
+handle @gloo-gpl {
+    reverse_proxy 127.0.0.1:3106
+}
+
+@gloo-hb-api host hb-api.gloo.internal.crussell.io
+handle @gloo-hb-api {
+    reverse_proxy 127.0.0.1:8000 {
+        header_up -X-Forwarded-For
+    }
+}
+
+@gloo-hb-web host hb-web.gloo.internal.crussell.io
+handle @gloo-hb-web {
+    reverse_proxy 127.0.0.1:3100
+}
+
+@gloo-polymer host polymer.gloo.internal.crussell.io
+handle @gloo-polymer {
+    reverse_proxy 127.0.0.1:3001
+}
+
+@gloo-rustfs host rustfs.gloo.internal.crussell.io
+handle @gloo-rustfs {
+    reverse_proxy 127.0.0.1:9000
+}
+
+@gloo-rustfs-console host rustfs-console.gloo.internal.crussell.io
+handle @gloo-rustfs-console {
+    redir / /rustfs/console/index.html
+    reverse_proxy 127.0.0.1:9001
+}
+
+@gloo-pgadmin host pgadmin.gloo.internal.crussell.io
+handle @gloo-pgadmin {
+    reverse_proxy 127.0.0.1:5050
+}

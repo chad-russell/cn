@@ -1,0 +1,5 @@
+[Unit]
+Description=Gloo GPL bootstrap state volume
+
+[Volume]
+VolumeName=gloo_gpl_state

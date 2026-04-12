@@ -45,9 +45,12 @@ export default function() {
 
 ```bash
 brunch apply ./config
+brunch apply ./config --target hub
 ```
 
 This builds your project and creates a new generation, symlinking everything into your home directory.
+
+If your `brunch.bri` exports named variants, `--target` lets you apply one of them without creating a second project directory.
 
 ### 4. List and manage generations
 
@@ -227,6 +230,11 @@ Switch to a specific generation, updating the `current` symlink and re-linking d
 Remove specific generations or ranges, for example `brunch prune-generations 3 5-8 10,12`.
 
 Use `--dry-run` to preview what would be removed.
+
+Additional prune modes:
+- `brunch prune-generations --keep-last 10`
+- `brunch prune-generations --all-but-current`
+- `brunch prune-generations --older-than 30d`
 
 ### Atomic Symlink Updates
 

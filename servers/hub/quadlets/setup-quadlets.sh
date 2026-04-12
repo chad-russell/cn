@@ -5,15 +5,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=== Creating /srv directory structure ==="
 
-sudo mkdir -p /srv/{linkding,papra,ntfy,peekaping,audiobookshelf,adguardhome,searxng,karakeep,immich,beszel,mastra}/
+sudo mkdir -p /srv/{linkding,papra,ntfy,peekaping,audiobookshelf,adguardhome,searxng,karakeep,immich,beszel}/
 sudo mkdir -p /srv/audiobookshelf/{audiobooks,config,metadata,podcasts}
 sudo mkdir -p /srv/adguardhome/{work,conf}
 sudo mkdir -p /srv/karakeep/{data,meilisearch}
 sudo mkdir -p /srv/searxng/valkey
 sudo mkdir -p /srv/immich/postgres
 sudo mkdir -p /srv/beszel
-sudo mkdir -p /srv/mastra/data
-
 sudo chown -R $(id -u):$(id -g) /srv/
 
 echo "=== Setting up NFS mount for photos ==="

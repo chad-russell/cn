@@ -9,11 +9,24 @@ fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
     match cli.command {
-        Commands::Apply { project_path } => commands::apply::run(&project_path),
+        Commands::Apply {
+            project_path,
+            target,
+        } => commands::apply::run(&project_path, target.as_deref()),
         Commands::ListGenerations => commands::list_generations::run(),
-        Commands::PruneGenerations { specs, dry_run } => {
-            commands::prune_generations::run(&specs, dry_run)
-        }
+        Commands::PruneGenerations {
+            specs,
+            dry_run,
+            keep_last,
+            all_but_current,
+            older_than,
+        } => commands::prune_generations::run(
+            &specs,
+            dry_run,
+            keep_last,
+            all_but_current,
+            older_than.as_deref(),
+        ),
         Commands::SwitchGeneration { gen_num } => commands::switch_generation::run(gen_num),
     }
 }
@@ -30,8 +43,17 @@ struct Cli {
 enum Commands {
     #[command(about = "Build and apply a Brioche project as a new generation")]
     Apply {
-        #[arg(value_name = "PROJECT_PATH", help = "Path to Brioche project directory")]
+        #[arg(
+            value_name = "PROJECT_PATH",
+            help = "Path to Brioche project directory"
+        )]
         project_path: PathBuf,
+        #[arg(
+            long,
+            value_name = "TARGET",
+            help = "Optional named build target, for example 'hub'"
+        )]
+        target: Option<String>,
     },
     #[command(about = "List all generations and mark the current one")]
     ListGenerations,
@@ -42,8 +64,21 @@ enum Commands {
             help = "Generation numbers or ranges, e.g. 3 5-8 10,12"
         )]
         specs: Vec<String>,
-        #[arg(long, help = "Show which generations would be removed without deleting them")]
+        #[arg(
+            long,
+            help = "Show which generations would be removed without deleting them"
+        )]
         dry_run: bool,
+        #[arg(long, value_name = "COUNT", help = "Keep the newest COUNT generations")]
+        keep_last: Option<usize>,
+        #[arg(long, help = "Remove all generations except the current one")]
+        all_but_current: bool,
+        #[arg(
+            long,
+            value_name = "AGE",
+            help = "Remove generations older than AGE (e.g. 30d, 12h, 2w)"
+        )]
+        older_than: Option<String>,
     },
     #[command(about = "Switch to a specific generation")]
     SwitchGeneration {
@@ -67,8 +102,8 @@ pub fn next_generation(generations_dir: &Path) -> Result<u32> {
     }
 
     let mut max_gen = 0u32;
-    for entry in std::fs::read_dir(generations_dir)
-        .context("Failed to read generations directory")?
+    for entry in
+        std::fs::read_dir(generations_dir).context("Failed to read generations directory")?
     {
         let entry = entry.context("Failed to read directory entry")?;
         let path = entry.path();
@@ -93,9 +128,7 @@ pub fn next_generation(generations_dir: &Path) -> Result<u32> {
 /// Creates a temporary symlink then atomically renames it over the target.
 /// This ensures the symlink always exists during the update.
 pub fn symlink_atomic(target: &Path, link: &Path) -> Result<()> {
-    let parent = link
-        .parent()
-        .context("Link path has no parent directory")?;
+    let parent = link.parent().context("Link path has no parent directory")?;
 
     std::fs::create_dir_all(parent).context("Failed to create parent directory")?;
 
@@ -106,22 +139,19 @@ pub fn symlink_atomic(target: &Path, link: &Path) -> Result<()> {
     }
 
     if link.exists() {
-        let metadata = std::fs::symlink_metadata(link)
-            .context("Failed to get link metadata")?;
+        let metadata = std::fs::symlink_metadata(link).context("Failed to get link metadata")?;
 
         if !metadata.file_type().is_symlink() {
             let timestamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)?
                 .as_secs();
             let backup_path = format!("{}.bak-{}", link.display(), timestamp);
-            std::fs::rename(link, backup_path)
-                .context("Failed to backup existing file")?;
+            std::fs::rename(link, backup_path).context("Failed to backup existing file")?;
         }
     }
 
     let temp_link = format!("{}.tmp", link.display());
-    std::os::unix::fs::symlink(target, &temp_link)
-        .context("Failed to create temporary symlink")?;
+    std::os::unix::fs::symlink(target, &temp_link).context("Failed to create temporary symlink")?;
 
     std::fs::rename(&temp_link, link).context("Failed to atomically update symlink")?;
 
@@ -140,10 +170,7 @@ pub fn current_generation(state_dir: &Path) -> Result<Option<u32>> {
 
     let target = std::fs::read_link(&current_link).context("Failed to read current symlink")?;
 
-    let gen_str = target
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
+    let gen_str = target.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
     let gen = gen_str.parse::<u32>().ok();
     Ok(gen)
@@ -155,8 +182,8 @@ pub fn list_generation_numbers(generations_dir: &Path) -> Result<Vec<u32>> {
     }
 
     let mut gens = Vec::new();
-    for entry in std::fs::read_dir(generations_dir)
-        .context("Failed to read generations directory")?
+    for entry in
+        std::fs::read_dir(generations_dir).context("Failed to read generations directory")?
     {
         let entry = entry.context("Failed to read directory entry")?;
         let path = entry.path();
