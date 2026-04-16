@@ -1,5 +1,0 @@
-[Unit]
-Description=Gloo RustFS data volume
-
-[Volume]
-VolumeName=gloo_rustfs_data

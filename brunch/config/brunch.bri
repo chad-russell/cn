@@ -1,11 +1,8 @@
-import { makeBrunch, mergeBrunch } from "brunch";
+import { makeBrunch } from "brunch";
 import { sharedBrunchConfig } from "./modules/shared.bri";
-import { devInfraBrunchConfig } from "./modules/dev-infra.bri";
-import { buildspaceBrunchConfig } from "./modules/buildspace.bri";
-import { glooBrunchConfig } from "./modules/gloo.bri";
 
 export const thinkpad = makeBrunch(sharedBrunchConfig);
 
-export const hub = makeBrunch(mergeBrunch(devInfraBrunchConfig, buildspaceBrunchConfig, glooBrunchConfig));
+export const hub = makeBrunch(sharedBrunchConfig);
 
 export default thinkpad;

@@ -1,5 +1,0 @@
-[Unit]
-Description=Gloo pgAdmin data volume
-
-[Volume]
-VolumeName=gloo_pgadmin_data

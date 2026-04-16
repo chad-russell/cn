@@ -1,0 +1,234 @@
+services:
+  postgres:
+    image: docker.io/library/postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 15s
+      retries: 20
+      start_period: 150s
+      timeout: 5s
+
+  rustfs:
+    image: docker.io/rustfs/rustfs:latest
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - rustfs_data:/data
+      - rustfs_logs:/logs
+    restart: unless-stopped
+
+  gpl-app:
+    build:
+      context: ${HOME}/Gloo/gloo-control-plane/images/node20-dev
+    image: localhost/gloo-node20-dev
+    command: corepack pnpm dev
+    working_dir: /workspace
+    volumes:
+      - ${HOME}/Gloo/360-gpl:/workspace
+      - gpl_node_modules:/workspace/node_modules
+      - pnpm_store:/pnpm-store
+    ports:
+      - "127.0.0.1:3106:3006"
+    env_file:
+      - ${HOME}/Gloo/gloo-control-plane/envs/gpl.env
+    environment:
+      COREPACK_HOME: /pnpm-store/corepack
+      PNPM_STORE_DIR: /pnpm-store
+    security_opt:
+      - label=disable
+    extra_hosts:
+      - "gpl.gloo.local:host-gateway"
+      - "hb-api.gloo.local:host-gateway"
+      - "hb-web.gloo.local:host-gateway"
+      - "polymer.gloo.local:host-gateway"
+      - "rustfs.gloo.local:host-gateway"
+      - "rustfs-console.gloo.local:host-gateway"
+      - "pgadmin.gloo.local:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ': > /dev/tcp/127.0.0.1/3006'"]
+      interval: 30s
+      retries: 3
+      start_period: 300s
+      timeout: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    restart: on-failure
+
+  hummingbird-api:
+    build:
+      context: ${HOME}/Gloo/gloo-control-plane/images/node20-dev
+    image: localhost/gloo-node20-dev
+    command: corepack pnpm --filter api dev
+    working_dir: /workspace
+    volumes:
+      - ${HOME}/Gloo/360-hummingbird:/workspace
+      - hb_node_modules:/workspace/node_modules
+      - hb_api_node_modules:/workspace/api/node_modules
+      - pnpm_store:/pnpm-store
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - ${HOME}/Gloo/gloo-control-plane/envs/hb-api.env
+    environment:
+      COREPACK_HOME: /pnpm-store/corepack
+      PNPM_STORE_DIR: /pnpm-store
+    security_opt:
+      - label=disable
+    extra_hosts:
+      - "gpl.gloo.local:host-gateway"
+      - "hb-api.gloo.local:host-gateway"
+      - "hb-web.gloo.local:host-gateway"
+      - "polymer.gloo.local:host-gateway"
+      - "rustfs.gloo.local:host-gateway"
+      - "rustfs-console.gloo.local:host-gateway"
+      - "pgadmin.gloo.local:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ': > /dev/tcp/127.0.0.1/8000'"]
+      interval: 30s
+      retries: 3
+      start_period: 300s
+      timeout: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    restart: on-failure
+
+  hummingbird-web:
+    build:
+      context: ${HOME}/Gloo/gloo-control-plane/images/node20-dev
+    image: localhost/gloo-node20-dev
+    command: corepack pnpm --filter web dev -- --host 0.0.0.0 --port 3000
+    working_dir: /workspace
+    volumes:
+      - ${HOME}/Gloo/360-hummingbird:/workspace
+      - hb_node_modules:/workspace/node_modules
+      - hb_web_node_modules:/workspace/web/node_modules
+      - pnpm_store:/pnpm-store
+    ports:
+      - "127.0.0.1:3100:3000"
+    env_file:
+      - ${HOME}/Gloo/gloo-control-plane/envs/hb-web.env
+    environment:
+      ALLOWED_HOSTS: hb-web.gloo.internal.crussell.io,localhost,127.0.0.1
+      COREPACK_HOME: /pnpm-store/corepack
+      PNPM_STORE_DIR: /pnpm-store
+    security_opt:
+      - label=disable
+    extra_hosts:
+      - "gpl.gloo.local:host-gateway"
+      - "hb-api.gloo.local:host-gateway"
+      - "hb-web.gloo.local:host-gateway"
+      - "polymer.gloo.local:host-gateway"
+      - "rustfs.gloo.local:host-gateway"
+      - "rustfs-console.gloo.local:host-gateway"
+      - "pgadmin.gloo.local:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ': > /dev/tcp/127.0.0.1/3000'"]
+      interval: 30s
+      retries: 3
+      start_period: 300s
+      timeout: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 2500M
+    restart: on-failure
+
+  polymer-app:
+    build:
+      context: ${HOME}/Gloo/gloo-control-plane/images/node24-dev
+    image: localhost/gloo-node24-dev
+    command: sh -c 'rm -f /workspace/apps/polymer/.next/dev/lock && cd /workspace/apps/polymer && exec corepack pnpm exec next dev --turbo --hostname 0.0.0.0 --port 3001'
+    working_dir: /workspace
+    volumes:
+      - ${HOME}/Gloo/360-polymer:/workspace
+      - polymer_node_modules:/workspace/node_modules
+      - pnpm_store:/pnpm-store
+    ports:
+      - "127.0.0.1:3001:3001"
+    env_file:
+      - ${HOME}/Gloo/gloo-control-plane/envs/polymer.env
+    environment:
+      COREPACK_HOME: /pnpm-store/corepack
+      PNPM_STORE_DIR: /pnpm-store
+    security_opt:
+      - label=disable
+    extra_hosts:
+      - "gpl.gloo.local:host-gateway"
+      - "hb-api.gloo.local:host-gateway"
+      - "hb-web.gloo.local:host-gateway"
+      - "polymer.gloo.local:host-gateway"
+      - "rustfs.gloo.local:host-gateway"
+      - "rustfs-console.gloo.local:host-gateway"
+      - "pgadmin.gloo.local:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ': > /dev/tcp/127.0.0.1/3001'"]
+      interval: 30s
+      retries: 3
+      start_period: 300s
+      timeout: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    restart: on-failure
+
+  pgadmin:
+    image: docker.io/dpage/pgadmin4:8
+    ports:
+      - "127.0.0.1:5050:80"
+    env_file:
+      - ${HOME}/Gloo/gloo-control-plane/envs/pgadmin.env
+    environment:
+      PGADMIN_LISTEN_PORT: 80
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rustfs_data:
+  rustfs_logs:
+  pnpm_store:
+  gpl_node_modules:
+  hb_node_modules:
+  hb_api_node_modules:
+  hb_web_node_modules:
+  polymer_node_modules:
+  pgadmin_data:

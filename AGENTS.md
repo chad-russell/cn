@@ -55,6 +55,10 @@ Use this file for global context. For implementation details, open the subsystem
 │  • Linkding    • Ntfy           • Papra                        │
 │  • AdGuardHome • Beszel         • Open-WebUI                   │
 │                                                                │
+│  Dev Stacks (Podman Compose):                                  │
+│  • Gloo (GPL + Hummingbird + Polymer + RustFS + pgAdmin)      │
+│  • Buildspace (postgres only; bun runs on host)                │
+│                                                                │
 │  Backup (Restic → NFS → NAS):                                  │
 │  • Daily snapshots of /srv/* volumes                           │
 │  • Retention: 7d/4w/12m                                        │
@@ -98,6 +102,9 @@ Use this file for global context. For implementation details, open the subsystem
 │   │   ├── backup/
 │   │   │   └── README.md
 │   │   ├── caddy/
+│   │   ├── dev-stacks/
+│   │   │   ├── gpl/compose.yaml
+│   │   │   └── buildspace/compose.yaml
 │   │   └── quadlets/
 │   ├── media/
 │   │   └── quadlets/
@@ -178,3 +185,4 @@ Deprecated configs are retained under `.archived/`:
 
 - `.archived/nixos/` - Legacy NixOS configs for decommissioned hosts
 - `.archived/swarm/` - Legacy Docker Swarm stack files
+- `.archived/brunch-modules/` - Legacy brunch modules for gloo/buildspace/dev-infra

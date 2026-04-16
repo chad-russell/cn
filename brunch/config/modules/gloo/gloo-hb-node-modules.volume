@@ -1,5 +1,0 @@
-[Unit]
-Description=Gloo Hummingbird shared node_modules volume
-
-[Volume]
-VolumeName=gloo_hb_node_modules

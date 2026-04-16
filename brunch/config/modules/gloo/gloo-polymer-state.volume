@@ -1,5 +1,0 @@
-[Unit]
-Description=Gloo Polymer bootstrap state volume
-
-[Volume]
-VolumeName=gloo_polymer_state

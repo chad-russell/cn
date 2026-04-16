@@ -1,8 +1,0 @@
-[Unit]
-Description=Gloo Node 24 dev image
-
-[Build]
-ImageTag=localhost/gloo-node24-dev:latest
-File=%h/Gloo/gloo-control-plane/images/node24-dev/Containerfile
-SetWorkingDirectory=file
-Pull=missing

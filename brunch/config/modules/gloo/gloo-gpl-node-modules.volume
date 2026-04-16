@@ -1,5 +1,0 @@
-[Unit]
-Description=Gloo GPL node_modules volume
-
-[Volume]
-VolumeName=gloo_gpl_node_modules
