@@ -5,10 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=== Creating /srv directory structure ==="
 
-sudo mkdir -p /srv/{linkding,papra,ntfy,peekaping,audiobookshelf,adguardhome,searxng,karakeep,immich,beszel}/
-sudo mkdir -p /srv/audiobookshelf/{audiobooks,config,metadata,podcasts}
+sudo mkdir -p /srv/{linkding,papra,ntfy,adguardhome,searxng,immich,beszel}/
 sudo mkdir -p /srv/adguardhome/{work,conf}
-sudo mkdir -p /srv/karakeep/{data,meilisearch}
 sudo mkdir -p /srv/searxng/valkey
 sudo mkdir -p /srv/immich/postgres
 sudo mkdir -p /srv/beszel
@@ -43,26 +41,21 @@ if ! command -v age &>/dev/null; then
 fi
 
 age -d -i "$AGE_KEY" "$SECRETS_DIR/immich.env.age" > /srv/immich/secrets.env
-age -d -i "$AGE_KEY" "$SECRETS_DIR/karakeep.env.age" > /srv/karakeep/secrets.env
 age -d -i "$AGE_KEY" "$SECRETS_DIR/beszel-hub.env.age" > /srv/beszel/secrets.env
 age -d -i "$AGE_KEY" "$SECRETS_DIR/searxng-settings.yml.age" > /srv/searxng/settings.yml
-age -d -i "$AGE_KEY" "$SECRETS_DIR/peekaping.env.age" > /srv/peekaping/secrets.env
 
 chmod 600 /srv/immich/secrets.env
-chmod 600 /srv/karakeep/secrets.env
 chmod 600 /srv/beszel/secrets.env
-chmod 600 /srv/peekaping/secrets.env
 
 echo "=== Copying quadlet files ==="
 
-mkdir -p ~/.config/containers/systemd/pods/{searxng,karakeep,immich}
+mkdir -p ~/.config/containers/systemd/pods/{searxng,immich}
 
 for f in "$SCRIPT_DIR"/containers/*.container; do
     [ -f "$f" ] && cp "$f" ~/.config/containers/systemd/
 done
 
 cp "$SCRIPT_DIR"/pods/searxng/* ~/.config/containers/systemd/pods/searxng/
-cp "$SCRIPT_DIR"/pods/karakeep/* ~/.config/containers/systemd/pods/karakeep/
 cp "$SCRIPT_DIR"/pods/immich/* ~/.config/containers/systemd/pods/immich/
 
 cp "$SCRIPT_DIR"/config/immich-postgresql.conf /srv/immich/postgresql.conf
@@ -76,9 +69,6 @@ systemctl --user daemon-reload
 echo ""
 echo "=== Setup complete! ==="
 echo ""
-echo "Before starting services, migrate data from old nodes."
-echo "See migrate-data.sh for migration script."
-echo ""
-echo "After migration, start services:"
-echo "  systemctl --user enable --now linkding papra ntfy peekaping audiobookshelf adguardhome"
-echo "  systemctl --user enable --now searxng karakeep immich"
+echo "Start services:"
+echo "  systemctl --user enable --now linkding papra ntfy adguardhome"
+echo "  systemctl --user enable --now searxng immich"

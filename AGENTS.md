@@ -20,11 +20,11 @@ Use this file for global context. For implementation details, open the subsystem
 |------|-----|---------|
 | AI host (`bees`) | `servers/ai/README.md` | llama.cpp + llama-swap operations |
 | NAS monitoring agent | `servers/nas/README.md` | Beszel agent deployment on TrueNAS |
-| Uptime monitoring | `servers/hub/peekaping/README.md` | Declarative monitor config and sync flow |
 | OpenClaw gateway | `servers/hub/openclaw/README.md` | Dedicated rootless OpenClaw deployment on hub |
 | Backup system | `servers/hub/backup/README.md` | Restic backups to NAS with ntfy notifications |
 | Desktop config tooling | `brunch/README.md` | Brunch/Brioche desktop generation management |
 | Custom Fedora Atomic image | `crussell-fin/AGENTS.md` | bootc image template for building personalized workstation images (based on finpilot/Bluefin) |
+| Dev stacks (Gloo, Buildspace) | `servers/hub/dev-stacks/README.md` | Podman Compose dev environments |
 
 ### Config-First Directories (No README Yet)
 
@@ -53,8 +53,7 @@ Use this file for global context. For implementation details, open the subsystem
 │                                                                │
 │  Podman Quadlets (rootless):                                   │
 │  • Linkding    • Ntfy           • Papra                        │
-│  • Peekaping   • Audiobookshelf • AdGuardHome                  │
-│  • Beszel      • Open-WebUI                               │
+│  • AdGuardHome • Beszel         • Open-WebUI                   │
 │                                                                │
 │  Backup (Restic → NFS → NAS):                                  │
 │  • Daily snapshots of /srv/* volumes                           │
@@ -99,8 +98,6 @@ Use this file for global context. For implementation details, open the subsystem
 │   │   ├── backup/
 │   │   │   └── README.md
 │   │   ├── caddy/
-│   │   ├── peekaping/
-│   │   │   └── README.md
 │   │   └── quadlets/
 │   ├── media/
 │   │   └── quadlets/
@@ -172,9 +169,8 @@ See `servers/hub/quadlets/secrets/README.md` for:
 
 1. Add or edit a quadlet in `servers/hub/quadlets/containers/`.
 2. If externally reachable, add/update route(s) in `servers/hub/caddy/Caddyfile`.
-3. Add/update monitoring in `servers/hub/peekaping/monitors.json` and sync via `sync-monitors.sh`.
-4. Deploy quadlet to `~/.config/containers/systemd/`, reload daemon, and restart service.
-5. Verify with service logs and HTTP checks.
+3. Deploy quadlet to `~/.config/containers/systemd/`, reload daemon, and restart service.
+4. Verify with service logs and HTTP checks.
 
 ## Archived / Deprecated
 

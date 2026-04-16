@@ -18,11 +18,6 @@
     import /etc/caddy/imports/routes/internal/*.caddy
 
     # --- hub Services (192.168.20.105 / 10.10.0.1) ---
-    @karakeep host karakeep.internal.crussell.io
-    handle @karakeep {
-        reverse_proxy 127.0.0.1:30092
-    }
-
     @linkding host linkding.internal.crussell.io
     handle @linkding {
         reverse_proxy 127.0.0.1:30080
@@ -41,16 +36,6 @@
     @searxng host searxng.internal.crussell.io
     handle @searxng {
         reverse_proxy 127.0.0.1:30084
-    }
-
-    @peekaping host peekaping.internal.crussell.io
-    handle @peekaping {
-        reverse_proxy 127.0.0.1:30087
-    }
-
-    @audiobookshelf host audiobookshelf.internal.crussell.io
-    handle @audiobookshelf {
-        reverse_proxy 127.0.0.1:30337
     }
 
     @openwebui host openwebui.internal.crussell.io
