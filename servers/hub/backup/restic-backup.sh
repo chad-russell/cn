@@ -78,10 +78,8 @@ run_backup() {
         --tag "hub-$(date '+%Y-%m-%d')" \
         /srv/linkding/data \
         /srv/papra/data \
-        /srv/audiobookshelf/config \
-        /srv/audiobookshelf/metadata \
-        /srv/adguardhome/conf \
         /srv/open-webui/data \
+        /srv/datenight/data \
         /var/tmp/restic-sqlite-dumps \
         /var/tmp/restic-volume-exports \
         /etc/restic \

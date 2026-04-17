@@ -16,10 +16,8 @@ hub → NFS mount → /var/mnt/tank/backups/hub-restic (on NAS)
 |------|------|-------|
 | `/srv/linkding/data` | Bind mount | Bookmarks |
 | `/srv/papra/data` | Bind mount | Documents |
-| `/srv/audiobookshelf/config` | Bind mount | Server config |
-| `/srv/audiobookshelf/metadata` | Bind mount | Play state |
-| `/srv/adguardhome/conf` | Bind mount | DNS rules |
 | `/srv/open-webui/data` | Bind mount | Chat history |
+| `/srv/datenight/data` | Bind mount | Restaurant picks |
 | `caddy_data` | Named volume | Certs (exported) |
 | `caddy_config` | Named volume | Config (exported) |
 | `/home/crussell/.config/containers/systemd` | Config | Quadlet files |
@@ -28,8 +26,6 @@ hub → NFS mount → /var/mnt/tank/backups/hub-restic (on NAS)
 
 ### Excluded
 
-- `/srv/audiobookshelf/audiobooks/*` - Media files (on NAS already)
-- `/srv/audiobookshelf/podcasts/*` - Media files
 - `/srv/ntfy/cache/*` - Transient notification cache
 
 ## Retention Policy

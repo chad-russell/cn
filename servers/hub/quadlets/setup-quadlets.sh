@@ -5,10 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=== Creating /srv directory structure ==="
 
-sudo mkdir -p /srv/{linkding,papra,ntfy,adguardhome,searxng,immich}/
-sudo mkdir -p /srv/adguardhome/{work,conf}
+sudo mkdir -p /srv/{linkding,papra,ntfy,searxng,immich,datenight}/
 sudo mkdir -p /srv/searxng/valkey
 sudo mkdir -p /srv/immich/postgres
+sudo mkdir -p /srv/datenight/data
 sudo chown -R $(id -u):$(id -g) /srv/
 
 echo "=== Setting up NFS mount for photos ==="
@@ -55,8 +55,6 @@ done
 cp "$SCRIPT_DIR"/pods/searxng/* ~/.config/containers/systemd/pods/searxng/
 cp "$SCRIPT_DIR"/pods/immich/* ~/.config/containers/systemd/pods/immich/
 
-cp "$SCRIPT_DIR"/config/immich-postgresql.conf /srv/immich/postgresql.conf
-
 echo "=== Enabling lingering for user services ==="
 sudo loginctl enable-linger $(whoami)
 
@@ -67,5 +65,5 @@ echo ""
 echo "=== Setup complete! ==="
 echo ""
 echo "Start services:"
-echo "  systemctl --user enable --now linkding papra ntfy adguardhome"
+echo "  systemctl --user enable --now linkding papra ntfy"
 echo "  systemctl --user enable --now searxng immich"

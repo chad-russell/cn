@@ -12,7 +12,7 @@ Use this file for global context. For implementation details, open the subsystem
 |------|-----|---------|
 | Nebula mesh VPN | `nebula/README.md` | Overlay topology, cert model, deploy/update workflows |
 | Public ingress gateway | `servers/gateway/README.md` | Hetzner nginx SSL passthrough to hub over Nebula |
-| Hub migration history | `servers/hub/MIGRATION.md` | Swarm → Quadlets migration context and historical decisions |
+| Hub migration history | *(archived)* | Swarm → Quadlets migration complete |
 
 ### Host and Service Docs
 
@@ -20,7 +20,6 @@ Use this file for global context. For implementation details, open the subsystem
 |------|-----|---------|
 | AI host (`bees`) | `servers/ai/README.md` | llama.cpp + llama-swap operations |
 | NAS | `servers/nas/README.md` | TrueNAS NFS exports |
-| OpenClaw gateway | `servers/hub/openclaw/README.md` | Dedicated rootless OpenClaw deployment on hub |
 | Backup system | `servers/hub/backup/README.md` | Restic backups to NAS with ntfy notifications |
 | Desktop config tooling | `brunch/README.md` | Brunch/Brioche desktop generation management |
 | Custom Fedora Atomic image | `crussell-fin/AGENTS.md` | bootc image template for building personalized workstation images (based on finpilot/Bluefin) |
@@ -53,7 +52,7 @@ Use this file for global context. For implementation details, open the subsystem
 │                                                                │
 │  Podman Quadlets (rootless):                                   │
 │  • Linkding    • Ntfy           • Papra                        │
-│  • AdGuardHome • Open-WebUI     • Datenight                    │
+│  • Open-WebUI   • Datenight     • SearXNG  • Immich           │
 │                                                                │
 │  Health Monitoring (systemd timer):                             │
 │  • Host ping + HTTP checks + resource thresholds               │
@@ -65,9 +64,10 @@ Use this file for global context. For implementation details, open the subsystem
 │                                                                │
 │  Backup (Restic → NFS → NAS):                                  │
 │  • Daily snapshots of /srv/* volumes                           │
+│  • Separate immich backup service                              │
 │  • Retention: 7d/4w/12m                                        │
 │                                                                │
-│  Caddy reverse proxy:                                          │
+│  Caddy reverse proxy (system-level container):                 │
 │  • *.internal.crussell.io → internal services                  │
 │  • *.crussell.io → public services (via Hetzner)               │
 └─────────────────────────────────┬──────────────────────────────┘
@@ -79,8 +79,14 @@ Use this file for global context. For implementation details, open the subsystem
           │ 192.168.20.61   │        │ 192.168.20.31   │
           │ Fedora Server   │        │   TrueNAS       │
           │ Podman stack    │        │ NFS             │
-          └─────────────────┘        │ + Backup target │
-                                     └─────────────────┘
+           └─────────────────┘        │ + Backup target │
+                                      └─────────────────┘
+
+           ┌─────────────────┐
+           │  homeassistant  │
+           │ 192.168.20.51   │
+           │   HAOS          │
+           └─────────────────┘
 ```
 
 ## Repository Structure
@@ -102,7 +108,6 @@ Use this file for global context. For implementation details, open the subsystem
 │   ├── ai/
 │   │   └── README.md
 │   ├── hub/
-│   │   ├── MIGRATION.md
 │   │   ├── backup/
 │   │   │   └── README.md
 │   │   ├── caddy/
@@ -110,6 +115,8 @@ Use this file for global context. For implementation details, open the subsystem
 │   │   │   ├── gpl/compose.yaml
 │   │   │   └── buildspace/compose.yaml
 │   │   └── quadlets/
+│   ├── homeassistant/
+│   │   └── README.md
 │   ├── media/
 │   │   └── quadlets/
 │   ├── nas/
@@ -128,6 +135,7 @@ Use this file for global context. For implementation details, open the subsystem
 | hub | 192.168.20.105 | Fedora Atomic | Main server | Podman Quadlets, Caddy |
 | media | 192.168.20.61 | Fedora Server | Media server | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr |
 | nas | 192.168.20.31 | TrueNAS | Network storage | NFS |
+| homeassistant | 192.168.20.51 | HAOS | Smart home | Home Assistant |
 | gateway | 178.156.171.212 | Fedora | Public gateway/VPS | nginx (SSL passthrough → hub via Nebula), Nebula lighthouse + relay |
 | think | - | Fedora Atomic | Laptop | ThinkPad T14 |
 

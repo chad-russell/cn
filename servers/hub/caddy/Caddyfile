@@ -120,20 +120,7 @@
         reverse_proxy 127.0.0.1:30088
     }
 
-    @adguard host adguard.internal.crussell.io
-    handle @adguard {
-        reverse_proxy 127.0.0.1:30100 127.0.0.1:30102 {
-            lb_policy first
-        }
-    }
-
-    @openclaw host openclaw.internal.crussell.io
-    handle @openclaw {
-        redir / /control permanent
-        reverse_proxy 127.0.0.1:30110
-    }
-
-    # --- k1 Services (192.168.20.61) ---
+    # --- media Services (192.168.20.61) ---
     @qbittorrent host qbittorrent.internal.crussell.io
     handle @qbittorrent {
         reverse_proxy 192.168.20.61:8080
@@ -157,12 +144,6 @@
     @jellyseerr host jellyseerr.internal.crussell.io
     handle @jellyseerr {
         reverse_proxy 192.168.20.61:5055
-    }
-
-    # --- k2 Services (192.168.20.62) ---
-    @dozzle host dozzle.internal.crussell.io
-    handle @dozzle {
-        reverse_proxy 192.168.20.62:8080
     }
 
 }
@@ -197,13 +178,4 @@
         reverse_proxy 192.168.20.64:8732
     }
 
-    @stumpdle host stumpdle.crussell.io
-    handle @stumpdle {
-        reverse_proxy 192.168.20.62:3177
-    }
-
-    @pelicans host pelicans.crussell.io
-    handle @pelicans {
-        reverse_proxy 127.0.0.1:3002
-    }
 }
