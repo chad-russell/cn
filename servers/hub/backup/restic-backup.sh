@@ -40,22 +40,7 @@ dump_sqlite_dbs() {
         log "  Dumped linkding database"
     fi
     
-    if [[ -f "/srv/peekaping/data/peekaping.db" ]]; then
-        podman run --rm --security-opt label=disable \
-            -v /srv/peekaping/data:/data:ro "$sqlite_img" \
-            sh -c "apk add --no-cache sqlite >/dev/null 2>&1 && sqlite3 /data/peekaping.db .dump" \
-            > "$dump_dir/peekaping.sql"
-        log "  Dumped peekaping database"
-    fi
-    
-    if [[ -f "/srv/beszel/data/beszel.db" ]]; then
-        podman run --rm --security-opt label=disable \
-            -v /srv/beszel/data:/data:ro "$sqlite_img" \
-            sh -c "apk add --no-cache sqlite >/dev/null 2>&1 && sqlite3 /data/beszel.db .dump" \
-            > "$dump_dir/beszel.sql"
-        log "  Dumped beszel database"
-    fi
-    
+
     if [[ -f "/srv/open-webui/data/webui.db" ]]; then
         podman run --rm --security-opt label=disable \
             -v /srv/open-webui/data:/data:ro "$sqlite_img" \
@@ -93,11 +78,9 @@ run_backup() {
         --tag "hub-$(date '+%Y-%m-%d')" \
         /srv/linkding/data \
         /srv/papra/data \
-        /srv/peekaping/data \
         /srv/audiobookshelf/config \
         /srv/audiobookshelf/metadata \
         /srv/adguardhome/conf \
-        /srv/beszel/data \
         /srv/open-webui/data \
         /var/tmp/restic-sqlite-dumps \
         /var/tmp/restic-volume-exports \

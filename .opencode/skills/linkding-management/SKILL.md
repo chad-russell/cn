@@ -39,7 +39,7 @@ This skill helps manage bookmarks in the local linkding instance running at `htt
 - `sso` - Authentication/SSO services
 - `media` - Media servers (Jellyfin, Audiobookshelf)
 - `automation` - Automation tools (n8n, Home Assistant)
-- `monitoring` - Monitoring dashboards (Grafana, Beszel)
+- `monitoring` - Monitoring dashboards (Grafana)
 - `search` - Search engines (SearXNG)
 - `notes` - Note-taking apps (Memos, Papra)
 - `bookmarks` - Bookmark managers (Karakeep, Linkding itself)
@@ -113,7 +113,6 @@ All tagged with `self-hosted`:
 - Audiobookshelf (Audiobooks/podcasts)
 - SearXNG (Search engine)
 - Open WebUI (LLM interface)
-- Beszel (System monitoring)
 - qBittorrent (Torrent client)
 - Sonarr (TV shows)
 - Radarr (Movies)

@@ -16,11 +16,9 @@ hub → NFS mount → /var/mnt/tank/backups/hub-restic (on NAS)
 |------|------|-------|
 | `/srv/linkding/data` | Bind mount | Bookmarks |
 | `/srv/papra/data` | Bind mount | Documents |
-| `/srv/peekaping/data` | Bind mount | Uptime history |
 | `/srv/audiobookshelf/config` | Bind mount | Server config |
 | `/srv/audiobookshelf/metadata` | Bind mount | Play state |
 | `/srv/adguardhome/conf` | Bind mount | DNS rules |
-| `/srv/beszel/data` | Bind mount | Monitoring data |
 | `/srv/open-webui/data` | Bind mount | Chat history |
 | `caddy_data` | Named volume | Certs (exported) |
 | `caddy_config` | Named volume | Config (exported) |

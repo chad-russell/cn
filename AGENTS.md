@@ -19,7 +19,7 @@ Use this file for global context. For implementation details, open the subsystem
 | Area | Doc | Purpose |
 |------|-----|---------|
 | AI host (`bees`) | `servers/ai/README.md` | llama.cpp + llama-swap operations |
-| NAS monitoring agent | `servers/nas/README.md` | Beszel agent deployment on TrueNAS |
+| NAS | `servers/nas/README.md` | TrueNAS NFS exports |
 | OpenClaw gateway | `servers/hub/openclaw/README.md` | Dedicated rootless OpenClaw deployment on hub |
 | Backup system | `servers/hub/backup/README.md` | Restic backups to NAS with ntfy notifications |
 | Desktop config tooling | `brunch/README.md` | Brunch/Brioche desktop generation management |
@@ -53,7 +53,11 @@ Use this file for global context. For implementation details, open the subsystem
 │                                                                │
 │  Podman Quadlets (rootless):                                   │
 │  • Linkding    • Ntfy           • Papra                        │
-│  • AdGuardHome • Beszel         • Open-WebUI                   │
+│  • AdGuardHome • Open-WebUI     • Datenight                    │
+│                                                                │
+│  Health Monitoring (systemd timer):                             │
+│  • Host ping + HTTP checks + resource thresholds               │
+│  • Alerts via ntfy                                              │
 │                                                                │
 │  Dev Stacks (Podman Compose):                                  │
 │  • Gloo (GPL + Hummingbird + Polymer + RustFS + pgAdmin)      │
@@ -74,7 +78,7 @@ Use this file for global context. For implementation details, open the subsystem
           │      media      │        │       nas       │
           │ 192.168.20.61   │        │ 192.168.20.31   │
           │ Fedora Server   │        │   TrueNAS       │
-          │ Podman stack    │        │ NFS + Beszel    │
+          │ Podman stack    │        │ NFS             │
           └─────────────────┘        │ + Backup target │
                                      └─────────────────┘
 ```
@@ -123,7 +127,7 @@ Use this file for global context. For implementation details, open the subsystem
 |----------|------------|-----|---------|----------|
 | hub | 192.168.20.105 | Fedora Atomic | Main server | Podman Quadlets, Caddy |
 | media | 192.168.20.61 | Fedora Server | Media server | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr |
-| nas | 192.168.20.31 | TrueNAS | Network storage | NFS, Beszel agent |
+| nas | 192.168.20.31 | TrueNAS | Network storage | NFS |
 | gateway | 178.156.171.212 | Fedora | Public gateway/VPS | nginx (SSL passthrough → hub via Nebula), Nebula lighthouse + relay |
 | think | - | Fedora Atomic | Laptop | ThinkPad T14 |
 

@@ -5,11 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=== Creating /srv directory structure ==="
 
-sudo mkdir -p /srv/{linkding,papra,ntfy,adguardhome,searxng,immich,beszel}/
+sudo mkdir -p /srv/{linkding,papra,ntfy,adguardhome,searxng,immich}/
 sudo mkdir -p /srv/adguardhome/{work,conf}
 sudo mkdir -p /srv/searxng/valkey
 sudo mkdir -p /srv/immich/postgres
-sudo mkdir -p /srv/beszel
 sudo chown -R $(id -u):$(id -g) /srv/
 
 echo "=== Setting up NFS mount for photos ==="
@@ -41,11 +40,9 @@ if ! command -v age &>/dev/null; then
 fi
 
 age -d -i "$AGE_KEY" "$SECRETS_DIR/immich.env.age" > /srv/immich/secrets.env
-age -d -i "$AGE_KEY" "$SECRETS_DIR/beszel-hub.env.age" > /srv/beszel/secrets.env
 age -d -i "$AGE_KEY" "$SECRETS_DIR/searxng-settings.yml.age" > /srv/searxng/settings.yml
 
 chmod 600 /srv/immich/secrets.env
-chmod 600 /srv/beszel/secrets.env
 
 echo "=== Copying quadlet files ==="
 

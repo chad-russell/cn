@@ -12,10 +12,7 @@ All plaintext secrets have been encrypted with age and the repo is ready for pub
 |------|-------------|--------|
 | `servers/hub/quadlets/secrets/immich.env.age` | PostgreSQL password | ✅ Encrypted |
 | `servers/hub/quadlets/secrets/karakeep.env.age` | Meili master key + NextAuth secret | ✅ Encrypted |
-| `servers/hub/quadlets/secrets/beszel-hub.env.age` | Beszel token + SSH key (hub) | ✅ Encrypted |
 | `servers/hub/quadlets/secrets/searxng-settings.yml.age` | SearXNG settings file | ✅ Encrypted |
-| `servers/media/quadlets/secrets/beszel-media.env.age` | Beszel token + SSH key (media) | ✅ Encrypted |
-| `servers/nas/secrets/beszel-nas.env.age` | Beszel token + SSH key (nas) | ✅ Encrypted |
 
 ## Decryption
 

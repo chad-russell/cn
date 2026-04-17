@@ -165,11 +165,6 @@
         reverse_proxy 192.168.20.62:8080
     }
 
-    # --- crussell-srv Monitoring ---
-    @beszel host beszel.internal.crussell.io
-    handle @beszel {
-        reverse_proxy 127.0.0.1:8090
-    }
 }
 
 # Public routes - *.crussell.io

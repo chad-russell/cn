@@ -1,0 +1,7 @@
+[Unit]
+Description=Infrastructure Health Check
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/Code/cn/servers/hub/scripts/healthcheck.sh

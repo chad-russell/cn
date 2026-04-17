@@ -132,7 +132,7 @@ services:
     env_file:
       - ${HOME}/Gloo/gloo-control-plane/envs/hb-web.env
     environment:
-      ALLOWED_HOSTS: hb-web.gloo.internal.crussell.io,localhost,127.0.0.1
+      ALLOWED_HOSTS: hb-web.internal.crussell.io,localhost,127.0.0.1
       COREPACK_HOME: /pnpm-store/corepack
       PNPM_STORE_DIR: /pnpm-store
     security_opt:
