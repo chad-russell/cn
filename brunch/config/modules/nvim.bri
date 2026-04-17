@@ -1,0 +1,9 @@
+import { BrunchConfig } from "brunch";
+
+const nvimConfig = Brioche.includeDirectory("../nvim");
+
+export const brunchConfig: BrunchConfig = {
+  files: {
+    ".config/nvim": nvimConfig,
+  },
+};

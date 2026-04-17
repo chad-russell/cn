@@ -1,0 +1,4 @@
+@opencode host opencode.internal.crussell.io
+handle @opencode {
+    reverse_proxy 127.0.0.1:4096
+}

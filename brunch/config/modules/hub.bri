@@ -1,0 +1,8 @@
+import { mergeBrunch, BrunchConfig } from "brunch";
+import { brunchConfig as shellConfig } from "../shell.bri";
+import { brunchConfig as nvimConfig } from "./nvim.bri";
+
+export const hubBrunchConfig: BrunchConfig = mergeBrunch(
+  shellConfig,
+  nvimConfig,
+);
