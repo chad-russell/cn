@@ -1,0 +1,76 @@
+image_name := env("IMAGE_NAME", "crussell-arch")
+image_tag := env("IMAGE_TAG", "latest")
+base_dir := env("BUILD_BASE_DIR", ".")
+filesystem := env("BUILD_FILESYSTEM", "ext4")
+selinux := env("BUILD_SELINUX", "false")
+
+options := if selinux == "true" { "-v /var/lib/containers:/var/lib/containers:Z -v /etc/containers:/etc/containers:Z -v /sys/fs/selinux:/sys/fs/selinux --security-opt label=type:unconfined_t" } else { "-v /var/lib/containers:/var/lib/containers -v /etc/containers:/etc/containers" }
+container_runtime := env("CONTAINER_RUNTIME", `command -v podman >/dev/null 2>&1 && echo podman || echo docker`)
+
+[private]
+default:
+    @just --list
+
+# Build the container image
+build:
+    sudo {{container_runtime}} build -f Containerfile -t "{{image_name}}-bootc:{{image_tag}}" .
+
+# Run bootc commands inside a privileged container from the image
+bootc *ARGS:
+    sudo {{container_runtime}} run \
+        --rm --privileged --pid=host \
+        {{options}} \
+        -v /dev:/dev \
+        -e RUST_LOG=debug \
+        -v "{{base_dir}}:/data" \
+        "{{image_name}}-bootc:{{image_tag}}" bootc {{ARGS}}
+
+# Build a raw disk image using bootc install to-disk (bootcrew method)
+disk-image:
+    #!/usr/bin/env bash
+    if [ ! -e "{{base_dir}}/bootable.img" ] ; then
+        fallocate -l 20G "{{base_dir}}/bootable.img"
+    fi
+    just bootc install to-disk --composefs-backend --via-loopback /data/bootable.img --filesystem "{{filesystem}}" --wipe --bootloader systemd
+
+# Build without composefs (fallback if composefs causes issues)
+disk-image-no-composefs:
+    #!/usr/bin/env bash
+    if [ ! -e "{{base_dir}}/bootable.img" ] ; then
+        fallocate -l 20G "{{base_dir}}/bootable.img"
+    fi
+    just bootc install to-disk --via-loopback /data/bootable.img --filesystem "{{filesystem}}" --wipe --bootloader systemd
+
+# Run the disk image in a VM using qemux/qemu container
+run-vm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [[ ! -f bootable.img ]]; then
+        echo "No disk image found. Run 'just disk-image' first."
+        exit 1
+    fi
+
+    port=8006
+    while grep -q :${port} <<< $(ss -tunalp); do
+        port=$(( port + 1 ))
+    done
+    echo "Using Port: ${port}"
+    echo "Connect to http://localhost:${port}"
+
+    podman run --rm --privileged \
+        --pull=newer \
+        --publish "127.0.0.1:${port}:8006" \
+        --env "CPU_CORES=4" \
+        --env "RAM_SIZE=8G" \
+        --env "DISK_SIZE=64G" \
+        --env "TPM=Y" \
+        --env "GPU=N" \
+        --device=/dev/kvm \
+        --device=/dev/dri \
+        --volume "${PWD}/bootable.img":"/boot.img" \
+        docker.io/qemux/qemu
+
+# Clean build artifacts
+clean:
+    rm -f bootable.img
