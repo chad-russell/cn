@@ -111,6 +111,8 @@ Use this file for global context. For implementation details, open the subsystem
 │   │   ├── backup/
 │   │   │   └── README.md
 │   │   ├── caddy/
+│   │   │   ├── Caddyfile
+│   │   │   └── routes/internal/   # Imported Caddy route snippets
 │   │   ├── dev-stacks/
 │   │   │   ├── gpl/compose.yaml
 │   │   │   └── buildspace/compose.yaml
@@ -163,10 +165,12 @@ systemctl --user status <service>
 journalctl --user -u <service>
 ```
 
-Caddy routing config lives at `servers/hub/caddy/Caddyfile`.
+Caddy config lives in `servers/hub/caddy/`. The Caddyfile imports route snippets from `routes/internal/*.caddy`. Both are mounted read-only into the container directly from the repo.
 
 ```bash
-# Validate/reload running Caddy container
+# Add a new internal route
+# 1. Create servers/hub/caddy/routes/internal/<name>.caddy
+# 2. Validate/reload:
 sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile
 sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
 ```
