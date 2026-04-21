@@ -1,0 +1,43 @@
+import * as std from "std";
+import { BrunchConfig } from "brunch";
+
+// Hub infrastructure health check — runs as a systemd timer every 5 minutes.
+// Pings hosts, checks HTTP services, monitors disk/load/memory, and alerts via ntfy.
+// The script is vendored into the brioche store so it's versioned with each generation.
+
+const healthcheckScript = Brioche.includeFile("./hub-healthcheck.sh");
+
+const healthcheckRun = std.bashRunnable`
+  exec bash "$root/healthcheck.sh"
+`.root(
+  std.directory({
+    "healthcheck.sh": healthcheckScript.withPermissions({ executable: true }),
+  }),
+);
+
+export const brunchConfig: BrunchConfig = {
+  systemdUnits: {
+    user: {
+      services: {
+        "healthcheck": {
+          description: "Infrastructure Health Check",
+          after: ["network-online.target"],
+          serviceConfig: {
+            execStart: healthcheckRun,
+            type: "oneshot",
+          },
+        },
+      },
+      timers: {
+        "healthcheck": {
+          description: "Run health check every 5 minutes",
+          timerConfig: {
+            onBootSec: "2min",
+            onUnitActiveSec: "5min",
+          },
+          enabled: true,
+        },
+      },
+    },
+  },
+};

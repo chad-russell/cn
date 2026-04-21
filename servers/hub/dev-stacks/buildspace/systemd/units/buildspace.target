@@ -1,4 +1,0 @@
-[Unit]
-Description=All Buildspace services
-Wants=buildspace-stack.target
-After=buildspace-stack.target

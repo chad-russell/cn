@@ -1,5 +1,0 @@
-[Unit]
-Description=Buildspace local app stack
-Wants=buildspace-infra.target buildspace-deps.service buildspace-marketplace.service buildspace-login.service buildspace-runtime.service buildspace-studio.service buildspace-docs.service buildspace-super-admin.service buildspace-jobs.service
-After=buildspace-infra.target buildspace-deps.service
-PropagatesStopTo=buildspace-marketplace.service buildspace-login.service buildspace-runtime.service buildspace-studio.service buildspace-docs.service buildspace-super-admin.service buildspace-jobs.service

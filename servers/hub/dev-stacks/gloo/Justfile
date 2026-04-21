@@ -32,18 +32,54 @@ init-buckets:
 # First-time infra setup: start + init-db + init-buckets
 infra-init: infra-up init-db init-buckets
 
-# ── App services ──────────────────────────────────────────────────
-
-# Install (or refresh) systemd user units from this repo
-install-units:
-    ./scripts/install-user-units.sh
-
-# Full schema + seed bootstrap (stops app units first)
-bootstrap:
-    ./scripts/bootstrap-data.sh
-
-# ── Convenience ───────────────────────────────────────────────────
+# ── Bootstrap ─────────────────────────────────────────────────────
 
 # Render runtime env for a service without starting it
 render-env service:
-    ./systemd/render-runtime-env.sh {{ service }}
+    ./scripts/render-runtime-env.sh {{ service }}
+
+# Bootstrap GPL: push schema + seed
+bootstrap-gpl: render-env-gpl
+    ./scripts/bootstrap-gpl.sh
+
+# Bootstrap Hummingbird API: seed data
+bootstrap-hb-api: render-env-hb-api
+    ./scripts/bootstrap-hb-api.sh
+
+# Bootstrap Storyhub: seed data
+bootstrap-storyhub: render-env-storyhub
+    ./scripts/bootstrap-storyhub.sh
+
+# Bootstrap Polymer: push schema + seed
+bootstrap-polymer: render-env-polymer
+    ./scripts/bootstrap-polymer.sh
+
+# Bootstrap all services (infra up + init-db + render envs + seed each)
+bootstrap-all: infra-up init-db render-env-all bootstrap-gpl bootstrap-hb-api bootstrap-storyhub bootstrap-polymer
+    @echo "Bootstrap complete."
+
+# ── Render env helpers ────────────────────────────────────────────
+
+render-env-gpl:
+    ./scripts/render-runtime-env.sh gpl
+
+render-env-hb-api:
+    ./scripts/render-runtime-env.sh hb-api
+
+render-env-storyhub:
+    ./scripts/render-runtime-env.sh storyhub
+
+render-env-polymer:
+    ./scripts/render-runtime-env.sh polymer
+
+render-env-all: render-env-gpl render-env-hb-api render-env-storyhub render-env-polymer
+
+# ── Convenience ───────────────────────────────────────────────────
+
+# Start infra + all app services (primary entry point)
+up: infra-up
+    systemctl --user start gloo-all.target
+
+# Stop all app services
+stop:
+    systemctl --user stop gloo-all.target

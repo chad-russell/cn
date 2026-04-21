@@ -1,0 +1,26 @@
+# Hub production services
+
+@linkding host linkding.internal.crussell.io
+handle @linkding {
+    reverse_proxy 127.0.0.1:30080
+}
+
+@papra host papra.internal.crussell.io
+handle @papra {
+    reverse_proxy 127.0.0.1:30083
+}
+
+@ntfy host ntfy.internal.crussell.io
+handle @ntfy {
+    reverse_proxy 127.0.0.1:30085
+}
+
+@searxng host searxng.internal.crussell.io
+handle @searxng {
+    reverse_proxy 127.0.0.1:30084
+}
+
+@openwebui host openwebui.internal.crussell.io
+handle @openwebui {
+    reverse_proxy 127.0.0.1:30088
+}

@@ -1,3 +1,0 @@
-[Unit]
-Description=Buildspace shared infra
-# Start compose postgres separately: just infra-up

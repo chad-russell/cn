@@ -3,10 +3,14 @@ import { brunchConfig as shellConfig } from "../shell.bri";
 import { brunchConfig as nvimConfig } from "./nvim.bri";
 import { brunchConfig as opencodeConfig } from "../opencode.bri";
 import { brunchConfig as piConfig } from "./pi.bri";
+import { brunchConfig as devStacksConfig } from "./hub-dev-stacks.bri";
+import { brunchConfig as healthcheckConfig } from "./hub-healthcheck.bri";
 
 export const hubBrunchConfig: BrunchConfig = mergeBrunch(
   shellConfig,
   nvimConfig,
   opencodeConfig,
   piConfig,
+  devStacksConfig,
+  healthcheckConfig,
 );

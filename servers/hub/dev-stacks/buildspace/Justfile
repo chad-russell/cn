@@ -25,8 +25,12 @@ infra-logs:
 
 # Full bootstrap: start postgres, create role/DB, install deps, migrate + seed
 bootstrap:
-    ./scripts/bootstrap.sh
+    systemctl --user start buildspace-bootstrap.service
 
-# Install (or refresh) systemd user units from this repo
-install-units:
-    ./scripts/install-user-units.sh
+# Start infra + all app services (primary entry point)
+up: infra-up
+    systemctl --user start buildspace-stack.target
+
+# Stop all app services
+stop:
+    systemctl --user stop buildspace-stack.target

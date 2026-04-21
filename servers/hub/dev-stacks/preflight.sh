@@ -57,10 +57,10 @@ else
     echo "  ✗ age key (missing — needed to decrypt dev secrets)"
 fi
 
-if [ -x "$HOME/Code/cn/servers/hub/dev-stacks/gloo/scripts/install-user-units.sh" ]; then
-    echo "  ✓ gloo install-user-units.sh"
+if command -v brunch &>/dev/null || [ -x "$HOME/.local/share/brioche/installed/bin/brunch" ]; then
+    echo "  ✓ brunch (for systemd unit management)"
 else
-    echo "  ✗ gloo install-user-units.sh (missing)"
+    echo "  ✗ brunch (missing — needed to install dev-stack systemd units)"
 fi
 
 echo ""
@@ -77,8 +77,4 @@ else
     echo "  ✗ .env (missing)"
 fi
 
-if [ -x "$HOME/Code/cn/servers/hub/dev-stacks/buildspace/scripts/install-user-units.sh" ]; then
-    echo "  ✓ buildspace install-user-units.sh"
-else
-    echo "  ✗ buildspace install-user-units.sh (missing)"
-fi
+

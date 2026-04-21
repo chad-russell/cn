@@ -1,0 +1,26 @@
+# Media server routes (192.168.20.61)
+
+@qbittorrent host qbittorrent.internal.crussell.io
+handle @qbittorrent {
+    reverse_proxy 192.168.20.61:8080
+}
+
+@sonarr host sonarr.internal.crussell.io
+handle @sonarr {
+    reverse_proxy 192.168.20.61:8989
+}
+
+@radarr host radarr.internal.crussell.io
+handle @radarr {
+    reverse_proxy 192.168.20.61:7878
+}
+
+@prowlarr host prowlarr.internal.crussell.io
+handle @prowlarr {
+    reverse_proxy 192.168.20.61:9696
+}
+
+@jellyseerr host jellyseerr.internal.crussell.io
+handle @jellyseerr {
+    reverse_proxy 192.168.20.61:5055
+}

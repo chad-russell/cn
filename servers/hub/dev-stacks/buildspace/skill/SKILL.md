@@ -5,7 +5,19 @@ description: Operate the local Buildspace dev stack on hub. Use when working in 
 
 # Buildspace Hosting
 
-The Buildspace dev stack runs on `hub` with Postgres managed via Podman Compose and bun dev processes managed by `systemd --user`.
+The Buildspace dev stack runs on `hub` with Postgres managed via Podman Compose and bun dev processes managed by `systemd --user` (via brunch).
+
+## Quick start
+
+```bash
+# Start everything (infra + all app services)
+just -f ~/Code/cn/servers/hub/dev-stacks/buildspace/Justfile up
+
+# Stop everything
+just -f ~/Code/cn/servers/hub/dev-stacks/buildspace/Justfile stop
+```
+
+For first-time setup, use `bootstrap` instead of `up`.
 
 ## Stack Composition
 
@@ -38,37 +50,34 @@ A `Justfile` provides the primary CLI for infra and setup.
 ## Infrastructure
 
 ```bash
-just infra-up      # start postgres
-just infra-down    # stop postgres
-just infra-logs    # tail logs
+just -f ~/Code/cn/servers/hub/dev-stacks/buildspace/Justfile infra-up      # start postgres
+just -f ~/Code/cn/servers/hub/dev-stacks/buildspace/Justfile infra-down    # stop postgres
+just -f ~/Code/cn/servers/hub/dev-stacks/buildspace/Justfile infra-logs    # tail logs
 ```
 
-**Important**: App services don't auto-start compose postgres. Run `just infra-up` before starting app units.
+**Important**: App services don't auto-start compose postgres. Run `just infra-up` before starting app units, or use `just up` which does both.
 
 ## First-Time Bootstrap
 
 ```bash
-just bootstrap
+just -f ~/Code/cn/servers/hub/dev-stacks/buildspace/Justfile bootstrap
 ```
 
-This script:
+This runs the `buildspace-bootstrap.service` systemd unit, which:
 1. Starts postgres via compose and waits for it to be healthy
 2. Creates the database role and database from `DATABASE_URL` in `.env`
 3. Enables `pgcrypto` extension
 4. Runs `bun install`, migrations, and seed
 
-Alternatively, use the systemd bootstrap unit:
+Or start the unit directly:
 ```bash
 systemctl --user start buildspace-bootstrap.service
 ```
 
 ## App Services (systemd --user)
 
-Install the checked-in units from the repo:
-
-```bash
-just install-units
-```
+Systemd user units are managed declaratively via brunch (`brunch apply ./config --target hub`).
+Do **not** install or symlink unit files manually — brunch handles creation, updates, and cleanup.
 
 ### Start / stop
 
@@ -104,7 +113,7 @@ Services use `bun --env-file=.env` to load the project `.env` directly.
 
 ## Caddy Routes
 
-Routes are defined in `~/Code/cn/servers/hub/caddy/Caddyfile`:
+Routes are defined in `~/Code/cn/servers/hub/caddy/routes/internal/buildspace.caddy`:
 
 | Host | Unit | Upstream |
 |------|------|----------|

@@ -1,0 +1,36 @@
+# Buildspace dev stack routes
+
+@buildspace-marketplace host buildspace.internal.crussell.io
+handle @buildspace-marketplace {
+    reverse_proxy 127.0.0.1:3000
+}
+
+@buildspace-login host bs-login.internal.crussell.io
+handle @buildspace-login {
+    reverse_proxy 127.0.0.1:3003
+}
+
+@buildspace-creator host bs-creator.internal.crussell.io
+handle @buildspace-creator {
+    reverse_proxy 127.0.0.1:3005
+}
+
+@buildspace-api host bs-api.internal.crussell.io
+handle @buildspace-api {
+    reverse_proxy 127.0.0.1:3002
+}
+
+@buildspace-docs host bs-docs.internal.crussell.io
+handle @buildspace-docs {
+    reverse_proxy 127.0.0.1:3004
+}
+
+@buildspace-super-admin host bs-admin.internal.crussell.io
+handle @buildspace-super-admin {
+    reverse_proxy 127.0.0.1:3006
+}
+
+@buildspace-jobs host bs-jobs.internal.crussell.io
+handle @buildspace-jobs {
+    reverse_proxy 127.0.0.1:3010
+}

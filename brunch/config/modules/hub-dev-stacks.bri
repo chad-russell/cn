@@ -1,0 +1,462 @@
+import * as std from "std";
+import { BrunchConfig } from "brunch";
+
+// Dev-stack systemd units for the hub profile.
+// Replaces the old install-user-units.sh scripts — brunch now owns these units
+// and will create/update/remove them on `brunch apply --target hub`.
+//
+// Gloo service runnables inline the full startup logic (lazy env rendering
+// + exec). The render-runtime-env.sh script is vendored into the brioche
+// store via includeFile() and referenced via $root.
+
+const glooEnvScript = Brioche.includeFile("./gloo/render-runtime-env.sh");
+
+// ── Gloo service runnables ──────────────────────────────────────────
+// Each runnable lazily renders the runtime env (if not already present)
+// then exec's the service-specific dev command. WorkingDirectory is set
+// in the systemd unit, so no `cd` is needed inside the runnable.
+//
+// All services use linuxbrew Node 24 for consistency.
+
+const nodePath = "/home/linuxbrew/.linuxbrew/opt/node@24/bin";
+
+function glooRunnable(service: string, execCmd: string) {
+  return std.bashRunnable`
+    SERVICE="${service}"
+    RUNTIME_BASE="\${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gloo"
+    RUNTIME_ENV="$RUNTIME_BASE/$SERVICE.env"
+
+    if [ ! -f "$RUNTIME_ENV" ]; then
+      bash "$root/render-runtime-env.sh" "$SERVICE" >/dev/null
+    fi
+
+    set -a
+    # shellcheck disable=SC1090
+    source "$RUNTIME_ENV"
+    set +a
+
+    export PATH="${nodePath}:$HOME/.local/bin:$HOME/.bun/bin:$PATH"
+
+    ${execCmd}
+  `.root(
+    std.directory({
+      "render-runtime-env.sh": glooEnvScript.withPermissions({ executable: true }),
+    }),
+  );
+}
+
+// ── Gloo infra runnables ────────────────────────────────────────────
+// The infra lifecycle is managed as oneshot systemd services that bring
+// up compose, create databases, and create S3 buckets. Idempotent.
+
+const glooComposeFile = "/var/home/crussell/Code/cn/servers/hub/dev-stacks/gloo/compose.yaml";
+
+const glooInfraUp = std.bashRunnable`
+  podman compose -f ${glooComposeFile} up -d
+
+  # Wait for postgres to be ready
+  CONTAINER="gloo_postgres_1"
+  for i in $(seq 1 60); do
+    if podman exec "$CONTAINER" pg_isready -U postgres -d postgres >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+  done
+
+  if ! podman exec "$CONTAINER" pg_isready -U postgres -d postgres >/dev/null 2>&1; then
+    echo "ERROR: Gloo postgres did not become ready" >&2
+    exit 1
+  fi
+`;
+
+const glooInitDb = std.bashRunnable`
+  CONTAINER="\${POSTGRES_CONTAINER:-gloo_postgres_1}"
+
+  for db in gpl_db storyhub polymer; do
+    podman exec "$CONTAINER" psql -U postgres -c "CREATE DATABASE $db;" 2>/dev/null \\
+      && echo "  ✓ $db" || echo "  ✓ $db (already exists)"
+  done
+`;
+
+const glooInitBuckets = std.bashRunnable`
+  AWS_CLI_IMAGE="\${AWS_CLI_IMAGE:-docker.io/amazon/aws-cli:latest}"
+  ENDPOINT_URL="\${S3_ENDPOINT_URL:-http://127.0.0.1:9000}"
+  export AWS_ACCESS_KEY_ID="\${AWS_ACCESS_KEY_ID:-rustfsadmin}"
+  export AWS_SECRET_ACCESS_KEY="\${AWS_SECRET_ACCESS_KEY:-rustfsadmin}"
+  export AWS_DEFAULT_REGION="\${AWS_DEFAULT_REGION:-us-east-1}"
+
+  echo "Waiting for RustFS at $ENDPOINT_URL..."
+  for i in $(seq 1 30); do
+    if podman run --rm --network host \
+      -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
+      "$AWS_CLI_IMAGE" \
+      s3api list-buckets --endpoint-url "$ENDPOINT_URL" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+  done
+
+  if ! podman run --rm --network host \
+    -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
+    "$AWS_CLI_IMAGE" \
+    s3api list-buckets --endpoint-url "$ENDPOINT_URL" >/dev/null 2>&1; then
+    echo "ERROR: RustFS did not become ready at $ENDPOINT_URL" >&2
+    exit 1
+  fi
+
+  for b in gpl-assets storyhub-media-items polymer-bucket; do
+    if podman run --rm --network host \
+      -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
+      "$AWS_CLI_IMAGE" \
+      s3api create-bucket --bucket "$b" --endpoint-url "$ENDPOINT_URL" >/dev/null 2>&1; then
+      echo "  ✓ $b"
+    fi
+  done
+`;
+
+// ── Buildspace app service helper ───────────────────────────────────
+
+const bsConditions = ["%h/Code/bs/buildspace/package.json", "%h/Code/bs/buildspace/.env"];
+const bsAppAfter = ["buildspace-infra.target", "buildspace-deps.service"];
+
+function buildspaceAppService(
+  name: string,
+  description: string,
+  filter: string,
+): Record<string, unknown> {
+  return {
+    description,
+    after: bsAppAfter,
+    wants: bsAppAfter,
+    conditionPathExists: bsConditions,
+    partOf: ["buildspace-stack.target"],
+    serviceConfig: {
+      type: "simple",
+      workingDirectory: "%h/Code/bs/buildspace",
+      environmentFile: "%h/.config/systemd/user/buildspace-overrides.env",
+      environment: {
+        PATH: "%h/.bun/bin:%h/.local/bin:/usr/bin:/bin",
+      },
+      execStart: `%h/.bun/bin/bun --env-file=.env --filter ${filter} dev`,
+      restart: "on-failure",
+      restartSec: 2,
+    },
+    wantedBy: ["buildspace-stack.target"],
+  };
+}
+
+// ── Buildspace bootstrap runnable ───────────────────────────────────
+// Full bootstrap: start postgres, create role/DB, install deps, migrate + seed.
+
+const bsComposeFile = "/var/home/crussell/Code/cn/servers/hub/dev-stacks/buildspace/compose.yaml";
+
+const bsBootstrapRun = std.bashRunnable`
+  REPO_DIR="$HOME/Code/bs/buildspace"
+  export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+
+  if [ ! -f "$REPO_DIR/.env" ]; then
+    echo "ERROR: $REPO_DIR/.env not found" >&2
+    exit 1
+  fi
+
+  # Start postgres
+  podman compose -f ${bsComposeFile} up -d postgres
+
+  # Find container
+  POSTGRES_CONTAINER="$(podman ps --format '{{.Names}}' | grep -E '^buildspace[_-]postgres[_-]1$' | head -n1 || true)"
+  if [ -z "$POSTGRES_CONTAINER" ]; then
+    echo "ERROR: Could not determine buildspace postgres container name" >&2
+    exit 1
+  fi
+
+  # Wait for healthy
+  echo "Waiting for postgres ($POSTGRES_CONTAINER)..."
+  for i in $(seq 1 60); do
+    if podman exec "$POSTGRES_CONTAINER" pg_isready -U postgres -d postgres >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+  done
+
+  # Parse DATABASE_URL from .env
+  eval "$(python3 -c "from pathlib import Path; from urllib.parse import urlparse; lines = Path('$REPO_DIR/.env').read_text().splitlines(); database_url = next((line.split('=', 1)[1].strip().strip(chr(34)).strip(chr(39)) for line in lines if line.startswith('DATABASE_URL=')), '');
+  if not database_url: raise SystemExit('DATABASE_URL is required');
+  parsed = urlparse(database_url);
+  shell_quote = lambda value: \"'\" + value.replace(\"'\", \"'\\''\") + \"'\";
+  print(f'DB_USER={shell_quote(parsed.username or \"\")}');
+  print(f'DB_PASS={shell_quote(parsed.password or \"\")}');
+  print(f'DB_NAME={shell_quote(parsed.path.lstrip(\"/\"))}')")"
+
+  if [ -z "$DB_USER" ] || [ -z "$DB_NAME" ]; then
+    echo "Failed to resolve database credentials from .env" >&2
+    exit 1
+  fi
+
+  # Create role and database
+  if [ "$(podman exec "$POSTGRES_CONTAINER" psql -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$DB_USER'")" != "1" ]; then
+    podman exec "$POSTGRES_CONTAINER" psql -U postgres -c "CREATE ROLE \\"$DB_USER\\" LOGIN PASSWORD '$DB_PASS'"
+  fi
+
+  if [ "$(podman exec "$POSTGRES_CONTAINER" psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'")" != "1" ]; then
+    podman exec "$POSTGRES_CONTAINER" psql -U postgres -c "CREATE DATABASE \\"$DB_NAME\\" OWNER \\"$DB_USER\\""
+  fi
+
+  podman exec "$POSTGRES_CONTAINER" psql -U postgres -d "$DB_NAME" -v ON_ERROR_STOP=1 \\
+    -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" \\
+    -c "ALTER SCHEMA public OWNER TO \\"$DB_USER\\";" \\
+    -c "GRANT ALL ON SCHEMA public TO \\"$DB_USER\\";" \\
+    -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \\"$DB_USER\\";" \\
+    -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \\"$DB_USER\\";"
+
+  # Install deps + migrate + seed
+  cd "$REPO_DIR"
+  bun install --frozen-lockfile
+
+  cd "$REPO_DIR/packages/db"
+  bun --env-file=../../.env run db:migrate
+  bun --env-file=../../.env run db:seed
+`;
+
+// ── Exported config ─────────────────────────────────────────────────
+
+export const brunchConfig: BrunchConfig = {
+  systemdUnits: {
+    user: {
+      // ── Gloo targets ──
+      targets: {
+        "gloo-infra": {
+          description: "Gloo shared infra (compose + init)",
+          wants: [
+            "gloo-infra-up.service",
+            "gloo-init-db.service",
+            "gloo-init-buckets.service",
+          ],
+          after: ["gloo-infra-up.service"],
+        },
+        "gloo-all": {
+          description: "All Gloo dev servers",
+          wants: [
+            "gloo-gpl.service",
+            "gloo-hb-api.service",
+            "gloo-hb-web.service",
+            "gloo-storyhub.service",
+            "gloo-storyhub-worker.service",
+            "gloo-polymer.service",
+          ],
+          after: ["gloo-infra.target"],
+        },
+        "gloo-hummingbird": {
+          description: "Gloo Hummingbird dev stack",
+          wants: ["gloo-hb-api.service", "gloo-hb-web.service"],
+        },
+        "gloo-storyhub": {
+          description: "Gloo Storyhub dev stack",
+          wants: ["gloo-storyhub.service", "gloo-storyhub-worker.service"],
+        },
+        "buildspace-infra": {
+          description: "Buildspace shared infra",
+        },
+        "buildspace-stack": {
+          description: "Buildspace local app stack",
+          wants: [
+            "buildspace-infra.target",
+            "buildspace-deps.service",
+            "buildspace-marketplace.service",
+            "buildspace-login.service",
+            "buildspace-runtime.service",
+            "buildspace-studio.service",
+            "buildspace-docs.service",
+            "buildspace-super-admin.service",
+            "buildspace-jobs.service",
+          ],
+          after: ["buildspace-infra.target", "buildspace-deps.service"],
+          propagatesStopTo: [
+            "buildspace-marketplace.service",
+            "buildspace-login.service",
+            "buildspace-runtime.service",
+            "buildspace-studio.service",
+            "buildspace-docs.service",
+            "buildspace-super-admin.service",
+            "buildspace-jobs.service",
+          ],
+        },
+        "buildspace": {
+          description: "All Buildspace services",
+          wants: ["buildspace-stack.target"],
+          after: ["buildspace-stack.target"],
+        },
+      },
+
+      services: {
+        // ── Gloo infra services ──
+        "gloo-infra-up": {
+          description: "Start Gloo compose infra and wait for postgres",
+          serviceConfig: {
+            execStart: glooInfraUp,
+            type: "oneshot",
+            remainAfterExit: true,
+          },
+        },
+        "gloo-init-db": {
+          description: "Create Gloo databases (idempotent)",
+          after: ["gloo-infra-up.service"],
+          wants: ["gloo-infra-up.service"],
+          serviceConfig: {
+            execStart: glooInitDb,
+            type: "oneshot",
+          },
+        },
+        "gloo-init-buckets": {
+          description: "Create Gloo S3 buckets in RustFS (idempotent)",
+          after: ["gloo-infra-up.service"],
+          wants: ["gloo-infra-up.service"],
+          serviceConfig: {
+            execStart: glooInitBuckets,
+            type: "oneshot",
+            timeoutStartSec: "5min",
+          },
+        },
+
+        // ── Gloo app services (runnables) ──
+        "gloo-gpl": {
+          description: "Gloo GPL dev server",
+          after: ["network-online.target", "gloo-infra.target"],
+          wants: ["network-online.target"],
+          serviceConfig: {
+            execStart: glooRunnable("gpl", "exec npx next dev -p 3106"),
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 2,
+            workingDirectory: "/var/home/crussell/Gloo/360-gpl",
+          },
+        },
+        "gloo-hb-api": {
+          description: "Gloo Hummingbird API dev server",
+          after: ["network-online.target", "gloo-infra.target"],
+          wants: ["network-online.target"],
+          partOf: ["gloo-hummingbird.target"],
+          serviceConfig: {
+            execStart: glooRunnable("hb-api", "exec pnpm --filter api dev"),
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 2,
+            workingDirectory: "/var/home/crussell/Gloo/360-hummingbird",
+          },
+        },
+        "gloo-hb-web": {
+          description: "Gloo Hummingbird Web dev server",
+          after: ["network-online.target", "gloo-infra.target"],
+          wants: ["network-online.target"],
+          partOf: ["gloo-hummingbird.target"],
+          serviceConfig: {
+            execStart: glooRunnable("hb-web", "exec pnpm --filter web dev -- --host 0.0.0.0 --port 3100"),
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 2,
+            workingDirectory: "/var/home/crussell/Gloo/360-hummingbird",
+          },
+        },
+        "gloo-polymer": {
+          description: "Gloo Polymer dev server",
+          after: ["network-online.target", "gloo-infra.target"],
+          wants: ["network-online.target"],
+          serviceConfig: {
+            execStart: glooRunnable("polymer", "rm -f .next/dev/lock && exec pnpm exec next dev --turbo --hostname 0.0.0.0 --port 3001"),
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 2,
+            workingDirectory: "/var/home/crussell/Gloo/360-polymer/apps/polymer",
+          },
+        },
+        "gloo-storyhub": {
+          description: "Gloo Storyhub dev server",
+          after: ["network-online.target", "gloo-infra.target"],
+          wants: ["network-online.target"],
+          partOf: ["gloo-storyhub.target"],
+          serviceConfig: {
+            execStart: glooRunnable("storyhub", "exec npx next dev --port 3007"),
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 2,
+            workingDirectory: "/var/home/crussell/Gloo/360-hummingbird/storyhub",
+          },
+        },
+        "gloo-storyhub-worker": {
+          description: "Gloo Storyhub worker dev server",
+          after: ["network-online.target", "gloo-infra.target"],
+          wants: ["network-online.target"],
+          partOf: ["gloo-storyhub.target"],
+          serviceConfig: {
+            execStart: glooRunnable("storyhub-worker", "exec pnpm --filter storyhub-worker dev"),
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 2,
+            workingDirectory: "/var/home/crussell/Gloo/360-hummingbird",
+          },
+        },
+
+        // ── Buildspace services ──
+        "buildspace-deps": {
+          description: "Bootstrap Buildspace dependencies",
+          after: ["buildspace-infra.target"],
+          wants: ["buildspace-infra.target"],
+          conditionPathExists: ["%h/Code/bs/buildspace/package.json"],
+          partOf: ["buildspace-stack.target"],
+          serviceConfig: {
+            type: "oneshot",
+            workingDirectory: "%h/Code/bs/buildspace",
+            execStart: "%h/.bun/bin/bun install --frozen-lockfile",
+            timeoutStartSec: "30min",
+          },
+          wantedBy: ["buildspace-stack.target"],
+        },
+        "buildspace-bootstrap": {
+          description: "Bootstrap Buildspace: start postgres, create role/DB, install deps, migrate + seed",
+          conditionPathExists: bsConditions,
+          serviceConfig: {
+            execStart: bsBootstrapRun,
+            type: "oneshot",
+            workingDirectory: "%h/Code/bs/buildspace",
+            environmentFile: "%h/.config/systemd/user/buildspace-overrides.env",
+            timeoutStartSec: "30min",
+          },
+        },
+        "buildspace-marketplace": buildspaceAppService(
+          "buildspace-marketplace",
+          "Buildspace marketplace app",
+          "@buildspace/marketplace",
+        ),
+        "buildspace-login": buildspaceAppService(
+          "buildspace-login",
+          "Buildspace login app",
+          "@buildspace/login",
+        ),
+        "buildspace-runtime": buildspaceAppService(
+          "buildspace-runtime",
+          "Buildspace runtime app",
+          "@buildspace/runtime",
+        ),
+        "buildspace-studio": buildspaceAppService(
+          "buildspace-studio",
+          "Buildspace studio app",
+          "@buildspace/studio",
+        ),
+        "buildspace-docs": buildspaceAppService(
+          "buildspace-docs",
+          "Buildspace docs app",
+          "@buildspace/docs",
+        ),
+        "buildspace-super-admin": buildspaceAppService(
+          "buildspace-super-admin",
+          "Buildspace super-admin app",
+          "@buildspace/super-admin",
+        ),
+        "buildspace-jobs": buildspaceAppService(
+          "buildspace-jobs",
+          "Buildspace jobs worker",
+          "@buildspace/jobs-app",
+        ),
+      },
+    },
+  },
+};

@@ -127,6 +127,15 @@ function mergeSystemdConfigs(
     );
   }
 
+  const userTargetsA = Object.keys(a.user?.targets ?? {});
+  const userTargetsB = Object.keys(b.user?.targets ?? {});
+  const userTargetConflicts = userTargetsA.filter((k) => userTargetsB.includes(k));
+  if (userTargetConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd user targets detected: ${userTargetConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
   const systemServicesA = Object.keys(a.system?.services ?? {});
   const systemServicesB = Object.keys(b.system?.services ?? {});
   const systemServiceConflicts = systemServicesA.filter((k) => systemServicesB.includes(k));
@@ -145,15 +154,27 @@ function mergeSystemdConfigs(
     );
   }
 
+  const systemTargetsA = Object.keys(a.system?.targets ?? {});
+  const systemTargetsB = Object.keys(b.system?.targets ?? {});
+  const systemTargetConflicts = systemTargetsA.filter((k) => systemTargetsB.includes(k));
+  if (systemTargetConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd system targets detected: ${systemTargetConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
   if (
     userServicesA.length > 0 ||
     userServicesB.length > 0 ||
     userTimersA.length > 0 ||
-    userTimersB.length > 0
+    userTimersB.length > 0 ||
+    userTargetsA.length > 0 ||
+    userTargetsB.length > 0
   ) {
     merged.user = {
       services: { ...a.user?.services, ...b.user?.services },
       timers: { ...a.user?.timers, ...b.user?.timers },
+      targets: { ...a.user?.targets, ...b.user?.targets },
     };
   }
 
@@ -161,11 +182,14 @@ function mergeSystemdConfigs(
     systemServicesA.length > 0 ||
     systemServicesB.length > 0 ||
     systemTimersA.length > 0 ||
-    systemTimersB.length > 0
+    systemTimersB.length > 0 ||
+    systemTargetsA.length > 0 ||
+    systemTargetsB.length > 0
   ) {
     merged.system = {
       services: { ...a.system?.services, ...b.system?.services },
       timers: { ...a.system?.timers, ...b.system?.timers },
+      targets: { ...a.system?.targets, ...b.system?.targets },
     };
   }
 

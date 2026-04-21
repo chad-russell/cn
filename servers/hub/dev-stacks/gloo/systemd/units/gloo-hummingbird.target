@@ -1,3 +1,0 @@
-[Unit]
-Description=Gloo Hummingbird dev stack
-Wants=gloo-hb-api.service gloo-hb-web.service

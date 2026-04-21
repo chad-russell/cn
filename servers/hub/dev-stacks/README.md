@@ -4,6 +4,7 @@ Self-contained dev environments for `hub`.
 
 - **Infrastructure** runs in Podman Compose
 - **App dev servers** run on the host and are managed by `systemd --user`
+- **Systemd units** are managed declaratively via brunch (`brunch apply ./config --target hub`)
 - **Caddy** remains the shared reverse proxy
 
 ## Stacks
@@ -31,32 +32,38 @@ podman compose -f servers/hub/dev-stacks/gloo/compose.yaml down
 podman compose -f servers/hub/dev-stacks/gloo/compose.yaml logs -f
 ```
 
-First-time infra init:
+First-time infra init (now managed by `gloo-infra.target` systemd unit):
 
 ```bash
-./servers/hub/dev-stacks/gloo/scripts/init-db.sh
-./servers/hub/dev-stacks/gloo/scripts/init-buckets.sh
+systemctl --user start gloo-infra.target
 ```
 
-Schema + seed bootstrap:
+Or use the Justfile:
 
 ```bash
-./servers/hub/dev-stacks/gloo/scripts/bootstrap-data.sh
+just -f servers/hub/dev-stacks/gloo/Justfile infra-init
 ```
 
-This script:
-- stops Gloo app units
-- ensures shared databases exist
-- renders runtime env files
-- runs GPL `db:push` + `db:seed`
-- runs Hummingbird API dump restore + migrations + dev-user seed
-- runs Storyhub Prisma push + seed
-- runs Polymer `db:push` + `db:seed`
+Schema + seed bootstrap (per-service scripts):
+
+```bash
+just -f servers/hub/dev-stacks/gloo/Justfile bootstrap-gpl
+just -f servers/hub/dev-stacks/gloo/Justfile bootstrap-hb-api
+just -f servers/hub/dev-stacks/gloo/Justfile bootstrap-storyhub
+just -f servers/hub/dev-stacks/gloo/Justfile bootstrap-polymer
+just -f servers/hub/dev-stacks/gloo/Justfile bootstrap-all
+```
 
 ### App units (`systemd --user`)
 
+Systemd units are managed by brunch. Run `brunch apply ./config --target hub` to create/update them. Do not install or symlink unit files manually.
+
 | Unit / target | Purpose |
 |---|---|
+| `gloo-infra-up.service` | Start compose + wait for postgres (oneshot) |
+| `gloo-init-db.service` | Create databases (idempotent oneshot) |
+| `gloo-init-buckets.service` | Create S3 buckets (idempotent oneshot) |
+| `gloo-infra.target` | All infra services |
 | `gloo-gpl.service` | GPL only |
 | `gloo-hb-api.service` | Hummingbird API only |
 | `gloo-hb-web.service` | Hummingbird Web only |
@@ -67,15 +74,12 @@ This script:
 | `gloo-polymer.service` | Polymer only |
 | `gloo-all.target` | All Gloo app dev services |
 
-Install the checked-in units once on `hub`:
-
-```bash
-./servers/hub/dev-stacks/gloo/scripts/install-user-units.sh
-```
-
 Typical usage:
 
 ```bash
+# Start everything at once
+just -f servers/hub/dev-stacks/gloo/Justfile up
+
 # Start one app
 systemctl --user start gloo-gpl.service
 systemctl --user start gloo-polymer.service
@@ -123,16 +127,16 @@ This keeps repo files clean while still giving a predictable runtime surface.
 
 | App | Unit | Port | Runtime |
 |---|---|---:|---|
-| GPL | `gloo-gpl.service` | 3106 | Node 22 + pnpm |
-| Hummingbird API | `gloo-hb-api.service` | 8000 | Node 22 + pnpm |
-| Hummingbird Web | `gloo-hb-web.service` | 3100 | Node 22 + pnpm |
-| Storyhub | `gloo-storyhub.service` | 3007 | Node 22 + pnpm |
-| Storyhub Worker | `gloo-storyhub-worker.service` | 8001 | Bun |
+| GPL | `gloo-gpl.service` | 3106 | Node 24 + pnpm |
+| Hummingbird API | `gloo-hb-api.service` | 8000 | Node 24 + pnpm |
+| Hummingbird Web | `gloo-hb-web.service` | 3100 | Node 24 + pnpm |
+| Storyhub | `gloo-storyhub.service` | 3007 | Node 24 + pnpm |
+| Storyhub Worker | `gloo-storyhub-worker.service` | 8001 | Node 24 + pnpm |
 | Polymer | `gloo-polymer.service` | 3001 | Node 24 + pnpm |
 
 ### Caddy routes
 
-Defined in `servers/hub/caddy/Caddyfile`.
+Defined in `servers/hub/caddy/routes/internal/gloo.caddy`.
 
 | Host | Upstream |
 |---|---|
@@ -158,10 +162,10 @@ sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
 - `~/Gloo/360-hummingbird`
 - `~/Gloo/360-polymer`
 - `pnpm`
-- `bun` (for `storyhub-worker`)
-- Homebrew `node@24` (for Polymer)
+- `bun`
+- Homebrew `node@24`
 - `age` and `~/.config/age/key.txt`
-- Gloo infra running before app bootstrap (`podman compose ... up -d`)
+- Gloo infra running before app bootstrap (`systemctl --user start gloo-infra.target`)
 
 ## Buildspace (`buildspace/`)
 
@@ -182,13 +186,15 @@ just -f servers/hub/dev-stacks/buildspace/Justfile infra-up
 just -f servers/hub/dev-stacks/buildspace/Justfile infra-down
 ```
 
-First-time setup:
+First-time setup (bootstrap is a systemd oneshot that starts postgres, creates role/DB, installs deps, migrates + seeds):
 
 ```bash
 just -f servers/hub/dev-stacks/buildspace/Justfile bootstrap
 ```
 
 ### App units (`systemd --user`)
+
+Systemd units are managed by brunch. Run `brunch apply ./config --target hub` to create/update them. Do not install or symlink unit files manually.
 
 | Unit | Port | Purpose |
 |---|---:|---|
@@ -201,15 +207,13 @@ just -f servers/hub/dev-stacks/buildspace/Justfile bootstrap
 | `buildspace-jobs.service` | 3010 | Background jobs worker |
 | `buildspace-stack.target` | — | All app services |
 
-Install the checked-in units once on `hub`:
-
-```bash
-just -f servers/hub/dev-stacks/buildspace/Justfile install-units
-```
-
 Typical usage:
 
 ```bash
+# Start everything at once
+just -f servers/hub/dev-stacks/buildspace/Justfile up
+
+# Individual control
 systemctl --user start buildspace-stack.target
 systemctl --user stop buildspace-stack.target
 systemctl --user restart buildspace-runtime.service
@@ -222,6 +226,8 @@ journalctl --user -u buildspace-runtime.service -f
 All services source `~/Code/bs/buildspace/.env` at startup. The `DATABASE_URL` should point to the compose-managed postgres on port 5434.
 
 ### Caddy routes
+
+Defined in `servers/hub/caddy/routes/internal/buildspace.caddy`.
 
 | Host | Upstream |
 |---|---|

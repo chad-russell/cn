@@ -108,6 +108,7 @@ function buildUnitSection(config: {
   wantedBy?: string[];
   partOf?: string[];
   conflicts?: string[];
+  propagatesStopTo?: string[];
 }): string[] {
   const lines: string[] = ["[Unit]"];
 
@@ -153,6 +154,10 @@ function buildUnitSection(config: {
 
   if (config.conflicts && config.conflicts.length > 0) {
     lines.push(`Conflicts=${config.conflicts.join(" ")}`);
+  }
+
+  if (config.propagatesStopTo && config.propagatesStopTo.length > 0) {
+    lines.push(`PropagatesStopTo=${config.propagatesStopTo.join(" ")}`);
   }
 
   return lines;
@@ -401,14 +406,47 @@ export function makeTimerUnit(
   return std.file(lines.join("\n"));
 }
 
+export interface BrunchTargetConfig {
+  description?: string;
+  documentation?: string | string[];
+  requires?: string[];
+  after?: string[];
+  before?: string[];
+  wants?: string[];
+  wantedBy?: string[];
+  partOf?: string[];
+  conflicts?: string[];
+  propagatesStopTo?: string[];
+}
+
+export function makeTargetUnit(
+  name: string,
+  config: BrunchTargetConfig
+): std.Recipe<std.File> {
+  const lines: string[] = [];
+
+  lines.push(...buildUnitSection(config));
+
+  // Only emit [Install] if WantedBy is specified
+  if (config.wantedBy && config.wantedBy.length > 0) {
+    lines.push("");
+    lines.push("[Install]");
+    lines.push(`WantedBy=${config.wantedBy.join(" ")}`);
+  }
+
+  return std.file(lines.join("\n"));
+}
+
 export interface BrunchSystemdConfig {
   user?: {
     services?: Record<string, BrunchServiceConfig>;
     timers?: Record<string, BrunchTimerConfig>;
+    targets?: Record<string, BrunchTargetConfig>;
   };
   system?: {
     services?: Record<string, BrunchServiceConfig>;
     timers?: Record<string, BrunchTimerConfig>;
+    targets?: Record<string, BrunchTargetConfig>;
   };
 }
 
@@ -438,6 +476,12 @@ export function makeSystemdUnits(
     }
   }
 
+  if (config.user?.targets) {
+    for (const [name, targetConfig] of Object.entries(config.user.targets)) {
+      userEntries[`${name}.target`] = makeTargetUnit(name, targetConfig);
+    }
+  }
+
   if (config.system?.services) {
     for (const [name, serviceConfig] of Object.entries(config.system.services)) {
       systemEntries[`${name}.service`] = makeServiceUnitInternal(name, serviceConfig, "system");
@@ -452,6 +496,12 @@ export function makeSystemdUnits(
   if (config.system?.timers) {
     for (const [name, timerConfig] of Object.entries(config.system.timers)) {
       systemEntries[`${name}.timer`] = makeTimerUnit(name, timerConfig);
+    }
+  }
+
+  if (config.system?.targets) {
+    for (const [name, targetConfig] of Object.entries(config.system.targets)) {
+      systemEntries[`${name}.target`] = makeTargetUnit(name, targetConfig);
     }
   }
 

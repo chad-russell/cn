@@ -1,3 +1,0 @@
-[Unit]
-Description=Gloo Storyhub dev stack
-Wants=gloo-storyhub.service gloo-storyhub-worker.service
