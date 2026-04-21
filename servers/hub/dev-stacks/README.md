@@ -6,40 +6,48 @@ Self-contained Podman Compose dev environments for `hub`. Each stack has its own
 
 ### Gloo (`gpl/`)
 
-Full Gloo dev stack with own postgres, RustFS object storage, and pgAdmin.
+Gloo dev stack with infra services in Podman Compose and dev servers running on the host for native hot-reload.
 
-**Services:**
+**Infrastructure (Podman Compose):**
 | Service | Port | Description |
 |---------|------|-------------|
-| postgres | 5433 | Gloo's own Postgres 16 |
+| postgres | 5433 | GPL's Postgres 16 |
 | rustfs | 9000, 9001 | S3-compatible object storage |
+| pgadmin | 5050 | Database admin UI |
+
+**Dev Servers (Host):**
+| Service | Port | Description |
+|---------|------|-------------|
 | gpl-app | 3106 | GPL app (`pnpm dev`) |
 | hummingbird-api | 8000 | Hummingbird API |
 | hummingbird-web | 3100 | Hummingbird Web |
-| polymer-app | 3001 | Polymer app |
-| pgadmin | 5050 | Database admin UI |
+| polymer-app | 3001 | Polymer app (requires Node 24 via Homebrew) |
 
 **Prerequisites:**
 - Repo clones at `~/Gloo/360-gpl`, `~/Gloo/360-hummingbird`, `~/Gloo/360-polymer`
-- Control plane at `~/Gloo/gloo-control-plane` (contains Containerfiles and env files)
-- Env files at `~/Gloo/gloo-control-plane/envs/` (gpl.env, hb-api.env, hb-web.env, polymer.env, pgadmin.env)
+- Control plane at `~/Gloo/gloo-control-plane` (contains bootstrap scripts and container env files)
+- `pnpm` installed (`npm install -g --prefix ~/.local pnpm`)
+- Node 24 via Homebrew (`brew install node@24`) for Polymer
 
 **Usage:**
 ```bash
-# Start the full stack
+# Start infra only
 podman compose -f servers/hub/dev-stacks/gpl/compose.yaml up -d
 
-# Follow logs
-podman compose -f servers/hub/dev-stacks/gpl/compose.yaml logs -f
+# Start dev servers (each in its own terminal for log visibility)
+./servers/hub/dev-stacks/gpl/dev.sh gpl
+./servers/hub/dev-stacks/gpl/dev.sh hb-api
+./servers/hub/dev-stacks/gpl/dev.sh hb-web
+./servers/hub/dev-stacks/gpl/dev.sh polymer
 
-# Stop
+# Or all at once
+./servers/hub/dev-stacks/gpl/dev.sh all
+
+# Stop infra
 podman compose -f servers/hub/dev-stacks/gpl/compose.yaml down
 ```
 
-**First-time setup:**
-1. Bootstrap RustFS buckets: `~/Gloo/gloo-control-plane/scripts/init-buckets.sh`
-2. Bootstrap dependencies: `~/Gloo/gloo-control-plane/scripts/bootstrap-gpl.sh`, etc.
-3. Update env files if DATABASE_URL references old shared postgres
+**Host env files** are in `gpl/host-envs/` — derived from `~/Gloo/gloo-control-plane/envs/` with container DNS names replaced by `127.0.0.1` addresses.
 
 ### Buildspace (`buildspace/`)
 
