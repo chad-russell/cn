@@ -6,6 +6,8 @@ RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gloo"
 HB_PSQL_WRAPPER_DIR="$HOME/.local/dev-bin"
 HB_PSQL_WRAPPER="$HB_PSQL_WRAPPER_DIR/psql"
 
+export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"
+
 render_env() {
   "$STACK_DIR/systemd/render-runtime-env.sh" "$1" >/dev/null
 }

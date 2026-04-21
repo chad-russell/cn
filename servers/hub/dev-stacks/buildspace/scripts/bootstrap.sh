@@ -5,6 +5,8 @@ REPO_DIR="${HOME}/Code/bs/buildspace"
 COMPOSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-}"
 
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+
 if [[ ! -f "${REPO_DIR}/.env" ]]; then
     echo "ERROR: ${REPO_DIR}/.env not found"
     exit 1
