@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_DIR="${HOME}/Code/bs/buildspace"
 COMPOSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-}"
 
 if [[ ! -f "${REPO_DIR}/.env" ]]; then
     echo "ERROR: ${REPO_DIR}/.env not found"
@@ -12,9 +13,18 @@ fi
 echo "=== Starting buildspace postgres ==="
 podman compose -f "${COMPOSE_DIR}/compose.yaml" up -d postgres
 
-echo "=== Waiting for postgres to be healthy ==="
+if [[ -z "${POSTGRES_CONTAINER}" ]]; then
+    POSTGRES_CONTAINER="$(podman ps --format '{{.Names}}' | grep -E '^buildspace[_-]postgres[_-]1$' | head -n1 || true)"
+fi
+
+if [[ -z "${POSTGRES_CONTAINER}" ]]; then
+    echo "ERROR: Could not determine buildspace postgres container name" >&2
+    exit 1
+fi
+
+echo "=== Waiting for postgres to be healthy (${POSTGRES_CONTAINER}) ==="
 for i in $(seq 1 60); do
-    if podman exec buildspace-postgres-1 pg_isready -U postgres -d postgres &>/dev/null; then
+    if podman exec "${POSTGRES_CONTAINER}" pg_isready -U postgres -d postgres &>/dev/null; then
         echo "Postgres is ready"
         break
     fi
@@ -35,13 +45,13 @@ if [ -z "$DB_USER" ] || [ -z "$DB_NAME" ]; then
 fi
 
 echo "=== Creating database role and database ==="
-podman exec buildspace-postgres-1 psql -U postgres -v ON_ERROR_STOP=1 -v db_user="$DB_USER" -v db_pass="$DB_PASS" -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'db_user') THEN EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', :'db_user', :'db_pass'); END IF; END \$\$;"
+podman exec "${POSTGRES_CONTAINER}" psql -U postgres -v ON_ERROR_STOP=1 -v db_user="$DB_USER" -v db_pass="$DB_PASS" -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'db_user') THEN EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', :'db_user', :'db_pass'); END IF; END \$\$;"
 
-if [ "$(podman exec buildspace-postgres-1 psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'")" != "1" ]; then
-    podman exec buildspace-postgres-1 psql -U postgres -c "CREATE DATABASE \"$DB_NAME\" OWNER \"$DB_USER\""
+if [ "$(podman exec "${POSTGRES_CONTAINER}" psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'")" != "1" ]; then
+    podman exec "${POSTGRES_CONTAINER}" psql -U postgres -c "CREATE DATABASE \"$DB_NAME\" OWNER \"$DB_USER\""
 fi
 
-podman exec buildspace-postgres-1 psql -U postgres -d "$DB_NAME" -v ON_ERROR_STOP=1 -v db_user="$DB_USER" -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" -c "DO \$\$ BEGIN EXECUTE format('ALTER SCHEMA public OWNER TO %I', :'db_user'); EXECUTE format('GRANT ALL ON SCHEMA public TO %I', :'db_user'); EXECUTE format('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO %I', :'db_user'); EXECUTE format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO %I', :'db_user'); END \$\$;"
+podman exec "${POSTGRES_CONTAINER}" psql -U postgres -d "$DB_NAME" -v ON_ERROR_STOP=1 -v db_user="$DB_USER" -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" -c "DO \$\$ BEGIN EXECUTE format('ALTER SCHEMA public OWNER TO %I', :'db_user'); EXECUTE format('GRANT ALL ON SCHEMA public TO %I', :'db_user'); EXECUTE format('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO %I', :'db_user'); EXECUTE format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO %I', :'db_user'); END \$\$;"
 
 echo "=== Installing dependencies ==="
 cd "${REPO_DIR}"
