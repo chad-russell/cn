@@ -7,16 +7,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_DIR="$SCRIPT_DIR/host-envs"
 COMPOSE_FILE="$SCRIPT_DIR/compose.yaml"
 
-# Load an env file for shell sourcing (skips comments and blank lines)
+# Source an env file (must be valid shell syntax: KEY=VALUE, # comments, blank lines)
 load_env() {
-    local envfile="$1"
     set -a
-    while IFS= read -r line; do
-        # Skip comments and blank lines
-        [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "${line// /}" ]] && continue
-        eval "$line"
-    done < "$envfile"
+    source "$1"
     set +a
 }
 
