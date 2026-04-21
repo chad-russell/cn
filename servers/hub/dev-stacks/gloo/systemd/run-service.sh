@@ -20,7 +20,7 @@ set -a
 source "$RUNTIME_ENV"
 set +a
 
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"
 
 case "$SERVICE" in
   gpl)
@@ -42,7 +42,7 @@ case "$SERVICE" in
   storyhub-worker)
     if ! command -v bun >/dev/null 2>&1; then
       echo "bun is required for storyhub-worker but is not installed" >&2
-      exit 1
+      exit 78
     fi
     cd "$HOME/Gloo/360-hummingbird"
     exec pnpm --filter storyhub-worker dev
@@ -55,6 +55,6 @@ case "$SERVICE" in
     ;;
   *)
     echo "unknown service: $SERVICE" >&2
-    exit 1
+    exit 78
     ;;
 esac

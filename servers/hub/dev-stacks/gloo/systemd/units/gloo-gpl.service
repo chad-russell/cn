@@ -9,6 +9,7 @@ ExecStartPre=/var/home/crussell/Code/cn/servers/hub/dev-stacks/gloo/systemd/rend
 ExecStart=/var/home/crussell/Code/cn/servers/hub/dev-stacks/gloo/systemd/run-service.sh gpl
 Restart=on-failure
 RestartSec=2
+RestartPreventExitStatus=78
 WorkingDirectory=/var/home/crussell/Gloo/360-gpl
 
 [Install]
