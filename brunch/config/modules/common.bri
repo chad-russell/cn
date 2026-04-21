@@ -1,0 +1,22 @@
+import { mergeBrunch, BrunchConfig } from "brunch";
+import { brunchConfig as shellConfig } from "../shell.bri";
+import { brunchConfig as nvimConfig } from "./nvim.bri";
+import { brunchConfig as opencodeConfig } from "../opencode.bri";
+import { brunchConfig as piConfig } from "./pi.bri";
+
+// explain-html is a general-purpose agent skill, not hub-specific
+const explainHtmlSkill = Brioche.includeDirectory("../agents/skills/explain-html");
+
+const explainHtmlConfig: BrunchConfig = {
+  files: {
+    ".agents/skills/explain-html": explainHtmlSkill,
+  },
+};
+
+export const commonBrunchConfig: BrunchConfig = mergeBrunch(
+  shellConfig,
+  nvimConfig,
+  opencodeConfig,
+  piConfig,
+  explainHtmlConfig,
+);

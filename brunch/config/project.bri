@@ -1,4 +1,4 @@
-import brunchConfig, { hub, thinkpad } from "./brunch.bri";
+import { hub, thinkpad } from "./brunch.bri";
 
 export const project = {
   name: "brunch-default",
@@ -10,4 +10,7 @@ export const project = {
 
 export { thinkpad, hub };
 
-export default brunchConfig;
+// Default is intentionally empty — always specify a target:
+//   brunch apply ./config --target hub
+//   brunch apply ./config --target thinkpad
+export { default } from "./brunch.bri";

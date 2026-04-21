@@ -1,9 +1,12 @@
 import { makeBrunch } from "brunch";
-import { sharedBrunchConfig } from "./modules/shared.bri";
+import { thinkpadBrunchConfig } from "./modules/thinkpad.bri";
 import { hubBrunchConfig } from "./modules/hub.bri";
 
-export const thinkpad = makeBrunch(sharedBrunchConfig);
+export const thinkpad = makeBrunch(thinkpadBrunchConfig);
 
 export const hub = makeBrunch(hubBrunchConfig);
 
-export default thinkpad;
+// Default export is intentionally empty — always specify a target:
+//   brunch apply ./config --target hub
+//   brunch apply ./config --target thinkpad
+export default makeBrunch({});
