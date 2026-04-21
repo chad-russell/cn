@@ -1,3 +1,4 @@
 [Unit]
-Description=All Buildspace dev servers
-Wants=buildspace-marketplace.service buildspace-login.service buildspace-runtime.service buildspace-studio.service buildspace-docs.service buildspace-super-admin.service buildspace-jobs.service
+Description=All Buildspace services
+Wants=buildspace-stack.target
+After=buildspace-stack.target

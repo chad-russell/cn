@@ -1,16 +1,18 @@
 [Unit]
-Description=Buildspace Jobs dev server
-After=network-online.target
-Wants=network-online.target
-PartOf=buildspace.target
+Description=Buildspace jobs worker
+After=buildspace-infra.target buildspace-deps.service
+Wants=buildspace-infra.target buildspace-deps.service
+ConditionPathExists=%h/Code/bs/buildspace/package.json
+ConditionPathExists=%h/Code/bs/buildspace/.env
+PartOf=buildspace-stack.target
 
 [Service]
 Type=simple
-ExecStart=/var/home/crussell/Code/cn/servers/hub/dev-stacks/buildspace/systemd/run-service.sh jobs
+WorkingDirectory=%h/Code/bs/buildspace
+EnvironmentFile=%h/.config/systemd/user/buildspace-overrides.env
+ExecStart=%h/.bun/bin/bun --env-file=.env --filter @buildspace/jobs-app dev
 Restart=on-failure
 RestartSec=2
-RestartPreventExitStatus=78
-WorkingDirectory=/var/home/crussell/Code/bs/buildspace
 
 [Install]
-WantedBy=default.target
+WantedBy=buildspace-stack.target

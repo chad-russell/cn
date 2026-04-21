@@ -199,7 +199,7 @@ just -f servers/hub/dev-stacks/buildspace/Justfile bootstrap
 | `buildspace-docs.service` | 3004 | Documentation site |
 | `buildspace-super-admin.service` | 3006 | Admin panel |
 | `buildspace-jobs.service` | 3010 | Background jobs worker |
-| `buildspace.target` | — | All app services |
+| `buildspace-stack.target` | — | All app services |
 
 Install the checked-in units once on `hub`:
 
@@ -210,8 +210,8 @@ just -f servers/hub/dev-stacks/buildspace/Justfile install-units
 Typical usage:
 
 ```bash
-systemctl --user start buildspace.target
-systemctl --user stop buildspace.target
+systemctl --user start buildspace-stack.target
+systemctl --user stop buildspace-stack.target
 systemctl --user restart buildspace-runtime.service
 systemctl --user status buildspace-marketplace.service
 journalctl --user -u buildspace-runtime.service -f

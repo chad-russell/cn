@@ -9,18 +9,23 @@ The Buildspace dev stack runs on `hub` with Postgres managed via Podman Compose 
 
 ## Stack Composition
 
-| Component | Type | Unit | Port | Purpose |
-|-----------|------|------|------|---------|
-| postgres | Podman Compose | — | 5434 | Buildspace's own Postgres database |
-| marketplace | Host (bun) | `buildspace-marketplace.service` | 3000 | Marketplace frontend |
-| login | Host (bun) | `buildspace-login.service` | 3003 | Auth service |
-| runtime | Host (bun) | `buildspace-runtime.service` | 3002 | API server |
-| studio | Host (bun) | `buildspace-studio.service` | 3005 | Creator studio |
-| docs | Host (bun) | `buildspace-docs.service` | 3004 | Documentation site |
-| super-admin | Host (bun) | `buildspace-super-admin.service` | 3006 | Admin panel |
-| jobs | Host (bun) | `buildspace-jobs.service` | 3010 | Background jobs worker |
+| Component | Unit | Port | Purpose |
+|-----------|------|------|---------|
+| postgres | Compose | 5434 | Buildspace's own Postgres database |
+| marketplace | `buildspace-marketplace.service` | 3000 | Marketplace frontend |
+| login | `buildspace-login.service` | 3003 | Auth service |
+| runtime | `buildspace-runtime.service` | 3002 | API server |
+| studio | `buildspace-studio.service` | 3005 | Creator studio |
+| docs | `buildspace-docs.service` | 3004 | Documentation site |
+| super-admin | `buildspace-super-admin.service` | 3006 | Admin panel |
+| jobs | `buildspace-jobs.service` | 3010 | Background jobs worker |
 
-Target: `buildspace.target` starts all app services.
+### Grouping targets
+
+| Target | Starts |
+|---|---|
+| `buildspace-stack.target` | All app services + deps |
+| `buildspace.target` | Umbrella over `buildspace-stack.target` |
 
 ## Compose File Location
 
@@ -28,7 +33,7 @@ Target: `buildspace.target` starts all app services.
 ~/Code/cn/servers/hub/dev-stacks/buildspace/compose.yaml
 ```
 
-A `Justfile` provides the primary CLI for infra and setup. Run `just --list` in the buildspace directory.
+A `Justfile` provides the primary CLI for infra and setup.
 
 ## Infrastructure
 
@@ -37,6 +42,8 @@ just infra-up      # start postgres
 just infra-down    # stop postgres
 just infra-logs    # tail logs
 ```
+
+**Important**: App services don't auto-start compose postgres. Run `just infra-up` before starting app units.
 
 ## First-Time Bootstrap
 
@@ -50,54 +57,50 @@ This script:
 3. Enables `pgcrypto` extension
 4. Runs `bun install`, migrations, and seed
 
+Alternatively, use the systemd bootstrap unit:
+```bash
+systemctl --user start buildspace-bootstrap.service
+```
+
 ## App Services (systemd --user)
 
-Install the checked-in units once on `hub`:
+Install the checked-in units from the repo:
 
 ```bash
 just install-units
 ```
 
-### Individual services
+### Start / stop
 
 ```bash
-systemctl --user start buildspace-marketplace.service
+# All services
+systemctl --user start buildspace-stack.target
+systemctl --user stop buildspace-stack.target
+
+# Individual services
 systemctl --user start buildspace-runtime.service
+systemctl --user restart buildspace-login.service
 ```
 
-### All services at once
+### Logs and status
 
 ```bash
-systemctl --user start buildspace.target
-```
-
-### Stop / restart
-
-```bash
-systemctl --user stop buildspace.target
-systemctl --user restart buildspace-runtime.service
-```
-
-## Logs and status
-
-This is the preferred interface for humans and AI agents.
-
-```bash
-systemctl --user status buildspace.target
+systemctl --user status buildspace-stack.target
 journalctl --user -u buildspace-runtime.service -n 100
 journalctl --user -u buildspace-marketplace.service -f
 ```
 
-## Environment Files
+## Environment
 
-- `~/Code/bs/buildspace/.env` - Main env file (contains `DATABASE_URL`, secrets)
+- `~/Code/bs/buildspace/.env` — Main env file (contains `DATABASE_URL` and secrets)
+- `~/.config/systemd/user/buildspace-overrides.env` — Systemd `EnvironmentFile` with URL overrides for internal routing
 
 The `DATABASE_URL` in `.env` should point to the compose-managed postgres:
 ```
 DATABASE_URL=postgresql://<user>:<pass>@127.0.0.1:5434/<dbname>
 ```
 
-All app services source this file before starting.
+Services use `bun --env-file=.env` to load the project `.env` directly.
 
 ## Caddy Routes
 
@@ -115,7 +118,7 @@ Routes are defined in `~/Code/cn/servers/hub/caddy/Caddyfile`:
 
 ## Volumes
 
-- `buildspace_postgres_data` - database
+- `buildspace_postgres_data` — database
 
 To wipe and start fresh:
 ```bash
