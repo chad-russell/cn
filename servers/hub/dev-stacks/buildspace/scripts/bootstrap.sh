@@ -45,13 +45,20 @@ if [ -z "$DB_USER" ] || [ -z "$DB_NAME" ]; then
 fi
 
 echo "=== Creating database role and database ==="
-podman exec "${POSTGRES_CONTAINER}" psql -U postgres -v ON_ERROR_STOP=1 -v db_user="$DB_USER" -v db_pass="$DB_PASS" -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'db_user') THEN EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', :'db_user', :'db_pass'); END IF; END \$\$;"
+if [ "$(podman exec "${POSTGRES_CONTAINER}" psql -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$DB_USER'")" != "1" ]; then
+    podman exec "${POSTGRES_CONTAINER}" psql -U postgres -c "CREATE ROLE \"$DB_USER\" LOGIN PASSWORD '$DB_PASS'"
+fi
 
 if [ "$(podman exec "${POSTGRES_CONTAINER}" psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'")" != "1" ]; then
     podman exec "${POSTGRES_CONTAINER}" psql -U postgres -c "CREATE DATABASE \"$DB_NAME\" OWNER \"$DB_USER\""
 fi
 
-podman exec "${POSTGRES_CONTAINER}" psql -U postgres -d "$DB_NAME" -v ON_ERROR_STOP=1 -v db_user="$DB_USER" -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" -c "DO \$\$ BEGIN EXECUTE format('ALTER SCHEMA public OWNER TO %I', :'db_user'); EXECUTE format('GRANT ALL ON SCHEMA public TO %I', :'db_user'); EXECUTE format('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO %I', :'db_user'); EXECUTE format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO %I', :'db_user'); END \$\$;"
+podman exec "${POSTGRES_CONTAINER}" psql -U postgres -d "$DB_NAME" -v ON_ERROR_STOP=1 \
+  -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" \
+  -c "ALTER SCHEMA public OWNER TO \"$DB_USER\";" \
+  -c "GRANT ALL ON SCHEMA public TO \"$DB_USER\";" \
+  -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$DB_USER\";" \
+  -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"$DB_USER\";"
 
 echo "=== Installing dependencies ==="
 cd "${REPO_DIR}"
