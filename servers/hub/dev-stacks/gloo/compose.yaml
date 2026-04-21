@@ -32,7 +32,7 @@ services:
     ports:
       - "127.0.0.1:5050:80"
     env_file:
-      - ${HOME}/Gloo/gloo-control-plane/envs/pgadmin.env
+      - ./pgadmin.env
     environment:
       PGADMIN_LISTEN_PORT: 80
     volumes:

@@ -1,0 +1,16 @@
+[Unit]
+Description=Gloo Hummingbird API dev server
+After=network-online.target
+Wants=network-online.target
+PartOf=gloo-hummingbird.target
+
+[Service]
+Type=simple
+ExecStartPre=/var/home/crussell/Code/cn/servers/hub/dev-stacks/gloo/systemd/render-runtime-env.sh hb-api
+ExecStart=/var/home/crussell/Code/cn/servers/hub/dev-stacks/gloo/systemd/run-service.sh hb-api
+Restart=on-failure
+RestartSec=2
+WorkingDirectory=/var/home/crussell/Gloo/360-hummingbird
+
+[Install]
+WantedBy=default.target

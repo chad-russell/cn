@@ -21,7 +21,7 @@ fi
 if command -v bun &>/dev/null; then
     echo "  ✓ bun"
 else
-    echo "  ✗ bun (missing — needed for Buildspace)"
+    echo "  ✗ bun (missing — needed for Buildspace and Gloo storyhub-worker)"
 fi
 
 # Check Node 24 for Polymer
@@ -55,6 +55,12 @@ if [ -f "$HOME/.config/age/key.txt" ]; then
     echo "  ✓ age key"
 else
     echo "  ✗ age key (missing — needed to decrypt dev secrets)"
+fi
+
+if [ -x "$HOME/Code/cn/servers/hub/dev-stacks/gloo/install-user-units.sh" ]; then
+    echo "  ✓ gloo install-user-units.sh"
+else
+    echo "  ✗ gloo install-user-units.sh (missing)"
 fi
 
 echo ""

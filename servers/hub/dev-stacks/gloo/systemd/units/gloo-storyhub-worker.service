@@ -1,0 +1,16 @@
+[Unit]
+Description=Gloo Storyhub worker dev server
+After=network-online.target
+Wants=network-online.target
+PartOf=gloo-storyhub.target
+
+[Service]
+Type=simple
+ExecStartPre=/var/home/crussell/Code/cn/servers/hub/dev-stacks/gloo/systemd/render-runtime-env.sh storyhub-worker
+ExecStart=/var/home/crussell/Code/cn/servers/hub/dev-stacks/gloo/systemd/run-service.sh storyhub-worker
+Restart=on-failure
+RestartSec=2
+WorkingDirectory=/var/home/crussell/Gloo/360-hummingbird
+
+[Install]
+WantedBy=default.target
