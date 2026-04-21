@@ -46,9 +46,7 @@ for b in "${BUCKETS[@]}"; do
     -e AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" \
     "$AWS_CLI_IMAGE" \
     s3api create-bucket --bucket "$b" --endpoint-url "$ENDPOINT_URL" >/dev/null 2>&1; then
-    echo "  ✓ $b (created)"
-  else
-    echo "  ✓ $b (already exists)"
+    echo "  ✓ $b"
   fi
 done
 

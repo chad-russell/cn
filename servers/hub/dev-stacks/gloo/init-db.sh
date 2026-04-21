@@ -3,7 +3,7 @@
 # Safe to re-run — uses IF NOT EXISTS equivalent via CREATE DATABASE ... 2>/dev/null.
 set -euo pipefail
 
-CONTAINER="${POSTGRES_CONTAINER:-glo_postgres_1}"
+CONTAINER="${POSTGRES_CONTAINER:-gloo_postgres_1}"
 
 echo "Creating databases..."
 podman exec "$CONTAINER" psql -U postgres -c "CREATE DATABASE gpl_db;" 2>/dev/null && echo "  ✓ gpl_db" || echo "  ✓ gpl_db (already exists)"

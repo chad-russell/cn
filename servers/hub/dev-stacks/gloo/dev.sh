@@ -54,7 +54,7 @@ podman compose -f "$COMPOSE_FILE" up -d
 # Wait for postgres
 echo "Waiting for postgres..."
 for i in $(seq 1 30); do
-    if podman exec glo_postgres_1 pg_isready -U postgres &>/dev/null; then
+    if podman exec gloo_postgres_1 pg_isready -U postgres &>/dev/null; then
         echo "Postgres ready."
         break
     fi
@@ -89,8 +89,8 @@ start_service() {
             echo "Starting Storyhub on :3007..."
             load_secrets
             load_env "$ENV_DIR/storyhub.env"
-            cd ~/Gloo/360-hummingbird
-            exec pnpm --filter storyhub dev -- --port 3007
+            cd ~/Gloo/360-hummingbird/storyhub
+            exec npx next dev --port 3007
             ;;
         storyhub-worker)
             echo "Starting Storyhub Worker on :8001..."
