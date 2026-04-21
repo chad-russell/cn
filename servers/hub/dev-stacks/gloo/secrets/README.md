@@ -21,7 +21,7 @@ age1uhmefj4e0jhf4nza9efsdz9qa8fq08sf04c3jh268cf3uhmlypfqh60u2v
 
 ## How secrets are used
 
-At app service start, the Brioche runnable (defined in `brunch/config/modules/hub-dev-stacks.bri`):
+At app service start, the Brioche runnable (defined in `brunch/config/hosts/hub/dev-stacks.bri`):
 
 1. Lazily calls `render-runtime-env.sh <service>` if the runtime env file doesn't exist yet
 2. The script copies `host-envs/<service>.env`

@@ -173,9 +173,14 @@ _rootful_load_image $target_image=image_name $tag=default_tag:
         ID=$(just sudoif podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
         if [[ "$ID" != "$USER_IMG_ID" ]]; then
             # If the image ID is not found or different from user, copy the image from user podman to root podman
-            COPYTMP=$(mktemp -p "${PWD}" -d -t _build_podman_scp.XXXXXXXXXX)
+            COPYTMP=$(mktemp -d)
+            cleanup_copytmp() {
+                just sudoif rm -rf "${COPYTMP}"
+            }
+            trap cleanup_copytmp EXIT
             just sudoif TMPDIR=${COPYTMP} podman image scp ${UID}@localhost::"${target_image}:${tag}" root@localhost::"${target_image}:${tag}"
-            rm -rf "${COPYTMP}"
+            trap - EXIT
+            cleanup_copytmp
         fi
     else
         # If the image is not found, pull it from the repository
@@ -199,7 +204,11 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
     args+="--use-librepo=True "
     args+="--rootfs=btrfs"
 
-    BUILDTMP=$(mktemp -p "${PWD}" -d -t _build-bib.XXXXXXXXXX)
+    BUILDTMP=$(mktemp -d)
+    cleanup_buildtmp() {
+      sudo rm -rf "$BUILDTMP"
+    }
+    trap cleanup_buildtmp EXIT
 
     sudo podman run \
       --rm \
@@ -217,6 +226,8 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
 
     mkdir -p output
     sudo mv -f $BUILDTMP/* output/
+    trap - EXIT
+    cleanup_buildtmp
     sudo rmdir $BUILDTMP
     sudo chown -R $(id -u):$(id -g) output/
 

@@ -48,38 +48,60 @@ zfs create tank/backups/hub-restic
 
 Configure NFS export for `tank/backups` restricted to hub's IP (192.168.20.105).
 
-### 2. Run Install Script
+### 2. Install Restic
 
 ```bash
-cd /home/crussell/Code/cn/servers/hub/backup
-sudo ./install.sh
+sudo dnf install -y restic
 ```
 
-This installs:
-- Restic package
-- Password file at `/etc/restic/password`
-- Backup script at `/usr/local/bin/restic-backup.sh`
-- Systemd units for NFS mount and backup timer
+### 3. Provision Secrets And Credentials
 
-### 3. Enable NFS Automount
+Create the required local files on `hub`:
+
+- `/etc/restic/password`
+- `/etc/restic/aws/access_key`
+- `/etc/restic/aws/secret_key`
+
+Example password generation:
 
 ```bash
-sudo systemctl enable --now var-mnt-tank-backups.automount
+sudo mkdir -p /etc/restic /etc/restic/aws
+sudo sh -c 'umask 077 && openssl rand -hex 32 > /etc/restic/password'
 ```
 
-### 4. Initialize Repository
+### 4. Apply The Hub Brunch Target
+
+```bash
+cd /home/crussell/Code/cn/brunch
+brunch apply ./config --target hub
+```
+
+This installs the Brunch-managed backup assets:
+- `/etc/restic/excludes`
+- `/usr/local/bin/restic-backup.sh`
+- `/usr/local/bin/restic-s3-copy.sh`
+- systemd units for the NFS mount, automount, backup service, and timers
+
+Apply with elevation when prompted so Brunch can install the system files and enable the managed units. Brunch enables:
+
+- `var-mnt-tank-backups.automount`
+- `restic-backup.timer`
+
+`restic-s3-copy.timer` is installed but not enabled by default.
+
+### 5. Initialize Repository
 
 ```bash
 sudo restic init --repo /var/mnt/tank/backups/hub-restic --password-file /etc/restic/password
 ```
 
-### 5. Enable Timer
+### 6. Optional: Enable Weekly S3 Copy
 
 ```bash
-sudo systemctl enable --now restic-backup.timer
+sudo systemctl enable --now restic-s3-copy.timer
 ```
 
-### 6. Subscribe to Notifications
+### 7. Subscribe to Notifications
 
 ```bash
 # Subscribe to backup notifications
@@ -133,11 +155,10 @@ sudo restic stats --repo /var/mnt/tank/backups/hub-restic --password-file /etc/r
 
 | File | Purpose |
 |------|---------|
-| `restic-backup.sh` | Main backup script |
-| `restic-backup.{service,timer}` | Systemd units for daily 2AM backups |
-| `var-mnt-tank-backups.{mount,automount}` | NFS mount to NAS |
-| `excludes` | Patterns to skip |
-| `install.sh` | Automated deployment |
+| `brunch/config/hosts/hub/backup.bri` | Brunch-managed systemd units and installed files |
+| `brunch/config/hosts/hub/backup/restic-backup.sh` | Main backup script |
+| `brunch/config/hosts/hub/backup/restic-s3-copy.sh` | Weekly S3 copy script |
+| `brunch/config/hosts/hub/backup/excludes` | Patterns to skip |
 
 ## Ntfy Topic
 

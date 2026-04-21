@@ -13,7 +13,7 @@ A tiny web app to track and randomly pick restaurants for date night. Dark speak
 ## Quick Start (Local)
 
 ```bash
-cd datenight
+cd servers/hub/apps/datenight
 pip install -r requirements.txt
 DATA_FILE=restaurants.json python app.py
 # Open http://localhost:7890
@@ -40,17 +40,20 @@ podman run -d --name datenight \
 ## Quadlet (systemd)
 
 ```bash
-# Copy quadlet
-cp datenight.container ~/.config/containers/systemd/
+# Copy the hub-managed quadlet
+cp servers/hub/quadlets/containers/datenight.container ~/.config/containers/systemd/
 
 # Ensure data dir exists
-mkdir -p ~/srv/datenight/data
-cp restaurants.json ~/srv/datenight/data/
+sudo mkdir -p /srv/datenight/data
+sudo cp servers/hub/apps/datenight/restaurants.json /srv/datenight/data/
 
 # Reload and start
 systemctl --user daemon-reload
 systemctl --user start datenight
 ```
+
+The application source lives in `servers/hub/apps/datenight/`.
+The host deployment quadlet lives in `servers/hub/quadlets/containers/datenight.container`.
 
 ## Adding a Caddy Route
 

@@ -15,11 +15,12 @@ Use this skill when working on the local GPL stack in this repository.
 - Control plane repo: `~/Gloo/gloo-control-plane`
 - Brunch target: `hub`
 
-Brunch config lives in:
+Relevant Brunch config lives in:
 
 - `~/Code/cn/brunch/config/brunch.bri`
-- `~/Code/cn/brunch/config/modules/gloo.bri`
-- `~/Code/cn/brunch/config/modules/gloo/*.container`
+- `~/Code/cn/brunch/config/hosts/hub/index.bri`
+- `~/Code/cn/brunch/config/hosts/hub/dev-stacks.bri`
+- `~/Code/cn/brunch/config/hosts/hub/gloo/render-runtime-env.sh`
 
 ## Main Units
 
@@ -59,9 +60,10 @@ Internal hosts are routed through Caddy on `hub`:
 - `https://rustfs-console.internal.crussell.io`
 - `https://pgadmin.internal.crussell.io`
 
-Route config is managed by Brunch at:
+Hub-specific Brunch target composition lives at:
 
-- `~/Code/cn/brunch/config/modules/gloo/gloo.caddy`
+- `~/Code/cn/brunch/config/hosts/hub/index.bri`
+- `~/Code/cn/brunch/config/hosts/hub/dev-stacks.bri`
 
 Important: after `brunch apply`, route changes usually require a full Caddy container restart, not just a reload, because the container bind-mounts the current Brunch generation.
 

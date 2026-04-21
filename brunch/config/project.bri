@@ -1,4 +1,4 @@
-import { hub, thinkpad } from "./brunch.bri";
+import { ai, hub, thinkpad } from "./brunch.bri";
 
 export const project = {
   name: "brunch-default",
@@ -8,9 +8,9 @@ export const project = {
   },
 };
 
-export { thinkpad, hub };
+export { ai, thinkpad, hub };
 
-// Default is intentionally empty — always specify a target:
+// No default export; the CLI requires an explicit target:
+//   brunch apply ./config --target ai
 //   brunch apply ./config --target hub
 //   brunch apply ./config --target thinkpad
-export { default } from "./brunch.bri";

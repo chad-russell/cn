@@ -23,8 +23,8 @@ custom/ujust/
 └── custom-system.just # System configuration commands
 ```
 
-**Example Files in this directory:**
-- [`custom-apps.just`](custom-apps.just) - Application installation commands (Brewfiles, Flatpaks, JetBrains Toolbox)
+**Current files in this directory:**
+- [`custom-apps.just`](custom-apps.just) - Application installation commands (Brewfiles, JetBrains Toolbox)
 - [`custom-system.just`](custom-system.just) - System configuration commands (benchmarks, dev groups, maintenance)
 
 ## Example Commands
@@ -149,7 +149,7 @@ clean-containers:
 
 For runtime package installation, use:
 - **Brewfiles** - Create shortcuts to Brewfiles in [`custom/brew/`](../brew/)
-- **Flatpak** - Install Flatpaks for GUI applications
+- **Brunch** - Manage GUI apps and Flatpaks declaratively in `../../../brunch/config/flatpaks/brunch.bri`
 - **Containers** - Use toolbox/distrobox for development environments
 
 Example Brewfile shortcut (from [`custom-apps.just`](custom-apps.just)):
@@ -183,7 +183,7 @@ just --justfile custom/ujust/custom-apps.just install-something
 
 ## Customization
 
-**Start by editing the example files:**
+**Start by editing the current files:**
 - **[`custom-apps.just`](custom-apps.just)** - Add your application installation commands
 - **[`custom-system.just`](custom-system.just)** - Add your system configuration commands
 
@@ -212,15 +212,14 @@ setup-dev:
     echo "Setting up dev environment..."
 ```
 
-## Examples from Bluefin
+## Included Commands
 
-The included files provide starting examples:
+The included files provide current commands for this image:
 - **[`custom-apps.just`](custom-apps.just)** - Application installation commands
 - **[`custom-system.just`](custom-system.just)** - System configuration commands
 
-These files show how to:
+These files cover:
 - Create shortcuts to Brewfiles in [`custom/brew/`](../brew/)
-- Install Flatpaks interactively
 - Configure system settings
 - Run maintenance tasks
 

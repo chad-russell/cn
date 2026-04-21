@@ -44,13 +44,24 @@ export default function() {
 ### 3. Apply
 
 ```bash
-brunch apply ./config
+brunch apply ./config --target thinkpad
 brunch apply ./config --target hub
+brunch apply ./config --target ai
 ```
 
 This builds your project and creates a new generation, symlinking everything into your home directory.
 
-If your `brunch.bri` exports named variants, `--target` lets you apply one of them without creating a second project directory.
+`brunch apply` requires `--target`. This keeps multi-host configs explicit and avoids accidentally applying a default export.
+
+### Repo Config Layout
+
+This repository's Brunch config layout lives in [`config/README.md`](config/README.md).
+
+That guide documents:
+
+- `features/`, `profiles/`, and `hosts/`
+- named targets like `ai`, `hub`, and `thinkpad`
+- where host-specific managed files and units should live
 
 ### 4. List and manage generations
 
@@ -217,8 +228,8 @@ This updates the `current` symlink to point to the specified generation, allowin
 
 ### Commands
 
-#### `brunch apply <PROJECT_PATH>`
-Build and apply a Brioche project as a new generation.
+#### `brunch apply <PROJECT_PATH> --target <TARGET>`
+Build and apply a Brioche project target as a new generation.
 
 #### `brunch list-generations`
 List all generations with the current one marked.

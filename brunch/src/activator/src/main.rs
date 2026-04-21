@@ -11,7 +11,7 @@ fn main() -> Result<()> {
         Commands::Apply {
             project_path,
             target,
-        } => commands::apply::run(&project_path, target.as_deref()),
+        } => commands::apply::run(&project_path, &target),
         Commands::ListGenerations => commands::list_generations::run(),
         Commands::PruneGenerations {
             specs,
@@ -50,9 +50,10 @@ enum Commands {
         #[arg(
             long,
             value_name = "TARGET",
-            help = "Optional named build target, for example 'hub'"
+            required = true,
+            help = "Named build target to apply, for example 'hub'"
         )]
-        target: Option<String>,
+        target: String,
     },
     #[command(about = "List all generations and mark the current one")]
     ListGenerations,

@@ -126,7 +126,7 @@ At service start, `render-runtime-env.sh` writes a merged runtime file to:
 /run/user/$UID/gloo/<service>.env
 ```
 
-That file is then sourced by each service's Brioche runnable (defined in `brunch/config/modules/hub-dev-stacks.bri`) before launching the app.
+That file is then sourced by each service's Brioche runnable (defined in `brunch/config/hosts/hub/dev-stacks.bri`) before launching the app.
 
 ## Important notes
 

@@ -5,13 +5,10 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn run(project_path: &Path, target: Option<&str>) -> Result<()> {
+pub fn run(project_path: &Path, target: &str) -> Result<()> {
     let project_path =
         std::fs::canonicalize(project_path).context("Failed to resolve project path")?;
-    let build_target = match target {
-        Some(target) => format!("{}^{}", project_path.display(), target),
-        None => project_path.display().to_string(),
-    };
+    let build_target = format!("{}^{}", project_path.display(), target);
 
     let state = state_dir()?;
     let generations = state.join("generations");

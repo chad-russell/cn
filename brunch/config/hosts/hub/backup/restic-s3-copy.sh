@@ -47,7 +47,7 @@ ensure_mount() {
             exit 1
         fi
     fi
-    
+
     if [[ ! -d "$LOCAL_REPO" ]]; then
         log "ERROR: Local repository not found at $LOCAL_REPO"
         send_notification "urgent" "S3 Copy Failed" "Local repository not found"
@@ -57,34 +57,34 @@ ensure_mount() {
 
 run_copy() {
     log "Starting restic copy to S3..."
-    
+
     restic copy \
         --from-repo "$LOCAL_REPO" \
         --repo "$S3_REPO" \
         --password-file "$PASSWORD_FILE" \
         --from-password-file "$PASSWORD_FILE"
-    
+
     log "Copy complete"
 }
 
 main() {
     log "=== Starting S3 copy run ==="
-    
+
     if [[ ! -f "$PASSWORD_FILE" ]]; then
         log "ERROR: Password file not found at $PASSWORD_FILE"
         send_notification "urgent" "S3 Copy Failed" "Password file missing"
         exit 1
     fi
-    
+
     ensure_mount
     load_aws_creds
     run_copy
-    
+
     local s3_stats
     s3_stats=$(restic stats --repo "$S3_REPO" --password-file "$PASSWORD_FILE" 2>/dev/null | head -5)
-    
+
     send_notification "default" "S3 Copy Complete" "Weekly S3 backup copy finished\n\n$s3_stats"
-    
+
     log "=== S3 copy run finished ==="
 }
 

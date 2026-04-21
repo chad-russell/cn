@@ -21,7 +21,7 @@ Use this file for global context. For implementation details, open the subsystem
 | AI host (`bees`) | `servers/ai/README.md` | llama.cpp + llama-swap operations |
 | NAS | `servers/nas/README.md` | TrueNAS NFS exports |
 | Backup system | `servers/hub/backup/README.md` | Restic backups to NAS with ntfy notifications |
-| Desktop config tooling | `brunch/README.md` | Brunch/Brioche desktop generation management |
+| Desktop config tooling | `brunch/README.md`, `brunch/config/README.md` | Brunch/Brioche tooling plus this repo's config layout |
 | Custom Fedora Atomic image | `crussell-fin/AGENTS.md` | bootc image template for building personalized workstation images (based on finpilot/Bluefin) |
 | Dev stacks (Gloo, Buildspace) | `servers/hub/dev-stacks/README.md` | Podman Compose dev environments |
 

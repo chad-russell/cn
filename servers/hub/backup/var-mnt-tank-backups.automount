@@ -1,9 +1,0 @@
-[Unit]
-Description=Automount for NAS backups
-
-[Automount]
-Where=/var/mnt/tank/backups
-TimeoutIdleSec=300
-
-[Install]
-WantedBy=multi-user.target

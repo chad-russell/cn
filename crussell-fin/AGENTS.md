@@ -41,8 +41,8 @@ This image is built and deployed **locally only** - no CI/CD infrastructure.
 │   └── *.sh.example      # Example scripts (rename to use)
 ├── custom/                # Runtime customizations
 │   ├── brew/             # Homebrew Brewfiles (CLI tools)
-│   ├── flatpaks/         # Flatpak preinstall (GUI apps)
 │   └── ujust/            # User commands
+├── ../brunch/config/      # Host/home config, Flatpaks, systemd units
 ├── iso/                   # ISO/disk image configs
 │   ├── disk.toml         # VM image config (QCOW2/RAW)
 │   └── iso.toml          # ISO installer config
@@ -54,7 +54,8 @@ This image is built and deployed **locally only** - no CI/CD infrastructure.
 ### Build-time vs Runtime
 
 - **Build-time** (`build/`): Baked into container. Use `dnf5 install`. Services, configs, system packages.
-- **Runtime** (`custom/`): User installs after deployment. Brewfiles, Flatpaks. CLI tools, GUI apps.
+- **Runtime** (`custom/`): User installs after deployment. Brewfiles and user commands.
+- **Host/home config** (`../brunch/config/`): Flatpaks, desktop settings, and managed user services.
 
 ### Bluefin Convention Compliance
 
@@ -89,14 +90,15 @@ Use for: CLI tools, dev environments. Users install via `ujust` commands.
 
 ### Flatpak Applications (Runtime)
 
-**Location**: `custom/flatpaks/*.preinstall`
+**Location**: `../brunch/config/flatpaks/brunch.bri`
 
-```ini
-[Flatpak Preinstall org.mozilla.firefox]
-Branch=stable
+```typescript
+flatpaks: [
+  "org.mozilla.firefox",
+]
 ```
 
-Use for: GUI apps. Installed post-first-boot.
+Use for: GUI apps. Applied and reconciled with `brunch apply`.
 
 ## Quick Reference
 
@@ -104,7 +106,7 @@ Use for: GUI apps. Installed post-first-boot.
 |---------|--------|----------|
 | Add system package | `dnf5 install -y pkg` | `build/10-build.sh` |
 | Add CLI tool | `brew "pkg"` | `custom/brew/default.Brewfile` |
-| Add GUI app | `[Flatpak Preinstall org.app.id]` | `custom/flatpaks/default.preinstall` |
+| Add GUI app | Add Flatpak ID | `../brunch/config/flatpaks/brunch.bri` |
 | Add user command | Create shortcut | `custom/ujust/*.just` |
 | Test locally | `just build && just build-qcow2 && just run-vm-qcow2` | |
 | Deploy | `just switch && sudo systemctl reboot` | |

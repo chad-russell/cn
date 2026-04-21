@@ -13,12 +13,11 @@ Use this skill when working on the local Buildspace stack in this repository.
 - Buildspace repo: `~/Code/bs/buildspace`
 - Brunch target: `hub`
 
-Brunch config lives in:
+Relevant Brunch config lives in:
 
 - `~/Code/cn/brunch/config/brunch.bri`
-- `~/Code/cn/brunch/config/modules/buildspace.bri`
-- `~/Code/cn/brunch/config/modules/buildspace/buildspace.caddy`
-- `~/Code/cn/brunch/config/modules/buildspace/buildspace.env.example`
+- `~/Code/cn/brunch/config/hosts/hub/index.bri`
+- `~/Code/cn/brunch/config/hosts/hub/dev-stacks.bri`
 
 ## Main Units
 
@@ -73,9 +72,9 @@ Buildspace internal hosts are:
 - `https://bs-admin.internal.crussell.io`
 - `https://bs-jobs.internal.crussell.io`
 
-The Brunch-managed route file is:
+The Buildspace units are defined in:
 
-- `~/Code/cn/brunch/config/modules/buildspace/buildspace.caddy`
+- `~/Code/cn/brunch/config/hosts/hub/dev-stacks.bri`
 
 After route changes:
 

@@ -121,8 +121,6 @@ fi
 
 sed -i "s|SHELL=/bin/bash|SHELL=$ZSH_PATH|g" /etc/default/useradd
 
-cp /ctx/build/zsh/skel-zshrc /etc/skel/.zshrc
-
 echo "::endgroup::"
 
 echo "::group:: Install Noctalia Shell"

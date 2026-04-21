@@ -2,7 +2,7 @@ import * as std from "std";
 import { BrunchConfig } from "brunch";
 
 // Dev-stack systemd units for the hub profile.
-// Replaces the old install-user-units.sh scripts — brunch now owns these units
+// Replaces the old install-user-units.sh scripts; brunch now owns these units
 // and will create/update/remove them on `brunch apply --target hub`.
 //
 // Gloo service runnables inline the full startup logic (lazy env rendering
@@ -11,10 +11,9 @@ import { BrunchConfig } from "brunch";
 
 const glooEnvScript = Brioche.includeFile("./gloo/render-runtime-env.sh");
 
-// ── Gloo service runnables ──────────────────────────────────────────
-// Each runnable lazily renders the runtime env (if not already present)
-// then exec's the service-specific dev command. WorkingDirectory is set
-// in the systemd unit, so no `cd` is needed inside the runnable.
+// Gloo service runnables lazily render the runtime env (if not already
+// present), then exec the service-specific dev command. WorkingDirectory is
+// set in the systemd unit, so no `cd` is needed inside the runnable.
 //
 // All services use linuxbrew Node 24 for consistency.
 
@@ -45,9 +44,8 @@ function glooRunnable(service: string, execCmd: string) {
   );
 }
 
-// ── Gloo infra runnables ────────────────────────────────────────────
-// The infra lifecycle is managed as oneshot systemd services that bring
-// up compose, create databases, and create S3 buckets. Idempotent.
+// The infra lifecycle is managed as oneshot systemd services that bring up
+// compose, create databases, and create S3 buckets. Everything is idempotent.
 
 const glooComposeFile = "/var/home/crussell/Code/cn/servers/hub/dev-stacks/gloo/compose.yaml";
 
@@ -114,8 +112,6 @@ const glooInitBuckets = std.bashRunnable`
   done
 `;
 
-// ── Buildspace app service helper ───────────────────────────────────
-
 const bsConditions = ["%h/Code/bs/buildspace/package.json", "%h/Code/bs/buildspace/.env"];
 const bsAppAfter = ["buildspace-infra.target", "buildspace-deps.service"];
 
@@ -145,7 +141,6 @@ function buildspaceAppService(
   };
 }
 
-// ── Buildspace bootstrap runnable ───────────────────────────────────
 // Full bootstrap: start postgres, create role/DB, install deps, migrate + seed.
 
 const bsComposeFile = "/var/home/crussell/Code/cn/servers/hub/dev-stacks/buildspace/compose.yaml";
@@ -183,9 +178,9 @@ const bsBootstrapRun = std.bashRunnable`
   if not database_url: raise SystemExit('DATABASE_URL is required');
   parsed = urlparse(database_url);
   shell_quote = lambda value: \"'\" + value.replace(\"'\", \"'\\''\") + \"'\";
-  print(f'DB_USER={shell_quote(parsed.username or \"\")}');
-  print(f'DB_PASS={shell_quote(parsed.password or \"\")}');
-  print(f'DB_NAME={shell_quote(parsed.path.lstrip(\"/\"))}')")"
+  print(f'DB_USER={shell_quote(parsed.username or "")}');
+  print(f'DB_PASS={shell_quote(parsed.password or "")}');
+  print(f'DB_NAME={shell_quote(parsed.path.lstrip("/"))}')")"
 
   if [ -z "$DB_USER" ] || [ -z "$DB_NAME" ]; then
     echo "Failed to resolve database credentials from .env" >&2
@@ -194,19 +189,19 @@ const bsBootstrapRun = std.bashRunnable`
 
   # Create role and database
   if [ "$(podman exec "$POSTGRES_CONTAINER" psql -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$DB_USER'")" != "1" ]; then
-    podman exec "$POSTGRES_CONTAINER" psql -U postgres -c "CREATE ROLE \\"$DB_USER\\" LOGIN PASSWORD '$DB_PASS'"
+    podman exec "$POSTGRES_CONTAINER" psql -U postgres -c "CREATE ROLE \"$DB_USER\" LOGIN PASSWORD '$DB_PASS'"
   fi
 
   if [ "$(podman exec "$POSTGRES_CONTAINER" psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'")" != "1" ]; then
-    podman exec "$POSTGRES_CONTAINER" psql -U postgres -c "CREATE DATABASE \\"$DB_NAME\\" OWNER \\"$DB_USER\\""
+    podman exec "$POSTGRES_CONTAINER" psql -U postgres -c "CREATE DATABASE \"$DB_NAME\" OWNER \"$DB_USER\""
   fi
 
-  podman exec "$POSTGRES_CONTAINER" psql -U postgres -d "$DB_NAME" -v ON_ERROR_STOP=1 \\
-    -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" \\
-    -c "ALTER SCHEMA public OWNER TO \\"$DB_USER\\";" \\
-    -c "GRANT ALL ON SCHEMA public TO \\"$DB_USER\\";" \\
-    -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \\"$DB_USER\\";" \\
-    -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \\"$DB_USER\\";"
+  podman exec "$POSTGRES_CONTAINER" psql -U postgres -d "$DB_NAME" -v ON_ERROR_STOP=1 \
+    -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" \
+    -c "ALTER SCHEMA public OWNER TO \"$DB_USER\";" \
+    -c "GRANT ALL ON SCHEMA public TO \"$DB_USER\";" \
+    -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$DB_USER\";" \
+    -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"$DB_USER\";"
 
   # Install deps + migrate + seed
   cd "$REPO_DIR"
@@ -217,12 +212,9 @@ const bsBootstrapRun = std.bashRunnable`
   bun --env-file=../../.env run db:seed
 `;
 
-// ── Exported config ─────────────────────────────────────────────────
-
 export const brunchConfig: BrunchConfig = {
   systemdUnits: {
     user: {
-      // ── Gloo targets ──
       targets: {
         "gloo-infra": {
           description: "Gloo shared infra (compose + init)",
@@ -288,7 +280,6 @@ export const brunchConfig: BrunchConfig = {
       },
 
       services: {
-        // ── Gloo infra services ──
         "gloo-infra-up": {
           description: "Start Gloo compose infra and wait for postgres",
           serviceConfig: {
@@ -317,7 +308,6 @@ export const brunchConfig: BrunchConfig = {
           },
         },
 
-        // ── Gloo app services (runnables) ──
         "gloo-gpl": {
           description: "Gloo GPL dev server",
           after: ["network-online.target", "gloo-infra.target"],
@@ -395,7 +385,6 @@ export const brunchConfig: BrunchConfig = {
           },
         },
 
-        // ── Buildspace services ──
         "buildspace-deps": {
           description: "Bootstrap Buildspace dependencies",
           after: ["buildspace-infra.target"],

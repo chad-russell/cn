@@ -8,9 +8,9 @@ const cursorAppImage = std.runBash`
   `
   .env({
     RAW_APPIMAGE: std.download({
-      url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/2.6",
+      url: "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/3.1",
       hash: std.sha256Hash(
-        "7aa3994212164617c1381e28c1c2c3b757c8f5802ee2e458970e87107bad4cc9",
+        "f8f93932f4128e1a0a25db4dfa9597fef7325a71e66d7bc9e70143be0b47a36d",
       ),
     }),
   })

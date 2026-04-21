@@ -105,9 +105,14 @@ _rootful_load_image $target_image=image_name $tag=default_tag:
     if [[ $return_code -eq 0 ]]; then
         ID=$(sudo podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
         if [[ "$ID" != "$USER_IMG_ID" ]]; then
-            COPYTMP=$(mktemp -p "${PWD}" -d -t _build_podman_scp.XXXXXXXXXX)
+            COPYTMP=$(mktemp -d)
+            cleanup_copytmp() {
+                sudo rm -rf "${COPYTMP}"
+            }
+            trap cleanup_copytmp EXIT
             sudo TMPDIR=${COPYTMP} podman image scp ${UID}@localhost::"${target_image}:${tag}" root@localhost::"${target_image}:${tag}"
-            rm -rf "${COPYTMP}"
+            trap - EXIT
+            cleanup_copytmp
         fi
     else
         sudo podman pull "${target_image}:${tag}"
@@ -122,7 +127,11 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
     args+="--use-librepo=True "
     args+="--rootfs=btrfs"
 
-    BUILDTMP=$(mktemp -p "${PWD}" -d -t _build-bib.XXXXXXXXXX)
+    BUILDTMP=$(mktemp -d)
+    cleanup_buildtmp() {
+      sudo rm -rf "$BUILDTMP"
+    }
+    trap cleanup_buildtmp EXIT
 
     sudo podman run \
       --rm \
@@ -140,7 +149,8 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
 
     mkdir -p output
     sudo mv -f $BUILDTMP/* output/
-    sudo rmdir $BUILDTMP
+    trap - EXIT
+    cleanup_buildtmp
     sudo chown -R $(id -u):$(id -g) output/
 
 # Rebuild helper - builds image then runs BIB

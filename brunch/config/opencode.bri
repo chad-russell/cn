@@ -23,10 +23,11 @@ export const brunchConfig: BrunchConfig = {
       services: {
         "opencode-web": {
           description: "OpenCode Web Server",
+          after: ["network.target"],
           serviceConfig: {
             execStart: opencodeWebRunnable,
             type: "simple",
-            restart: "on-failure",
+            restart: "always",
             restartSec: 5,
             workingDirectory: "%h",
           },

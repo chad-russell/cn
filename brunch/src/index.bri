@@ -2,12 +2,30 @@ import * as std from "std";
 import { makeDesktopApps, type BrunchDesktopApp } from "./desktop_apps.bri";
 import { makeFiles } from "./files.bri";
 import { makeCliTools, type BrunchCliTool } from "./cli_tools.bri";
-import { makeSystemdUnits, type BrunchSystemdConfig, type BrunchServiceConfig, type BrunchTimerConfig } from "./systemd.bri";
+import {
+  makeSystemdUnits,
+  type BrunchAutomountConfig,
+  type BrunchMountConfig,
+  type BrunchServiceConfig,
+  type BrunchSystemdConfig,
+  type BrunchTimerConfig,
+} from "./systemd.bri";
 
 export { makeDesktopApps, makeWebAppExecutable, type BrunchDesktopApp } from "./desktop_apps.bri";
 export { makeFiles } from "./files.bri";
 export { makeCliTools, type BrunchCliTool } from "./cli_tools.bri";
-export { makeSystemdUnits, makeServiceUnit, makeTimerUnit, type BrunchSystemdConfig, type BrunchServiceConfig, type BrunchTimerConfig } from "./systemd.bri";
+export {
+  makeAutomountUnit,
+  makeMountUnit,
+  makeSystemdUnits,
+  makeServiceUnit,
+  makeTimerUnit,
+  type BrunchAutomountConfig,
+  type BrunchMountConfig,
+  type BrunchSystemdConfig,
+  type BrunchServiceConfig,
+  type BrunchTimerConfig,
+} from "./systemd.bri";
 
 export interface BrunchConfig {
   /**
@@ -136,6 +154,24 @@ function mergeSystemdConfigs(
     );
   }
 
+  const userMountsA = Object.keys(a.user?.mounts ?? {});
+  const userMountsB = Object.keys(b.user?.mounts ?? {});
+  const userMountConflicts = userMountsA.filter((k) => userMountsB.includes(k));
+  if (userMountConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd user mounts detected: ${userMountConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
+  const userAutomountsA = Object.keys(a.user?.automounts ?? {});
+  const userAutomountsB = Object.keys(b.user?.automounts ?? {});
+  const userAutomountConflicts = userAutomountsA.filter((k) => userAutomountsB.includes(k));
+  if (userAutomountConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd user automounts detected: ${userAutomountConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
   const systemServicesA = Object.keys(a.system?.services ?? {});
   const systemServicesB = Object.keys(b.system?.services ?? {});
   const systemServiceConflicts = systemServicesA.filter((k) => systemServicesB.includes(k));
@@ -163,18 +199,42 @@ function mergeSystemdConfigs(
     );
   }
 
+  const systemMountsA = Object.keys(a.system?.mounts ?? {});
+  const systemMountsB = Object.keys(b.system?.mounts ?? {});
+  const systemMountConflicts = systemMountsA.filter((k) => systemMountsB.includes(k));
+  if (systemMountConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd system mounts detected: ${systemMountConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
+  const systemAutomountsA = Object.keys(a.system?.automounts ?? {});
+  const systemAutomountsB = Object.keys(b.system?.automounts ?? {});
+  const systemAutomountConflicts = systemAutomountsA.filter((k) => systemAutomountsB.includes(k));
+  if (systemAutomountConflicts.length > 0) {
+    throw new Error(
+      `mergeBrunch: duplicate systemd system automounts detected: ${systemAutomountConflicts.join(", ")} (in config ${configIndex})`
+    );
+  }
+
   if (
     userServicesA.length > 0 ||
     userServicesB.length > 0 ||
     userTimersA.length > 0 ||
     userTimersB.length > 0 ||
     userTargetsA.length > 0 ||
-    userTargetsB.length > 0
+    userTargetsB.length > 0 ||
+    userMountsA.length > 0 ||
+    userMountsB.length > 0 ||
+    userAutomountsA.length > 0 ||
+    userAutomountsB.length > 0
   ) {
     merged.user = {
       services: { ...a.user?.services, ...b.user?.services },
       timers: { ...a.user?.timers, ...b.user?.timers },
       targets: { ...a.user?.targets, ...b.user?.targets },
+      mounts: { ...a.user?.mounts, ...b.user?.mounts },
+      automounts: { ...a.user?.automounts, ...b.user?.automounts },
     };
   }
 
@@ -184,12 +244,18 @@ function mergeSystemdConfigs(
     systemTimersA.length > 0 ||
     systemTimersB.length > 0 ||
     systemTargetsA.length > 0 ||
-    systemTargetsB.length > 0
+    systemTargetsB.length > 0 ||
+    systemMountsA.length > 0 ||
+    systemMountsB.length > 0 ||
+    systemAutomountsA.length > 0 ||
+    systemAutomountsB.length > 0
   ) {
     merged.system = {
       services: { ...a.system?.services, ...b.system?.services },
       timers: { ...a.system?.timers, ...b.system?.timers },
       targets: { ...a.system?.targets, ...b.system?.targets },
+      mounts: { ...a.system?.mounts, ...b.system?.mounts },
+      automounts: { ...a.system?.automounts, ...b.system?.automounts },
     };
   }
 

@@ -30,8 +30,8 @@ AMD Strix Halo APU machine running llama.cpp for local LLM inference.
 │  └─────────────────────────────────────────────────────┘    │
 │                                                             │
 │  Models: ~/.cache/llama.cpp/                                │
-│  Config: ~/Code/config.yaml                                 │
-│  Start script: ~/Code/start-llama-swap.sh                   │
+│  Config: ~/Code/config.yaml (Brunch-managed)                │
+│  Service: systemd --user llama-swap.service                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -40,8 +40,9 @@ AMD Strix Halo APU machine running llama.cpp for local LLM inference.
 [llama-swap](https://github.com/mostlygeek/llama-swap) is a proxy server that dynamically loads/unloads models to conserve VRAM. It accepts OpenAI-compatible API requests on port 8000.
 
 - **Listen:** 0.0.0.0:8000
-- **Config:** `~/Code/config.yaml`
-- **Start:** `cd ~/Code && ./start-llama-swap.sh` (inside toolbox)
+- **Config:** `~/Code/config.yaml` (symlinked by `brunch apply ./config --target ai`)
+- **Service:** `systemctl --user start llama-swap.service`
+- **Definition:** `brunch/config/hosts/ai/index.bri`
 
 ### Config Format
 
@@ -108,7 +109,7 @@ toolbox run --container llama-vulkan-radv <command>
 
 ## Current Models (as of 2026-02-28)
 
-See `@config.yaml`
+See `brunch/config/hosts/ai/index.bri`.
 
 ## Useful Commands
 
@@ -116,14 +117,18 @@ See `@config.yaml`
 # Check GPU detection
 toolbox run --container llama-vulkan-radv llama-server --help 2>&1 | grep -i vulkan
 
-# Start llama-swap (in toolbox)
-cd ~/Code && ./start-llama-swap.sh
+# Apply/update the AI host target
+cd ~/Code/cn/brunch
+brunch apply ./config --target ai
+
+# Start llama-swap
+systemctl --user start llama-swap.service
 
 # Test API
 curl http://localhost:8000/v1/models
 
-# Check running llama-swap process
-ps aux | grep llama-swap
+# Check running llama-swap service
+systemctl --user status llama-swap.service --no-pager
 ```
 
 ## Model Sources

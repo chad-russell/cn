@@ -14,9 +14,6 @@ echo "::group:: Copy Custom Files"
 
 cp -a /ctx/oci/brew/. /
 
-# Copy default user configs to skel
-cp -a /ctx/custom/skel/. /etc/skel/
-
 # Copy Brewfiles to standard location
 mkdir -p /usr/share/ublue-os/homebrew/
 cp /ctx/custom/brew/*.Brewfile /usr/share/ublue-os/homebrew/ 2>/dev/null || true
@@ -73,8 +70,6 @@ if ! grep -qxF "$ZSH_PATH" /etc/shells; then
 fi
 
 sed -i "s|SHELL=/bin/bash|SHELL=$ZSH_PATH|g" /etc/default/useradd
-
-cp /ctx/build/zsh/skel-zshrc /etc/skel/.zshrc
 
 echo "::endgroup::"
 

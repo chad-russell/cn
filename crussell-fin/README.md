@@ -20,7 +20,7 @@ This image is based on [Silverblue Main](https://github.com/ublue-os/bluefin) an
 - **Voxtype** (voice-to-text): Managed by Brunch - Vulkan variant with GPU acceleration, autostart via systemd user service
 
 ### Configuration Changes
-- **Default shell**: Zsh configured as default shell
+- **Default shell**: Zsh set as the default shell; per-user shell config is managed by Brunch
 - **Systemd services enabled**: podman.socket, brew-setup/update/upgrade, tailscaled
 - **Session chooser**: GDM offers GNOME and niri from the login screen
 - **niri defaults**: Default config copied to /etc/xdg/niri/config.kdl
@@ -75,11 +75,11 @@ Use @chad-russell/crussell-fin as a template, name the OS the repository name. E
 ### Flatpak Support
 - Ship your favorite flatpaks declaratively in Brunch config
 - Installed and reconciled on `brunch apply`
-- See [custom/flatpaks/README.md](custom/flatpaks/README.md) for details
+- See [`../brunch/config/README.md`](../brunch/config/README.md) and `brunch/config/flatpaks/brunch.bri`
 
 ### ujust Commands
 - User-friendly command shortcuts via `ujust`
-- Pre-configured examples for app installation and system maintenance for you to customize
+- Curated commands for app installation and system maintenance
 - See [custom/ujust/README.md](custom/ujust/README.md) for details
 
 ### Build Scripts
@@ -128,7 +128,7 @@ dnf5 install -y package-name
 
 Customize your apps:
 - Add Brewfiles in `custom/brew/` ([guide](custom/brew/README.md))
-- Add Flatpaks in `custom/flatpaks/` ([guide](custom/flatpaks/README.md))
+- Add Flatpaks in `brunch/config/flatpaks/brunch.bri`
 - Add ujust commands in `custom/ujust/` ([guide](custom/ujust/README.md))
 
 ### 5. Development Workflow
@@ -298,7 +298,7 @@ cosign verify --key cosign.pub ghcr.io/your-username/your-repo-name:stable
 ## Detailed Guides
 
 - [Homebrew/Brewfiles](custom/brew/README.md) - Runtime package management
-- [Flatpak Preinstall](custom/flatpaks/README.md) - GUI application setup
+- [Brunch Config Layout](../brunch/config/README.md) - Host targets, shared profiles, and Flatpak config
 - [ujust Commands](custom/ujust/README.md) - User convenience commands
 - [Build Scripts](build/README.md) - Build-time customization
 

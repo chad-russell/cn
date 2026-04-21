@@ -1,0 +1,85 @@
+import { BrunchConfig } from "brunch";
+
+const excludesFile = Brioche.includeFile("./backup/excludes");
+const resticBackupScript = Brioche.includeFile("./backup/restic-backup.sh").withPermissions({ executable: true });
+const resticS3CopyScript = Brioche.includeFile("./backup/restic-s3-copy.sh").withPermissions({ executable: true });
+
+export const brunchConfig: BrunchConfig = {
+  files: {
+    "/etc/restic/excludes": excludesFile,
+    "/usr/local/bin/restic-backup.sh": resticBackupScript,
+    "/usr/local/bin/restic-s3-copy.sh": resticS3CopyScript,
+  },
+  systemdUnits: {
+    system: {
+      services: {
+        "restic-backup": {
+          description: "Restic Backup",
+          after: ["network-online.target", "var-mnt-tank-backups.mount"],
+          wants: ["network-online.target"],
+          requires: ["var-mnt-tank-backups.mount"],
+          serviceConfig: {
+            execStart: "/usr/local/bin/restic-backup.sh",
+            type: "oneshot",
+            nice: 19,
+            ioSchedulingClass: "idle",
+          },
+        },
+        "restic-s3-copy": {
+          description: "Restic Copy to S3",
+          after: ["network-online.target"],
+          wants: ["network-online.target"],
+          serviceConfig: {
+            execStart: "/usr/local/bin/restic-s3-copy.sh",
+            type: "oneshot",
+            nice: 19,
+            ioSchedulingClass: "idle",
+          },
+        },
+      },
+      timers: {
+        "restic-backup": {
+          description: "Daily Restic Backup Timer",
+          enabled: true,
+          timerConfig: {
+            onCalendar: "*-*-* 02:00:00",
+            randomizedDelaySec: "1h",
+            persistent: true,
+          },
+        },
+        "restic-s3-copy": {
+          description: "Weekly Restic Copy to S3",
+          timerConfig: {
+            onCalendar: "Sun 03:00:00",
+            randomizedDelaySec: "1h",
+            persistent: true,
+          },
+        },
+      },
+      mounts: {
+        "var-mnt-tank-backups": {
+          description: "NFS mount for NAS backups",
+          after: ["network-online.target"],
+          wants: ["network-online.target"],
+          mountConfig: {
+            what: "192.168.20.31:/mnt/tank/backups",
+            where: "/var/mnt/tank/backups",
+            type: "nfs",
+            options: "_netdev,auto",
+            timeoutSec: 30,
+          },
+        },
+      },
+      automounts: {
+        "var-mnt-tank-backups": {
+          description: "Automount for NAS backups",
+          enabled: true,
+          automountConfig: {
+            where: "/var/mnt/tank/backups",
+            timeoutIdleSec: 300,
+          },
+        },
+      },
+    },
+  },
+};

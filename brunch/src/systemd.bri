@@ -29,6 +29,7 @@ export interface BrunchServiceConfig {
     user?: string;
     group?: string;
     nice?: number;
+    ioSchedulingClass?: string;
     timeoutStartSec?: string | number;
     timeoutStopSec?: string | number;
     remainAfterExit?: boolean;
@@ -64,6 +65,47 @@ export interface BrunchTimerConfig {
     accuracySec?: string;
     randomizedDelaySec?: string;
     unit?: string;
+  };
+}
+
+export interface BrunchMountConfig {
+  description?: string;
+  documentation?: string | string[];
+  conditionPathExists?: string[];
+  assertPathExists?: string[];
+  enabled?: boolean;
+  requires?: string[];
+  after?: string[];
+  before?: string[];
+  wants?: string[];
+  wantedBy?: string[];
+  partOf?: string[];
+  conflicts?: string[];
+  mountConfig: {
+    what: string;
+    where: string;
+    type?: string;
+    options?: string;
+    timeoutSec?: string | number;
+  };
+}
+
+export interface BrunchAutomountConfig {
+  description?: string;
+  documentation?: string | string[];
+  conditionPathExists?: string[];
+  assertPathExists?: string[];
+  enabled?: boolean;
+  requires?: string[];
+  after?: string[];
+  before?: string[];
+  wants?: string[];
+  wantedBy?: string[];
+  partOf?: string[];
+  conflicts?: string[];
+  automountConfig: {
+    where: string;
+    timeoutIdleSec?: string | number;
   };
 }
 
@@ -263,6 +305,10 @@ function makeServiceUnitInternal(
     lines.push(`Nice=${sc.nice}`);
   }
 
+  if (sc.ioSchedulingClass !== undefined) {
+    lines.push(`IOSchedulingClass=${sc.ioSchedulingClass}`);
+  }
+
   if (sc.timeoutStartSec !== undefined) {
     lines.push(`TimeoutStartSec=${formatSeconds(sc.timeoutStartSec)}`);
   }
@@ -320,6 +366,8 @@ export function makeServiceUnit(
 function makeEnablementMetadata(config: {
   services?: Record<string, BrunchServiceConfig>;
   timers?: Record<string, BrunchTimerConfig>;
+  mounts?: Record<string, BrunchMountConfig>;
+  automounts?: Record<string, BrunchAutomountConfig>;
 }): std.Recipe<std.Directory> {
   const enabledUnits: string[] = [];
   const disabledUnits: string[] = [];
@@ -337,6 +385,22 @@ function makeEnablementMetadata(config: {
       enabledUnits.push(`${name}.timer`);
     } else if (timerConfig.enabled === false) {
       disabledUnits.push(`${name}.timer`);
+    }
+  }
+
+  for (const [name, mountConfig] of Object.entries(config.mounts ?? {})) {
+    if (mountConfig.enabled === true) {
+      enabledUnits.push(`${name}.mount`);
+    } else if (mountConfig.enabled === false) {
+      disabledUnits.push(`${name}.mount`);
+    }
+  }
+
+  for (const [name, automountConfig] of Object.entries(config.automounts ?? {})) {
+    if (automountConfig.enabled === true) {
+      enabledUnits.push(`${name}.automount`);
+    } else if (automountConfig.enabled === false) {
+      disabledUnits.push(`${name}.automount`);
     }
   }
 
@@ -406,6 +470,73 @@ export function makeTimerUnit(
   return std.file(lines.join("\n"));
 }
 
+export function makeMountUnit(
+  name: string,
+  config: BrunchMountConfig
+): std.Recipe<std.File> {
+  const lines: string[] = [];
+
+  lines.push(...buildUnitSection(config));
+
+  lines.push("");
+  lines.push("[Mount]");
+
+  const mc = config.mountConfig;
+  lines.push(`What=${mc.what}`);
+  lines.push(`Where=${mc.where}`);
+
+  if (mc.type !== undefined) {
+    lines.push(`Type=${mc.type}`);
+  }
+
+  if (mc.options !== undefined) {
+    lines.push(`Options=${mc.options}`);
+  }
+
+  if (mc.timeoutSec !== undefined) {
+    lines.push(`TimeoutSec=${formatSeconds(mc.timeoutSec)}`);
+  }
+
+  lines.push("");
+  lines.push("[Install]");
+  if (config.wantedBy && config.wantedBy.length > 0) {
+    lines.push(`WantedBy=${config.wantedBy.join(" ")}`);
+  } else {
+    lines.push("WantedBy=multi-user.target");
+  }
+
+  return std.file(lines.join("\n"));
+}
+
+export function makeAutomountUnit(
+  name: string,
+  config: BrunchAutomountConfig
+): std.Recipe<std.File> {
+  const lines: string[] = [];
+
+  lines.push(...buildUnitSection(config));
+
+  lines.push("");
+  lines.push("[Automount]");
+
+  const ac = config.automountConfig;
+  lines.push(`Where=${ac.where}`);
+
+  if (ac.timeoutIdleSec !== undefined) {
+    lines.push(`TimeoutIdleSec=${formatSeconds(ac.timeoutIdleSec)}`);
+  }
+
+  lines.push("");
+  lines.push("[Install]");
+  if (config.wantedBy && config.wantedBy.length > 0) {
+    lines.push(`WantedBy=${config.wantedBy.join(" ")}`);
+  } else {
+    lines.push("WantedBy=multi-user.target");
+  }
+
+  return std.file(lines.join("\n"));
+}
+
 export interface BrunchTargetConfig {
   description?: string;
   documentation?: string | string[];
@@ -442,11 +573,15 @@ export interface BrunchSystemdConfig {
     services?: Record<string, BrunchServiceConfig>;
     timers?: Record<string, BrunchTimerConfig>;
     targets?: Record<string, BrunchTargetConfig>;
+    mounts?: Record<string, BrunchMountConfig>;
+    automounts?: Record<string, BrunchAutomountConfig>;
   };
   system?: {
     services?: Record<string, BrunchServiceConfig>;
     timers?: Record<string, BrunchTimerConfig>;
     targets?: Record<string, BrunchTargetConfig>;
+    mounts?: Record<string, BrunchMountConfig>;
+    automounts?: Record<string, BrunchAutomountConfig>;
   };
 }
 
@@ -482,6 +617,18 @@ export function makeSystemdUnits(
     }
   }
 
+  if (config.user?.mounts) {
+    for (const [name, mountConfig] of Object.entries(config.user.mounts)) {
+      userEntries[`${name}.mount`] = makeMountUnit(name, mountConfig);
+    }
+  }
+
+  if (config.user?.automounts) {
+    for (const [name, automountConfig] of Object.entries(config.user.automounts)) {
+      userEntries[`${name}.automount`] = makeAutomountUnit(name, automountConfig);
+    }
+  }
+
   if (config.system?.services) {
     for (const [name, serviceConfig] of Object.entries(config.system.services)) {
       systemEntries[`${name}.service`] = makeServiceUnitInternal(name, serviceConfig, "system");
@@ -505,11 +652,25 @@ export function makeSystemdUnits(
     }
   }
 
+  if (config.system?.mounts) {
+    for (const [name, mountConfig] of Object.entries(config.system.mounts)) {
+      systemEntries[`${name}.mount`] = makeMountUnit(name, mountConfig);
+    }
+  }
+
+  if (config.system?.automounts) {
+    for (const [name, automountConfig] of Object.entries(config.system.automounts)) {
+      systemEntries[`${name}.automount`] = makeAutomountUnit(name, automountConfig);
+    }
+  }
+
   if (Object.keys(userEntries).length > 0) {
     dirs["user"] = std.directory(userEntries);
     stateDirs["user"] = makeEnablementMetadata({
       services: config.user?.services,
       timers: config.user?.timers,
+      mounts: config.user?.mounts,
+      automounts: config.user?.automounts,
     });
   }
 
@@ -518,6 +679,8 @@ export function makeSystemdUnits(
     stateDirs["system"] = makeEnablementMetadata({
       services: config.system?.services,
       timers: config.system?.timers,
+      mounts: config.system?.mounts,
+      automounts: config.system?.automounts,
     });
   }
 
