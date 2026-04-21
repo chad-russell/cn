@@ -48,7 +48,7 @@ start_service() {
             echo "Starting Hummingbird Web on :3100..."
             load_env "$ENV_DIR/hb-web.env"
             cd ~/Gloo/360-hummingbird
-            exec pnpm --filter web dev -- --host 0.0.0.0 --port 3000
+            exec pnpm --filter web dev -- --host 0.0.0.0 --port 3100
             ;;
         polymer)
             echo "Starting Polymer on :3001..."
