@@ -1,17 +1,50 @@
 #!/usr/bin/env bash
-# Start GPL dev services on the host.
-# Usage: ./dev.sh [gpl|hb-api|hb-web|polymer|all]
+# Start Gloo dev services on the host.
+# Usage: ./dev.sh [gpl|hb-api|hb-web|storyhub|storyhub-worker|polymer|all]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_DIR="$SCRIPT_DIR/host-envs"
 COMPOSE_FILE="$SCRIPT_DIR/compose.yaml"
+SECRETS_FILE="$SCRIPT_DIR/secrets/gloo-secrets.env.age"
+AGE_KEY="${AGE_KEY:-$HOME/.config/age/key.txt}"
+AGE_BIN="${AGE_BIN:-$([ -x /home/linuxbrew/.linuxbrew/bin/age ] && echo /home/linuxbrew/.linuxbrew/bin/age || which age 2>/dev/null)}"
 
 # Source an env file (must be valid shell syntax: KEY=VALUE, # comments, blank lines)
 load_env() {
     set -a
     source "$1"
     set +a
+}
+
+# Decrypt and load age-encrypted secrets
+load_secrets() {
+    if [ ! -f "$SECRETS_FILE" ]; then
+        echo "WARNING: $SECRETS_FILE not found — skipping secrets" >&2
+        return
+    fi
+    if [ ! -x "$AGE_BIN" ]; then
+        echo "WARNING: age binary not found — skipping secrets" >&2
+        return
+    fi
+    if [ ! -f "$AGE_KEY" ]; then
+        echo "WARNING: age key not found at $AGE_KEY — skipping secrets" >&2
+        return
+    fi
+
+    local secrets_tmp
+    secrets_tmp=$(mktemp /tmp/gloo-secrets.XXXXXX.env)
+    trap 'rm -f "$secrets_tmp"' EXIT
+
+    if $AGE_BIN -d -i "$AGE_KEY" "$SECRETS_FILE" > "$secrets_tmp" 2>/dev/null; then
+        load_env "$secrets_tmp"
+        rm -f "$secrets_tmp"
+        trap - EXIT
+    else
+        echo "WARNING: failed to decrypt secrets — proceeding without them" >&2
+        rm -f "$secrets_tmp"
+        trap - EXIT
+    fi
 }
 
 # Ensure infra is running
@@ -21,7 +54,7 @@ podman compose -f "$COMPOSE_FILE" up -d
 # Wait for postgres
 echo "Waiting for postgres..."
 for i in $(seq 1 30); do
-    if podman exec gpl_postgres_1 pg_isready -U postgres &>/dev/null; then
+    if podman exec glo_postgres_1 pg_isready -U postgres &>/dev/null; then
         echo "Postgres ready."
         break
     fi
@@ -34,12 +67,14 @@ start_service() {
     case "$name" in
         gpl)
             echo "Starting GPL app on :3106..."
+            load_secrets
             load_env "$ENV_DIR/gpl.env"
             cd ~/Gloo/360-gpl
             exec npx next dev -p 3106
             ;;
         hb-api)
             echo "Starting Hummingbird API on :8000..."
+            load_secrets
             load_env "$ENV_DIR/hb-api.env"
             cd ~/Gloo/360-hummingbird
             exec pnpm --filter api dev
@@ -50,9 +85,24 @@ start_service() {
             cd ~/Gloo/360-hummingbird
             exec pnpm --filter web dev -- --host 0.0.0.0 --port 3100
             ;;
+        storyhub)
+            echo "Starting Storyhub on :3007..."
+            load_secrets
+            load_env "$ENV_DIR/storyhub.env"
+            cd ~/Gloo/360-hummingbird
+            exec pnpm --filter storyhub dev -- --port 3007
+            ;;
+        storyhub-worker)
+            echo "Starting Storyhub Worker on :8001..."
+            load_secrets
+            load_env "$ENV_DIR/storyhub-worker.env"
+            cd ~/Gloo/360-hummingbird
+            exec pnpm --filter storyhub-worker dev
+            ;;
         polymer)
             echo "Starting Polymer on :3001..."
             export PATH="/home/linuxbrew/.linuxbrew/opt/node@24/bin:$PATH"
+            load_secrets
             load_env "$ENV_DIR/polymer.env"
             cd ~/Gloo/360-polymer/apps/polymer
             rm -f .next/dev/lock
@@ -60,7 +110,7 @@ start_service() {
             ;;
         *)
             echo "Unknown service: $name"
-            echo "Usage: $0 [gpl|hb-api|hb-web|polymer|all]"
+            echo "Usage: $0 [gpl|hb-api|hb-web|storyhub|storyhub-worker|polymer|all]"
             exit 1
             ;;
     esac
@@ -72,6 +122,8 @@ if [ $# -eq 0 ] || [ "$1" = "all" ]; then
     echo "  $0 gpl"
     echo "  $0 hb-api"
     echo "  $0 hb-web"
+    echo "  $0 storyhub"
+    echo "  $0 storyhub-worker"
     echo "  $0 polymer"
     echo ""
     echo "Starting all in this terminal (Ctrl+C to stop all)..."
@@ -80,6 +132,8 @@ if [ $# -eq 0 ] || [ "$1" = "all" ]; then
 
     (start_service hb-api) &
     (start_service hb-web) &
+    (start_service storyhub) &
+    (start_service storyhub-worker) &
     (start_service polymer) &
     (start_service gpl) &
 

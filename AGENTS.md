@@ -58,8 +58,8 @@ Use this file for global context. For implementation details, open the subsystem
 │  • Host ping + HTTP checks + resource thresholds               │
 │  • Alerts via ntfy                                              │
 │                                                                │
-│  Dev Stacks (Podman Compose):                                  │
-│  • Gloo (GPL + Hummingbird + Polymer + RustFS + pgAdmin)      │
+│  Dev Stacks (Compose infra + host dev servers):               │
+│  • Gloo (GPL + HB + Storyhub + Polymer; shared infra)         │
 │  • Buildspace (postgres only; bun runs on host)                │
 │                                                                │
 │  Backup (Restic → NFS → NAS):                                  │
@@ -114,7 +114,7 @@ Use this file for global context. For implementation details, open the subsystem
 │   │   │   ├── Caddyfile
 │   │   │   └── routes/internal/   # Imported Caddy route snippets
 │   │   ├── dev-stacks/
-│   │   │   ├── gpl/compose.yaml
+│   │   │   ├── gloo/compose.yaml
 │   │   │   └── buildspace/compose.yaml
 │   │   └── quadlets/
 │   ├── homeassistant/

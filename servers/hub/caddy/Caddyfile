@@ -55,6 +55,11 @@
         reverse_proxy 127.0.0.1:5050
     }
 
+    @gloo-storyhub host storyhub.internal.crussell.io
+    handle @gloo-storyhub {
+        reverse_proxy 127.0.0.1:3007
+    }
+
     # Buildspace
     @buildspace-marketplace host buildspace.internal.crussell.io
     handle @buildspace-marketplace {
