@@ -28,7 +28,7 @@ systemctl --user stop \
   gloo-polymer.service >/dev/null 2>&1 || true
 
 echo "Ensuring shared databases exist..."
-"$STACK_DIR/init-db.sh"
+"$STACK_DIR/scripts/init-db.sh"
 
 echo "Rendering runtime env files..."
 for svc in gpl hb-api storyhub polymer; do
