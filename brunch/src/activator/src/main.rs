@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand};
-use dirs;
 use std::path::{Path, PathBuf};
 
 mod commands;

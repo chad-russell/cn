@@ -1,50 +1,47 @@
 ---
 name: buildspace-hosting
-description: Operate the local Buildspace dev stack on hub. Use when working in ~/Code/bs/buildspace and the task mentions starting/stopping services, database setup, bootstrap, or local dev infra.
+description: Operate the local Buildspace dev stack on hub. Use when working in ~/Code/bs/buildspace and the task mentions starting/stopping services, database setup, bootstrap, systemd units, or local dev infra.
 ---
 
 # Buildspace Hosting
 
-The Buildspace dev stack runs on `hub` with Postgres managed via Podman Compose and bun dev processes running directly on the host for native hot-reload.
+The Buildspace dev stack runs on `hub` with Postgres managed via Podman Compose and bun dev processes managed by `systemd --user`.
 
 ## Stack Composition
 
-| Component | Type | Port | Purpose |
-|-----------|------|------|---------|
-| postgres | Podman Compose | 5434 | Buildspace's own Postgres database |
-| marketplace | Host (bun) | 3000 | Marketplace frontend |
-| login | Host (bun) | 3003 | Auth service |
-| api | Host (bun) | 3002 | API server |
-| runtime | Host (bun) | 3005 | Runtime service |
-| docs | Host (bun) | 3004 | Documentation site |
-| super-admin | Host (bun) | 3006 | Admin panel |
-| jobs | Host (bun) | 3010 | Background jobs worker |
+| Component | Type | Unit | Port | Purpose |
+|-----------|------|------|------|---------|
+| postgres | Podman Compose | — | 5434 | Buildspace's own Postgres database |
+| marketplace | Host (bun) | `buildspace-marketplace.service` | 3000 | Marketplace frontend |
+| login | Host (bun) | `buildspace-login.service` | 3003 | Auth service |
+| runtime | Host (bun) | `buildspace-runtime.service` | 3002 | API server |
+| studio | Host (bun) | `buildspace-studio.service` | 3005 | Creator studio |
+| docs | Host (bun) | `buildspace-docs.service` | 3004 | Documentation site |
+| super-admin | Host (bun) | `buildspace-super-admin.service` | 3006 | Admin panel |
+| jobs | Host (bun) | `buildspace-jobs.service` | 3010 | Background jobs worker |
+
+Target: `buildspace.target` starts all app services.
 
 ## Compose File Location
 
-```
+```text
 ~/Code/cn/servers/hub/dev-stacks/buildspace/compose.yaml
 ```
 
-## Start / Stop Postgres
+A `Justfile` provides the primary CLI for infra and setup. Run `just --list` in the buildspace directory.
+
+## Infrastructure
 
 ```bash
-COMPOSE_FILE=~/Code/cn/servers/hub/dev-stacks/buildspace/compose.yaml
-
-# Start postgres
-podman compose -f $COMPOSE_FILE up -d
-
-# Stop postgres
-podman compose -f $COMPOSE_FILE down
-
-# View logs
-podman compose -f $COMPOSE_FILE logs -f
+just infra-up      # start postgres
+just infra-down    # stop postgres
+just infra-logs    # tail logs
 ```
 
 ## First-Time Bootstrap
 
 ```bash
-~/Code/cn/servers/hub/dev-stacks/buildspace/bootstrap.sh
+just bootstrap
 ```
 
 This script:
@@ -53,54 +50,68 @@ This script:
 3. Enables `pgcrypto` extension
 4. Runs `bun install`, migrations, and seed
 
-## Running Dev Servers
+## App Services (systemd --user)
+
+Install the checked-in units once on `hub`:
 
 ```bash
-cd ~/Code/bs/buildspace
+just install-units
+```
 
-# Start all dev servers
-bun run dev
+### Individual services
 
-# Or start individual services:
-bun --filter @buildspace/marketplace dev
-bun --filter @buildspace/login dev
-bun --filter @buildspace/runtime dev
-bun --filter @buildspace/studio dev
-bun --filter @buildspace/docs dev
-bun --filter @buildspace/super-admin dev
-bun --filter @buildspace/jobs-app dev
+```bash
+systemctl --user start buildspace-marketplace.service
+systemctl --user start buildspace-runtime.service
+```
+
+### All services at once
+
+```bash
+systemctl --user start buildspace.target
+```
+
+### Stop / restart
+
+```bash
+systemctl --user stop buildspace.target
+systemctl --user restart buildspace-runtime.service
+```
+
+## Logs and status
+
+This is the preferred interface for humans and AI agents.
+
+```bash
+systemctl --user status buildspace.target
+journalctl --user -u buildspace-runtime.service -n 100
+journalctl --user -u buildspace-marketplace.service -f
 ```
 
 ## Environment Files
 
 - `~/Code/bs/buildspace/.env` - Main env file (contains `DATABASE_URL`, secrets)
-- `~/Code/cn/servers/hub/dev-stacks/buildspace/.env.example` - Template
 
 The `DATABASE_URL` in `.env` should point to the compose-managed postgres:
 ```
 DATABASE_URL=postgresql://<user>:<pass>@127.0.0.1:5434/<dbname>
 ```
 
+All app services source this file before starting.
+
 ## Caddy Routes
 
 Routes are defined in `~/Code/cn/servers/hub/caddy/Caddyfile`:
 
-| Host | Service |
-|------|---------|
-| buildspace.internal.crussell.io | marketplace (3000) |
-| bs-login.internal.crussell.io | login (3003) |
-| bs-api.internal.crussell.io | api (3002) |
-| bs-creator.internal.crussell.io | runtime (3005) |
-| bs-docs.internal.crussell.io | docs (3004) |
-| bs-admin.internal.crussell.io | super-admin (3006) |
-| bs-jobs.internal.crussell.io | jobs (3010) |
-
-After editing Caddyfile:
-```bash
-sudo podman cp ~/Code/cn/servers/hub/caddy/Caddyfile systemd-caddy:/etc/caddy/Caddyfile
-sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile
-sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
-```
+| Host | Unit | Upstream |
+|------|------|----------|
+| `buildspace.internal.crussell.io` | marketplace | `127.0.0.1:3000` |
+| `bs-login.internal.crussell.io` | login | `127.0.0.1:3003` |
+| `bs-api.internal.crussell.io` | runtime | `127.0.0.1:3002` |
+| `bs-creator.internal.crussell.io` | studio | `127.0.0.1:3005` |
+| `bs-docs.internal.crussell.io` | docs | `127.0.0.1:3004` |
+| `bs-admin.internal.crussell.io` | super-admin | `127.0.0.1:3006` |
+| `bs-jobs.internal.crussell.io` | jobs | `127.0.0.1:3010` |
 
 ## Volumes
 
@@ -109,20 +120,4 @@ sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
 To wipe and start fresh:
 ```bash
 podman compose -f ~/Code/cn/servers/hub/dev-stacks/buildspace/compose.yaml down -v
-```
-
-## Troubleshooting
-
-```bash
-# Check postgres health
-podman exec buildspace-postgres-1 pg_isready -U postgres
-
-# Connect to database
-podman exec -it buildspace-postgres-1 psql -U postgres
-
-# Restart postgres
-podman compose -f ~/Code/cn/servers/hub/dev-stacks/buildspace/compose.yaml restart
-
-# Re-bootstrap database
-~/Code/cn/servers/hub/dev-stacks/buildspace/bootstrap.sh
 ```

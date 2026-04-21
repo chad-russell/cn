@@ -1,0 +1,43 @@
+import { BrunchConfig } from "brunch";
+
+export const brunchConfig: BrunchConfig = {
+  flatpaks: [
+    // Web & Communication
+    "app.zen_browser.zen",
+    "com.google.Chrome",
+    "com.slack.Slack",
+    "org.mozilla.firefox",
+    "org.telegram.desktop",
+    "us.zoom.Zoom",
+
+    // Development
+    "dev.zed.Zed",
+    "io.podman_desktop.PodmanDesktop",
+
+    // Graphics & Media
+    "be.alexandervanhee.gradia",
+    "com.bambulab.BambuStudio",
+    "io.github.diegopvlk.Cine",
+    "org.inkscape.Inkscape",
+    "org.onlyoffice.desktopeditors",
+    "io.github.lullabyX.sone",
+
+    // System & Utilities
+    "com.github.tchx84.Flatseal",
+    "com.onepassword.OnePassword",
+    "io.github.flattool.Warehouse",
+    "io.missioncenter.MissionCenter",
+    "org.deskflow.deskflow",
+    "org.localsend.localsend_app",
+    "com.usebottles.bottles",
+    "org.fedoraproject.MediaWriter",
+
+    // GNOME
+    "org.gnome.DejaDup",
+    "org.gnome.Loupe",
+
+    // Universal Blue
+    "com.ranfdev.DistroShelf",
+    "io.github.kolunmi.Bazaar",
+  ],
+};

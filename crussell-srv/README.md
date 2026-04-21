@@ -11,7 +11,6 @@ Server-focused Universal Blue image for homelab consolidation.
 - **Monitoring:** htop, btop, iotop, lm_sensors
 - **Storage tools:** ncdu, dust, smartmontools, nvme-cli
 - **Modern CLI:** ripgrep, fd, bat, eza, jq, yq
-- **Sync:** Syncthing
 - **Shell:** Zsh with sensible defaults
 
 ## Building

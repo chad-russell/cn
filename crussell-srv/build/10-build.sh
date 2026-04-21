@@ -48,7 +48,6 @@ dnf5 install -y \
     helix \
     lm_sensors \
     hdparm \
-    syncthing
 
 echo "::endgroup::"
 
@@ -91,9 +90,6 @@ systemctl enable brew-upgrade.timer 2>/dev/null || true
 
 # Enable tailscale
 systemctl enable tailscaled.service
-
-# Enable syncthing for user (will be started by user later)
-# systemctl enable syncthing@.service is a template, user enables per-user
 
 echo "::endgroup::"
 

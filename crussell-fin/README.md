@@ -8,7 +8,7 @@ This image is based on [Silverblue Main](https://github.com/ublue-os/bluefin) an
 
 ### Added Packages (Build-time)
 - **Vicinae** - Application launcher installed natively via COPR (quadratech188/vicinae)
-- **Desktop Sessions**: GNOME (base image), niri (scrollable-tiling Wayland compositor), COSMIC (Fedora packages)
+- **Desktop Sessions**: GNOME (base image), niri (scrollable-tiling Wayland compositor)
 - **Shell/Desktop Utilities**: Noctalia Shell, Ghostty terminal
 - **Utilities**: fuzzel, swaybg, swaylock, mako, cliphist, matugen, cava
 - **Development**: gcc, gcc-c++, make
@@ -17,13 +17,14 @@ This image is based on [Silverblue Main](https://github.com/ublue-os/bluefin) an
 - **Accessibility**: wtype, wl-clipboard for voice typing support
 
 ### Added Applications (Runtime)
-- **Voxtype** (voice-to-text): Install via `ujust install-voxtype` - Vulkan variant with GPU acceleration, autostart via systemd
+- **Voxtype** (voice-to-text): Managed by Brunch - Vulkan variant with GPU acceleration, autostart via systemd user service
 
 ### Configuration Changes
 - **Default shell**: Zsh configured as default shell
 - **Systemd services enabled**: podman.socket, brew-setup/update/upgrade, tailscaled
-- **Session chooser**: GDM offers GNOME, niri, and COSMIC from the login screen
+- **Session chooser**: GDM offers GNOME and niri from the login screen
 - **niri defaults**: Default config copied to /etc/xdg/niri/config.kdl
+- **Desktop config**: GTK themes, default browser, and flatpaks managed declaratively via Brunch
 
 *Last updated: 2026-04-02*
 
@@ -72,8 +73,8 @@ Use @chad-russell/crussell-fin as a template, name the OS the repository name. E
 - See [custom/brew/README.md](custom/brew/README.md) for details
 
 ### Flatpak Support
-- Ship your favorite flatpaks
-- Automatically installed on first boot after user setup
+- Ship your favorite flatpaks declaratively in Brunch config
+- Installed and reconciled on `brunch apply`
 - See [custom/flatpaks/README.md](custom/flatpaks/README.md) for details
 
 ### ujust Commands

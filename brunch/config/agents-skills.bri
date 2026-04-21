@@ -2,10 +2,12 @@ import { BrunchConfig } from "brunch";
 
 const gplHostingSkill = Brioche.includeDirectory("./agents/skills/gpl-hosting");
 const buildspaceHostingSkill = Brioche.includeDirectory("./agents/skills/buildspace-hosting");
+const explainHtmlSkill = Brioche.includeDirectory("./agents/skills/explain-html");
 
 export const agentsSkillsBrunchConfig: BrunchConfig = {
   files: {
     ".agents/skills/gpl-hosting": gplHostingSkill,
     ".agents/skills/buildspace-hosting": buildspaceHostingSkill,
+    ".agents/skills/explain-html": explainHtmlSkill,
   },
 };

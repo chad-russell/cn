@@ -1,39 +1,38 @@
--- LSP Configuration for Neovim 0.11+
--- Uses native vim.lsp.config
+-- LSP Configuration using native vim.lsp.config + vim.lsp.enable (Neovim 0.11+)
+--
+-- Keymaps provided by Neovim 0.12 defaults (no need to set these):
+--   gra   - code_action       grn  - rename          grr  - references
+--   gri   - implementation    grt  - type_definition  grx - codelens
+--   gO    - document_symbol   K    - hover
+--   CTRL-S - signature_help (insert mode)
+--   <Tab>/<S-Tab> - buffer cycling (not snippet jumping)
+--   <C-n>/<C-p>    - snippet jump forward/backward (insert/select mode)
 
--- LSP keymaps (attached when LSP connects to buffer)
+-- Custom LSP keymaps (beyond the built-in defaults)
 vim.api.nvim_create_autocmd("LspAttach", {
   group = vim.api.nvim_create_augroup("UserLspConfig", {}),
   callback = function(ev)
     local opts = { buffer = ev.buf, silent = true }
     local keymap = vim.keymap.set
 
+    -- Additional keymaps beyond Neovim defaults
     keymap("n", "gD", vim.lsp.buf.declaration, vim.tbl_extend("force", opts, { desc = "Go to declaration" }))
     keymap("n", "gd", vim.lsp.buf.definition, vim.tbl_extend("force", opts, { desc = "Go to definition" }))
-    keymap("n", "K", vim.lsp.buf.hover, vim.tbl_extend("force", opts, { desc = "Show hover" }))
-    keymap("n", "gi", vim.lsp.buf.implementation, vim.tbl_extend("force", opts, { desc = "Go to implementation" }))
-    keymap("n", "<C-k>", vim.lsp.buf.signature_help, vim.tbl_extend("force", opts, { desc = "Signature help" }))
     keymap("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, vim.tbl_extend("force", opts, { desc = "Add workspace folder" }))
     keymap("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, vim.tbl_extend("force", opts, { desc = "Remove workspace folder" }))
     keymap("n", "<leader>wl", function()
       print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
     end, vim.tbl_extend("force", opts, { desc = "List workspace folders" }))
-    keymap("n", "<leader>D", vim.lsp.buf.type_definition, vim.tbl_extend("force", opts, { desc = "Type definition" }))
-    keymap("n", "<leader>rn", vim.lsp.buf.rename, vim.tbl_extend("force", opts, { desc = "Rename symbol" }))
-    keymap("n", "<leader>ca", vim.lsp.buf.code_action, vim.tbl_extend("force", opts, { desc = "Code action" }))
-    keymap("n", "gr", vim.lsp.buf.references, vim.tbl_extend("force", opts, { desc = "Find references" }))
     keymap("n", "<leader>f", function()
       vim.lsp.buf.format({ async = true })
     end, vim.tbl_extend("force", opts, { desc = "Format buffer" }))
+
+    -- Enable LSP-driven autocompletion for this buffer
+    vim.lsp.completion.enable(true, ev.data.client_id, ev.buf, {
+      autotrigger = true,
+    })
   end,
 })
-
--- Diagnostic signs
-local signs = { Error = "󰅚 ", Warn = "󰀪 ", Hint = "󰌶 ", Info = " " }
-for type, icon in pairs(signs) do
-  local hl = "DiagnosticSign" .. type
-  vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
-end
 
 -- Diagnostic configuration
 vim.diagnostic.config({
@@ -58,19 +57,11 @@ vim.api.nvim_create_autocmd("CursorHold", {
   end,
 })
 
--- LSP capabilities with nvim-cmp
-local capabilities = vim.lsp.protocol.make_client_capabilities()
-local cmp_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
-if cmp_ok then
-  capabilities = cmp_nvim_lsp.default_capabilities(capabilities)
-end
-
--- Server configurations using vim.lsp.config (Neovim 0.11+)
+-- Server configurations using vim.lsp.config
 vim.lsp.config.ts_ls = {
   cmd = { "typescript-language-server", "--stdio" },
   filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
   root_markers = { "tsconfig.json", "jsconfig.json", "package.json", ".git" },
-  capabilities = capabilities,
   settings = {
     typescript = {
       inlayHints = {
@@ -101,7 +92,6 @@ vim.lsp.config.rust_analyzer = {
   cmd = { "rust-analyzer" },
   filetypes = { "rust" },
   root_markers = { "Cargo.toml", "Cargo.lock", ".git" },
-  capabilities = capabilities,
   settings = {
     ["rust-analyzer"] = {
       check = { command = "clippy" },
@@ -126,7 +116,6 @@ vim.lsp.config.pyright = {
   cmd = { "pyright-langserver", "--stdio" },
   filetypes = { "python" },
   root_markers = { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "Pipfile", "pyrightconfig.json", ".git" },
-  capabilities = capabilities,
   settings = {
     python = {
       analysis = {
@@ -143,7 +132,6 @@ vim.lsp.config.lua_ls = {
   cmd = { "lua-language-server" },
   filetypes = { "lua" },
   root_markers = { ".luarc.json", ".luarc.jsonc", ".luacheckrc", ".stylua.toml", "stylua.toml", "selene.toml", ".git" },
-  capabilities = capabilities,
   settings = {
     Lua = {
       diagnostics = { globals = { "vim" } },
@@ -158,50 +146,23 @@ vim.lsp.config.lua_ls = {
 }
 
 vim.lsp.config.markdown_oxide = {
-  cmd = { vim.fn.stdpath("data") .. "/mason/bin/markdown-oxide" },
+  cmd = { "markdown-oxide" },
   filetypes = { "markdown" },
   root_markers = { ".git", ".obsidian" },
-  capabilities = vim.tbl_deep_extend("force", capabilities, {
+  capabilities = {
     workspace = {
       didChangeWatchedFiles = {
         dynamicRegistration = true,
       },
     },
-  }),
+  },
 }
 
--- Auto-start LSP servers when opening matching filetypes
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
-  callback = function()
-    vim.lsp.start(vim.lsp.config.ts_ls)
-  end,
-})
-
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "rust",
-  callback = function()
-    vim.lsp.start(vim.lsp.config.rust_analyzer)
-  end,
-})
-
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "python",
-  callback = function()
-    vim.lsp.start(vim.lsp.config.pyright)
-  end,
-})
-
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "lua",
-  callback = function()
-    vim.lsp.start(vim.lsp.config.lua_ls)
-  end,
-})
-
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "markdown",
-  callback = function()
-    vim.lsp.start(vim.lsp.config.markdown_oxide)
-  end,
+-- Enable LSP servers (replaces manual FileType autocmds + vim.lsp.start calls)
+vim.lsp.enable({
+  'ts_ls',
+  'rust_analyzer',
+  'pyright',
+  'lua_ls',
+  'markdown_oxide',
 })

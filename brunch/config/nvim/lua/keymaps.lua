@@ -21,14 +21,40 @@ keymap("n", "J", "mzJ`z", { desc = "Join lines and maintain cursor position" })
 keymap("n", "Y", "yg$", { desc = "Yank to end of line" })
 
 -- Movement remaps
+-- L/H for end/start of line (instead of $/^ which are hard to reach)
+-- Note: H conflicts with v_an (LSP selection range) and L with v_in,
+-- but these are only active during visual mode with LSP attached.
 keymap({ "n", "v" }, "L", "$", { desc = "Move to end of line" })
 keymap({ "n", "v" }, "H", "^", { desc = "Move to start of line" })
-keymap({ "n", "v" }, "K", "%", { desc = "Jump to matching bracket" })
+
+-- Jump to matching bracket (using \ instead of K, since K = LSP hover in 0.12)
+keymap({ "n", "v" }, "\\", "%", { desc = "Jump to matching bracket" })
 
 -- Disable original movement keys
 keymap({ "n", "v" }, "$", "<nop>", { desc = "Disabled: use L instead" })
 keymap({ "n", "v" }, "^", "<nop>", { desc = "Disabled: use H instead" })
-keymap({ "n", "v" }, "%", "<nop>", { desc = "Disabled: use K instead" })
+keymap({ "n", "v" }, "%", "<nop>", { desc = "Disabled: use \\ instead" })
+
+-- Snippet jumping: use <C-n>/<C-p> in insert/select mode
+-- Alternative options you might prefer:
+--   <M-n>/<M-p>  (Alt+n / Alt+p)
+--   <C-j>/<C-k>  (conflicts with window nav in normal mode, but fine in insert)
+--   <C-l>/<C-h>  (same reasoning)
+keymap({ "i", "s" }, "<C-n>", function()
+  if vim.snippet.active({ direction = 1 }) then
+    vim.snippet.jump(1)
+    return
+  end
+  return "<C-n>"
+end, { expr = true, desc = "Snippet jump forward" })
+
+keymap({ "i", "s" }, "<C-p>", function()
+  if vim.snippet.active({ direction = -1 }) then
+    vim.snippet.jump(-1)
+    return
+  end
+  return "<C-p>"
+end, { expr = true, desc = "Snippet jump backward" })
 
 -- Buffer navigation
 keymap("n", "<tab>", "<cmd>bnext<CR>", { desc = "Next buffer" })
@@ -53,5 +79,8 @@ keymap("n", "<C-l>", "<C-w><C-l>", { desc = "Move focus to the right" })
 keymap("n", "<C-j>", "<C-w><C-j>", { desc = "Move focus down" })
 keymap("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus up" })
 
--- Which-key show
-keymap("n", "<leader>?", ":lua require('which-key').show({ global = false })<CR>", { desc = "Show which-key mappings", silent = true })
+-- Which-key show (guard against plugin not yet loaded)
+keymap("n", "<leader>?", function()
+  local ok, wk = pcall(require, 'which-key')
+  if ok then wk.show({ global = false }) end
+end, { desc = "Show which-key mappings", silent = true })

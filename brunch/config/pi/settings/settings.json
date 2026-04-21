@@ -1,0 +1,9 @@
+{
+  "lastChangelogVersion": "0.67.67",
+  "defaultProvider": "zai",
+  "defaultModel": "glm-5.1",
+  "defaultThinkingLevel": "off",
+  "packages": [
+    "npm:@plannotator/pi-extension"
+  ]
+}

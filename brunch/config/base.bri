@@ -4,6 +4,8 @@ import { placeholderPngIcon } from "./icons.bri";
 
 const niriConfig = Brioche.includeFile("./niri/config.kdl");
 const ghosttyConfig = Brioche.includeFile("./ghostty/config");
+const gtkSettings = Brioche.includeFile("./gtk/settings.ini");
+const mimeappsList = Brioche.includeFile("./mime/mimeapps.list");
 
 const noctaliaRunnable = std.bashRunnable`
   exec qs -c noctalia-shell
@@ -29,6 +31,13 @@ export const brunchConfig: BrunchConfig = {
 
     // Ghostty configuration
     ".config/ghostty/config": ghosttyConfig,
+
+    // GTK theme settings (Papirus-Dark icons, Adwaita cursor, dark theme)
+    ".config/gtk-3.0/settings.ini": gtkSettings,
+    ".config/gtk-4.0/settings.ini": gtkSettings,
+
+    // Default browser and MIME type associations
+    ".config/mimeapps.list": mimeappsList,
   },
   systemdUnits: {
     user: {

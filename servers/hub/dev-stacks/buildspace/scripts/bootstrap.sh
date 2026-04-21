@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_DIR="${HOME}/Code/bs/buildspace"
-COMPOSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMPOSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [[ ! -f "${REPO_DIR}/.env" ]]; then
     echo "ERROR: ${REPO_DIR}/.env not found"

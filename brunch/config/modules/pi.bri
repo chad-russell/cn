@@ -1,0 +1,21 @@
+import { BrunchConfig } from "brunch";
+
+// Pi agent extensions
+const askModeExtension = Brioche.includeDirectory("../pi/extensions/ask-mode");
+const searxngSearchExtension = Brioche.includeDirectory("../pi/extensions/searxng-search");
+
+// Pi agent settings
+const piSettings = Brioche.includeFile("../pi/settings/settings.json");
+const piModels = Brioche.includeFile("../pi/settings/models.json");
+
+export const brunchConfig: BrunchConfig = {
+  files: {
+    // Pi agent extensions
+    ".pi/agent/extensions/ask-mode": askModeExtension,
+    ".pi/agent/extensions/searxng-search": searxngSearchExtension,
+
+    // Pi agent settings
+    ".pi/agent/settings.json": piSettings,
+    ".pi/agent/models.json": piModels,
+  },
+};

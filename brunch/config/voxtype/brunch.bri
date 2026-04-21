@@ -1,0 +1,56 @@
+import * as std from "std";
+import { BrunchConfig } from "brunch";
+
+const VOXTYPE_VERSION = "0.6.1";
+
+// Download the voxtype binary and create a runnable directory
+const voxtypeRunnableDir = std
+  .runBash`
+  mkdir -p "$BRIOCHE_OUTPUT/bin"
+  cp "$RAW_BINARY" "$BRIOCHE_OUTPUT/bin/voxtype"
+  chmod +x "$BRIOCHE_OUTPUT/bin/voxtype"
+  ln -s bin/voxtype "$BRIOCHE_OUTPUT/brioche-run"
+  `
+  .env({
+    RAW_BINARY: std.download({
+      url: `https://github.com/peteonrails/voxtype/releases/download/v${VOXTYPE_VERSION}/voxtype-${VOXTYPE_VERSION}-linux-x86_64-vulkan`,
+      hash: std.sha256Hash(
+        "2c19a82c44547cbe5298c6bf43ca69f68589f598803cee933edf04c9b4760445",
+      ),
+    }),
+  })
+  .toDirectory();
+
+const voxtypeDaemonRunnable = std.bashRunnable`
+  exec voxtype daemon
+  `;
+
+export const brunchConfig: BrunchConfig = {
+  cliTools: [
+    {
+      name: "voxtype",
+      executable: voxtypeRunnableDir,
+    },
+  ],
+  systemdUnits: {
+    user: {
+      services: {
+        voxtype: {
+          description: "Voxtype voice-to-text daemon (Vulkan)",
+          after: ["graphical-session.target"],
+          wants: ["graphical-session.target"],
+          partOf: ["graphical-session.target"],
+          wantedBy: ["graphical-session.target"],
+          enabled: true,
+          serviceConfig: {
+            execStart: voxtypeDaemonRunnable,
+            execCondition: "/usr/bin/sh -lc '[ -n \"$WAYLAND_DISPLAY\" ]'",
+            type: "simple",
+            restart: "on-failure",
+            restartSec: 5,
+          },
+        },
+      },
+    },
+  },
+};

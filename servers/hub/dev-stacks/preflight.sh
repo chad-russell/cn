@@ -57,7 +57,7 @@ else
     echo "  ✗ age key (missing — needed to decrypt dev secrets)"
 fi
 
-if [ -x "$HOME/Code/cn/servers/hub/dev-stacks/gloo/install-user-units.sh" ]; then
+if [ -x "$HOME/Code/cn/servers/hub/dev-stacks/gloo/scripts/install-user-units.sh" ]; then
     echo "  ✓ gloo install-user-units.sh"
 else
     echo "  ✗ gloo install-user-units.sh (missing)"
@@ -71,11 +71,14 @@ else
     echo "  ✗ $HOME/Code/bs/buildspace (missing)"
 fi
 
-for envfile in \
-    "$HOME/Code/bs/buildspace/.env"; do
-    if [ -f "$envfile" ]; then
-        echo "  ✓ $envfile"
-    else
-        echo "  ✗ $envfile (missing)"
-    fi
-done
+if [ -f "$HOME/Code/bs/buildspace/.env" ]; then
+    echo "  ✓ .env"
+else
+    echo "  ✗ .env (missing)"
+fi
+
+if [ -x "$HOME/Code/cn/servers/hub/dev-stacks/buildspace/scripts/install-user-units.sh" ]; then
+    echo "  ✓ buildspace install-user-units.sh"
+else
+    echo "  ✗ buildspace install-user-units.sh (missing)"
+fi

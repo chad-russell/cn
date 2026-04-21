@@ -16,14 +16,10 @@ require('telescope').setup({
       fuzzy = true,
       override_generic_sorter = true,
     },
-    ["ui-select"] = {
-      require('telescope.themes').get_dropdown({}),
-    },
   },
 })
 
 pcall(require('telescope').load_extension, "fzf")
-pcall(require('telescope').load_extension, "ui-select")
 
 vim.keymap.set("n", "<leader>sh", builtin.help_tags, { desc = "[S]earch [H]elp" })
 vim.keymap.set("n", "<leader>sk", builtin.keymaps, { desc = "[S]earch [K]eymaps" })

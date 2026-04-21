@@ -20,6 +20,8 @@ wk.add({
   { "<leader>a", group = "aerial" },
   { "<leader>at", desc = "Toggle outline" },
   { "<leader>b", group = "buffer" },
+  { "<tab>", desc = "Next buffer" },
+  { "<S-tab>", desc = "Previous buffer" },
   { "<leader>c", group = "code" },
   { "<leader>g", group = "git" },
   { "<leader>gh", group = "hunks" },

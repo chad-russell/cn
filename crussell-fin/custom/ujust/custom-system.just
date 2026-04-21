@@ -91,16 +91,6 @@ update-and-reboot:
         echo "Reboot later to apply updates."
     fi
 
-# Set Zen Browser as default system browser
-[group('System')]
-set-default-browser:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Setting Zen Browser as default browser..."
-    xdg-settings set default-web-browser app.zen_browser.zen.desktop
-    CURRENT=$(xdg-settings get default-web-browser)
-    echo "Default browser set to: $CURRENT"
-
 # Swap caps and escape on GNOME Desktop
 [group('System')]
 swap-caps-escape-gnome:

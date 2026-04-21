@@ -32,8 +32,8 @@ Commands:
 podman compose -f ~/Code/cn/servers/hub/dev-stacks/gloo/compose.yaml up -d
 podman compose -f ~/Code/cn/servers/hub/dev-stacks/gloo/compose.yaml down
 podman compose -f ~/Code/cn/servers/hub/dev-stacks/gloo/compose.yaml logs -f
-~/Code/cn/servers/hub/dev-stacks/gloo/init-db.sh
-~/Code/cn/servers/hub/dev-stacks/gloo/init-buckets.sh
+~/Code/cn/servers/hub/dev-stacks/gloo/scripts/init-db.sh
+~/Code/cn/servers/hub/dev-stacks/gloo/scripts/init-buckets.sh
 ```
 
 ## App services
@@ -47,7 +47,7 @@ Checked-in unit files live in:
 Install / refresh them with:
 
 ```bash
-~/Code/cn/servers/hub/dev-stacks/gloo/install-user-units.sh
+~/Code/cn/servers/hub/dev-stacks/gloo/scripts/install-user-units.sh
 ```
 
 ### Individual services

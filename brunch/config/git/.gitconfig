@@ -1,3 +1,7 @@
+[user]
+	name = Chad Russell
+	email = chaddouglasrussell@gmail.com
+
 [alias]
   co = checkout
   br = branch

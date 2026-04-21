@@ -19,9 +19,6 @@ cp -a /ctx/oci/common/shared/. /
 cp -a /ctx/oci/common/bluefin/. /
 cp -a /ctx/oci/brew/. /
 
-# Copy default user configs to skel
-cp -a /ctx/custom/skel/. /etc/skel/
-
 # Copy Brewfiles to standard location
 mkdir -p /usr/share/ublue-os/homebrew/
 cp /ctx/custom/brew/*.Brewfile /usr/share/ublue-os/homebrew/
@@ -29,10 +26,6 @@ cp /ctx/custom/brew/*.Brewfile /usr/share/ublue-os/homebrew/
 # Consolidate Just Files
 mkdir -p /usr/share/ublue-os/just/
 find /ctx/custom/ujust -iname '*.just' -exec printf "\n\n" \; -exec cat {} \; >> /usr/share/ublue-os/just/60-custom.just
-
-# Copy Flatpak preinstall files
-mkdir -p /etc/flatpak/preinstall.d/
-cp /ctx/custom/flatpaks/*.preinstall /etc/flatpak/preinstall.d/
 
 echo "::endgroup::"
 
@@ -44,12 +37,6 @@ chmod +x /usr/bin/ublue-motd
 echo "::endgroup::"
 
 echo "::group:: Install Packages"
-
-# Install COSMIC alongside the Silverblue GNOME session so GDM can offer both.
-# Fedora 43 ships current COSMIC packages directly in the main repositories.
-dnf5 -y install \
-    cosmic-session \
-    cosmic-edit
 
 # Install niri (scrollable-tiling Wayland compositor) from COPR
 copr_install_isolated "yalter/niri" niri

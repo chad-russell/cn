@@ -30,6 +30,13 @@ export interface BrunchConfig {
    * Systemd units to manage (user and system scope)
    */
   systemdUnits?: BrunchSystemdConfig;
+
+  /**
+   * Flatpak application IDs to install and manage declaratively.
+   * On `brunch apply`, missing flatpaks are installed and flatpaks
+   * removed from config are uninstalled.
+   */
+  flatpaks?: string[];
 }
 
 export function mergeBrunch(...configs: BrunchConfig[]): BrunchConfig {
@@ -81,6 +88,10 @@ export function mergeBrunch(...configs: BrunchConfig[]): BrunchConfig {
         config.systemdUnits,
         configIndex
       );
+    }
+
+    if (config.flatpaks !== undefined && config.flatpaks.length > 0) {
+      merged.flatpaks = [...(acc.flatpaks ?? []), ...config.flatpaks];
     }
 
     return merged;
@@ -178,6 +189,17 @@ export function makeBrunch(config: BrunchConfig): std.Recipe<std.Directory> {
 
   if (config.systemdUnits !== undefined) {
     parts.push(makeSystemdUnits(config.systemdUnits));
+  }
+
+  // Write flatpak manifest to generation output
+  if (config.flatpaks !== undefined && config.flatpaks.length > 0) {
+    parts.push(
+      std.directory({
+        "flatpaks": std.directory({
+          "managed.list": std.file(config.flatpaks.join("\n") + "\n"),
+        }),
+      }),
+    );
   }
 
   if (parts.length === 0) {

@@ -6,6 +6,10 @@ import { brunchConfig as vicinaeConfig } from "../vicinae.bri";
 import { brunchConfig as cursorConfig } from "../cursor/brunch.bri";
 import { brunchConfig as opencodeConfig } from "../opencode.bri";
 import { brunchConfig as weztermConfig } from "../wezterm/brunch.bri";
+import { brunchConfig as piConfig } from "./pi.bri";
+import { brunchConfig as voxtypeConfig } from "../voxtype/brunch.bri";
+import { brunchConfig as flatpakConfig } from "../flatpaks/brunch.bri";
+import { agentsSkillsBrunchConfig } from "../agents-skills.bri";
 
 export const sharedBrunchConfig: BrunchConfig = mergeBrunch(
   baseConfig,
@@ -15,4 +19,8 @@ export const sharedBrunchConfig: BrunchConfig = mergeBrunch(
   cursorConfig,
   opencodeConfig,
   weztermConfig,
+  piConfig,
+  voxtypeConfig,
+  flatpakConfig,
+  agentsSkillsBrunchConfig,
 );

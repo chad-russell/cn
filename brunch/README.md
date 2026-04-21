@@ -267,6 +267,7 @@ interface BrunchConfig {
   cliTools?: BrunchCliTool[];
   files?: Record<string, std.RecipeLike<std.File | std.Directory>>;
   systemdUnits?: BrunchSystemdConfig;
+  flatpaks?: string[];
 }
 ```
 
@@ -340,5 +341,6 @@ brioche-packages/packages/brunch/
 - [x] Support for systemd units (services and timers)
 - [x] Support for config files (`.config/`, `~/.bashrc`, etc.)
 - [x] Add `prune-generations` command to clean up old generations
+- [x] Support for Flatpak declarative management
 - [ ] Add `diff` command to see changes between generations
 - [ ] Support for non-asset resources (environment variables, PATH additions)

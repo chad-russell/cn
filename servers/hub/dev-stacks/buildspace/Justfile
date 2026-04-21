@@ -1,0 +1,32 @@
+# Buildspace dev stack
+# Run from this directory or anywhere: just -f ~/Code/cn/servers/hub/dev-stacks/buildspace/Justfile <recipe>
+
+compose_file := justfile_directory() / "compose.yaml"
+
+# List available recipes (default)
+default:
+    @just --list
+
+# ── Infrastructure ────────────────────────────────────────────────
+
+# Start postgres
+infra-up:
+    podman compose -f {{ compose_file }} up -d
+
+# Stop postgres
+infra-down:
+    podman compose -f {{ compose_file }} down
+
+# Tail postgres logs
+infra-logs:
+    podman compose -f {{ compose_file }} logs -f
+
+# ── Setup ─────────────────────────────────────────────────────────
+
+# Full bootstrap: start postgres, create role/DB, install deps, migrate + seed
+bootstrap:
+    ./scripts/bootstrap.sh
+
+# Install (or refresh) systemd user units from this repo
+install-units:
+    ./scripts/install-user-units.sh

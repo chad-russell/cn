@@ -1,0 +1,16 @@
+[Unit]
+Description=Buildspace Super Admin dev server
+After=network-online.target
+Wants=network-online.target
+PartOf=buildspace.target
+
+[Service]
+Type=simple
+ExecStart=/var/home/crussell/Code/cn/servers/hub/dev-stacks/buildspace/systemd/run-service.sh super-admin
+Restart=on-failure
+RestartSec=2
+RestartPreventExitStatus=78
+WorkingDirectory=/var/home/crussell/Code/bs/buildspace
+
+[Install]
+WantedBy=default.target

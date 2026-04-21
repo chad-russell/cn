@@ -12,6 +12,8 @@ Self-contained dev environments for `hub`.
 
 Shared infra for GPL, Hummingbird, Storyhub, and Polymer.
 
+A `Justfile` provides the primary CLI interface. Run `just -f servers/hub/dev-stacks/gloo/Justfile --list` or `cd` into the gloo directory and run `just --list`.
+
 ### Infrastructure
 
 | Service | Port | Notes |
@@ -29,12 +31,27 @@ podman compose -f servers/hub/dev-stacks/gloo/compose.yaml down
 podman compose -f servers/hub/dev-stacks/gloo/compose.yaml logs -f
 ```
 
-First-time init:
+First-time infra init:
 
 ```bash
-./servers/hub/dev-stacks/gloo/init-db.sh
-./servers/hub/dev-stacks/gloo/init-buckets.sh
+./servers/hub/dev-stacks/gloo/scripts/init-db.sh
+./servers/hub/dev-stacks/gloo/scripts/init-buckets.sh
 ```
+
+Schema + seed bootstrap:
+
+```bash
+./servers/hub/dev-stacks/gloo/scripts/bootstrap-data.sh
+```
+
+This script:
+- stops Gloo app units
+- ensures shared databases exist
+- renders runtime env files
+- runs GPL `db:push` + `db:seed`
+- runs Hummingbird API dump restore + migrations + dev-user seed
+- runs Storyhub Prisma push + seed
+- runs Polymer `db:push` + `db:seed`
 
 ### App units (`systemd --user`)
 
@@ -53,7 +70,7 @@ First-time init:
 Install the checked-in units once on `hub`:
 
 ```bash
-./servers/hub/dev-stacks/gloo/install-user-units.sh
+./servers/hub/dev-stacks/gloo/scripts/install-user-units.sh
 ```
 
 Typical usage:
@@ -144,17 +161,82 @@ sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
 - `bun` (for `storyhub-worker`)
 - Homebrew `node@24` (for Polymer)
 - `age` and `~/.config/age/key.txt`
+- Gloo infra running before app bootstrap (`podman compose ... up -d`)
 
 ## Buildspace (`buildspace/`)
 
-Buildspace keeps its current model: Postgres in Podman Compose and app processes run manually on the host.
+Buildspace uses the same model as Gloo: Postgres in Podman Compose, app dev servers managed by `systemd --user`.
+
+A `Justfile` provides the primary CLI interface. Run `just --list` in the buildspace directory.
+
+### Infrastructure
+
+| Service | Port | Notes |
+|---|---:|---|
+| postgres | 5434 | Buildspace database |
+
+Start / stop infra:
 
 ```bash
-./servers/hub/dev-stacks/buildspace/bootstrap.sh
-podman compose -f servers/hub/dev-stacks/buildspace/compose.yaml up -d
-cd ~/Code/bs/buildspace
-bun run dev
+just -f servers/hub/dev-stacks/buildspace/Justfile infra-up
+just -f servers/hub/dev-stacks/buildspace/Justfile infra-down
 ```
+
+First-time setup:
+
+```bash
+just -f servers/hub/dev-stacks/buildspace/Justfile bootstrap
+```
+
+### App units (`systemd --user`)
+
+| Unit | Port | Purpose |
+|---|---:|---|
+| `buildspace-marketplace.service` | 3000 | Marketplace frontend |
+| `buildspace-login.service` | 3003 | Auth service |
+| `buildspace-runtime.service` | 3002 | API server |
+| `buildspace-studio.service` | 3005 | Creator studio |
+| `buildspace-docs.service` | 3004 | Documentation site |
+| `buildspace-super-admin.service` | 3006 | Admin panel |
+| `buildspace-jobs.service` | 3010 | Background jobs worker |
+| `buildspace.target` | — | All app services |
+
+Install the checked-in units once on `hub`:
+
+```bash
+just -f servers/hub/dev-stacks/buildspace/Justfile install-units
+```
+
+Typical usage:
+
+```bash
+systemctl --user start buildspace.target
+systemctl --user stop buildspace.target
+systemctl --user restart buildspace-runtime.service
+systemctl --user status buildspace-marketplace.service
+journalctl --user -u buildspace-runtime.service -f
+```
+
+### Environment
+
+All services source `~/Code/bs/buildspace/.env` at startup. The `DATABASE_URL` should point to the compose-managed postgres on port 5434.
+
+### Caddy routes
+
+| Host | Upstream |
+|---|---|
+| `buildspace.internal.crussell.io` | `127.0.0.1:3000` |
+| `bs-login.internal.crussell.io` | `127.0.0.1:3003` |
+| `bs-api.internal.crussell.io` | `127.0.0.1:3002` |
+| `bs-creator.internal.crussell.io` | `127.0.0.1:3005` |
+| `bs-docs.internal.crussell.io` | `127.0.0.1:3004` |
+| `bs-admin.internal.crussell.io` | `127.0.0.1:3006` |
+| `bs-jobs.internal.crussell.io` | `127.0.0.1:3010` |
+
+### Prereqs
+
+- `~/Code/bs/buildspace`
+- `bun`
 
 ## Preflight
 

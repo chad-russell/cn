@@ -65,6 +65,9 @@ pub fn run(project_path: &Path, target: Option<&str>) -> Result<()> {
         cleanup_files(old_path, &gen_path).context("Failed to cleanup old files")?;
     }
 
+    reconcile_flatpaks(&current, old_current.as_deref())
+        .context("Failed to reconcile flatpaks")?;
+
     println!("Applied generation {}", gen_num);
     Ok(())
 }
@@ -530,4 +533,142 @@ fn cleanup_dir_recursive(
         }
     }
     Ok(())
+}
+
+/// Reconcile declaratively managed Flatpak applications.
+///
+/// Reads the flatpak manifest from the current generation and:
+/// - Installs any flatpaks not yet present
+/// - Uninstalls flatpaks that were managed but removed from config
+fn reconcile_flatpaks(current: &Path, old_gen: Option<&Path>) -> Result<()> {
+    let flatpak_dir = current.join("flatpaks");
+    if !flatpak_dir.exists() {
+        // No flatpak config in this generation — check if we need to
+        // clean up flatpaks from a previous generation.
+        if let Some(old) = old_gen {
+            let old_flatpak_dir = old.join("flatpaks");
+            if old_flatpak_dir.exists() {
+                let old_list = read_flatpak_list(&old_flatpak_dir.join("managed.list"))?;
+                uninstall_flatpaks(&old_list)?;
+            }
+        }
+        return Ok(());
+    }
+
+    let desired = read_flatpak_list(&flatpak_dir.join("managed.list"))?;
+    if desired.is_empty() {
+        return Ok(());
+    }
+
+    // Get currently installed flatpaks
+    let installed = get_installed_flatpaks()?;
+
+    // Install missing flatpaks
+    let mut to_install: Vec<&str> = Vec::new();
+    for id in &desired {
+        if !installed.contains(&id.to_string()) {
+            to_install.push(id);
+        }
+    }
+
+    if !to_install.is_empty() {
+        println!("Installing {} flatpak(s)...", to_install.len());
+        for id in &to_install {
+            println!("  installing {}", id);
+        }
+
+        let mut cmd = Command::new("flatpak");
+        cmd.arg("install").arg("--noninteractive").arg("--or-update");
+        for id in &to_install {
+            cmd.arg(id);
+        }
+
+        let status = cmd.status().context("Failed to run flatpak install")?;
+        if !status.success() {
+            log::warn!("flatpak install returned non-zero exit status");
+        }
+    }
+
+    // Uninstall flatpaks that were previously managed but no longer desired
+    if let Some(old) = old_gen {
+        let old_flatpak_dir = old.join("flatpaks");
+        if old_flatpak_dir.exists() {
+            let old_list = read_flatpak_list(&old_flatpak_dir.join("managed.list"))?;
+            let desired_set: std::collections::HashSet<String> =
+                desired.iter().map(|s| s.to_string()).collect();
+
+            let to_remove: Vec<String> = old_list
+                .iter()
+                .filter(|id| !desired_set.contains(*id))
+                .cloned()
+                .collect();
+
+            uninstall_flatpaks(&to_remove)?;
+        }
+    }
+
+    if to_install.is_empty() {
+        println!("Flatpaks up to date ({} managed)", desired.len());
+    }
+
+    Ok(())
+}
+
+fn uninstall_flatpaks(ids: &[String]) -> Result<()> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+
+    println!("Uninstalling {} removed flatpak(s)...", ids.len());
+    for id in ids {
+        println!("  removing {}", id);
+    }
+
+    let mut cmd = Command::new("flatpak");
+    cmd.arg("uninstall").arg("--noninteractive");
+    for id in ids {
+        cmd.arg(id);
+    }
+
+    let status = cmd.status().context("Failed to run flatpak uninstall")?;
+    if !status.success() {
+        log::warn!("flatpak uninstall returned non-zero exit status");
+    }
+
+    Ok(())
+}
+
+fn read_flatpak_list(path: &Path) -> Result<Vec<String>> {
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+    let contents = std::fs::read_to_string(path)
+        .context(format!("Failed to read flatpak list: {}", path.display()))?;
+    Ok(contents
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect())
+}
+
+fn get_installed_flatpaks() -> Result<std::collections::HashSet<String>> {
+    let output = Command::new("flatpak")
+        .args(["list", "--app", "--columns=application"])
+        .output()
+        .context("Failed to run flatpak list")?;
+
+    if !output.status.success() {
+        // flatpak might not be installed yet — return empty set
+        log::warn!("flatpak list failed, assuming no flatpaks installed");
+        return Ok(std::collections::HashSet::new());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect())
 }

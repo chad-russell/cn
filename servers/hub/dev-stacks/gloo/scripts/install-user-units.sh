@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STACK_DIR="$(cd "$(dirname "$0")" && pwd)"
+STACK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 UNIT_SRC_DIR="$STACK_DIR/systemd/units"
 UNIT_DEST_DIR="$HOME/.config/systemd/user"
 
