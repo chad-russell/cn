@@ -106,7 +106,7 @@ start_service() {
             load_env "$ENV_DIR/polymer.env"
             cd ~/Gloo/360-polymer/apps/polymer
             rm -f .next/dev/lock
-            exec pnpm exec next dev --hostname 0.0.0.0 --port 3001
+            exec pnpm exec next dev --no-turbopack --hostname 0.0.0.0 --port 3001
             ;;
         *)
             echo "Unknown service: $name"
