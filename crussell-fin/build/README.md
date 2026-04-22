@@ -4,11 +4,13 @@ This directory contains build scripts that run during image creation. Scripts ar
 
 ## How It Works
 
-Scripts are named with a number prefix (e.g., `10-build.sh`, `20-onepassword.sh`) and run in ascending order during the container build process.
+Scripts are named with a number prefix (e.g., `build.sh`, `20-onepassword.sh`) and run in ascending order during the container build process.
 
 ## Included Scripts
 
-- **`10-build.sh`** - Main build script for base system modifications, package installation, and service configuration
+- **`build.sh`** - Runner that executes the numbered section scripts in order
+- **`sections/*.sh`** - Individual build sections, one former `::group::` block per script
+- **`tailscale/install.sh`** - Tailscale package install and privileged hook setup
 
 ## Example Scripts
 
@@ -24,7 +26,7 @@ To use an example script:
 Create numbered scripts for different purposes:
 
 ```bash
-# 10-build.sh - Base system (already exists)
+# build.sh - Base system (already exists)
 # 20-drivers.sh - Hardware drivers  
 # 30-development.sh - Development tools
 # 40-gaming.sh - Gaming software
@@ -60,14 +62,10 @@ To temporarily disable a script without deleting it:
 The Containerfile runs scripts like this:
 
 ```dockerfile
-RUN /ctx/build/10-build.sh
+RUN /ctx/build/build.sh
 ```
 
-If you want to run multiple scripts, you can:
-
-1. **Modify Containerfile** to run each script explicitly
-2. **Create a runner script** that executes all numbered scripts
-3. **Use the default** and keep everything in `10-build.sh` (simplest)
+`build.sh` is the runner. It calls the section scripts in `build/sections/` explicitly so the build stays ordered and easy to read.
 
 ## Notes
 

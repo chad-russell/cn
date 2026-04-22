@@ -5,6 +5,40 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+pub struct ElevatedOps {
+    commands: Vec<String>,
+}
+
+impl ElevatedOps {
+    pub fn new() -> Self {
+        Self {
+            commands: Vec::new(),
+        }
+    }
+
+    fn add_shell(&mut self, cmd: impl Into<String>) {
+        self.commands.push(cmd.into());
+    }
+
+    pub fn execute(self) -> Result<()> {
+        if self.commands.is_empty() {
+            return Ok(());
+        }
+
+        let script = self.commands.join("\n");
+
+        let status = Command::new("pkexec")
+            .args(["sh", "-c", &script])
+            .status()
+            .or_else(|_| Command::new("sudo").args(["sh", "-c", &script]).status())?;
+
+        if !status.success() {
+            log::warn!("Elevated commands failed");
+        }
+        Ok(())
+    }
+}
+
 pub fn run(project_path: &Path, target: &str) -> Result<()> {
     let project_path =
         std::fs::canonicalize(project_path).context("Failed to resolve project path")?;
@@ -34,7 +68,8 @@ pub fn run(project_path: &Path, target: &str) -> Result<()> {
     }
 
     let has_system_units = gen_path.join("systemd/system").exists();
-    let elevated = if has_system_units {
+    let has_system_files = gen_path.join("files/root").exists();
+    let elevated = if has_system_units || has_system_files {
         prompt_for_elevation()?
     } else {
         false
@@ -48,18 +83,26 @@ pub fn run(project_path: &Path, target: &str) -> Result<()> {
 
     symlink_atomic(&gen_path, &current).context("Failed to update current symlink")?;
 
+    let mut ops = ElevatedOps::new();
+
     if let Some(ref old_path) = old_current {
-        cleanup_systemd(old_path, &gen_path, elevated)
+        cleanup_systemd(old_path, &gen_path, elevated, &mut ops)
             .context("Failed to cleanup old systemd units")?;
     }
 
-    link_systemd(&current, elevated).context("Failed to link systemd units")?;
+    link_systemd(&current, elevated, &mut ops).context("Failed to link systemd units")?;
 
     link_desktop_assets(&current).context("Failed to link desktop assets")?;
-    link_files(&current).context("Failed to link home files")?;
+
+    link_files(&current, elevated, &mut ops).context("Failed to link files")?;
 
     if let Some(ref old_path) = old_current {
-        cleanup_files(old_path, &gen_path).context("Failed to cleanup old files")?;
+        cleanup_files(old_path, &gen_path, elevated, &mut ops)
+            .context("Failed to cleanup old files")?;
+    }
+
+    if elevated {
+        ops.execute()?;
     }
 
     reconcile_flatpaks(&current, old_current.as_deref())
@@ -69,8 +112,8 @@ pub fn run(project_path: &Path, target: &str) -> Result<()> {
     Ok(())
 }
 
-fn prompt_for_elevation() -> Result<bool> {
-    println!("System-level systemd units detected.");
+pub fn prompt_for_elevation() -> Result<bool> {
+    println!("System-level configuration detected.");
     print!("Apply with elevated privileges? [y/N]: ");
     io::stdout().flush()?;
 
@@ -80,19 +123,7 @@ fn prompt_for_elevation() -> Result<bool> {
     Ok(input.trim().to_lowercase() == "y")
 }
 
-fn run_elevated_command(args: &[&str]) -> Result<()> {
-    let status = Command::new("pkexec")
-        .args(args)
-        .status()
-        .or_else(|_| Command::new("sudo").args(args).status())?;
-
-    if !status.success() {
-        log::warn!("Elevated command failed: {:?}", args);
-    }
-    Ok(())
-}
-
-pub fn link_systemd(current: &Path, elevated: bool) -> Result<()> {
+pub fn link_systemd(current: &Path, elevated: bool, ops: &mut ElevatedOps) -> Result<()> {
     let systemd_dir = current.join("systemd");
     let systemd_state_dir = current.join("systemd-state");
     if !systemd_dir.exists() {
@@ -104,17 +135,17 @@ pub fn link_systemd(current: &Path, elevated: bool) -> Result<()> {
         let config_dir = dirs::config_dir().context("Failed to get config directory")?;
         let target_dir = config_dir.join("systemd/user");
         link_systemd_dir(&user_dir, &target_dir, &user_dir, false)?;
-        daemon_reload(false)?;
-        reconcile_enablement(&systemd_state_dir.join("user"), false)?;
+        daemon_reload(false, ops)?;
+        reconcile_enablement(&systemd_state_dir.join("user"), false, ops)?;
     }
 
     if elevated {
         let system_dir = systemd_dir.join("system");
         if system_dir.exists() {
             let target_dir = PathBuf::from("/etc/systemd/system");
-            link_systemd_dir_elevated(&system_dir, &target_dir, &system_dir)?;
-            daemon_reload(true)?;
-            reconcile_enablement(&systemd_state_dir.join("system"), true)?;
+            link_systemd_dir_elevated(&system_dir, &target_dir, ops)?;
+            daemon_reload(true, ops)?;
+            reconcile_enablement(&systemd_state_dir.join("system"), true, ops)?;
         }
     } else if systemd_dir.join("system").exists() {
         log::warn!("System units present but no elevated privileges - skipping system units");
@@ -153,9 +184,9 @@ fn link_systemd_dir(
     Ok(())
 }
 
-fn daemon_reload(is_system: bool) -> Result<()> {
+fn daemon_reload(is_system: bool, ops: &mut ElevatedOps) -> Result<()> {
     if is_system {
-        run_elevated_command(&["systemctl", "daemon-reload"])?;
+        ops.add_shell("systemctl daemon-reload");
     } else {
         let status = Command::new("systemctl")
             .args(["--user", "daemon-reload"])
@@ -186,14 +217,14 @@ fn read_units_list(path: &Path) -> Result<Vec<String>> {
         .collect())
 }
 
-fn reconcile_enablement(state_dir: &Path, is_system: bool) -> Result<()> {
+fn reconcile_enablement(state_dir: &Path, is_system: bool, ops: &mut ElevatedOps) -> Result<()> {
     if !state_dir.exists() {
         return Ok(());
     }
 
     for unit in read_units_list(&state_dir.join("enabled.units"))? {
         if is_system {
-            run_elevated_command(&["systemctl", "enable", &unit])?;
+            ops.add_shell(format!("systemctl enable {}", unit));
         } else {
             let status = Command::new("systemctl")
                 .args(["--user", "enable", &unit])
@@ -208,7 +239,7 @@ fn reconcile_enablement(state_dir: &Path, is_system: bool) -> Result<()> {
 
     for unit in read_units_list(&state_dir.join("disabled.units"))? {
         if is_system {
-            run_elevated_command(&["systemctl", "disable", &unit])?;
+            ops.add_shell(format!("systemctl disable {}", unit));
         } else {
             let status = Command::new("systemctl")
                 .args(["--user", "disable", &unit])
@@ -227,7 +258,7 @@ fn reconcile_enablement(state_dir: &Path, is_system: bool) -> Result<()> {
 fn link_systemd_dir_elevated(
     source_root: &Path,
     target_root: &Path,
-    _expected_link_base: &Path,
+    ops: &mut ElevatedOps,
 ) -> Result<()> {
     for entry in walkdir::WalkDir::new(source_root) {
         let entry = entry?;
@@ -245,19 +276,22 @@ fn link_systemd_dir_elevated(
         let target_sys_path = target_root.join(rel_path);
         let parent = target_sys_path.parent().context("No parent directory")?;
 
-        let mkdir_cmd = format!("mkdir -p '{}'", parent.display());
-        let ln_cmd = format!(
-            "ln -sf '{}' '{}'",
+        ops.add_shell(format!("mkdir -p '{}'", parent.display()));
+        ops.add_shell(format!(
+            "ln -sfn '{}' '{}'",
             path.display(),
             target_sys_path.display()
-        );
-
-        run_elevated_command(&["sh", "-c", &format!("{} && {}", mkdir_cmd, ln_cmd)])?;
+        ));
     }
     Ok(())
 }
 
-pub fn cleanup_systemd(old_gen: &Path, new_gen: &Path, elevated: bool) -> Result<()> {
+pub fn cleanup_systemd(
+    old_gen: &Path,
+    new_gen: &Path,
+    elevated: bool,
+    ops: &mut ElevatedOps,
+) -> Result<()> {
     let old_systemd_dir = old_gen.join("systemd");
     let new_systemd_dir = new_gen.join("systemd");
 
@@ -273,6 +307,7 @@ pub fn cleanup_systemd(old_gen: &Path, new_gen: &Path, elevated: bool) -> Result
         &config_dir.join("systemd/user"),
         &old_systemd_dir.join("user"),
         false,
+        ops,
     )?;
 
     if elevated {
@@ -282,6 +317,7 @@ pub fn cleanup_systemd(old_gen: &Path, new_gen: &Path, elevated: bool) -> Result
             &PathBuf::from("/etc/systemd/system"),
             &old_systemd_dir.join("system"),
             true,
+            ops,
         )?;
     }
 
@@ -294,6 +330,7 @@ fn cleanup_systemd_dir(
     target_root: &Path,
     expected_link_base: &Path,
     is_system: bool,
+    ops: &mut ElevatedOps,
 ) -> Result<()> {
     if !old_root.exists() {
         return Ok(());
@@ -331,13 +368,14 @@ fn cleanup_systemd_dir(
                             target_sys_path.display()
                         );
 
-                        let unit_name = rel_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                        let unit_name = rel_path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("");
 
                         if is_system {
-                            let _ =
-                                run_elevated_command(&["systemctl", "disable", "--now", unit_name]);
-                            let rm_cmd = format!("rm -f '{}'", target_sys_path.display());
-                            let _ = run_elevated_command(&["sh", "-c", &rm_cmd]);
+                            ops.add_shell(format!("systemctl disable --now {}", unit_name));
+                            ops.add_shell(format!("rm -f '{}'", target_sys_path.display()));
                         } else {
                             let _ = Command::new("systemctl")
                                 .args(["--user", "disable", "--now", unit_name])
@@ -418,7 +456,7 @@ pub fn link_desktop_assets(current: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn link_files(current: &Path) -> Result<()> {
+pub fn link_files(current: &Path, elevated: bool, ops: &mut ElevatedOps) -> Result<()> {
     let files_dir = current.join("files");
     if !files_dir.exists() {
         return Ok(());
@@ -426,7 +464,11 @@ pub fn link_files(current: &Path) -> Result<()> {
 
     let root_dir = files_dir.join("root");
     if root_dir.exists() {
-        link_dir_recursive(&root_dir, &PathBuf::from("/"))?;
+        if elevated {
+            link_dir_recursive_elevated(&root_dir, &PathBuf::from("/"), ops)?;
+        } else {
+            log::warn!("System files present but no elevated privileges - skipping system files");
+        }
     }
 
     let home_dir = files_dir.join("home");
@@ -458,7 +500,38 @@ fn link_dir_recursive(source_root: &Path, target_root: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn cleanup_files(old_gen: &Path, new_gen: &Path) -> Result<()> {
+fn link_dir_recursive_elevated(
+    source_root: &Path,
+    target_root: &Path,
+    ops: &mut ElevatedOps,
+) -> Result<()> {
+    for entry in walkdir::WalkDir::new(source_root) {
+        let entry = entry?;
+        if !entry.file_type().is_file() && !entry.file_type().is_symlink() {
+            continue;
+        }
+
+        let path = entry.path();
+        let rel_path = path.strip_prefix(source_root)?;
+        let target_sys_path = target_root.join(rel_path);
+        let parent = target_sys_path.parent().context("No parent directory")?;
+
+        ops.add_shell(format!("mkdir -p '{}'", parent.display()));
+        ops.add_shell(format!(
+            "ln -sfn '{}' '{}'",
+            path.display(),
+            target_sys_path.display()
+        ));
+    }
+    Ok(())
+}
+
+pub fn cleanup_files(
+    old_gen: &Path,
+    new_gen: &Path,
+    elevated: bool,
+    ops: &mut ElevatedOps,
+) -> Result<()> {
     let state = state_dir()?;
     let current_link = state.join("current");
 
@@ -469,12 +542,16 @@ pub fn cleanup_files(old_gen: &Path, new_gen: &Path) -> Result<()> {
         return Ok(());
     }
 
-    cleanup_dir_recursive(
-        &old_files_dir.join("root"),
-        &new_files_dir.join("root"),
-        &PathBuf::from("/"),
-        &current_link.join("files/root"),
-    )?;
+    if elevated {
+        cleanup_dir_recursive(
+            &old_files_dir.join("root"),
+            &new_files_dir.join("root"),
+            &PathBuf::from("/"),
+            &current_link.join("files/root"),
+            true,
+            ops,
+        )?;
+    }
 
     let home = std::env::var("HOME").ok();
     if let Some(home_path) = home {
@@ -483,6 +560,8 @@ pub fn cleanup_files(old_gen: &Path, new_gen: &Path) -> Result<()> {
             &new_files_dir.join("home"),
             &PathBuf::from(home_path),
             &current_link.join("files/home"),
+            false,
+            ops,
         )?;
     }
 
@@ -494,6 +573,8 @@ fn cleanup_dir_recursive(
     new_root: &Path,
     target_root: &Path,
     expected_link_base: &Path,
+    elevated: bool,
+    ops: &mut ElevatedOps,
 ) -> Result<()> {
     if !old_root.exists() {
         return Ok(());
@@ -522,8 +603,12 @@ fn cleanup_dir_recursive(
 
                     if target == expected_target {
                         log::info!("Removing managed file: {}", target_sys_path.display());
-                        std::fs::remove_file(&target_sys_path)
-                            .context("Failed to remove old symlink")?;
+                        if elevated {
+                            ops.add_shell(format!("rm -f '{}'", target_sys_path.display()));
+                        } else {
+                            std::fs::remove_file(&target_sys_path)
+                                .context("Failed to remove old symlink")?;
+                        }
                     }
                 }
             }
@@ -532,16 +617,9 @@ fn cleanup_dir_recursive(
     Ok(())
 }
 
-/// Reconcile declaratively managed Flatpak applications.
-///
-/// Reads the flatpak manifest from the current generation and:
-/// - Installs any flatpaks not yet present
-/// - Uninstalls flatpaks that were managed but removed from config
 fn reconcile_flatpaks(current: &Path, old_gen: Option<&Path>) -> Result<()> {
     let flatpak_dir = current.join("flatpaks");
     if !flatpak_dir.exists() {
-        // No flatpak config in this generation — check if we need to
-        // clean up flatpaks from a previous generation.
         if let Some(old) = old_gen {
             let old_flatpak_dir = old.join("flatpaks");
             if old_flatpak_dir.exists() {
@@ -557,10 +635,8 @@ fn reconcile_flatpaks(current: &Path, old_gen: Option<&Path>) -> Result<()> {
         return Ok(());
     }
 
-    // Get currently installed flatpaks
     let installed = get_installed_flatpaks()?;
 
-    // Install missing flatpaks
     let mut to_install: Vec<&str> = Vec::new();
     for id in &desired {
         if !installed.contains(&id.to_string()) {
@@ -575,7 +651,9 @@ fn reconcile_flatpaks(current: &Path, old_gen: Option<&Path>) -> Result<()> {
         }
 
         let mut cmd = Command::new("flatpak");
-        cmd.arg("install").arg("--noninteractive").arg("--or-update");
+        cmd.arg("install")
+            .arg("--noninteractive")
+            .arg("--or-update");
         for id in &to_install {
             cmd.arg(id);
         }
@@ -586,7 +664,6 @@ fn reconcile_flatpaks(current: &Path, old_gen: Option<&Path>) -> Result<()> {
         }
     }
 
-    // Uninstall flatpaks that were previously managed but no longer desired
     if let Some(old) = old_gen {
         let old_flatpak_dir = old.join("flatpaks");
         if old_flatpak_dir.exists() {
@@ -656,7 +733,6 @@ fn get_installed_flatpaks() -> Result<std::collections::HashSet<String>> {
         .context("Failed to run flatpak list")?;
 
     if !output.status.success() {
-        // flatpak might not be installed yet — return empty set
         log::warn!("flatpak list failed, assuming no flatpaks installed");
         return Ok(std::collections::HashSet::new());
     }

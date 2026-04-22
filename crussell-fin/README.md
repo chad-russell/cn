@@ -70,7 +70,6 @@ Use @chad-russell/crussell-fin as a template, name the OS the repository name. E
 - Includes curated collections: development tools, fonts, CLI utilities. Go nuts.
 - Users install packages at runtime with `brew bundle`, aliased to premade `ujust commands`
 - Homebrew itself is provided by the `@ublue-os/brew` OCI layer copied during build
-- See [custom/brew/README.md](custom/brew/README.md) for details
 
 ### Flatpak Support
 - Ship your favorite flatpaks declaratively in Brunch config
@@ -80,7 +79,6 @@ Use @chad-russell/crussell-fin as a template, name the OS the repository name. E
 ### ujust Commands
 - User-friendly command shortcuts via `ujust`
 - Curated commands for app installation and system maintenance
-- See [custom/ujust/README.md](custom/ujust/README.md) for details
 
 ### Build Scripts
 - Modular numbered scripts (10-, 20-, 30-) run in order
@@ -102,7 +100,6 @@ Important: Change `finpilot` to your repository name in these 6 files:
 2. `Justfile` (line 1): `export image_name := env("IMAGE_NAME", "your-repo-name")`
 3. `README.md` (line 1): `# your-repo-name`
 4. `artifacthub-repo.yml` (line 5): `repositoryID: your-repo-name`
-5. `custom/ujust/README.md` (~line 175): `localhost/your-repo-name:stable`
 6. `.github/workflows/clean.yml` (line 23): `packages: your-repo-name`
 
 ### 3. Enable GitHub Actions
@@ -121,15 +118,10 @@ Choose your base image in `Containerfile` (line 23):
 FROM ghcr.io/ublue-os/bluefin:stable
 ```
 
-Add your packages in `build/10-build.sh`:
+Add your packages in `build/build.sh`:
 ```bash
 dnf5 install -y package-name
 ```
-
-Customize your apps:
-- Add Brewfiles in `custom/brew/` ([guide](custom/brew/README.md))
-- Add Flatpaks in `brunch/config/flatpaks/brunch.bri`
-- Add ujust commands in `custom/ujust/` ([guide](custom/ujust/README.md))
 
 ### 5. Development Workflow
 
@@ -297,9 +289,6 @@ cosign verify --key cosign.pub ghcr.io/your-username/your-repo-name:stable
 
 ## Detailed Guides
 
-- [Homebrew/Brewfiles](custom/brew/README.md) - Runtime package management
-- [Brunch Config Layout](../brunch/config/README.md) - Host targets, shared profiles, and Flatpak config
-- [ujust Commands](custom/ujust/README.md) - User convenience commands
 - [Build Scripts](build/README.md) - Build-time customization
 
 ## Architecture
@@ -310,7 +299,6 @@ This template follows the **multi-stage build architecture** from @projectbluefi
 
 **Stage 1: Context (ctx)** - Combines resources from multiple sources:
 - Local build scripts (`/build`)
-- Local custom files (`/custom`)
 - **@projectbluefin/common** - Desktop configuration shared with Aurora
 - **@projectbluefin/branding** - Branding assets
 - **@ublue-os/artwork** - Artwork shared with Aurora and Bazzite

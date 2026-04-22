@@ -37,12 +37,7 @@ This image is built and deployed **locally only** - no CI/CD infrastructure.
 ├── Containerfile          # Main build definition (multi-stage build)
 ├── Justfile               # Build automation (build, switch, VM commands)
 ├── build/                 # Build-time scripts
-│   ├── 10-build.sh       # Main build script (packages, services)
-│   └── *.sh.example      # Example scripts (rename to use)
-├── custom/                # Runtime customizations
-│   ├── brew/             # Homebrew Brewfiles (CLI tools)
-│   └── ujust/            # User commands
-├── ../brunch/config/      # Host/home config, Flatpaks, systemd units
+│   ├── build.sh       # Main build script (packages, services)
 ├── iso/                   # ISO/disk image configs
 │   ├── disk.toml         # VM image config (QCOW2/RAW)
 │   └── iso.toml          # ISO installer config
@@ -54,7 +49,6 @@ This image is built and deployed **locally only** - no CI/CD infrastructure.
 ### Build-time vs Runtime
 
 - **Build-time** (`build/`): Baked into container. Use `dnf5 install`. Services, configs, system packages.
-- **Runtime** (`custom/`): User installs after deployment. Brewfiles and user commands.
 - **Host/home config** (`../brunch/config/`): Flatpaks, desktop settings, and managed user services.
 
 ### Bluefin Convention Compliance
@@ -62,13 +56,12 @@ This image is built and deployed **locally only** - no CI/CD infrastructure.
 - Use `dnf5` exclusively (never `dnf`, `yum`, `rpm-ostree`)
 - Always `-y` flag for non-interactive
 - COPRs: enable → install → **DISABLE**
-- Numbered scripts: `10-build.sh`, `20-*.sh`, `30-*.sh`
 
 ## Where to Add Packages
 
 ### System Packages (Build-time)
 
-**Location**: `build/10-build.sh`
+**Location**: `build/build.sh`
 
 ```bash
 dnf5 install -y vim git htop
@@ -76,38 +69,11 @@ dnf5 install -y vim git htop
 
 Use for: system utilities, services, dependencies needed at boot.
 
-### Homebrew Packages (Runtime)
-
-**Location**: `custom/brew/*.Brewfile`
-
-```ruby
-brew "bat"
-brew "eza"
-brew "ripgrep"
-```
-
-Use for: CLI tools, dev environments. Users install via `ujust` commands.
-
-### Flatpak Applications (Runtime)
-
-**Location**: `../brunch/config/flatpaks/brunch.bri`
-
-```typescript
-flatpaks: [
-  "org.mozilla.firefox",
-]
-```
-
-Use for: GUI apps. Applied and reconciled with `brunch apply`.
-
 ## Quick Reference
 
 | Request | Action | Location |
 |---------|--------|----------|
-| Add system package | `dnf5 install -y pkg` | `build/10-build.sh` |
-| Add CLI tool | `brew "pkg"` | `custom/brew/default.Brewfile` |
-| Add GUI app | Add Flatpak ID | `../brunch/config/flatpaks/brunch.bri` |
-| Add user command | Create shortcut | `custom/ujust/*.just` |
+| Add system package | `dnf5 install -y pkg` | `build/build.sh` |
 | Test locally | `just build && just build-qcow2 && just run-vm-qcow2` | |
 | Deploy | `just switch && sudo systemctl reboot` | |
 
@@ -154,7 +120,6 @@ The Containerfile uses multi-stage builds following @projectbluefin/distroless:
 
 Build scripts access resources at `/ctx/`:
 - Local scripts: `/ctx/build/`
-- Custom files: `/ctx/custom/`
 - OCI resources: `/ctx/oci/`
 
 ## Image Tags

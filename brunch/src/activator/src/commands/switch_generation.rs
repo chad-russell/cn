@@ -1,11 +1,11 @@
 use crate::{
     commands::apply::{
         cleanup_files, cleanup_systemd, link_desktop_assets, link_files, link_systemd,
+        prompt_for_elevation, ElevatedOps,
     },
     state_dir, symlink_atomic,
 };
 use anyhow::{Context, Result};
-use std::io::{self, Write};
 
 pub fn run(gen_num: u32) -> Result<()> {
     let state = state_dir()?;
@@ -17,7 +17,8 @@ pub fn run(gen_num: u32) -> Result<()> {
     }
 
     let has_system_units = gen_path.join("systemd/system").exists();
-    let elevated = if has_system_units {
+    let has_system_files = gen_path.join("files/root").exists();
+    let elevated = if has_system_units || has_system_files {
         prompt_for_elevation()?
     } else {
         false
@@ -37,31 +38,27 @@ pub fn run(gen_num: u32) -> Result<()> {
 
     log::info!("Switched to generation {}", gen_num);
 
+    let mut ops = ElevatedOps::new();
+
     if let Some(ref old_path) = old_current {
-        cleanup_systemd(old_path, &gen_path, elevated)
+        cleanup_systemd(old_path, &gen_path, elevated, &mut ops)
             .context("Failed to cleanup old systemd units")?;
     }
 
-    link_systemd(&current, elevated).context("Failed to link systemd units")?;
+    link_systemd(&current, elevated, &mut ops).context("Failed to link systemd units")?;
 
     link_desktop_assets(&current).context("Failed to link desktop assets for generation switch")?;
-    link_files(&current).context("Failed to link home files for generation switch")?;
+    link_files(&current, elevated, &mut ops).context("Failed to link files for generation switch")?;
 
     if let Some(ref old_path) = old_current {
-        cleanup_files(old_path, &gen_path).context("Failed to cleanup old files")?;
+        cleanup_files(old_path, &gen_path, elevated, &mut ops)
+            .context("Failed to cleanup old files")?;
+    }
+
+    if elevated {
+        ops.execute()?;
     }
 
     println!("Switched to generation {}", gen_num);
     Ok(())
-}
-
-fn prompt_for_elevation() -> Result<bool> {
-    println!("System-level systemd units detected.");
-    print!("Apply with elevated privileges? [y/N]: ");
-    io::stdout().flush()?;
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-
-    Ok(input.trim().to_lowercase() == "y")
 }
