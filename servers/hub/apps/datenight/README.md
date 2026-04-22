@@ -26,13 +26,13 @@ DATA_FILE=restaurants.json python app.py
 podman build -t datenight .
 
 # Create persistent data directory
-mkdir -p ~/srv/datenight/data
-cp restaurants.json ~/srv/datenight/data/
+mkdir -p /srv/datenight/data
+cp restaurants.json /srv/datenight/data/
 
 # Run
 podman run -d --name datenight \
   -p 7890:7890 \
-  -v ~/srv/datenight/data:/data:Z \
+  -v /srv/datenight/data:/data:Z \
   -e DATA_FILE=/data/restaurants.json \
   datenight
 ```
