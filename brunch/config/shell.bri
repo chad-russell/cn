@@ -1,9 +1,5 @@
 import * as std from "std";
 import { BrunchConfig } from "brunch";
-import eza from "eza";
-import oh_my_posh from "oh_my_posh";
-import zoxide from "zoxide";
-import nebula from "./nebula.bri";
 
 // zsh-autosuggestions - provides as-you-type command suggestions
 const zshAutosuggestionsSource = Brioche.gitCheckout({
@@ -30,24 +26,6 @@ const gitConfig = Brioche.includeFile("./git/.gitconfig");
 const ohMyPoshTheme = Brioche.includeFile("./oh-my-posh/config.json");
 
 export const brunchConfig: BrunchConfig = {
-  cliTools: [
-    {
-      name: "eza",
-      executable: eza(),
-    },
-    {
-      name: "oh-my-posh",
-      executable: oh_my_posh(),
-    },
-    {
-      name: "zoxide",
-      executable: zoxide(),
-    },
-    {
-      name: "nebula",
-      executable: nebula(),
-    },
-  ],
   files: {
     // Git configuration
     ".gitconfig": gitConfig,

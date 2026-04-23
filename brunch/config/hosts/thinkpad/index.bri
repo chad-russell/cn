@@ -1,5 +1,6 @@
 import { mergeBrunch, BrunchConfig } from "brunch";
 import { commonBrunchConfig } from "../../profiles/common.bri";
+import { devPackages } from "../../packages.bri";
 import { brunchConfig as baseConfig } from "../../profiles/desktop-base.bri";
 import { brunchConfig as cursorConfig } from "../../cursor/brunch.bri";
 import { brunchConfig as weztermConfig } from "../../wezterm/brunch.bri";
@@ -9,6 +10,7 @@ import { brunchConfig as flatpakConfig } from "../../flatpaks/brunch.bri";
 
 export const thinkpadBrunchConfig: BrunchConfig = mergeBrunch(
   commonBrunchConfig,
+  devPackages,
   baseConfig,
   cursorConfig,
   weztermConfig,

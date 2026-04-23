@@ -1,0 +1,39 @@
+import { BrunchConfig } from "brunch";
+import nebula from "./nebula.bri";
+
+export const commonPackages: BrunchConfig = {
+  cliTools: [
+    { name: "nebula", executable: nebula() },
+  ],
+  briochePackages: [
+    "bat",
+    "dust",
+    "eza",
+    "gum",
+    "lazygit",
+    { package: "nodejs", bin: "node" },
+    { package: "oh_my_posh", bin: "oh-my-posh" },
+    { package: "ripgrep", bin: "rg" },
+    "shellcheck",
+    "tokei",
+    "uv",
+    "yazi",
+    "zoxide",
+  ],
+};
+
+const localPackagesRoot = "../../../brioche-packages/packages";
+
+export const devPackages: BrunchConfig = {
+  briochePackages: [
+    "caddy",
+    "duckdb",
+    { package: "gemini_cli", bin: "gemini" },
+    { package: "github_cli", bin: "gh" },
+    { package: "mprocs", path: `${localPackagesRoot}/mprocs` },
+    "python",
+    "railway",
+    { package: "turso_cli", bin: "turso", path: `${localPackagesRoot}/turso_cli` },
+    "witr",
+  ],
+};

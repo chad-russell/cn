@@ -67,6 +67,9 @@ pub fn run(project_path: &Path, target: &str) -> Result<()> {
         anyhow::bail!("Brioche build failed");
     }
 
+    materialize_brioche_packages(&gen_path)
+        .context("Failed to materialize brioche packages")?;
+
     let has_system_units = gen_path.join("systemd/system").exists();
     let has_system_files = gen_path.join("files/root").exists();
     let elevated = if has_system_units || has_system_files {
@@ -615,6 +618,92 @@ fn cleanup_dir_recursive(
         }
     }
     Ok(())
+}
+
+fn materialize_brioche_packages(gen_path: &Path) -> Result<()> {
+    let packages_file = gen_path.join("brioche-packages/packages.json");
+    if !packages_file.exists() {
+        return Ok(());
+    }
+
+    let contents = std::fs::read_to_string(&packages_file)
+        .context("Failed to read brioche packages manifest")?;
+
+    let packages: Vec<BriochePackageEntry> = serde_json::from_str(&contents)
+        .context("Failed to parse brioche packages manifest")?;
+
+    if packages.is_empty() {
+        return Ok(());
+    }
+
+    println!("Materializing {} brioche package(s)...", packages.len());
+
+    let bin_dir = gen_path.join("bin");
+    let executables_dir = gen_path.join("brioche-executables");
+    std::fs::create_dir_all(&bin_dir).context("Failed to create bin dir")?;
+    std::fs::create_dir_all(&executables_dir).context("Failed to create executables dir")?;
+
+    for pkg in &packages {
+        let output_dir = executables_dir.join(&pkg.bin);
+        println!("  {} (from {})", pkg.bin, pkg.package);
+
+        let status = if let Some(path) = &pkg.path {
+            Command::new("brioche")
+                .args(["build", "-p", path])
+                .arg("-o")
+                .arg(&output_dir)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .context(format!("Failed to run brioche build for {}", pkg.package))?
+        } else {
+            Command::new("brioche")
+                .args(["build", &pkg.package])
+                .arg("-o")
+                .arg(&output_dir)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .context(format!("Failed to run brioche build for {}", pkg.package))?
+        };
+
+        if !status.success() {
+            anyhow::bail!(
+                "brioche build {} failed (exit code {:?})",
+                pkg.package,
+                status.code()
+            );
+        }
+
+        let symlink_src = output_dir.join("brioche-run");
+        let symlink_dest = bin_dir.join(&pkg.bin);
+
+        if symlink_src.exists() {
+            std::os::unix::fs::symlink(
+                PathBuf::from("..").join("brioche-executables").join(&pkg.bin).join("brioche-run"),
+                &symlink_dest,
+            ).context(format!(
+                "Failed to create bin symlink for {}",
+                pkg.bin,
+            ))?;
+        } else {
+            log::warn!(
+                "Package {} has no brioche-run entry point, skipping bin symlink",
+                pkg.package,
+            );
+        }
+    }
+
+    println!("All {} package(s) materialized", packages.len());
+    Ok(())
+}
+
+#[derive(serde::Deserialize)]
+struct BriochePackageEntry {
+    package: String,
+    bin: String,
+    #[serde(default)]
+    path: Option<String>,
 }
 
 fn reconcile_flatpaks(current: &Path, old_gen: Option<&Path>) -> Result<()> {

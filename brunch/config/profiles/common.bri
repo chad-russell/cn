@@ -3,8 +3,8 @@ import { brunchConfig as shellConfig } from "../shell.bri";
 import { brunchConfig as nvimConfig } from "../features/nvim.bri";
 import { brunchConfig as opencodeConfig } from "../opencode.bri";
 import { brunchConfig as piConfig } from "../features/pi.bri";
+import { commonPackages } from "../packages.bri";
 
-// explain-html is a general-purpose agent skill, not host-specific
 const explainHtmlSkill = Brioche.includeDirectory("../agents/skills/explain-html");
 
 const explainHtmlConfig: BrunchConfig = {
@@ -14,6 +14,7 @@ const explainHtmlConfig: BrunchConfig = {
 };
 
 export const commonBrunchConfig: BrunchConfig = mergeBrunch(
+  commonPackages,
   shellConfig,
   nvimConfig,
   opencodeConfig,

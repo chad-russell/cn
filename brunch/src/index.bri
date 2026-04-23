@@ -27,34 +27,36 @@ export {
   type BrunchTimerConfig,
 } from "./systemd.bri";
 
+export type BriochePackage =
+  | string
+  | { package: string; bin?: string; path?: string };
+
 export interface BrunchConfig {
-  /**
-   * Desktop applications to install
-   */
   desktopApps?: BrunchDesktopApp[];
-
-  /**
-   * CLI tools to install (symlinked to ~/.local/bin)
-   */
   cliTools?: BrunchCliTool[];
-
-  /**
-   * Files to manage (map of absolute path -> content)
-   * Can be either files or directories
-   */
   files?: Record<string, std.RecipeLike<std.File | std.Directory>>;
-
-  /**
-   * Systemd units to manage (user and system scope)
-   */
   systemdUnits?: BrunchSystemdConfig;
-
-  /**
-   * Flatpak application IDs to install and manage declaratively.
-   * On `brunch apply`, missing flatpaks are installed and flatpaks
-   * removed from config are uninstalled.
-   */
   flatpaks?: string[];
+  briochePackages?: BriochePackage[];
+}
+
+export function getBinName(pkg: BriochePackage): string {
+  return typeof pkg === "string" ? pkg : (pkg.bin ?? pkg.package);
+}
+
+export function normalizePackage(pkg: BriochePackage): {
+  package: string;
+  bin: string;
+  path?: string;
+} {
+  const result: { package: string; bin: string; path?: string } = {
+    package: typeof pkg === "string" ? pkg : pkg.package,
+    bin: getBinName(pkg),
+  };
+  if (typeof pkg !== "string" && pkg.path !== undefined) {
+    result.path = pkg.path;
+  }
+  return result;
 }
 
 export function mergeBrunch(...configs: BrunchConfig[]): BrunchConfig {
@@ -110,6 +112,25 @@ export function mergeBrunch(...configs: BrunchConfig[]): BrunchConfig {
 
     if (config.flatpaks !== undefined && config.flatpaks.length > 0) {
       merged.flatpaks = [...(acc.flatpaks ?? []), ...config.flatpaks];
+    }
+
+    if (config.briochePackages !== undefined && config.briochePackages.length > 0) {
+      const existingBins = new Set(
+        (acc.briochePackages ?? []).map(getBinName),
+      );
+      const duplicates = config.briochePackages.filter((p) =>
+        existingBins.has(getBinName(p)),
+      );
+      if (duplicates.length > 0) {
+        const names = duplicates.map((d) => getBinName(d)).join(", ");
+        throw new Error(
+          `mergeBrunch: duplicate briochePackages detected: ${names} (in config ${configIndex})`,
+        );
+      }
+      merged.briochePackages = [
+        ...(acc.briochePackages ?? []),
+        ...config.briochePackages,
+      ];
     }
 
     return merged;
@@ -281,12 +302,22 @@ export function makeBrunch(config: BrunchConfig): std.Recipe<std.Directory> {
     parts.push(makeSystemdUnits(config.systemdUnits));
   }
 
-  // Write flatpak manifest to generation output
   if (config.flatpaks !== undefined && config.flatpaks.length > 0) {
     parts.push(
       std.directory({
         "flatpaks": std.directory({
           "managed.list": std.file(config.flatpaks.join("\n") + "\n"),
+        }),
+      }),
+    );
+  }
+
+  if (config.briochePackages !== undefined && config.briochePackages.length > 0) {
+    const normalized = config.briochePackages.map(normalizePackage);
+    parts.push(
+      std.directory({
+        "brioche-packages": std.directory({
+          "packages.json": std.file(JSON.stringify(normalized)),
         }),
       }),
     );
