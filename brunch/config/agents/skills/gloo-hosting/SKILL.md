@@ -1,5 +1,5 @@
 ---
-name: gpl-hosting
+name: gloo-hosting
 description: Operate the Gloo dev stack on hub. Use when working in 360-gpl, 360-hummingbird, 360-polymer, or the old gloo-control-plane and the task involves app start/stop, logs, env/secrets, systemd units, compose infra, or local dev routing.
 ---
 
@@ -15,10 +15,7 @@ The Gloo stack on `hub` uses:
 ## Quick start
 
 ```bash
-# Start everything (infra + all app services)
 just -f ~/Code/cn/servers/hub/dev-stacks/gloo/Justfile up
-
-# Stop everything
 just -f ~/Code/cn/servers/hub/dev-stacks/gloo/Justfile stop
 ```
 
@@ -41,11 +38,11 @@ Services:
 Infra lifecycle is managed via the `gloo-infra.target` systemd target, which starts compose, creates databases, and creates S3 buckets:
 
 ```bash
-systemctl --user start gloo-infra.target    # start all infra
-systemctl --user status gloo-infra.target    # check status
-journalctl --user -u gloo-infra-up.service   # compose logs
-journalctl --user -u gloo-init-db.service    # database creation logs
-journalctl --user -u gloo-init-buckets.service  # bucket creation logs
+systemctl --user start gloo-infra.target
+systemctl --user status gloo-infra.target
+journalctl --user -u gloo-infra-up.service
+journalctl --user -u gloo-init-db.service
+journalctl --user -u gloo-init-buckets.service
 ```
 
 Or use the Justfile shortcuts:
@@ -96,8 +93,6 @@ systemctl --user restart gloo-hb-api.service
 
 ## Logs and status
 
-This is the preferred interface for humans and AI agents.
-
 ```bash
 systemctl --user status gloo-polymer.service
 journalctl --user -u gloo-polymer.service -n 100
@@ -128,12 +123,6 @@ At service start, `render-runtime-env.sh` writes a merged runtime file to:
 
 That file is then sourced by each service's Brioche runnable (defined in `brunch/config/hosts/hub/dev-stacks.bri`) before launching the app.
 
-## Important notes
-
-- All services use linuxbrew Node 24 for consistency.
-- Caddy is **separate**. App services only bind localhost ports.
-- Polymer should use Turbopack unless there is a concrete host-level issue being debugged.
-
 ## Bootstrap
 
 Per-service bootstrap scripts are in `~/Code/cn/servers/hub/dev-stacks/gloo/scripts/`:
@@ -160,6 +149,9 @@ Routes are defined in `~/Code/cn/servers/hub/caddy/routes/internal/gloo.caddy`:
 | `hb-web.internal.crussell.io` | `127.0.0.1:3100` |
 | `storyhub.internal.crussell.io` | `127.0.0.1:3007` |
 | `polymer.internal.crussell.io` | `127.0.0.1:3001` |
+| `rustfs.internal.crussell.io` | `127.0.0.1:9000` |
+| `rustfs-console.internal.crussell.io` | `127.0.0.1:9001` |
+| `pgadmin.internal.crussell.io` | `127.0.0.1:5050` |
 
 Reload Caddy after config edits:
 
@@ -167,3 +159,10 @@ Reload Caddy after config edits:
 sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile
 sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
 ```
+
+## Important notes
+
+- All services use linuxbrew Node 24 for consistency.
+- Caddy is **separate**. App services only bind localhost ports.
+- Polymer should use Turbopack unless there is a concrete host-level issue being debugged.
+- Flat subdomains are required because the wildcard cert only covers one level under `internal.crussell.io`.

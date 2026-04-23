@@ -12,6 +12,7 @@ copr_install_isolated "scottames/ghostty" ghostty
 
 dnf5 -y install \
     wl-clipboard \
-    cava
+    cava \
+    xdg-desktop-portal-gnome
 
 echo "::endgroup::"

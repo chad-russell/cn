@@ -70,6 +70,33 @@ window-rule {
     open-floating true
 }
 
+window-rule {
+    match app-id="Zoom Workplace" title=".*menu.*"
+    open-floating true
+    min-width 250
+    open-focused true
+}
+
+window-rule {
+    match app-id="Zoom Workplace" title="Settings"
+    open-floating true
+}
+
+window-rule {
+    match app-id="Zoom Workplace" title="Audio Settings"
+    open-floating true
+}
+
+window-rule {
+    match app-id="Zoom Workplace" title=".*Sharing.*"
+    open-floating true
+}
+
+window-rule {
+    match app-id="Zoom Workplace" title="Chat"
+    open-floating true
+}
+
 binds {
     // Window/column navigation
     Mod+Left  { focus-column-left; }

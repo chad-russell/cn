@@ -8,22 +8,22 @@ Use this file for global context. For implementation details, open the subsystem
 
 ### Core Infrastructure Docs
 
-| Area | Doc | Purpose |
-|------|-----|---------|
-| Nebula mesh VPN | `nebula/README.md` | Overlay topology, cert model, deploy/update workflows |
-| Public ingress gateway | `servers/gateway/README.md` | Hetzner nginx SSL passthrough to hub over Nebula |
-| Hub migration history | *(archived)* | Swarm → Quadlets migration complete |
+| Area                   | Doc                         | Purpose                                               |
+| ---------------------- | --------------------------- | ----------------------------------------------------- |
+| Nebula mesh VPN        | `nebula/README.md`          | Overlay topology, cert model, deploy/update workflows |
+| Public ingress gateway | `servers/gateway/README.md` | Hetzner nginx SSL passthrough to hub over Nebula      |
+| Hub migration history  | _(archived)_                | Swarm → Quadlets migration complete                   |
 
 ### Host and Service Docs
 
-| Area | Doc | Purpose |
-|------|-----|---------|
-| AI host (`bees`) | `servers/ai/README.md` | llama.cpp + llama-swap operations |
-| NAS | `servers/nas/README.md` | TrueNAS NFS exports |
-| Backup system | `servers/hub/backup/README.md` | Restic backups to NAS with ntfy notifications |
-| Desktop config tooling | `brunch/README.md`, `brunch/config/README.md` | Brunch/Brioche tooling plus this repo's config layout |
-| Custom Fedora Atomic image | `crussell-fin/AGENTS.md` | bootc image template for building personalized workstation images (based on finpilot/Bluefin) |
-| Dev stacks (Gloo, Buildspace) | `servers/hub/dev-stacks/README.md` | Podman Compose dev environments |
+| Area                          | Doc                                           | Purpose                                                                                       |
+| ----------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| AI host (`bees`)              | `servers/ai/README.md`                        | llama.cpp + llama-swap operations                                                             |
+| NAS                           | `servers/nas/README.md`                       | TrueNAS NFS exports                                                                           |
+| Backup system                 | `servers/hub/backup/README.md`                | Restic backups to NAS with ntfy notifications                                                 |
+| Desktop config tooling        | `brunch/README.md`, `brunch/config/README.md` | Brunch/Brioche tooling plus this repo's config layout                                         |
+| Custom Fedora Atomic image    | `crussell-fin/AGENTS.md`                      | bootc image template for building personalized workstation images (based on finpilot/Bluefin) |
+| Dev stacks (Gloo, Buildspace) | `brunch/config/agents/skills/gloo-hosting/SKILL.md`, `brunch/config/agents/skills/buildspace-hosting/SKILL.md` | Brunch-managed dev stack skills (infra + app services) |
 
 ### Config-First Directories (No README Yet)
 
@@ -114,7 +114,12 @@ Use this file for global context. For implementation details, open the subsystem
 │   │   │   ├── Caddyfile
 │   │   │   └── routes/internal/   # Imported Caddy route snippets
 │   │   ├── dev-stacks/
-│   │   │   ├── gloo/compose.yaml
+│   │   │   ├── gloo/
+│   │   │   │   ├── compose.yaml
+│   │   │   │   ├── Justfile
+│   │   │   │   ├── host-envs/
+│   │   │   │   ├── scripts/
+│   │   │   │   └── secrets/
 │   │   │   └── buildspace/compose.yaml
 │   │   └── quadlets/
 │   ├── homeassistant/
@@ -132,14 +137,14 @@ Use this file for global context. For implementation details, open the subsystem
 
 ## Machine Registry
 
-| Hostname | IP Address | OS | Purpose | Services |
-|----------|------------|-----|---------|----------|
-| hub | 192.168.20.105 | Fedora Atomic | Main server | Podman Quadlets, Caddy |
-| media | 192.168.20.61 | Fedora Server | Media server | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr |
-| nas | 192.168.20.31 | TrueNAS | Network storage | NFS |
-| homeassistant | 192.168.20.51 | HAOS | Smart home | Home Assistant |
-| gateway | 178.156.171.212 | Fedora | Public gateway/VPS | nginx (SSL passthrough → hub via Nebula), Nebula lighthouse + relay |
-| think | - | Fedora Atomic | Laptop | ThinkPad T14 |
+| Hostname      | IP Address      | OS            | Purpose            | Services                                                            |
+| ------------- | --------------- | ------------- | ------------------ | ------------------------------------------------------------------- |
+| hub           | 192.168.20.105  | Fedora Atomic | Main server        | Podman Quadlets, Caddy                                              |
+| media         | 192.168.20.61   | Fedora Server | Media server       | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr         |
+| nas           | 192.168.20.31   | TrueNAS       | Network storage    | NFS                                                                 |
+| homeassistant | 192.168.20.51   | HAOS          | Smart home         | Home Assistant                                                      |
+| gateway       | 178.156.171.212 | Fedora        | Public gateway/VPS | nginx (SSL passthrough → hub via Nebula), Nebula lighthouse + relay |
+| think         | -               | Fedora Atomic | Laptop             | ThinkPad T14                                                        |
 
 ## SSH Configuration
 
@@ -150,6 +155,8 @@ Use this file for global context. For implementation details, open the subsystem
 ## Hub Operations (Quick Reference)
 
 Services run as rootless Podman containers via systemd Quadlets.
+
+For the brunch-managed dev stacks (`servers/hub/dev-stacks/`), do not manually install or symlink user units. The source of truth for those units is `brunch/config/hosts/hub/dev-stacks.bri`, applied with `brunch apply ./config --target hub`.
 
 ```bash
 # View quadlet source files in repo
@@ -180,10 +187,12 @@ sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
 Secrets are encrypted with [age](https://github.com/FiloSottile/age) and stored in `servers/hub/quadlets/secrets/*.age`. They are decrypted during setup by `setup-quadlets.sh`.
 
 **Prerequisites:**
+
 - Age key at `~/.config/age/key.txt`
 - Age binary installed (`~/.local/bin/age` or system-wide)
 
 See `servers/hub/quadlets/secrets/README.md` for:
+
 - List of encrypted files and their contents
 - Manual decryption commands
 - Instructions for rotating secrets
@@ -194,6 +203,8 @@ See `servers/hub/quadlets/secrets/README.md` for:
 2. If externally reachable, add/update route(s) in `servers/hub/caddy/Caddyfile`.
 3. Deploy quadlet to `~/.config/containers/systemd/`, reload daemon, and restart service.
 4. Verify with service logs and HTTP checks.
+
+For Gloo / Buildspace app dev services, use the `gloo-hosting` or `buildspace-hosting` skills instead; those services are host-run dev servers managed by brunch user units, not by copying quadlets manually.
 
 ## Archived / Deprecated
 

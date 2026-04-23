@@ -51,6 +51,12 @@ const llamaSwapConfig = std.file(std.indoc`
     "gemma4-e2b":
       name: "Gemma-4-E2B-it-UD-Q8_K_XL"
       cmd: \${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_gemma-4-E2B-it-GGUF_gemma-4-E2B-it-UD-Q8_K_XL.gguf --mmproj /home/crussell/.cache/llama.cpp/unsloth_gemma-4-E2B-it-GGUF_mmproj-BF16.gguf --jinja --ctx-size 50000
+    "gemma4-26b-a4b":
+      name: "Gemma-4-26B-A4B-it-UD-Q8_K_XL"
+      cmd: \${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_gemma-4-26B-A4B-it-GGUF_gemma-4-26B-A4B-it-UD-Q8_K_XL.gguf --mmproj /home/crussell/.cache/llama.cpp/unsloth_gemma-4-26B-A4B-it-GGUF_mmproj-BF16.gguf --jinja --ctx-size 50000
+    "gemma4-31b":
+      name: "Gemma-4-31B-it-UD-Q8_K_XL"
+      cmd: \${llama-cmd} /home/crussell/.cache/llama.cpp/unsloth_gemma-4-31B-it-GGUF_gemma-4-31B-it-UD-Q8_K_XL.gguf --mmproj /home/crussell/.cache/llama.cpp/unsloth_gemma-4-31B-it-GGUF_mmproj-BF16.gguf --jinja --ctx-size 50000
     "nomic-embed-text-v2":
       name: "Nomic-Embed-Text-V2"
       cmd: \${llama-cmd} /home/crussell/.cache/llama.cpp/ggml-org_Nomic-Embed-Text-V2-GGUF_nomic-embed-text-v2-moe-q8_0.gguf --embeddings --ctx-size 50000
