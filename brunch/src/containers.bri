@@ -1,0 +1,414 @@
+import * as std from "std";
+
+export interface OciContainerConfig {
+  image: string;
+  autoStart?: boolean;
+  containerName?: string;
+  environment?: Record<string, string>;
+  environmentFiles?: string[];
+  ports?: string[];
+  volumes?: string[];
+  cmd?: string[];
+  networks?: string[];
+  privileged?: boolean;
+  pull?: "always" | "missing" | "never" | "never-newer";
+  restart?: "no" | "on-success" | "on-failure" | "on-abnormal" | "on-watchdog" | "on-abort" | "always" | "unless-stopped";
+  restartSec?: string | number;
+  user?: string;
+  workdir?: string;
+  hostname?: string;
+  healthCmd?: string;
+  healthInterval?: string;
+  healthTimeout?: string;
+  healthRetries?: number;
+  healthStartPeriod?: string;
+  dependsOn?: string[];
+  labels?: Record<string, string>;
+  extraOptions?: Record<string, string>;
+  wantedBy?: string[];
+}
+
+export interface OciPodContainerConfig {
+  image: string;
+  args?: string[];
+  environment?: Record<string, string>;
+  volumeMounts?: Record<string, string>;
+  ports?: Record<string, number>;
+  healthCmd?: string[];
+  healthHttpGet?: { path: string; port: number };
+  healthInitialDelaySeconds?: number;
+  healthPeriodSeconds?: number;
+  healthTimeoutSeconds?: number;
+  healthFailureThreshold?: number;
+}
+
+export interface OciPodVolume {
+  type: "hostPath" | "pvc";
+  path?: string;
+  hostPathType?: "Directory" | "DirectoryOrCreate" | "FileOrCreate";
+  claimName?: string;
+}
+
+export interface OciPodConfig {
+  containers: Record<string, OciPodContainerConfig>;
+  volumes?: Record<string, OciPodVolume>;
+  ports?: string[];
+  environmentFiles?: string[];
+  dependsOn?: string[];
+  wantedBy?: string[];
+}
+
+export function makeQuadletFile(
+  name: string,
+  config: OciContainerConfig
+): std.Recipe<std.File> {
+  const lines: string[] = [];
+
+  lines.push("[Unit]");
+  lines.push(`Description=Container: ${name}`);
+
+  const afterUnits: string[] = ["network-online.target"];
+  const wantUnits: string[] = ["network-online.target"];
+
+  if (config.dependsOn && config.dependsOn.length > 0) {
+    for (const dep of config.dependsOn) {
+      afterUnits.push(`${dep}.service`);
+      wantUnits.push(`${dep}.service`);
+    }
+  }
+
+  lines.push(`After=${afterUnits.join(" ")}`);
+  lines.push(`Wants=${wantUnits.join(" ")}`);
+
+  lines.push("");
+  lines.push("[Container]");
+  lines.push(`Image=${config.image}`);
+
+  if (config.containerName) {
+    lines.push(`ContainerName=${config.containerName}`);
+  }
+
+  if (config.environment) {
+    for (const [key, value] of Object.entries(config.environment)) {
+      lines.push(`Environment=${key}=${value}`);
+    }
+  }
+
+  if (config.environmentFiles) {
+    for (const filePath of config.environmentFiles) {
+      lines.push(`EnvironmentFile=${filePath}`);
+    }
+  }
+
+  if (config.ports) {
+    for (const port of config.ports) {
+      lines.push(`PublishPort=${port}`);
+    }
+  }
+
+  if (config.volumes) {
+    for (const volume of config.volumes) {
+      lines.push(`Volume=${volume}`);
+    }
+  }
+
+  if (config.cmd && config.cmd.length > 0) {
+    lines.push(`Exec=${config.cmd.join(" ")}`);
+  }
+
+  if (config.networks) {
+    for (const network of config.networks) {
+      lines.push(`Network=${network}`);
+    }
+  }
+
+  if (config.privileged) {
+    lines.push("Privileged=true");
+  }
+
+  if (config.pull) {
+    lines.push(`Pull=${config.pull}`);
+  }
+
+  if (config.user) {
+    lines.push(`User=${config.user}`);
+  }
+
+  if (config.workdir) {
+    lines.push(`WorkingDir=${config.workdir}`);
+  }
+
+  if (config.hostname) {
+    lines.push(`HostName=${config.hostname}`);
+  }
+
+  if (config.healthCmd) {
+    lines.push(`HealthCmd=${config.healthCmd}`);
+  }
+
+  if (config.healthInterval) {
+    lines.push(`HealthInterval=${config.healthInterval}`);
+  }
+
+  if (config.healthTimeout) {
+    lines.push(`HealthTimeout=${config.healthTimeout}`);
+  }
+
+  if (config.healthRetries !== undefined) {
+    lines.push(`HealthRetries=${config.healthRetries}`);
+  }
+
+  if (config.healthStartPeriod) {
+    lines.push(`HealthStartPeriod=${config.healthStartPeriod}`);
+  }
+
+  if (config.labels) {
+    for (const [key, value] of Object.entries(config.labels)) {
+      lines.push(`Label=${key}=${value}`);
+    }
+  }
+
+  if (config.extraOptions) {
+    for (const [key, value] of Object.entries(config.extraOptions)) {
+      lines.push(`${key}=${value}`);
+    }
+  }
+
+  lines.push("");
+  lines.push("[Service]");
+
+  if (config.restart) {
+    lines.push(`Restart=${config.restart}`);
+  }
+
+  if (config.restartSec !== undefined) {
+    lines.push(`RestartSec=${formatSeconds(config.restartSec)}`);
+  }
+
+  lines.push("");
+  lines.push("[Install]");
+  if (config.wantedBy && config.wantedBy.length > 0) {
+    lines.push(`WantedBy=${config.wantedBy.join(" ")}`);
+  } else {
+    lines.push("WantedBy=default.target");
+  }
+
+  return std.file(lines.join("\n"));
+}
+
+export function makeKubeFile(
+  name: string,
+  config: OciPodConfig
+): { kube: std.Recipe<std.File>; yml: std.Recipe<std.File> } {
+  const kubeLines: string[] = [];
+
+  kubeLines.push("[Unit]");
+  kubeLines.push(`Description=Pod: ${name}`);
+
+  const afterUnits: string[] = ["network-online.target"];
+  const wantUnits: string[] = ["network-online.target"];
+
+  if (config.dependsOn && config.dependsOn.length > 0) {
+    for (const dep of config.dependsOn) {
+      afterUnits.push(`${dep}.service`);
+      wantUnits.push(`${dep}.service`);
+    }
+  }
+
+  kubeLines.push(`After=${afterUnits.join(" ")}`);
+  kubeLines.push(`Wants=${wantUnits.join(" ")}`);
+
+  kubeLines.push("");
+  kubeLines.push("[Kube]");
+  kubeLines.push(`Yaml=${name}.yml`);
+
+  if (config.ports) {
+    for (const port of config.ports) {
+      kubeLines.push(`PublishPort=${port}`);
+    }
+  }
+
+  if (config.environmentFiles) {
+    for (const filePath of config.environmentFiles) {
+      kubeLines.push(`EnvironmentFile=${filePath}`);
+    }
+  }
+
+  kubeLines.push("");
+  kubeLines.push("[Install]");
+
+  if (config.wantedBy && config.wantedBy.length > 0) {
+    kubeLines.push(`WantedBy=${config.wantedBy.join(" ")}`);
+  } else {
+    kubeLines.push("WantedBy=default.target");
+  }
+
+  const yml = makeKubeYaml(name, config);
+
+  return {
+    kube: std.file(kubeLines.join("\n")),
+    yml,
+  };
+}
+
+function makeKubeYaml(
+  podName: string,
+  config: OciPodConfig
+): std.Recipe<std.File> {
+  const containerEntries: Record<string, unknown>[] = [];
+
+  for (const [containerName, containerConfig] of Object.entries(config.containers)) {
+    const container: Record<string, unknown> = {
+      name: containerName,
+      image: containerConfig.image,
+    };
+
+    if (containerConfig.args && containerConfig.args.length > 0) {
+      container.args = containerConfig.args;
+    }
+
+    if (containerConfig.environment) {
+      container.env = Object.entries(containerConfig.environment).map(
+        ([name, value]) => ({ name, value })
+      );
+    }
+
+    if (containerConfig.volumeMounts) {
+      container.volumeMounts = Object.entries(containerConfig.volumeMounts).map(
+        ([name, mountPath]) => ({ name, mountPath })
+      );
+    }
+
+    const livenessProbe = buildLivenessProbe(containerConfig);
+    if (livenessProbe) {
+      container.livenessProbe = livenessProbe;
+    }
+
+    containerEntries.push(container);
+  }
+
+  const volumeEntries: Record<string, unknown>[] = [];
+
+  if (config.volumes) {
+    for (const [volName, volConfig] of Object.entries(config.volumes)) {
+      const volume: Record<string, unknown> = { name: volName };
+
+      if (volConfig.type === "hostPath") {
+        const hostPath: Record<string, unknown> = {
+          path: volConfig.path,
+        };
+        if (volConfig.hostPathType) {
+          hostPath.type = volConfig.hostPathType;
+        }
+        volume.hostPath = hostPath;
+      } else if (volConfig.type === "pvc") {
+        volume.persistentVolumeClaim = {
+          claimName: volConfig.claimName,
+        };
+      }
+
+      volumeEntries.push(volume);
+    }
+  }
+
+  const pod: Record<string, unknown> = {
+    apiVersion: "v1",
+    kind: "Pod",
+    metadata: { name: podName },
+    spec: {
+      containers: containerEntries,
+    },
+  };
+
+  if (volumeEntries.length > 0) {
+    (pod.spec as Record<string, unknown>).volumes = volumeEntries;
+  }
+
+  return std.file(JSON.stringify(pod, null, 2));
+}
+
+function buildLivenessProbe(containerConfig: OciPodContainerConfig): Record<string, unknown> | undefined {
+  const probe: Record<string, unknown> = {};
+
+  if (containerConfig.healthCmd) {
+    probe.exec = { command: containerConfig.healthCmd };
+  } else if (containerConfig.healthHttpGet) {
+    probe.httpGet = containerConfig.healthHttpGet;
+  } else {
+    return undefined;
+  }
+
+  if (containerConfig.healthInitialDelaySeconds !== undefined) {
+    probe.initialDelaySeconds = containerConfig.healthInitialDelaySeconds;
+  }
+  if (containerConfig.healthPeriodSeconds !== undefined) {
+    probe.periodSeconds = containerConfig.healthPeriodSeconds;
+  }
+  if (containerConfig.healthTimeoutSeconds !== undefined) {
+    probe.timeoutSeconds = containerConfig.healthTimeoutSeconds;
+  }
+  if (containerConfig.healthFailureThreshold !== undefined) {
+    probe.failureThreshold = containerConfig.healthFailureThreshold;
+  }
+
+  return probe;
+}
+
+function formatSeconds(value: string | number): string {
+  if (typeof value === "number") {
+    return `${value}s`;
+  }
+  return value;
+}
+
+export interface BrunchOciConfig {
+  containers?: Record<string, OciContainerConfig>;
+  pods?: Record<string, OciPodConfig>;
+}
+
+export function makeOciContainers(
+  config: BrunchOciConfig
+): std.Recipe<std.Directory> {
+  const entries: Record<string, std.Recipe<std.File | std.Directory>> = {};
+
+  if (config.containers) {
+    for (const [name, containerConfig] of Object.entries(config.containers)) {
+      entries[`${name}.container`] = makeQuadletFile(name, containerConfig);
+    }
+  }
+
+  if (config.pods) {
+    for (const [podName, podConfig] of Object.entries(config.pods)) {
+      const { kube, yml } = makeKubeFile(podName, podConfig);
+      entries[`pods/${podName}/${podName}.kube`] = kube;
+      entries[`pods/${podName}/${podName}.yml`] = yml;
+    }
+  }
+
+  if (Object.keys(entries).length === 0) {
+    return std.directory({});
+  }
+
+  const autoStartUnits: string[] = [];
+
+  if (config.containers) {
+    for (const [name, containerConfig] of Object.entries(config.containers)) {
+      if (containerConfig.autoStart !== false) {
+        autoStartUnits.push(`${name}.container`);
+      }
+    }
+  }
+
+  if (config.pods) {
+    for (const [podName, podConfig] of Object.entries(config.pods)) {
+      autoStartUnits.push(`${podName}.kube`);
+    }
+  }
+
+  return std.directory({
+    containers: std.directory(entries),
+    "containers-state": std.directory({
+      "autostart.units": std.file(autoStartUnits.join("\n")),
+    }),
+  });
+}

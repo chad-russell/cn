@@ -95,6 +95,12 @@ pub fn run(project_path: &Path, target: &str) -> Result<()> {
 
     link_systemd(&current, elevated, &mut ops).context("Failed to link systemd units")?;
 
+    link_containers(&current, &mut ops).context("Failed to link container quadlets")?;
+
+    if let Some(ref old_path) = old_current {
+        cleanup_containers(old_path, &gen_path).context("Failed to cleanup old container quadlets")?;
+    }
+
     link_desktop_assets(&current).context("Failed to link desktop assets")?;
 
     link_files(&current, elevated, &mut ops).context("Failed to link files")?;
@@ -391,6 +397,119 @@ fn cleanup_systemd_dir(
             }
         }
     }
+    Ok(())
+}
+
+pub fn link_containers(current: &Path, _ops: &mut ElevatedOps) -> Result<()> {
+    let containers_dir = current.join("containers");
+    if !containers_dir.exists() {
+        return Ok(());
+    }
+
+    let config_dir = dirs::config_dir().context("Failed to get config directory")?;
+    let systemd_containers_dir = config_dir.join("containers/systemd");
+
+    for entry in walkdir::WalkDir::new(&containers_dir) {
+        let entry = entry?;
+        let path = entry.path();
+
+        if !entry.file_type().is_file() && !entry.file_type().is_symlink() {
+            continue;
+        }
+
+        let rel_path = path.strip_prefix(&containers_dir)?;
+        let target_path = systemd_containers_dir.join(rel_path);
+
+        symlink_atomic(path, &target_path).context(format!(
+            "Failed to link container quadlet {} -> {}",
+            path.display(),
+            target_path.display()
+        ))?;
+    }
+
+    let containers_state_dir = current.join("containers-state");
+    if containers_state_dir.exists() {
+        let autostart_units = read_units_list(&containers_state_dir.join("autostart.units"))?;
+
+        let status = Command::new("systemctl")
+            .args(["--user", "daemon-reload"])
+            .status()
+            .context("Failed to reload user systemd daemon for containers")?;
+
+        if !status.success() {
+            log::warn!("User systemd daemon-reload for containers failed");
+        }
+
+        for unit in autostart_units {
+            let service_name = unit.replace(".container", ".service").replace(".kube", ".service");
+            log::info!("Enabling container unit: {} -> {}", unit, service_name);
+
+            let status = Command::new("systemctl")
+                .args(["--user", "enable", &service_name])
+                .status()
+                .context(format!("Failed to enable container unit {}", service_name))?;
+
+            if !status.success() {
+                log::warn!("Failed to enable container unit {}", service_name);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn cleanup_containers(old_gen: &Path, new_gen: &Path) -> Result<()> {
+    let old_containers_dir = old_gen.join("containers");
+    if !old_containers_dir.exists() {
+        return Ok(());
+    }
+
+    let new_containers_dir = new_gen.join("containers");
+    let config_dir = dirs::config_dir().context("Failed to get config directory")?;
+    let systemd_containers_dir = config_dir.join("containers/systemd");
+
+    for entry in walkdir::WalkDir::new(&old_containers_dir) {
+        let entry = entry?;
+        let path = entry.path();
+
+        if !entry.file_type().is_file() && !entry.file_type().is_symlink() {
+            continue;
+        }
+
+        let rel_path = path.strip_prefix(&old_containers_dir)?;
+        let new_path = new_containers_dir.join(rel_path);
+
+        if !new_path.exists() {
+            let target_path = systemd_containers_dir.join(rel_path);
+            let expected_target = old_containers_dir.join(rel_path);
+
+            if target_path.is_symlink() {
+                if let Ok(target) = std::fs::read_link(&target_path) {
+                    if target == expected_target {
+                        log::info!(
+                            "Removing managed container quadlet: {}",
+                            target_path.display()
+                        );
+
+                        let unit_name = rel_path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("");
+
+                        let service_name = unit_name.replace(".container", ".service").replace(".kube", ".service");
+
+                        let _ = Command::new("systemctl")
+                            .args(["--user", "disable", "--now", &service_name])
+                            .status();
+
+                        std::fs::remove_file(&target_path)
+                            .context("Failed to remove old container quadlet")?;
+                    }
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 

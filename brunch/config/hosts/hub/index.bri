@@ -4,6 +4,7 @@ import { devPackages } from "../../packages.bri";
 import { brunchConfig as backupConfig } from "./backup.bri";
 import { brunchConfig as devStacksConfig } from "./dev-stacks.bri";
 import { brunchConfig as healthcheckConfig } from "./healthcheck.bri";
+import { brunchConfig as containersConfig } from "./containers.bri";
 
 const glooHostingSkill = Brioche.includeDirectory("../../agents/skills/gloo-hosting");
 const buildspaceHostingSkill = Brioche.includeDirectory("../../agents/skills/buildspace-hosting");
@@ -21,5 +22,6 @@ export const hubBrunchConfig: BrunchConfig = mergeBrunch(
   backupConfig,
   devStacksConfig,
   healthcheckConfig,
+  containersConfig,
   hubAgentSkillsConfig,
 );

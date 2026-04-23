@@ -10,6 +10,14 @@ import {
   type BrunchSystemdConfig,
   type BrunchTimerConfig,
 } from "./systemd.bri";
+import {
+  makeOciContainers,
+  type BrunchOciConfig,
+  type OciContainerConfig,
+  type OciPodConfig,
+  type OciPodContainerConfig,
+  type OciPodVolume,
+} from "./containers.bri";
 
 export { makeDesktopApps, makeWebAppExecutable, type BrunchDesktopApp } from "./desktop_apps.bri";
 export { makeFiles } from "./files.bri";
@@ -26,6 +34,16 @@ export {
   type BrunchServiceConfig,
   type BrunchTimerConfig,
 } from "./systemd.bri";
+export {
+  makeOciContainers,
+  makeQuadletFile,
+  makeKubeFile,
+  type BrunchOciConfig,
+  type OciContainerConfig,
+  type OciPodConfig,
+  type OciPodContainerConfig,
+  type OciPodVolume,
+} from "./containers.bri";
 
 export type BriochePackage =
   | string
@@ -36,6 +54,7 @@ export interface BrunchConfig {
   cliTools?: BrunchCliTool[];
   files?: Record<string, std.RecipeLike<std.File | std.Directory>>;
   systemdUnits?: BrunchSystemdConfig;
+  ociContainers?: BrunchOciConfig;
   flatpaks?: string[];
   briochePackages?: BriochePackage[];
 }
@@ -110,6 +129,14 @@ export function mergeBrunch(...configs: BrunchConfig[]): BrunchConfig {
       );
     }
 
+    if (config.ociContainers !== undefined) {
+      merged.ociContainers = mergeOciConfigs(
+        acc.ociContainers,
+        config.ociContainers,
+        configIndex
+      );
+    }
+
     if (config.flatpaks !== undefined && config.flatpaks.length > 0) {
       merged.flatpaks = [...(acc.flatpaks ?? []), ...config.flatpaks];
     }
@@ -135,6 +162,44 @@ export function mergeBrunch(...configs: BrunchConfig[]): BrunchConfig {
 
     return merged;
   }, {} as BrunchConfig);
+}
+
+function mergeOciConfigs(
+  a: BrunchOciConfig | undefined,
+  b: BrunchOciConfig | undefined,
+  configIndex: number
+): BrunchOciConfig {
+  if (!a && !b) return {};
+  if (!a) return b!;
+  if (!b) return a;
+
+  const merged: BrunchOciConfig = {};
+
+  if (a.containers || b.containers) {
+    const namesA = Object.keys(a.containers ?? {});
+    const namesB = Object.keys(b.containers ?? {});
+    const conflicts = namesA.filter((k) => namesB.includes(k));
+    if (conflicts.length > 0) {
+      throw new Error(
+        `mergeBrunch: duplicate ociContainers detected: ${conflicts.join(", ")} (in config ${configIndex})`
+      );
+    }
+    merged.containers = { ...a.containers, ...b.containers };
+  }
+
+  if (a.pods || b.pods) {
+    const namesA = Object.keys(a.pods ?? {});
+    const namesB = Object.keys(b.pods ?? {});
+    const conflicts = namesA.filter((k) => namesB.includes(k));
+    if (conflicts.length > 0) {
+      throw new Error(
+        `mergeBrunch: duplicate ociPods detected: ${conflicts.join(", ")} (in config ${configIndex})`
+      );
+    }
+    merged.pods = { ...a.pods, ...b.pods };
+  }
+
+  return merged;
 }
 
 function mergeSystemdConfigs(
@@ -300,6 +365,10 @@ export function makeBrunch(config: BrunchConfig): std.Recipe<std.Directory> {
 
   if (config.systemdUnits !== undefined) {
     parts.push(makeSystemdUnits(config.systemdUnits));
+  }
+
+  if (config.ociContainers !== undefined) {
+    parts.push(makeOciContainers(config.ociContainers));
   }
 
   if (config.flatpaks !== undefined && config.flatpaks.length > 0) {

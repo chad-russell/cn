@@ -278,7 +278,9 @@ interface BrunchConfig {
   cliTools?: BrunchCliTool[];
   files?: Record<string, std.RecipeLike<std.File | std.Directory>>;
   systemdUnits?: BrunchSystemdConfig;
+  ociContainers?: BrunchOciConfig;
   flatpaks?: string[];
+  briochePackages?: BriochePackage[];
 }
 ```
 
@@ -320,6 +322,101 @@ export default function() {
 ```
 
 Uses `flatpak run com.google.Chrome --app=<url>` to launch websites as standalone applications.
+
+### Managing OCI Containers (Podman Quadlets)
+
+Brunch can declaratively manage Podman containers as systemd services using the Quadlet format. This provides a NixOS-like `virtualisation.oci-containers` experience.
+
+```typescript
+import { makeBrunch } from "brunch";
+
+export default function() {
+  return makeBrunch({
+    ociContainers: {
+      containers: {
+        linkding: {
+          image: "docker.io/sissbruecker/linkding:latest",
+          ports: ["30080:9090"],
+          volumes: ["/srv/linkding/data:/etc/linkding/data"],
+          environment: {
+            LD_CSRF_TRUSTED_ORIGINS: "https://linkding.internal.crussell.io",
+          },
+          restart: "unless-stopped",
+          restartSec: 5,
+        },
+      },
+    },
+  });
+}
+```
+
+**Container options:**
+```typescript
+interface OciContainerConfig {
+  image: string;
+  autoStart?: boolean;           // default true
+  containerName?: string;
+  environment?: Record<string, string>;
+  environmentFiles?: string[];
+  ports?: string[];               // ["8080:80"]
+  volumes?: string[];             // ["/srv/foo:/data"]
+  cmd?: string[];
+  networks?: string[];
+  privileged?: boolean;
+  pull?: "always" | "missing" | "never" | "never-newer";
+  restart?: "no" | "on-success" | "on-failure" | "always" | "unless-stopped";
+  restartSec?: string | number;
+  user?: string;
+  workdir?: string;
+  hostname?: string;
+  healthCmd?: string;
+  healthInterval?: string;
+  healthTimeout?: string;
+  healthRetries?: number;
+  healthStartPeriod?: string;
+  dependsOn?: string[];
+  labels?: Record<string, string>;
+  extraOptions?: Record<string, string>;
+  wantedBy?: string[];
+}
+```
+
+**Multi-container pods (Kubernetes-style):**
+```typescript
+ociContainers: {
+  pods: {
+    searxng: {
+      ports: ["30084:8080"],
+      containers: {
+        searxng: {
+          image: "docker.io/searxng/searxng:latest",
+          environment: { SEARXNG_BASE_URL: "https://searxng.internal.crussell.io/" },
+          volumeMounts: { settings: "/etc/searxng" },
+          healthHttpGet: { path: "/healthz", port: 8080 },
+          healthInitialDelaySeconds: 40,
+          healthPeriodSeconds: 30,
+        },
+        valkey: {
+          image: "docker.io/valkey/valkey:8-alpine",
+          args: ["valkey-server", "--save", "30", "1"],
+          volumeMounts: { "valkey-data": "/data" },
+        },
+      },
+      volumes: {
+        settings: { type: "hostPath", path: "/srv/searxng", hostPathType: "Directory" },
+        "valkey-data": { type: "hostPath", path: "/srv/searxng/valkey", hostPathType: "DirectoryOrCreate" },
+      },
+    },
+  },
+},
+```
+
+**How it works:**
+- Generates `.container` quadlet files for individual containers
+- Generates `.kube` + `.yml` pairs for multi-container pods
+- Files are symlinked to `~/.config/containers/systemd/`
+- `systemctl --user daemon-reload` makes systemd discover the quadlets
+- Removed containers are disabled, stopped, and unlinked on next apply
 
 ## Development
 
