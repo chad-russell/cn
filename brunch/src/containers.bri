@@ -230,7 +230,7 @@ export function makeKubeFile(
 
   if (config.environmentFiles) {
     for (const filePath of config.environmentFiles) {
-      kubeLines.push(`EnvironmentFile=${filePath}`);
+      kubeLines.push(`PodmanArgs=--env-file ${filePath}`);
     }
   }
 
