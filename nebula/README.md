@@ -106,7 +106,7 @@ Required cert identities:
 Generate cert examples:
 
 ```bash
-cd /var/home/crussell/Code/cn/nebula/pki
+cd /home/crussell/Code/cn/nebula/pki
 
 # local lighthouse
 ../scripts/nebula-cert sign \
@@ -135,10 +135,10 @@ cd /var/home/crussell/Code/cn/nebula/pki
 ### Update `hub` host (`10.10.0.6`)
 
 ```bash
-sudo cp /var/home/crussell/Code/cn/nebula/configs/hub-host.yaml /etc/nebula/config.yaml
-sudo cp /var/home/crussell/Code/cn/nebula/pki/ca.crt /etc/nebula/ca.crt
-sudo cp /var/home/crussell/Code/cn/nebula/pki/hub-host.crt /etc/nebula/hub-host.crt
-sudo cp /var/home/crussell/Code/cn/nebula/pki/hub-host.key /etc/nebula/hub-host.key
+sudo cp /home/crussell/Code/cn/nebula/configs/hub-host.yaml /etc/nebula/config.yaml
+sudo cp /home/crussell/Code/cn/nebula/pki/ca.crt /etc/nebula/ca.crt
+sudo cp /home/crussell/Code/cn/nebula/pki/hub-host.crt /etc/nebula/hub-host.crt
+sudo cp /home/crussell/Code/cn/nebula/pki/hub-host.key /etc/nebula/hub-host.key
 sudo systemctl restart nebula
 ```
 
@@ -146,12 +146,12 @@ sudo systemctl restart nebula
 
 ```bash
 sudo mkdir -p /etc/nebula-lh
-sudo cp /var/home/crussell/Code/cn/nebula/configs/hub-lighthouse.yaml /etc/nebula-lh/config.yaml
-sudo cp /var/home/crussell/Code/cn/nebula/pki/ca.crt /etc/nebula-lh/ca.crt
-sudo cp /var/home/crussell/Code/cn/nebula/pki/crussell-lh-local.crt /etc/nebula-lh/crussell-lh-local.crt
-sudo cp /var/home/crussell/Code/cn/nebula/pki/crussell-lh-local.key /etc/nebula-lh/crussell-lh-local.key
+sudo cp /home/crussell/Code/cn/nebula/configs/hub-lighthouse.yaml /etc/nebula-lh/config.yaml
+sudo cp /home/crussell/Code/cn/nebula/pki/ca.crt /etc/nebula-lh/ca.crt
+sudo cp /home/crussell/Code/cn/nebula/pki/crussell-lh-local.crt /etc/nebula-lh/crussell-lh-local.crt
+sudo cp /home/crussell/Code/cn/nebula/pki/crussell-lh-local.key /etc/nebula-lh/crussell-lh-local.key
 
-sudo cp /var/home/crussell/Code/cn/nebula/quadlets/nebula-lh-local.container /etc/containers/systemd/nebula-lh-local.container
+sudo cp /home/crussell/Code/cn/nebula/quadlets/nebula-lh-local.container /etc/containers/systemd/nebula-lh-local.container
 sudo systemctl daemon-reload
 sudo systemctl restart nebula-lh-local.service
 ```

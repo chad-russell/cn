@@ -1,0 +1,13 @@
+[Unit]
+Description=Nebula Overlay Network
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/home/crussell/.local/bin/nebula -config /etc/nebula/config.yaml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

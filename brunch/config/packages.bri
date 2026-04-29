@@ -19,6 +19,8 @@ export const commonPackages: BrunchConfig = {
     "uv",
     "yazi",
     "zoxide",
+    "less",
+    "fzf",
   ],
 };
 

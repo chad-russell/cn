@@ -5,6 +5,8 @@ export const project = {
   version: "0.0.1",
   dependencies: {
     brunch: { path: "../src" },
+    mprocs: { path: "../../../brioche-packages/packages/mprocs" },
+    turso_cli: { path: "../../../brioche-packages/packages/turso_cli" },
   },
 };
 

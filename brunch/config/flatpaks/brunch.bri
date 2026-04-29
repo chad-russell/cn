@@ -8,7 +8,6 @@ export const brunchConfig: BrunchConfig = {
     "com.slack.Slack",
     "org.mozilla.firefox",
     "org.telegram.desktop",
-    "us.zoom.Zoom",
 
     // Development
     "dev.zed.Zed",

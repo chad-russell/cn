@@ -739,6 +739,10 @@ fn cleanup_dir_recursive(
     Ok(())
 }
 
+fn package_cache_root() -> Result<PathBuf> {
+    Ok(state_dir()?.join("package-cache"))
+}
+
 fn materialize_brioche_packages(gen_path: &Path) -> Result<()> {
     let packages_file = gen_path.join("brioche-packages/packages.json");
     if !packages_file.exists() {
@@ -759,61 +763,171 @@ fn materialize_brioche_packages(gen_path: &Path) -> Result<()> {
 
     let bin_dir = gen_path.join("bin");
     let executables_dir = gen_path.join("brioche-executables");
+    let cache_root = package_cache_root()?;
     std::fs::create_dir_all(&bin_dir).context("Failed to create bin dir")?;
     std::fs::create_dir_all(&executables_dir).context("Failed to create executables dir")?;
+    std::fs::create_dir_all(&cache_root).context("Failed to create package cache dir")?;
 
-    for pkg in &packages {
+    // Resolve all package targets to absolute paths where needed
+    let resolved_targets: Vec<String> = packages
+        .iter()
+        .map(|pkg| resolve_package_target(pkg))
+        .collect();
+
+    // Build all packages in a single brioche invocation using --output-dir.
+    // Individual target failures are OK — brioche continues building remaining
+    // targets and writes successful outputs.
+    println!(
+        "  Building {} package(s) in single invocation...",
+        resolved_targets.len()
+    );
+    let mut cmd = Command::new("brioche");
+    cmd.arg("build");
+    for target in &resolved_targets {
+        cmd.arg(target);
+    }
+    cmd.arg("--output-dir")
+        .arg(&cache_root)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+
+    let status = cmd
+        .status()
+        .context("Failed to run brioche build for all packages")?;
+
+    if !status.success() {
+        log::warn!(
+            "brioche batch build had failures (exit code {:?}), falling back to individual builds for missing packages",
+            status.code()
+        );
+    }
+
+    // Symlink each package from the cache into the generation.
+    // For packages that didn't get cached outputs (e.g. not found in registry),
+    // fall back to building individually.
+    let mut cache_hits = 0usize;
+    let mut individual_builds = 0usize;
+    let mut warnings = 0usize;
+
+    for (i, pkg) in packages.iter().enumerate() {
         let output_dir = executables_dir.join(&pkg.bin);
-        println!("  {} (from {})", pkg.bin, pkg.package);
+        let target_name = target_name_for_package(pkg);
+        let cached_dir = cache_root.join(&target_name);
 
-        let status = if let Some(path) = &pkg.path {
-            Command::new("brioche")
-                .args(["build", "-p", path])
-                .arg("-o")
-                .arg(&output_dir)
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status()
-                .context(format!("Failed to run brioche build for {}", pkg.package))?
-        } else {
-            Command::new("brioche")
-                .args(["build", &pkg.package])
-                .arg("-o")
-                .arg(&output_dir)
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status()
-                .context(format!("Failed to run brioche build for {}", pkg.package))?
-        };
-
-        if !status.success() {
-            anyhow::bail!(
-                "brioche build {} failed (exit code {:?})",
-                pkg.package,
-                status.code()
-            );
+        if cached_dir.exists() {
+            cache_hits += 1;
+            symlink_atomic(&cached_dir, &output_dir)
+                .context(format!("Failed to link cached package {}", pkg.package))?;
+            create_package_bin_symlink(&output_dir, &bin_dir, pkg)?;
+            continue;
         }
 
-        let symlink_src = output_dir.join("brioche-run");
-        let symlink_dest = bin_dir.join(&pkg.bin);
+        // Fall back to individual build
+        log::info!("  Building {} individually (not in batch output)", pkg.package);
+        let target = &resolved_targets[i];
+        let temp_dir = cache_root.join(format!(".tmp-{}", pkg.bin));
+        if temp_dir.exists() {
+            let _ = std::fs::remove_dir_all(&temp_dir);
+        }
 
-        if symlink_src.exists() {
-            std::os::unix::fs::symlink(
-                PathBuf::from("..").join("brioche-executables").join(&pkg.bin).join("brioche-run"),
-                &symlink_dest,
-            ).context(format!(
-                "Failed to create bin symlink for {}",
-                pkg.bin,
-            ))?;
+        let mut cmd = Command::new("brioche");
+        cmd.arg("build").arg(target).arg("-o").arg(&temp_dir);
+        cmd.stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+
+        let individual_status = cmd
+            .status()
+            .context(format!("Failed to run brioche build for {}", pkg.package))?;
+
+        if individual_status.success() {
+            // Move temp to final named location
+            let rename_result = std::fs::rename(&temp_dir, &cached_dir);
+            if let Err(e) = rename_result {
+                if cached_dir.exists() {
+                    let _ = std::fs::remove_dir_all(&temp_dir);
+                } else {
+                    log::warn!("Failed to finalize cache for {}: {e}", pkg.package);
+                    // Try using the temp dir directly
+                    symlink_atomic(&temp_dir, &output_dir)
+                        .context(format!("Failed to link package {}", pkg.package))?;
+                    create_package_bin_symlink(&output_dir, &bin_dir, pkg)?;
+                    individual_builds += 1;
+                    continue;
+                }
+            }
+            symlink_atomic(&cached_dir, &output_dir)
+                .context(format!("Failed to link package {}", pkg.package))?;
+            create_package_bin_symlink(&output_dir, &bin_dir, pkg)?;
+            individual_builds += 1;
         } else {
             log::warn!(
-                "Package {} has no brioche-run entry point, skipping bin symlink",
+                "brioche build {} failed (exit code {:?})",
                 pkg.package,
+                individual_status.code()
             );
+            let _ = std::fs::remove_dir_all(&temp_dir);
+            warnings += 1;
         }
     }
 
-    println!("All {} package(s) materialized", packages.len());
+    println!(
+        "All {} package(s) materialized ({} cached, {} built{} )",
+        packages.len(),
+        cache_hits,
+        individual_builds,
+        if warnings > 0 {
+            format!(", {} warning(s)", warnings)
+        } else {
+            String::new()
+        }
+    );
+    Ok(())
+}
+
+/// Resolve a package target. If the package has a local path (now always absolute
+/// from normalizePackage), use it directly. Otherwise use the registry package name.
+fn resolve_package_target(pkg: &BriochePackageEntry) -> String {
+    if let Some(path) = &pkg.path {
+        path.clone()
+    } else {
+        pkg.package.clone()
+    }
+}
+
+/// Derive the expected cache subdirectory name for a package.
+/// This must match the naming logic in brioche's --output-dir.
+fn target_name_for_package(pkg: &BriochePackageEntry) -> String {
+    if let Some(path) = &pkg.path {
+        std::path::Path::new(path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("default")
+            .to_string()
+    } else {
+        pkg.package.clone()
+    }
+}
+
+
+fn create_package_bin_symlink(output_dir: &Path, bin_dir: &Path, pkg: &BriochePackageEntry) -> Result<()> {
+    let symlink_src = output_dir.join("brioche-run");
+    let symlink_dest = bin_dir.join(&pkg.bin);
+
+    if symlink_src.exists() {
+        std::os::unix::fs::symlink(
+            PathBuf::from("..").join("brioche-executables").join(&pkg.bin).join("brioche-run"),
+            &symlink_dest,
+        ).context(format!(
+            "Failed to create bin symlink for {}",
+            pkg.bin,
+        ))?;
+    } else {
+        log::warn!(
+            "Package {} has no brioche-run entry point, skipping bin symlink",
+            pkg.package,
+        );
+    }
+
     Ok(())
 }
 

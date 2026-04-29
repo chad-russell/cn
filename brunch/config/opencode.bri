@@ -4,7 +4,7 @@ import { BrunchConfig, makeWebAppExecutable } from "brunch";
 const opencodeIcon = Brioche.includeFile("./static/opencode-logo-dark.svg");
 
 const opencodeWebRunnable = std.bashRunnable`
-  exec /home/linuxbrew/.linuxbrew/bin/opencode web --hostname 0.0.0.0
+  exec /var/home/crussell/.bun/bin/opencode web --hostname 0.0.0.0
   `;
 
 export const brunchConfig: BrunchConfig = {

@@ -68,14 +68,53 @@ export function normalizePackage(pkg: BriochePackage): {
   bin: string;
   path?: string;
 } {
-  const result: { package: string; bin: string; path?: string } = {
+  const result: {
+    package: string;
+    bin: string;
+    path?: string;
+  } = {
     package: typeof pkg === "string" ? pkg : pkg.package,
     bin: getBinName(pkg),
   };
   if (typeof pkg !== "string" && pkg.path !== undefined) {
-    result.path = pkg.path;
+    result.path = resolveAbsolutePath(pkg.path);
   }
   return result;
+}
+
+/**
+ * Resolve a potentially relative path to an absolute path.
+ * Uses the brunch library directory as the base for relative paths.
+ */
+function resolveAbsolutePath(path: string): string {
+  if (path.startsWith("/")) {
+    return path;
+  }
+
+  const url = import.meta.url;
+  const filePath = url.startsWith("file://") ? url.slice("file://".length) : url;
+  const dir = filePath.slice(0, filePath.lastIndexOf("/") + 1);
+
+  const segments = `${dir}${path}`.split("/");
+  const resolved: string[] = [];
+  for (const segment of segments) {
+    if (segment === "" && resolved.length === 0) {
+      resolved.push("");
+      continue;
+    }
+    if (segment === "" || segment === ".") {
+      continue;
+    }
+    if (segment === "..") {
+      if (resolved.length > 1) {
+        resolved.pop();
+      }
+      continue;
+    }
+    resolved.push(segment);
+  }
+
+  return resolved.join("/") || "/";
 }
 
 export function mergeBrunch(...configs: BrunchConfig[]): BrunchConfig {

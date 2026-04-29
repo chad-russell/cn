@@ -172,7 +172,7 @@ binds {
 
     // Applications
     Mod+T { spawn "ghostty"; }
-    Mod+B { spawn "flatpak" "run" "com.google.Chrome"; }
+    Mod+B { spawn "flatpak" "run" "app.zen_browser.zen"; }
     Mod+F { spawn "nautilus" "--new-window"; }
     Mod+R { spawn "voxtype" "record" "toggle"; }
 

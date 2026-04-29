@@ -3,8 +3,14 @@ import { aiBrunchConfig } from "./hosts/ai/index.bri";
 import { thinkpadBrunchConfig } from "./hosts/thinkpad/index.bri";
 import { hubBrunchConfig } from "./hosts/hub/index.bri";
 
-export const ai = makeBrunch(aiBrunchConfig);
+export async function ai() {
+  return makeBrunch(aiBrunchConfig);
+}
 
-export const thinkpad = makeBrunch(thinkpadBrunchConfig);
+export async function thinkpad() {
+  return makeBrunch(thinkpadBrunchConfig);
+}
 
-export const hub = makeBrunch(hubBrunchConfig);
+export async function hub() {
+  return makeBrunch(hubBrunchConfig);
+}
