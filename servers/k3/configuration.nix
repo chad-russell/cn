@@ -128,6 +128,9 @@
     extraArgs = [ "--confirm-legal-notice" ];
   };
 
+  # ── Gloo Dev Stack ──────────────────────────────────
+  services.gloo.enable = true;
+
   # ── SSH ─────────────────────────────────────────────
   services.openssh = {
     enable = true;
@@ -144,6 +147,7 @@
     curl
     htop
     nfs-utils
+    nodejs_24
   ];
 
   # ── Nix ─────────────────────────────────────────────
