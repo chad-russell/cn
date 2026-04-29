@@ -28,6 +28,17 @@ let
     pkgs.bun
   ] + ":/run/current-system/sw/bin";
 
+  # ── Prisma engine paths (for services using Prisma on NixOS) ────
+  prismaEngines = lib.getBin pkgs.prisma-engines;
+  prismaEnv = ''
+    Environment=PRISMA_QUERY_ENGINE_BINARY=${prismaEngines}/bin/query-engine
+    Environment=PRISMA_SCHEMA_ENGINE_BINARY=${prismaEngines}/bin/schema-engine
+    Environment=PRISMA_FMT_BINARY=${prismaEngines}/bin/prisma-fmt
+    Environment=PRISMA_CLI_QUERY_ENGINE_TYPE=binary
+    Environment=PRISMA_CLIENT_ENGINE_TYPE=binary
+    Environment=PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+  '';
+
   # ── PATH for infra services ──────────────────────────────────────
   infraPath = lib.makeBinPath [
     pkgs.podman
@@ -49,7 +60,7 @@ let
     hb-api = {
       description = "Gloo Hummingbird API dev server";
       workingDir = "${glooDir}/360-hummingbird";
-      execCmd = "exec pnpm --filter api dev";
+      execCmd = "exec pnpm run prisma:generate && exec pnpm --filter api dev";
       port = 8000;
     };
     hb-web = {
@@ -89,6 +100,7 @@ let
     [Service]
     Type=simple
     Environment=PATH=${servicePath}
+    ${prismaEnv}
     EnvironmentFile=/etc/gloo/envs/${name}.env
     EnvironmentFile=${secretsPath}
     WorkingDirectory=${svc.workingDir}
@@ -276,6 +288,7 @@ in
       age
       git
       jq
+      prisma-engines
     ];
 
     # ── Podman (rootless) ─────────────────────────────────────────
