@@ -29,8 +29,6 @@
   };
 
   # ── Local HDD ───────────────────────────────────────
-  # /dev/sda1 — 1.8T, mounted for torrent downloads
-  # (avoids active torrent I/O going over NFS)
   fileSystems."/mnt/data" = {
     device = "/dev/disk/by-uuid/e9c12a3f-6a65-458f-bd9b-ac46537e8839";
     fsType = "ext4";
@@ -64,36 +62,43 @@
   };
   users.users.jellyfin.extraGroups = [ "media" ];
 
-  # ── Sonarr ──────────────────────────────────────────
+  # ── Sonarr (has native user/group options) ──────────
   services.sonarr = {
     enable = true;
     openFirewall = true;
     group = "media";
   };
 
-  # ── Radarr ──────────────────────────────────────────
+  # ── Radarr (has native user/group options) ──────────
   services.radarr = {
     enable = true;
     openFirewall = true;
     group = "media";
   };
 
-  # ── Prowlarr ────────────────────────────────────────
+  # ── Prowlarr (DynamicUser — override to use media group) ──
   services.prowlarr = {
     enable = true;
     openFirewall = true;
+  };
+  systemd.services.prowlarr.serviceConfig = {
+    DynamicUser = lib.mkForce false;
+    User = "prowlarr";
+    Group = "media";
+    StateDirectory = "prowlarr";
+  };
+  users.users.prowlarr = {
+    isSystemUser = true;
     group = "media";
+    home = "/var/lib/prowlarr";
   };
 
-  # ── Jellyseerr ──────────────────────────────────────
+  # ── Jellyseerr (DynamicUser — override to use media group) ──
   services.jellyseerr = {
     enable = true;
     openFirewall = true;
     port = 5055;
   };
-  # Jellyseerr uses DynamicUser — give it access to media via ACL
-  # since we can't assign a static group.
-  # Alternatively, override to use the media group:
   systemd.services.jellyseerr.serviceConfig = {
     DynamicUser = lib.mkForce false;
     User = "jellyseerr";
@@ -118,7 +123,6 @@
       Preferences = {
         General.Locale = "en";
         WebUI.Username = "admin";
-        # Set your password via the web UI on first login (default: adminadmin)
       };
     };
     extraArgs = [ "--confirm-legal-notice" ];
@@ -146,7 +150,6 @@
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   # ── Firewall ────────────────────────────────────────
-  # Individual services open their own ports via openFirewall
   networking.firewall.enable = true;
 
   # ── State version ───────────────────────────────────
