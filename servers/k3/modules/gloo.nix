@@ -43,37 +43,37 @@ let
     gpl = {
       description = "Gloo GPL dev server";
       workingDir = "${glooDir}/360-gpl";
-      execCmd = "npx next dev -H 0.0.0.0 -p 3106";
+      execCmd = "exec npx next dev -H 0.0.0.0 -p 3106";
       port = 3106;
     };
     hb-api = {
       description = "Gloo Hummingbird API dev server";
       workingDir = "${glooDir}/360-hummingbird";
-      execCmd = "pnpm --filter api dev";
+      execCmd = "exec pnpm --filter api dev";
       port = 8000;
     };
     hb-web = {
       description = "Gloo Hummingbird Web dev server";
       workingDir = "${glooDir}/360-hummingbird";
-      execCmd = "pnpm --filter web dev -- --host 0.0.0.0 --port 3100";
+      execCmd = "exec pnpm --filter web dev -- --host 0.0.0.0 --port 3100";
       port = 3100;
     };
     storyhub = {
       description = "Gloo Storyhub dev server";
       workingDir = "${glooDir}/360-hummingbird/storyhub";
-      execCmd = "npx next dev -H 0.0.0.0 --port 3007";
+      execCmd = "exec npx next dev -H 0.0.0.0 --port 3007";
       port = 3007;
     };
     storyhub-worker = {
       description = "Gloo Storyhub worker dev server";
       workingDir = "${glooDir}/360-hummingbird";
-      execCmd = "pnpm --filter storyhub-worker dev";
+      execCmd = "exec pnpm --filter storyhub-worker dev";
       port = 8001;
     };
     polymer = {
       description = "Gloo Polymer dev server";
       workingDir = "${glooDir}/360-polymer/apps/polymer";
-      execCmd = "${pkgs.bash}/bin/bash -c 'rm -f .next/dev/lock && exec pnpm exec next dev --turbo --hostname 0.0.0.0 --port 3001'";
+      execCmd = "rm -f .next/dev/lock && exec pnpm exec next dev --turbo --hostname 0.0.0.0 --port 3001";
       port = 3001;
     };
   };
@@ -92,7 +92,7 @@ let
     EnvironmentFile=/etc/gloo/envs/${name}.env
     EnvironmentFile=${secretsPath}
     WorkingDirectory=${svc.workingDir}
-    ExecStart=${svc.execCmd}
+    ExecStart=${pkgs.bash}/bin/bash -c '${svc.execCmd}'
     Restart=on-failure
     RestartSec=2
 
