@@ -60,7 +60,7 @@ let
     hb-api = {
       description = "Gloo Hummingbird API dev server";
       workingDir = "${glooDir}/360-hummingbird";
-      execCmd = "exec pnpm run prisma:generate && exec pnpm --filter api dev";
+      execCmd = "exec pnpm --filter api dev";
       port = 8000;
     };
     hb-web = {
