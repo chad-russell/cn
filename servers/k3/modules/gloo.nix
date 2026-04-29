@@ -233,8 +233,8 @@ let
     # Fix ownership
     chown -R ${user}:users "$UNIT_DIR"
 
-    # Reload systemd (use sudo -u instead of su, which may not be in PATH)
-    ${pkgs.sudo}/bin/sudo -u ${user} XDG_RUNTIME_DIR=/run/user/$(id -u ${user}) systemctl --user daemon-reload
+    # Reload systemd (use full path to systemctl)
+    ${pkgs.sudo}/bin/sudo -u ${user} XDG_RUNTIME_DIR=/run/user/$(id -u ${user}) ${pkgs.systemd}/bin/systemctl --user daemon-reload
   '';
 
 in
