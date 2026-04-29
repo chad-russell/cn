@@ -32,16 +32,13 @@ let
   infraPath = lib.makeBinPath [
     pkgs.podman
     pkgs.docker-compose
+    pkgs.awscli2
   ] + ":/run/current-system/sw/bin";
 
-  # ── Agenix secret path (deterministic: /run/agenix/<name>) ───────
+  # ── Agenix secret path ──────────────────────────────────────────
   secretsPath = "${config.age.secretsDir}/gloo-secrets";
 
   # ── App service definitions ──────────────────────────────────────
-  # Each entry generates:
-  #   - /etc/gloo/envs/<name>.env   (static env file)
-  #   - /etc/systemd/user/gloo-<name>.service
-
   appServices = {
     gpl = {
       description = "Gloo GPL dev server";
@@ -108,7 +105,7 @@ let
   waitPostgres = pkgs.writeShellScript "gloo-wait-postgres" ''
     echo "Waiting for Gloo postgres..."
     for i in $(seq 1 60); do
-      if ${lib.getExe' pkgs.podman "podman"} exec gloo_postgres_1 \
+      if podman exec gloo_postgres_1 \
           pg_isready -U postgres -d postgres >/dev/null 2>&1; then
         echo "Postgres is ready."
         exit 0
@@ -122,7 +119,7 @@ let
   initDb = pkgs.writeShellScript "gloo-init-db" ''
     echo "Creating databases..."
     for db in gpl_db storyhub polymer; do
-      ${lib.getExe' pkgs.podman "podman"} exec gloo_postgres_1 \
+      podman exec gloo_postgres_1 \
         psql -U postgres -c "CREATE DATABASE $db;" 2>/dev/null \
         && echo "  ✓ $db" || echo "  ✓ $db (already exists)"
     done
@@ -149,6 +146,95 @@ let
       ${lib.getExe pkgs.awscli2} s3api create-bucket --bucket "$b" --endpoint-url "$ENDPOINT" >/dev/null 2>&1 \
         && echo "  ✓ $b" || true
     done
+  '';
+
+  # ── All user unit file contents (written to ~/.config/systemd/user/) ──
+  userUnits =
+    # Targets
+    {
+      "gloo-infra.target" = ''
+        [Unit]
+        Description=Gloo shared infra (compose + init)
+        Wants=gloo-infra-up.service gloo-init-db.service gloo-init-buckets.service
+        After=gloo-infra-up.service
+      '';
+      "gloo-all.target" = ''
+        [Unit]
+        Description=All Gloo dev servers
+        Wants=${lib.concatStringsSep " "
+          (lib.mapAttrsToList (name: _: "gloo-${name}.service") appServices)}
+        After=gloo-infra.target
+      '';
+      "gloo-hummingbird.target" = ''
+        [Unit]
+        Description=Gloo Hummingbird dev stack
+        Wants=gloo-hb-api.service gloo-hb-web.service
+      '';
+      "gloo-storyhub.target" = ''
+        [Unit]
+        Description=Gloo Storyhub dev stack
+        Wants=gloo-storyhub.service gloo-storyhub-worker.service
+      '';
+    }
+    # Infra services
+    // {
+      "gloo-infra-up.service" = ''
+        [Unit]
+        Description=Start Gloo compose infra and wait for postgres
+
+        [Service]
+        Type=oneshot
+        Environment=PATH=${infraPath}
+        ExecStart=${pkgs.bash}/bin/bash -c 'podman compose -f /etc/gloo/compose.yaml up -d && ${waitPostgres}'
+        RemainAfterExit=yes
+      '';
+      "gloo-init-db.service" = ''
+        [Unit]
+        Description=Create Gloo databases (idempotent)
+        After=gloo-infra-up.service
+        Wants=gloo-infra-up.service
+
+        [Service]
+        Type=oneshot
+        Environment=PATH=${infraPath}
+        ExecStart=${initDb}
+      '';
+      "gloo-init-buckets.service" = ''
+        [Unit]
+        Description=Create Gloo S3 buckets in RustFS (idempotent)
+        After=gloo-infra-up.service
+        Wants=gloo-infra-up.service
+
+        [Service]
+        Type=oneshot
+        TimeoutStartSec=5min
+        Environment=PATH=${infraPath}
+        ExecStart=${initBuckets}
+      '';
+    }
+    # App services
+    // (lib.mapAttrs' (name: svc:
+        lib.nameValuePair "gloo-${name}.service" { text = mkAppUnit name svc; }
+      ) appServices);
+
+  # Script that writes all user unit files to ~/.config/systemd/user/
+  installUserUnits = pkgs.writeShellScript "gloo-install-user-units" ''
+    UNIT_DIR="/home/${user}/.config/systemd/user"
+    mkdir -p "$UNIT_DIR"
+
+    ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: content: ''
+      cat > "$UNIT_DIR/${name}" << 'UNIT_EOF'
+  ${content}
+  UNIT_EOF
+    '') (lib.mapAttrs (name: def:
+      if builtins.isAttrs def then def.text else def
+    ) userUnits))}
+
+    # Fix ownership
+    chown -R ${user}:users "$UNIT_DIR"
+
+    # Reload systemd
+    su - ${user} -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload'
   '';
 
 in
@@ -202,94 +288,19 @@ in
     networking.firewall.allowedTCPPorts =
       lib.mapAttrsToList (_: svc: svc.port) appServices;
 
-    # ── Static files ──────────────────────────────────────────────
-    environment.etc =
+    # ── Static files in /etc/gloo/ ────────────────────────────────
+    environment.etc = {
+      "gloo/compose.yaml".source = ../gloo/compose.yaml;
+    } // (lib.mapAttrs' (name: _:
+        lib.nameValuePair "gloo/envs/${name}.env" {
+          source = ../gloo/envs/${name}.env;
+        }
+      ) appServices);
 
-      # Compose file + per-service env files
-      {
-        "gloo/compose.yaml".source = ../gloo/compose.yaml;
-      }
-      // (lib.mapAttrs' (name: _:
-          lib.nameValuePair "gloo/envs/${name}.env" {
-            source = ../gloo/envs/${name}.env;
-          }
-        ) appServices)
-
-      # ── Systemd user targets ──────────────────────────────────────
-      // {
-        "systemd/user/gloo-infra.target".text = ''
-          [Unit]
-          Description=Gloo shared infra (compose + init)
-          Wants=gloo-infra-up.service gloo-init-db.service gloo-init-buckets.service
-          After=gloo-infra-up.service
-        '';
-
-        "systemd/user/gloo-all.target".text = ''
-          [Unit]
-          Description=All Gloo dev servers
-          Wants=${lib.concatStringsSep " "
-            (lib.mapAttrsToList (name: _: "gloo-${name}.service") appServices)}
-          After=gloo-infra.target
-        '';
-
-        "systemd/user/gloo-hummingbird.target".text = ''
-          [Unit]
-          Description=Gloo Hummingbird dev stack
-          Wants=gloo-hb-api.service gloo-hb-web.service
-        '';
-
-        "systemd/user/gloo-storyhub.target".text = ''
-          [Unit]
-          Description=Gloo Storyhub dev stack
-          Wants=gloo-storyhub.service gloo-storyhub-worker.service
-        '';
-      }
-
-      # ── Infra services ────────────────────────────────────────────
-      // {
-        "systemd/user/gloo-infra-up.service".text = ''
-          [Unit]
-          Description=Start Gloo compose infra and wait for postgres
-
-          [Service]
-          Type=oneshot
-          Environment=PATH=${infraPath}
-          ExecStart=${pkgs.bash}/bin/bash -c '${lib.getExe' pkgs.podman "podman"} compose -f /etc/gloo/compose.yaml up -d && ${waitPostgres}'
-          RemainAfterExit=yes
-        '';
-
-        "systemd/user/gloo-init-db.service".text = ''
-          [Unit]
-          Description=Create Gloo databases (idempotent)
-          After=gloo-infra-up.service
-          Wants=gloo-infra-up.service
-
-          [Service]
-          Type=oneshot
-          Environment=PATH=${infraPath}
-          ExecStart=${initDb}
-        '';
-
-        "systemd/user/gloo-init-buckets.service".text = ''
-          [Unit]
-          Description=Create Gloo S3 buckets in RustFS (idempotent)
-          After=gloo-infra-up.service
-          Wants=gloo-infra-up.service
-
-          [Service]
-          Type=oneshot
-          TimeoutStartSec=5min
-          Environment=PATH=${infraPath}
-          ExecStart=${initBuckets}
-        '';
-      }
-
-      # ── App services ──────────────────────────────────────────────
-      // (lib.mapAttrs' (name: svc:
-          lib.nameValuePair "systemd/user/gloo-${name}.service" {
-            text = mkAppUnit name svc;
-          }
-        ) appServices);
+    # ── Install user units on activation ──────────────────────────
+    system.activationScripts.gloo-user-units = lib.stringAfter [ "users" "etc" ] ''
+      ${installUserUnits}
+    '';
 
     # ── User linger (services start at boot without login) ───────
     system.activationScripts.gloo-linger = lib.stringAfter [ "users" ] ''
