@@ -120,9 +120,17 @@
     torrentingPort = 51413;
     serverConfig = {
       LegalNotice.Accepted = true;
+      BitTorrent.Session = {
+        DefaultSavePath = "/mnt/media/Downloads";
+        TempPath = "/mnt/media/Downloads/incomplete";
+      };
       Preferences = {
         General.Locale = "en";
         WebUI.Username = "admin";
+        Downloads = {
+          SavePath = "/mnt/media/Downloads";
+          TempPath = "/mnt/media/Downloads/incomplete";
+        };
       };
     };
     extraArgs = [ "--confirm-legal-notice" ];
