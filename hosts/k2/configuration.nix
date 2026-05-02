@@ -4,7 +4,11 @@
   imports = [
     ../../modules/elitedesk-hardware.nix
     ../../modules/base-server.nix
-    ../../modules/elitedesk-disk-config.nix
+    # k2 already installed with its own disk layout.
+    # Use its existing disk-config from the remote repo.
+    # When we reformat k2 with nixos-anywhere, switch to:
+    #   ../../modules/elitedesk-disk-config.nix
+    ./disk-config.nix
     # ../../modules/nebula-client.nix  # Enable once certs are deployed
   ];
 
@@ -30,5 +34,5 @@
   services.nebula.networks.homelab.enable = false;  # Enable after certs deployed
 
   # ── State version ───────────────────────────────────────────────
-  system.stateVersion = "25.11";
+  system.stateVersion = "25.05";
 }

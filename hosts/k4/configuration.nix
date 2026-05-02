@@ -4,7 +4,11 @@
   imports = [
     ../../modules/elitedesk-hardware.nix
     ../../modules/base-server.nix
-    ../../modules/elitedesk-disk-config.nix
+    # k4 already installed with its own disk layout.
+    # Use its existing disk-config from the remote repo.
+    # When we reformat k4 with nixos-anywhere, switch to:
+    #   ../../modules/elitedesk-disk-config.nix
+    ./disk-config.nix
     # ../../modules/nebula-client.nix  # Enable once certs are deployed
   ];
 
@@ -26,7 +30,7 @@
     options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
   };
 
-  # ── NFS: Photos from NAS (for Immich if moved here) ─────────────
+  # ── NFS: Photos from NAS ────────────────────────────────────────
   fileSystems."/mnt/photos" = {
     device = "192.168.20.31:/mnt/tank/photos";
     fsType = "nfs";
@@ -37,5 +41,5 @@
   services.nebula.networks.homelab.enable = false;  # Enable after certs deployed
 
   # ── State version ───────────────────────────────────────────────
-  system.stateVersion = "25.11";
+  system.stateVersion = "25.05";
 }

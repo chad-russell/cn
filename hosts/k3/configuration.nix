@@ -4,7 +4,9 @@
   imports = [
     ../../modules/elitedesk-hardware.nix
     ../../modules/base-server.nix
-    ../../modules/elitedesk-disk-config.nix
+    # k3 was installed with its own disk layout (512M EFI, 8G swap, ext4 root)
+    # NOT the standard elitedesk layout. Use the original disk-config.
+    ../../servers/k3/disk-config.nix
     # ../../modules/nebula-client.nix  # Enable once certs are deployed
     ./media-services.nix
     ./gloo.nix
@@ -19,6 +21,13 @@
     address = [ "192.168.20.63/24" ];
     routes = [{ Gateway = "192.168.20.1"; }];
     dns = [ "8.8.8.8" "1.1.1.1" ];
+  };
+
+  # ── Local HDD mount ─────────────────────────────────────────────
+  fileSystems."/mnt/data" = {
+    device = "/dev/disk/by-uuid/e9c12a3f-6a65-458f-bd9b-ac46537e8839";
+    fsType = "ext4";
+    options = [ "defaults" "nofail" ];
   };
 
   # ── NFS: Media from NAS ─────────────────────────────────────────
