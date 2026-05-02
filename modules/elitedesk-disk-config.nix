@@ -54,6 +54,23 @@
           };
         };
       };
+      data = {
+        type = "disk";
+        device = "/dev/sda";
+        content = {
+          type = "gpt";
+          partitions = {
+            data = {
+              size = "100%";
+              content = {
+                type = "filesystem";
+                format = "ext4";
+                mountpoint = "/mnt/data";
+              };
+            };
+          };
+        };
+      };
     };
   };
 }
