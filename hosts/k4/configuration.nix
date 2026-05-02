@@ -1,0 +1,41 @@
+{ config, lib, pkgs, ... }:
+
+{
+  imports = [
+    ../../modules/elitedesk-hardware.nix
+    ../../modules/base-server.nix
+    ../../modules/elitedesk-disk-config.nix
+    # ../../modules/nebula-client.nix  # Enable once certs are deployed
+  ];
+
+  networking.hostName = "k4";
+
+  # ── Networking ───────────────────────────────────────────────────
+  systemd.network.networks."40-eno1" = {
+    matchConfig.Name = "eno1";
+    networkConfig.DHCP = "no";
+    address = [ "192.168.20.64/24" ];
+    routes = [{ routeConfig.Gateway = "192.168.20.1"; }];
+    dns = [ "8.8.8.8" "1.1.1.1" ];
+  };
+
+  # ── NFS: Backups from NAS ───────────────────────────────────────
+  fileSystems."/mnt/backups" = {
+    device = "192.168.20.31:/mnt/tank/backups";
+    fsType = "nfs";
+    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
+  };
+
+  # ── NFS: Photos from NAS (for Immich if moved here) ─────────────
+  fileSystems."/mnt/photos" = {
+    device = "192.168.20.31:/mnt/tank/photos";
+    fsType = "nfs";
+    options = [ "nfsvers=4" "rw" "soft" "intr" "timeo=30" "retrans=3" ];
+  };
+
+  # ── Nebula ──────────────────────────────────────────────────────
+  services.nebula.networks.homelab.enable = false;  # Enable after certs deployed
+
+  # ── State version ───────────────────────────────────────────────
+  system.stateVersion = "25.11";
+}
