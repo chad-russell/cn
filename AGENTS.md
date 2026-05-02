@@ -72,15 +72,14 @@ Use this file for global context. For implementation details, open the subsystem
 │  • *.crussell.io → public services (via Hetzner)               │
 └─────────────────────────────────┬──────────────────────────────┘
                                   │
-                    ┌─────────────┴─────────────┐
-                    ▼                           ▼
-          ┌─────────────────┐        ┌─────────────────┐
-          │      media      │        │       nas       │
-          │ 192.168.20.61   │        │ 192.168.20.31   │
-          │ Fedora Server   │        │   TrueNAS       │
-          │ Podman stack    │        │ NFS             │
-           └─────────────────┘        │ + Backup target │
-                                      └─────────────────┘
+                    ┌─────────────┴─────────────────────────────┐
+                    ▼                                           ▼
+          ┌─────────────────┐                       ┌─────────────────┐
+          │       k3        │                       │       nas       │
+          │ 192.168.20.63   │                       │ 192.168.20.31   │
+          │   NixOS 25.11   │                       │   TrueNAS       │
+          │ Media + Gloo    │                       │ NFS             │
+          └─────────────────┘                       └─────────────────┘
 
            ┌─────────────────┐
            │  homeassistant  │
@@ -139,12 +138,15 @@ Use this file for global context. For implementation details, open the subsystem
 
 | Hostname      | IP Address      | OS            | Purpose            | Services                                                            |
 | ------------- | --------------- | ------------- | ------------------ | ------------------------------------------------------------------- |
-| hub           | 192.168.20.105  | Fedora Atomic | Main server        | Podman Quadlets, Caddy                                              |
-| media         | 192.168.20.61   | Fedora Server | Media server       | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr         |
+| hub           | 192.168.20.105  | Fedora Atomic | Main server        | Podman Quadlets, Caddy, Nebula lighthouse                           |
+| k1            | 192.168.20.61   | Fedora Server | Spare (→ NixOS)    | —                                                                   |
+| k2            | 192.168.20.62   | NixOS 25.11   | Utility server     | Beszel agent                                                        |
+| k3            | 192.168.20.63   | NixOS 25.11   | Media server       | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr, Gloo  |
+| k4            | 192.168.20.64   | NixOS 25.11   | Utility server     | Immich (Docker), Beszel hub, chex-mix-timer                         |
 | nas           | 192.168.20.31   | TrueNAS       | Network storage    | NFS                                                                 |
 | homeassistant | 192.168.20.51   | HAOS          | Smart home         | Home Assistant                                                      |
 | gateway       | 178.156.171.212 | Fedora        | Public gateway/VPS | nginx (SSL passthrough → hub via Nebula), Nebula lighthouse + relay |
-| think         | -               | Fedora Atomic | Laptop             | ThinkPad T14                                                        |
+| think         | —               | NixOS 25.11   | Laptop             | ThinkPad T14                                                        |
 
 ## SSH Configuration
 
