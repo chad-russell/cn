@@ -15,7 +15,7 @@
     matchConfig.Name = "eno1";
     networkConfig.DHCP = "no";
     address = [ "192.168.20.61/24" ];
-    routes = [{ routeConfig.Gateway = "192.168.20.1"; }];
+    routes = [{ Gateway = "192.168.20.1"; }];
     dns = [ "8.8.8.8" "1.1.1.1" ];
   };
 

@@ -40,6 +40,6 @@
 
   # ── Hardware watchdog ────────────────────────────────────────────
   boot.kernelModules = [ "iTCO_wdt" ];
-  systemd.watchdog.runtimeTime = "30s";
-  systemd.watchdog.rebootTime = "2min";
+  systemd.settings.Manager.RuntimeWatchdogSec = "30s";
+  systemd.settings.Manager.RebootWatchdogSec = "2min";
 }
