@@ -4,11 +4,7 @@
   imports = [
     ../../modules/elitedesk-hardware.nix
     ../../modules/base-server.nix
-    # k2 already installed with its own disk layout.
-    # Use its existing disk-config from the remote repo.
-    # When we reformat k2 with nixos-anywhere, switch to:
-    #   ../../modules/elitedesk-disk-config.nix
-    ./disk-config.nix
+    ../../modules/elitedesk-disk-config.nix
     # ../../modules/nebula-client.nix  # Enable once certs are deployed
   ];
 
