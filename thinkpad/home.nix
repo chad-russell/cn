@@ -109,6 +109,9 @@ in
     vesktop
     voxtype
 
+    # Node (needed by `pi install` for extension deps)
+    nodejs
+
     # TUI apps
     slk
   ];
