@@ -45,9 +45,10 @@
         reverse_proxy 192.168.20.64:2283
     }
 
-    @chex-mix-timer host chex-mix-timer.crussell.io
-    handle @chex-mix-timer {
-        reverse_proxy 192.168.20.64:8732
-    }
+    # chex-mix-timer removed — k4 wiped, service retired until next holiday season
+    # @chex-mix-timer host chex-mix-timer.crussell.io
+    # handle @chex-mix-timer {
+    #     reverse_proxy 192.168.20.64:8732
+    # }
 
 }

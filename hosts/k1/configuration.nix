@@ -29,8 +29,7 @@
   # ── Nebula ──────────────────────────────────────────────────────
   services.nebula.networks.homelab.enable = false;  # Enable after certs deployed
 
-  # ── Services will be added after migration ──────────────────────
-  # Potential roles: Immich, Beszel hub, chex-mix-timer, etc.
+  # ── Services will be added as needed ─────────────────────────────
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";

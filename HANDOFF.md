@@ -13,7 +13,7 @@
 | k1 | 192.168.20.61 | NixOS 25.11 ✅ | Standard ✅ | ✅ Works | Clean install, empty |
 | k2 | 192.168.20.62 | NixOS 25.11 ✅ | Standard ✅ | ✅ Works | Clean install, empty |
 | k3 | 192.168.20.63 | NixOS 25.11 ✅ | Original (512M/8G/ext4) ✅ | ⚠️ Not tested remotely | Running media + gloo services |
-| k4 | 192.168.20.64 | NixOS 25.11 (old) | Old layout (1G EFI, no swap, HDD /var/lib/longhorn) | ❌ | Needs reformat (Phase 3) |
+| k4 | 192.168.20.64 | NixOS 25.11 ✅ | Standard ✅ | ✅ Works | Clean install, empty |
 | gateway | 178.156.171.212 | Fedora | N/A | N/A | Unchanged |
 | nas | 192.168.20.31 | TrueNAS | ZFS | N/A | Unchanged |
 | think | — | NixOS 25.11 | Own layout | Local rebuild | Your laptop |
@@ -100,32 +100,14 @@ sudo nixos-rebuild switch --flake .#think
 
 ## Next Steps
 
-### Phase 3b: k4 Reformat
+### ✅ Phase 3b: k4 Reformat
 
-**Before wiping k4**, migrate its services to k1:
-
-1. **Immich** (Docker on k4, server container in restart loop):
-   - Photo storage is on NFS (`192.168.20.31:/mnt/tank/photos`), already safe
-   - Docker volumes: `immich-pgdata` (postgres), `immich-redis-data`, `immich-model-cache` — ~2.2G total
-   - Plan: Dump postgres from k4, set up Immich on k1 (native NixOS or Docker), restore
-   - k1 already has `/mnt/photos` NFS mount in its config... wait, no — k1's config doesn't have that. k4's config does. Need to add to k1.
-
-2. **Beszel hub** (k4):
-   - Runs on port 8090, stores data in Docker volume `beszel-data` / `beszel_beszel-data`
-   - Move to k1
-
-3. **chex-mix-timer** (k4):
-   - App at `~/chex-mix-timer/`, Docker Compose with Redis
-   - Small app, move to k1
-
-4. **After migration**, reformat k4:
-   ```bash
-   # Same as k1/k2
-   nix run github:nix-community/nixos-anywhere -- \
-     --flake .#k4 -i ~/.ssh/id_ed25519 --ssh-option IdentitiesOnly=yes --build-on local \
-     crussell@192.168.20.64
-   ```
-   - Remove `hosts/k4/disk-config.nix`, switch to `../../modules/elitedesk-disk-config.nix`
+- Reinstalled with `nixos-anywhere` using standard `elitedesk-disk-config.nix`
+- Removed `hosts/k4/disk-config.nix`, switched config to standard layout
+- Removed `/mnt/photos` NFS mount (Immich moved to hub)
+- Remote deploy verified working
+- All old services removed: Docker, Tailscale, Immich, Beszel hub, chex-mix-timer
+- Caddy route for chex-mix-timer commented out, Caddy reloaded on hub
 
 ### Phase 4: Hub Migration to NixOS
 
@@ -211,7 +193,7 @@ ssh hub "sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddy
 | jellyfin.crussell.io | k3:8096 | Caddyfile |
 | homeassistant.crussell.io | 192.168.20.51:8123 | Caddyfile |
 | photos.crussell.io | hub:30093 | Caddyfile |
-| chex-mix-timer.crussell.io | k4:8732 | Caddyfile |
+| ~~chex-mix-timer.crussell.io~~ | ~~k4:8732~~ | ~~Caddyfile~~ (removed) |
 | qbittorrent/sonarr/radarr/prowlarr/jellyseerr/jellyfin internal | k3 (.63) | routes/internal/media.caddy |
 | gpl/hb-api/hb-web/polymer/rustfs/pgadmin/storyhub internal | k3 (.63) | routes/internal/gloo.caddy |
 | linkding/papra/ntfy/searxng/openwebui internal | hub (127.0.0.1) | routes/internal/hub-services.caddy |
