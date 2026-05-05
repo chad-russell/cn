@@ -1,6 +1,12 @@
-# NEVER commit these - private key material
+# Private key material (plain keys must never be committed)
+# Encrypted *.key.age versions are safe to commit.
 *.key
-pki/
+!*.key.age
+
+# Phone config has embedded private key — only commit encrypted version
+configs/phone.yaml
+
+# Old encrypted archive
 nebula-ca.tar.gz.gpg
 
 # OS artifacts

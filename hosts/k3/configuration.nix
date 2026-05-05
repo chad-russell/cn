@@ -7,9 +7,8 @@
     # k3 was installed with its own disk layout (512M EFI, 8G swap, ext4 root)
     # NOT the standard elitedesk layout. Use the original disk-config.
     ../../servers/k3/disk-config.nix
-    # ../../modules/nebula-client.nix  # Enable once certs are deployed
+    ../../modules/nebula-client.nix
     ./media-services.nix
-    ./gloo.nix
   ];
 
   networking.hostName = "k3";
@@ -45,7 +44,7 @@
   };
 
   # ── Nebula ──────────────────────────────────────────────────────
-  services.nebula.networks.homelab.enable = false;  # Enable after certs deployed
+  services.nebula.networks.homelab.enable = true;
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";

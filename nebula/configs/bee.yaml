@@ -1,5 +1,5 @@
-# Primary Nebula host for hub services
-# This is the service endpoint identity (Caddy/backends), not a lighthouse.
+# Nebula host config for bee (Beelink mini PC)
+# Overlay IP: 10.10.0.12
 
 pki:
   ca: /etc/nebula/ca.crt
@@ -8,7 +8,7 @@ pki:
 
 static_host_map:
   "10.10.0.2": ["178.156.171.212:4242"]
-  "10.10.0.1": ["127.0.0.1:4243", "192.168.20.105:4243"]
+  "10.10.0.1": ["192.168.20.62:4243"]
 
 lighthouse:
   am_lighthouse: false

@@ -1,29 +1,30 @@
 # ── Nebula VPN Client Module ───────────────────────────────────────
 #
 # Standard Nebula client config for homelab machines.
-# Lighthouses: 10.10.0.1 (hub local) and 10.10.0.2 (Hetzner)
+# Lighthouses: 10.10.0.1 (k2 local) and 10.10.0.2 (Hetzner)
 #
 # Usage in host config:
 #   imports = [ ./modules/nebula-client.nix ];
+#   services.nebula.networks.homelab.enable = true;
 #   # Then place certs at /etc/nebula/{ca.crt,host.crt,host.key}
 #
 # Certs are NOT managed by this module — deploy them separately
 # (via agenix or manual copy) before enabling.
+#
+# This module sets connection defaults unconditionally.
+# They're inert when enable = false (the default).
 
 { config, lib, pkgs, ... }:
 
-let
-  cfg = config.services.nebula.networks.homelab;
-in
 {
-  config = lib.mkIf config.services.nebula.networks.homelab.enable {
+  config = {
     services.nebula.networks.homelab = {
       ca = "/etc/nebula/ca.crt";
       cert = "/etc/nebula/host.crt";
       key = "/etc/nebula/host.key";
 
       staticHostMap = {
-        "10.10.0.1" = [ "192.168.20.105:4243" ];
+        "10.10.0.1" = [ "192.168.20.62:4243" ];
         "10.10.0.2" = [ "178.156.171.212:4242" ];
       };
 
@@ -54,8 +55,8 @@ in
       };
     };
 
-    # Ensure nebula service user can read cert files
-    systemd.tmpfiles.rules = [
+    # Ensure nebula service user can read cert files when enabled
+    systemd.tmpfiles.rules = lib.mkIf config.services.nebula.networks.homelab.enable [
       "Z /etc/nebula/ca.crt  0440 root nebula-homelab -"
       "Z /etc/nebula/host.crt 0440 root nebula-homelab -"
       "Z /etc/nebula/host.key 0440 root nebula-homelab -"

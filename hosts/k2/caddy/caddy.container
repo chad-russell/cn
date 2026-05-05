@@ -1,0 +1,20 @@
+[Unit]
+Description=Caddy Reverse Proxy (SSL termination + Route53 DNS challenge)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/caddy-route53:latest
+Network=host
+Volume=/etc/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+Volume=/etc/caddy/routes:/etc/caddy/imports/routes:ro
+Volume=caddy_data:/data
+Volume=caddy_config:/config
+EnvironmentFile=/etc/caddy/aws.env
+
+[Service]
+Restart=unless-stopped
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -16,7 +16,6 @@ age1uhmefj4e0jhf4nza9efsdz9qa8fq08sf04c3jh268cf3uhmlypfqh60u2v
 
 | File | Decrypted To | Variables |
 |------|--------------|-----------|
-| `immich.env.age` | `/srv/immich/secrets.env` | `POSTGRES_PASSWORD` |
 | `searxng-settings.yml.age` | `/srv/searxng/settings.yml` | Full SearXNG settings file |
 
 ## Manual Decryption
@@ -24,7 +23,7 @@ age1uhmefj4e0jhf4nza9efsdz9qa8fq08sf04c3jh268cf3uhmlypfqh60u2v
 If you need to decrypt secrets manually:
 
 ```bash
-age -d -i ~/.config/age/key.txt secrets/immich.env.age > /srv/immich/secrets.env
+age -d -i ~/.config/age/key.txt secrets/searxng-settings.yml.age > /srv/searxng/settings.yml
 ```
 
 ## Rotating Secrets
@@ -34,20 +33,17 @@ age -d -i ~/.config/age/key.txt secrets/immich.env.age > /srv/immich/secrets.env
    openssl rand -base64 32
    ```
 
-2. **Create new plaintext file:**
-   ```bash
-   echo "POSTGRES_PASSWORD=$(openssl rand -base64 32)" > immich.env
-   ```
+2. **Create new plaintext file** with the secret contents.
 
 3. **Encrypt with age:**
    ```bash
    age -e -r age1uhmefj4e0jhf4nza9efsdz9qa8fq08sf04c3jh268cf3uhmlypfqh60u2v \
-     immich.env > immich.env.age
+     <file> > <file>.age
    ```
 
 4. **Remove plaintext file:**
    ```bash
-   rm immich.env
+   rm <file>
    ```
 
 5. **Redeploy:** Run `setup-quadlets.sh` or manually decrypt to `/srv/`.

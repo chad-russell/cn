@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Date Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090b;--surface:#141416;--surface2:#1c1c20;--surface3:#27272d;
+  --accent:#f43f5e;--accent2:#fb7185;--accent-glow:rgba(244,63,94,.12);
+  --text:#fafafa;--text2:#a1a1aa;--text3:#71717a;
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.10);
+  --danger:#ef4444;--success:#22c55e;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.15);
+  --radius:12px;
+  --font-display:'Playfair Display',Georgia,serif;
+  --font-body:'DM Sans',system-ui,sans-serif;
+}
+html{font-size:16px}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font-body);
+  min-height:100vh;overflow-x:hidden;line-height:1.5;
+}
+.app{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:24px 20px 60px}
+header{text-align:center;padding:32px 0 12px}
+header h1{
+  font-family:var(--font-display);font-weight:900;font-size:2.8rem;
+  letter-spacing:-.02em;color:var(--text);
+}
+header p{color:var(--text2);font-size:.95rem;margin-top:6px;font-weight:400;letter-spacing:.02em}
+
+.tonight-banner{
+  background:var(--surface);border:1px solid var(--border2);border-radius:20px;
+  padding:30px 32px;margin:24px 0;text-align:center;position:relative;
+}
+.tonight-banner .banner-close{
+  position:absolute;top:14px;right:14px;z-index:1;
+  width:34px;height:34px;border-radius:999px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text2);font-size:1rem;line-height:1;
+}
+.tonight-banner .banner-close:hover{color:var(--text);border-color:var(--accent);background:rgba(244,63,94,.08)}
+.tonight-banner .tonight-label{
+  font-size:.8rem;text-transform:uppercase;letter-spacing:.15em;
+  color:var(--accent);font-weight:600;margin-bottom:8px;
+}
+.tonight-banner .tonight-restaurant{
+  font-family:var(--font-display);font-size:2.4rem;font-weight:900;
+  color:var(--text);position:relative;margin-bottom:4px;
+}
+.tonight-banner .tonight-date{color:var(--text3);font-size:.95rem;margin-bottom:16px}
+.tonight-banner .tonight-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.tonight-banner .tonight-url{
+  display:inline-flex;align-items:center;gap:6px;
+  color:var(--text);font-size:.9rem;text-decoration:none;
+  padding:10px 16px;border-radius:10px;background:var(--surface2);
+  border:1px solid var(--border);transition:all .2s;
+}
+.tonight-banner .tonight-url:hover{background:rgba(244,63,94,.08);border-color:rgba(244,63,94,.2)}
+
+.tonight-empty{
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:28px;margin:24px 0;text-align:center;color:var(--text2);font-size:.95rem;
+}
+
+.picker-section{
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:32px;margin:24px 0 28px;text-align:center;position:relative;
+}
+.picker-section h2{font-family:var(--font-display);font-size:1.55rem;color:var(--text);margin-bottom:8px;position:relative}
+.picker-section p{position:relative;color:var(--text2);margin-bottom:18px}
+.picker-controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;position:relative}
+.picker-controls select{
+  background:var(--surface2);color:var(--text);border:1px solid var(--border);
+  border-radius:10px;padding:12px 16px;font-family:var(--font-body);font-size:.95rem;
+  cursor:pointer;min-width:160px;
+}
+.picker-controls select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,63,94,.1)}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:10px 20px;border-radius:var(--radius);border:none;
+  font-family:var(--font-body);font-size:.9rem;font-weight:600;
+  cursor:pointer;transition:all .2s;
+}
+.btn-primary{
+  background:var(--accent);color:#fff;
+}
+.btn-primary:hover{background:var(--accent2)}
+.btn-primary:active{transform:scale(.98)}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2);background:var(--surface3)}
+.btn-sm{padding:6px 12px;font-size:.8rem}
+.btn-danger-ghost{background:transparent;color:var(--text3);border:1px solid var(--border)}
+.btn-danger-ghost:hover{color:var(--danger);border-color:var(--danger)}
+.btn-icon{
+  background:transparent;border:none;color:var(--text3);cursor:pointer;
+  padding:4px;border-radius:6px;transition:all .15s;font-size:.85rem;
+}
+.btn-icon:hover{color:var(--text);background:var(--surface3)}
+.btn-icon.danger:hover{color:var(--danger)}
+
+.picker-result{
+  margin-top:24px;min-height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;
+}
+.picker-result .result-card{
+  font-family:var(--font-display);font-size:2rem;font-weight:700;
+  color:var(--text);
+  padding:12px 32px;border-radius:12px;
+  background:var(--surface2);border:1px solid var(--border2);
+  opacity:0;transform:scale(.8);
+  transition:all .4s cubic-bezier(.34,1.56,.64,1);
+}
+.picker-result .result-card.visible{opacity:1;transform:scale(1)}
+.picker-result .result-card.cycling{opacity:1;transform:scale(.95);transition:all .08s ease}
+.picker-result .pool-info{color:var(--text3);font-size:.85rem;margin-top:8px}
+.picker-result .pick-actions{margin-top:12px;display:flex;gap:8px;align-items:center}
+
+.tabs{
+  display:flex;gap:4px;padding:4px;background:var(--surface);
+  border-radius:14px;margin:24px 0 20px;border:1px solid var(--border);
+}
+.tab{
+  flex:1;padding:10px;border:none;background:transparent;
+  color:var(--text2);font-family:var(--font-body);font-size:.85rem;font-weight:500;
+  border-radius:10px;cursor:pointer;transition:all .2s;
+}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--surface2);color:var(--text)}
+.tab .tab-count{
+  display:inline-block;font-size:.7rem;background:var(--surface3);
+  padding:2px 7px;border-radius:999px;margin-left:4px;color:var(--text3);
+}
+.tab.active .tab-count{background:rgba(244,63,94,.12);color:var(--accent)}
+
+.category-panel{display:none}
+.category-panel.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.panel-header h3{font-family:var(--font-display);font-size:1.2rem;color:var(--text)}
+
+.add-form{display:flex;gap:8px;margin-bottom:16px}
+.add-form input{
+  flex:1;background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:10px 14px;color:var(--text);
+  font-family:var(--font-body);font-size:.9rem;
+}
+.add-form input:focus{outline:none;border-color:var(--accent)}
+.add-form input::placeholder{color:var(--text3)}
+
+.restaurant-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.restaurant-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius);
+  transition:all .15s;
+}
+.restaurant-item:hover{border-color:var(--border2);background:var(--surface2)}
+.restaurant-item.is-tonight{border-color:rgba(244,63,94,.25);background:rgba(244,63,94,.06)}
+.restaurant-item .name-col{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.restaurant-item .name{font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.restaurant-item .name a{color:var(--text);text-decoration:none}
+.restaurant-item .name a:hover{color:var(--accent)}
+.restaurant-item .url-link{
+  font-size:.78rem;color:var(--accent2);text-decoration:none;
+  display:inline-flex;align-items:center;gap:3px;
+  opacity:.7;transition:opacity .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.restaurant-item .url-link:hover{opacity:1}
+.restaurant-item .badges{display:flex;gap:6px;flex-shrink:0}
+.badge{font-size:.7rem;padding:2px 8px;border-radius:6px;font-weight:500}
+.badge-eaten{background:rgba(34,197,94,.12);color:var(--success)}
+.badge-new{background:rgba(251,113,133,.12);color:var(--accent2)}
+.badge-tonight{background:rgba(244,63,94,.15);color:var(--accent);font-weight:600}
+.badge-no-url{background:var(--surface3);color:var(--text3)}
+
+.restaurant-item .edit-col{flex:1;display:flex;gap:6px;align-items:center}
+.restaurant-item .edit-input{
+  flex:1;background:var(--surface2);border:1px solid var(--accent);
+  border-radius:var(--radius);padding:6px 10px;color:var(--text);
+  font-family:var(--font-body);font-size:.95rem;min-width:0;
+}
+.restaurant-item .url-edit-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:6px;padding:4px 8px;color:var(--text2);
+  font-family:var(--font-body);font-size:.8rem;margin-top:4px;
+}
+.restaurant-item .url-edit-input:focus{outline:none;border-color:var(--accent)}
+
+.eaten-section{margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
+.eaten-section h3{font-family:var(--font-display);font-size:1.1rem;color:var(--text2);margin-bottom:12px}
+.eaten-grid{display:flex;flex-wrap:wrap;gap:6px}
+.eaten-chip{
+  font-size:.82rem;padding:5px 12px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);color:var(--text2);
+  display:flex;align-items:center;gap:6px;
+}
+.eaten-chip a{color:var(--text2);text-decoration:none}
+.eaten-chip a:hover{color:var(--accent)}
+.eaten-chip .btn-icon{font-size:.7rem;padding:2px}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:.9rem;font-style:italic}
+
+.visit-dates{font-size:.72rem;color:var(--text3);display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.visit-date-chip{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:1px 6px;border-radius:4px;background:var(--surface3);color:var(--text3);
+}
+.visit-date-chip .remove-visit{cursor:pointer;opacity:.5;font-size:.65rem}
+.visit-date-chip .remove-visit:hover{opacity:1;color:var(--danger)}
+.eaten-chip .visit-info{font-size:.7rem;color:var(--text3)}
+
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;
+  display:flex;align-items:center;justify-content:center;
+  animation:modalFadeIn .15s ease;
+}
+@keyframes modalFadeIn{from{opacity:0}to{opacity:1}}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);border-radius:20px;
+  padding:28px 32px;max-width:380px;width:90%;box-shadow:0 24px 48px rgba(0,0,0,.5);
+}
+.modal h3{font-family:var(--font-display);font-size:1.3rem;margin-bottom:4px;color:var(--text)}
+.modal .modal-sub{color:var(--text2);font-size:.85rem;margin-bottom:20px}
+.modal label{display:block;font-size:.8rem;color:var(--text2);margin-bottom:6px;font-weight:500}
+.modal input[type="date"]{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;color:var(--text);
+  font-family:var(--font-body);font-size:.95rem;margin-bottom:20px;
+  color-scheme:dark;
+}
+.modal input[type="date"]:focus{outline:none;border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal-actions .btn{min-width:90px;justify-content:center}
+
+@media(max-width:600px){
+  header h1{font-size:2rem}
+  .tonight-banner .tonight-restaurant{font-size:1.8rem}
+  .picker-controls{flex-direction:column;align-items:stretch}
+  .tonight-banner{padding:26px 20px}
+  .tabs{flex-wrap:wrap}
+  .tab{flex:1 1 45%}
+  .restaurant-item .badges{display:none}
+}
+
+.toast-container{position:fixed;top:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+.toast{
+  padding:12px 20px;border-radius:var(--radius);
+  background:var(--surface3);border:1px solid var(--border2);color:var(--text);
+  font-size:.85rem;box-shadow:0 8px 32px rgba(0,0,0,.4);
+  animation:toastIn .3s ease;min-width:200px;
+}
+.toast.leaving{animation:toastOut .25s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateX(40px)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Date Night</h1>
+    <p>where are we going tonight?</p>
+  </header>
+
+  <div id="planSection"></div>
+
+  <div class="tabs" id="categoryTabs"></div>
+  <div id="panels"></div>
+
+  <div class="eaten-section">
+    <h3>Already Visited</h3>
+    <div class="eaten-grid" id="eatenGrid"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+<div id="modalRoot"></div>
+
+<script>
+const CATEGORIES = [
+  { key: 'bfast', label: 'Breakfast', emoji: '\u{1F373}' },
+  { key: 'lunch', label: 'Lunch/Dinner', emoji: '\u{1F963}' },
+  { key: 'pizza', label: 'Pizza', emoji: '\u{1F355}' },
+  { key: 'indian', label: 'Indian', emoji: '\u{1F35B}' },
+];
+
+let data = {};
+let activeTab = 'bfast';
+let editingItem = null;
+let editingUrl = null;
+let spinning = false;
+
+async function apiGet() {
+  const res = await fetch('/api/data');
+  if (!res.ok) throw new Error('Request failed');
+  return res.json();
+}
+
+async function apiPost(endpoint, body) {
+  const res = await fetch(`/api/${endpoint}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+  return res.json();
+}
+
+async function apiPut(body) {
+  const res = await fetch('/api/restaurants', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+  return res.json();
+}
+
+async function apiDel(endpoint, body) {
+  const opts = { method: 'DELETE', headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`/api/${endpoint}`, opts);
+  if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+  return res.json();
+}
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.classList.add('leaving'); setTimeout(() => el.remove(), 250); }, 2500);
+}
+
+function getUrl(name) { return (data.urls || {})[name] || ''; }
+
+function render() {
+  renderPlanSection();
+  renderTabs();
+  renderPanels();
+  renderEaten();
+}
+
+function renderPlanSection() {
+  const section = document.getElementById('planSection');
+  const tonight = data.tonight;
+  if (!tonight || !tonight.name) {
+    section.innerHTML = `
+      <div class="picker-section">
+        <h2>Pick Tonight's Plan</h2>
+        <p>Choose a lane and let the app break the tie.</p>
+        <div class="picker-controls">
+          <select id="pickerCategory">
+            <option value="future">Unvisited</option>
+            <option value="all">Everything</option>
+            <option value="bfast">Breakfast</option>
+            <option value="lunch">Lunch/Dinner</option>
+            <option value="pizza">Pizza</option>
+            <option value="indian">Indian</option>
+          </select>
+          <button class="btn btn-primary" onclick="spinPick()">Pick for Us</button>
+        </div>
+        <div class="picker-result" id="pickerResult"></div>
+      </div>
+      <div class="tonight-empty">
+        Nothing is locked in yet. Pick a place above or star one from the list below.
+      </div>
+    `;
+    return;
+  }
+  const url = getUrl(tonight.name);
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = tonight.date === today;
+  const dateLabel = isToday ? 'Tonight' : formatDate(tonight.date);
+  section.innerHTML = `
+    <div class="tonight-banner">
+      <button class="btn-icon banner-close" title="Clear tonight's plan" onclick="clearTonight()">&times;</button>
+      <div class="tonight-label">${isToday ? '\u2728 Tonight\'s Plan' : '\u{1F4C5} Planned'}</div>
+      <div class="tonight-restaurant">${escHtml(tonight.name)}</div>
+      <div class="tonight-date">${dateLabel}</div>
+      <div class="tonight-actions">
+        ${url ? `<a class="tonight-url" href="${escHtml(url)}" target="_blank" rel="noopener">\u{1F517} View Menu / Website</a>` : ''}
+        <button class="btn btn-primary btn-sm" onclick="openVisitModal('${escAttr(tonight.name)}', '${tonight.date || ''}')">Yes, we went!</button>
+      </div>
+    </div>
+  `;
+}
+
+function formatDate(dateStr) {
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  } catch { return dateStr; }
+}
+
+function renderTabs() {
+  const container = document.getElementById('categoryTabs');
+  container.innerHTML = CATEGORIES.map(c => `
+    <button class="tab ${activeTab === c.key ? 'active' : ''}" onclick="switchTab('${c.key}')">
+      ${c.emoji} ${c.label}
+      <span class="tab-count">${(data[c.key] || []).length}</span>
+    </button>
+  `).join('');
+}
+
+function renderPanels() {
+  const container = document.getElementById('panels');
+  const tonight = data.tonight;
+  container.innerHTML = CATEGORIES.map(c => {
+    const items = data[c.key] || [];
+    const eaten = data.eaten || [];
+    const future = data.future_ideas || [];
+    return `
+      <div class="category-panel ${activeTab === c.key ? 'active' : ''}" data-category="${c.key}">
+        <div class="panel-header">
+          <h3>${c.emoji} ${c.label}</h3>
+        </div>
+        <form class="add-form" onsubmit="addRestaurant(event, '${c.key}')">
+          <input type="text" id="add-${c.key}" placeholder="Add a restaurant..." autocomplete="off">
+          <button type="submit" class="btn btn-primary btn-sm">Add</button>
+        </form>
+        ${items.length === 0 ? '<div class="empty-state">Nothing here yet \u2014 add something!</div>' : `
+        <ul class="restaurant-list">
+          ${items.map((name, i) => {
+            const isEaten = eaten.includes(name);
+            const isFuture = future.includes(name);
+            const url = getUrl(name);
+            const isTonight = tonight && tonight.name === name;
+            const visits = (data.visits || {})[name] || [];
+            const isEditing = editingItem && editingItem.category === c.key && editingItem.index === i;
+            const isEditingUrl = editingUrl && editingUrl.category === c.key && editingUrl.index === i;
+            return `
+              <li class="restaurant-item ${isTonight ? 'is-tonight' : ''}">
+                ${isEditing ? `
+                  <div class="edit-col">
+                    <input class="edit-input" id="edit-input" value="${escHtml(name)}"
+                      onkeydown="handleEditKey(event,'${c.key}',${i},'${escAttr(name)}')"
+                      onblur="saveEdit('${c.key}',${i},'${escAttr(name)}')">
+                    <button class="btn btn-primary btn-sm" onclick="saveEdit('${c.key}',${i},'${escAttr(name)}')">Save</button>
+                  </div>
+                ` : `
+                  <div class="name-col">
+                    <span class="name">${url ? `<a href="${escHtml(url)}" target="_blank" rel="noopener">${escHtml(name)}</a>` : escHtml(name)}</span>
+                    ${isEditingUrl ? `
+                      <input class="url-edit-input" id="url-edit-input" value="${escHtml(url)}" placeholder="Website URL..."
+                        onkeydown="handleUrlKey(event,'${c.key}',${i},'${escAttr(name)}')"
+                        onblur="saveUrl('${c.key}',${i},'${escAttr(name)}')">
+                    ` : (url ? `<a class="url-link" href="${escHtml(url)}" target="_blank" rel="noopener">\u{1F517} ${escHtml(shortUrl(url))}</a>` : `
+                      <span class="url-link" style="cursor:pointer;opacity:.4" onclick="startUrlEdit('${c.key}',${i})" title="Add website URL">+ add link</span>
+                    `)}
+                    ${visits.length > 0 ? `<div class="visit-dates">${visits.map(v => `<span class="visit-date-chip">${formatDateShort(v)}<span class="remove-visit" title="Remove this visit" onclick="event.stopPropagation();removeVisit('${escAttr(name)}','${v}')">\u2715</span></span>`).join('')}</div>` : ''}
+                  </div>
+                  <span class="badges">
+                    ${isTonight ? '<span class="badge badge-tonight">TONIGHT</span>' : ''}
+                    ${isEaten ? '<span class="badge badge-eaten">visited</span>' : ''}
+                    ${isFuture ? '<span class="badge badge-new">on the list</span>' : ''}
+                  </span>
+                  ${!isTonight ? `<button class="btn-icon" title="Set as tonight" onclick="setTonight('${escAttr(name)}')">\u{1F31F}</button>` : ''}
+                  ${!isEaten ? `<button class="btn-icon" title="Mark visited" onclick="openVisitModal('${escAttr(name)}')">\u2713</button>` : `<button class="btn-icon" title="Add another visit" onclick="openVisitModal('${escAttr(name)}')">\u2713</button>`}
+                  <button class="btn-icon" title="Edit" onclick="startEdit('${c.key}',${i})">\u270E</button>
+                  <button class="btn-icon danger" title="Delete" onclick="deleteRestaurant('${c.key}','${escAttr(name)}')">\u2715</button>
+                `}
+              </li>
+            `;
+          }).join('')}
+        </ul>
+        `}
+      </div>
+    `;
+  }).join('');
+
+  if (editingItem) {
+    const inp = document.getElementById('edit-input');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
+  if (editingUrl) {
+    const inp = document.getElementById('url-edit-input');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
+}
+
+function shortUrl(url) {
+  try { return new URL(url).hostname.replace('www.',''); } catch { return url; }
+}
+
+function renderEaten() {
+  const eaten = data.eaten || [];
+  const grid = document.getElementById('eatenGrid');
+  if (eaten.length === 0) {
+    grid.innerHTML = '<div class="empty-state">No restaurants visited yet</div>';
+    return;
+  }
+  grid.innerHTML = eaten.map(name => {
+    const url = getUrl(name);
+    const visits = (data.visits || {})[name] || [];
+    return `
+      <span class="eaten-chip">
+        ${url ? `<a href="${escHtml(url)}" target="_blank" rel="noopener">${escHtml(name)}</a>` : escHtml(name)}
+        ${visits.length > 0 ? `<span class="visit-info">${visits.map(v => formatDateShort(v)).join(', ')}</span>` : ''}
+        <button class="btn-icon" title="Add visit" onclick="openVisitModal('${escAttr(name)}')">+</button>
+      </span>
+    `;
+  }).join('');
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+function switchTab(key) { activeTab = key; editingItem = null; editingUrl = null; render(); }
+
+async function addRestaurant(e, category) {
+  e.preventDefault();
+  const input = document.getElementById(`add-${category}`);
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    data = await apiPost('restaurants', { category, name });
+    input.value = '';
+    render();
+  } catch (err) { toast(err.message); }
+}
+
+function startEdit(category, index) {
+  editingItem = { category, index };
+  editingUrl = null;
+  render();
+}
+
+function startUrlEdit(category, index) {
+  editingUrl = { category, index };
+  editingItem = null;
+  render();
+}
+
+function handleEditKey(e, category, index, oldName) {
+  if (e.key === 'Enter') { e.target.blur(); }
+  if (e.key === 'Escape') { editingItem = null; render(); }
+}
+
+function handleUrlKey(e, category, index, name) {
+  if (e.key === 'Enter') { e.target.blur(); }
+  if (e.key === 'Escape') { editingUrl = null; render(); }
+}
+
+async function saveEdit(category, index, oldName) {
+  const input = document.getElementById('edit-input');
+  if (!input) return;
+  const newName = input.value.trim();
+  editingItem = null;
+  if (!newName || newName === oldName) { render(); return; }
+  try {
+    data = await apiPut({ category, old_name: oldName, new_name: newName });
+    render();
+  } catch (err) { toast(err.message); render(); }
+}
+
+async function saveUrl(category, index, name) {
+  const input = document.getElementById('url-edit-input');
+  if (!input) return;
+  const url = input.value.trim();
+  editingUrl = null;
+  try {
+    data = await apiPost('url', { name, url });
+    render();
+  } catch (err) { toast(err.message); render(); }
+}
+
+async function deleteRestaurant(category, name) {
+  if (!confirm(`Remove "${name}"?`)) return;
+  try {
+    data = await apiDel('restaurants', { category, name });
+    render();
+    toast(`Removed ${name}`);
+  } catch (err) { toast(err.message); }
+}
+
+async function setTonight(name) {
+  try {
+    data = await apiPost('tonight', { name });
+    render();
+    toast(`${name} \u2014 it's a date!`);
+  } catch (err) { toast(err.message); }
+}
+
+async function clearTonight() {
+  try {
+    data = await apiPost('tonight', { name: '' });
+    render();
+  } catch (err) { toast(err.message); }
+}
+
+async function markEaten(name) {
+  try {
+    data = await apiPost('mark-eaten', { name });
+    render();
+    toast(`Marked ${name} as visited`);
+  } catch (err) { toast(err.message); }
+}
+
+async function markUnvisited(name) {
+  try {
+    data = await apiPost('mark-unvisited', { name });
+    render();
+    toast(`${name} is back on the list`);
+  } catch (err) { toast(err.message); }
+}
+
+async function spinPick() {
+  if (spinning) return;
+  const category = document.getElementById('pickerCategory').value;
+  const resultEl = document.getElementById('pickerResult');
+
+  try {
+    const preData = await apiGet();
+    let pool;
+    if (category === 'future') pool = preData.future_ideas || [];
+    else if (category === 'all') pool = preData.future_ideas || [];
+    else pool = (preData[category] || []).filter(r => (preData.future_ideas || []).includes(r));
+    if (pool.length === 0) { toast('No restaurants to pick from!'); return; }
+
+    spinning = true;
+    const finalPick = await (await fetch('/api/pick', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category }),
+    })).json();
+    if (finalPick.error) { toast(finalPick.error); spinning = false; return; }
+
+    resultEl.innerHTML = '<div class="result-card cycling" id="spinCard"></div><div class="pick-actions" id="pickActions"></div>';
+    const card = document.getElementById('spinCard');
+    const totalCycles = 20;
+    let cycle = 0;
+
+    const interval = setInterval(() => {
+      card.textContent = pool[Math.floor(Math.random() * pool.length)];
+      card.classList.remove('visible');
+      card.classList.add('cycling');
+      void card.offsetWidth;
+      card.classList.add('visible');
+      cycle++;
+      if (cycle >= totalCycles) {
+        clearInterval(interval);
+        card.textContent = finalPick.pick;
+        card.classList.remove('cycling');
+        card.classList.add('visible');
+        card.style.fontSize = '2.2rem';
+        card.style.textShadow = '0 0 30px rgba(244,63,94,.15)';
+        spinning = false;
+        const url = getUrl(finalPick.pick);
+        const actions = document.getElementById('pickActions');
+        actions.innerHTML = `
+          <button class="btn btn-primary btn-sm" onclick="setTonight('${escAttr(finalPick.pick)}')">Set as Tonight</button>
+          ${url ? `<a class="btn btn-ghost btn-sm" href="${escHtml(url)}" target="_blank" rel="noopener">\u{1F517} Website</a>` : ''}
+          <div class="pool-info">Chosen from ${finalPick.pool_size} options</div>
+        `;
+      }
+    }, 70 + (cycle * 6));
+  } catch (err) { toast(err.message); spinning = false; }
+}
+
+function formatDateShort(dateStr) {
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return dateStr; }
+}
+
+function openVisitModal(name, preDate) {
+  const today = new Date().toISOString().split('T')[0];
+  const defaultDate = preDate || today;
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h3>${escHtml(name)}</h3>
+        <p class="modal-sub">Confirm your visit date</p>
+        <label for="visitDate">When did you go?</label>
+        <input type="date" id="visitDate" value="${defaultDate}" max="${today}">
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="confirmVisit('${escAttr(name)}')">Confirm</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('visitDate').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalRoot').innerHTML = '';
+}
+
+async function confirmVisit(name) {
+  const dateInput = document.getElementById('visitDate');
+  const visitDate = dateInput ? dateInput.value : '';
+  if (!visitDate) { toast('Please pick a date'); return; }
+  closeModal();
+  try {
+    data = await apiPost('visit', { name, date: visitDate });
+    render();
+    toast(`Recorded visit to ${name}`);
+  } catch (err) { toast(err.message); }
+}
+
+async function removeVisit(name, visitDate) {
+  try {
+    data = await apiDel('visit', { name, date: visitDate });
+    render();
+  } catch (err) { toast(err.message); }
+}
+
+async function init() {
+  data = await apiGet();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>

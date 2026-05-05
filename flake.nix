@@ -174,15 +174,15 @@
         ];
       };
 
-      # hub — main infrastructure server
-      nixosConfigurations.hub = mkHost {
-        hostname = "hub";
+      # bee — Beelink mini PC (general-purpose server)
+      nixosConfigurations.bee = mkHost {
+        hostname = "bee";
       };
 
       # ── Deploy script (nix run .#deploy) ─────────────────────────
       apps.x86_64-linux.deploy = {
         type = "app";
-        program = toString (
+        program = "${
           nixpkgs.legacyPackages.x86_64-linux.writeShellScriptBin "deploy" ''
             set -euo pipefail
 
@@ -190,7 +190,7 @@
               echo "Usage: nix run .#deploy -- <host> [host...]"
               echo "  Example: nix run .#deploy -- k2 k3 k4"
               echo ""
-              echo "Available hosts: think k1 k2 k3 k4 hub"
+              echo "Available hosts: think k1 k2 k3 k4 bee"
               exit 1
             fi
 
@@ -216,8 +216,8 @@
                 k4)
                   TARGET="root@192.168.20.64"
                   ;;
-                hub)
-                  TARGET="root@192.168.20.105"
+                bee)
+                  TARGET="crussell@192.168.20.105"
                   ;;
                 *)
                   echo "Unknown host: $host"
@@ -227,7 +227,11 @@
 
               if [ "$host" != "think" ]; then
                 echo ">>> Deploying to $host ($TARGET)..."
-                nixos-rebuild switch --flake .#$host --target-host "$TARGET" --build-host localhost "$@"
+                DEPLOY_ARGS="--flake .#$host --target-host $TARGET --build-host localhost"
+                if [ "$host" = "bee" ]; then
+                  DEPLOY_ARGS="$DEPLOY_ARGS --sudo"
+                fi
+                nixos-rebuild switch $DEPLOY_ARGS
               fi
 
               echo ">>> $host done."
@@ -236,13 +240,13 @@
 
             echo "All hosts deployed."
           ''
-        );
+        }/bin/deploy";
       };
 
       # ── Install script (nix run .#install <host>) ────────────────
       apps.x86_64-linux.install = {
         type = "app";
-        program = toString (
+        program = "${
           nixpkgs.legacyPackages.x86_64-linux.writeShellScriptBin "install" ''
             set -euo pipefail
 
@@ -263,7 +267,7 @@
               k2) IP="''${IP:-192.168.20.62}" ;;
               k3) IP="''${IP:-192.168.20.63}" ;;
               k4) IP="''${IP:-192.168.20.64}" ;;
-              hub) IP="''${IP:-192.168.20.105}" ;;
+              bee) IP="''${IP:-192.168.20.105}" ;;
               *)
                 echo "Unknown host: $HOST"
                 exit 1
@@ -275,9 +279,16 @@
             read -p "Continue? [y/N] " confirm
             [ "$confirm" = "y" ] || exit 1
 
-            nix run github:nix-community/nixos-anywhere -- --flake .#$HOST root@$IP
+            # Hub has no root SSH; connect as crussell (passwordless sudo)
+            if [ "$HOST" = "bee" ]; then
+              SSH_USER="crussell"
+            else
+              SSH_USER="root"
+            fi
+
+            nix run github:nix-community/nixos-anywhere -- --flake .#$HOST $SSH_USER@$IP
           ''
-        );
+        }/bin/install";
       };
     };
 }

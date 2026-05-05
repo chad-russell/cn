@@ -44,33 +44,31 @@ Use this file for global context. For implementation details, open the subsystem
                     └─────────────┬─────────────┘
                                   │ Nebula VPN
 ┌─────────────────────────────────▼──────────────────────────────┐
-│                              hub                               │
-│              (192.168.20.105 - this machine)                   │
+│                              k2                                │
+│              (192.168.20.62 - NixOS server)                    │
 │                     Nebula split identity:                     │
 │                     • 10.10.0.1 local lighthouse               │
 │                     • 10.10.0.6 host/services endpoint         │
 │                                                                │
-│  Podman Quadlets (rootless):                                   │
-│  • Linkding    • Ntfy           • Papra                        │
-│  • Open-WebUI   • Datenight     • SearXNG  • Immich           │
-│                                                                │
-│  Health Monitoring (systemd timer):                             │
-│  • Host ping + HTTP checks + resource thresholds               │
-│  • Alerts via ntfy                                              │
-│                                                                │
-│  Dev Stacks (Compose infra + host dev servers):               │
-│  • Gloo (GPL + HB + Storyhub + Polymer; shared infra)         │
-│  • Buildspace (postgres only; bun runs on host)                │
-│                                                                │
-│  Backup (Restic → NFS → NAS):                                  │
-│  • Daily snapshots of /srv/* volumes                           │
-│  • Separate immich backup service                              │
-│  • Retention: 7d/4w/12m                                        │
-│                                                                │
-│  Caddy reverse proxy (system-level container):                 │
+│  Caddy reverse proxy (Podman container):                       │
 │  • *.internal.crussell.io → internal services                  │
 │  • *.crussell.io → public services (via Hetzner)               │
+│                                                                │
+│  Other services:                                               │
+│  • Ntfy  • SearXNG  • Datenight                               │
+│  • Papra  • Linkding                                           │
 └─────────────────────────────────┬──────────────────────────────┘
+                                  │
+                    ┌─────────────┘
+                    ▼
+          ┌─────────────────┐
+          │       bee       │
+          │ 192.168.20.105  │
+          │   NixOS 25.11   │
+          │ Beelink mini PC │
+          │  Nebula: 10.10.0.12  │
+│          │  (fresh — services TBD)  │
+│          └─────────────────┘
                                   │
                     ┌─────────────┴─────────────────────────────┐
                     ▼                                           ▼
@@ -138,14 +136,14 @@ Use this file for global context. For implementation details, open the subsystem
 
 | Hostname      | IP Address      | OS            | Purpose            | Services                                                            |
 | ------------- | --------------- | ------------- | ------------------ | ------------------------------------------------------------------- |
-| hub           | 192.168.20.105  | Fedora Atomic | Main server        | Podman Quadlets, Caddy, Nebula lighthouse                           |
-| k1            | 192.168.20.61   | Fedora Server | Spare (→ NixOS)    | —                                                                   |
-| k2            | 192.168.20.62   | NixOS 25.11   | Utility server     | Beszel agent                                                        |
-| k3            | 192.168.20.63   | NixOS 25.11   | Media server       | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr, Gloo  |
-| k4            | 192.168.20.64   | NixOS 25.11   | Utility server     | —                                                                   |
+| bee           | 192.168.20.105  | NixOS 25.11   | General-purpose    | Beelink mini PC, Nebula client (10.10.0.12)                        |
+| k1            | 192.168.20.61   | NixOS 25.11   | Utility server     | Bun, pi-coding-agent, Nebula client (10.10.0.4)                   |
+| k2            | 192.168.20.62   | NixOS 25.11   | Utility server     | Caddy, Ntfy, SearXNG, Nebula lighthouse (10.10.0.1+10.10.0.6)     |
+| k3            | 192.168.20.63   | NixOS 25.11   | Media server       | Jellyfin, Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr, Nebula client |
+| k4            | 192.168.20.64   | NixOS 25.11   | Utility server     | Immich, Nebula client                                             |
 | nas           | 192.168.20.31   | TrueNAS       | Network storage    | NFS                                                                 |
 | homeassistant | 192.168.20.51   | HAOS          | Smart home         | Home Assistant                                                      |
-| gateway       | 178.156.171.212 | Fedora        | Public gateway/VPS | nginx (SSL passthrough → hub via Nebula), Nebula lighthouse + relay |
+| gateway       | 178.156.171.212 | Fedora        | Public gateway/VPS | nginx (SSL passthrough → k2 via Nebula), Nebula lighthouse + relay  |
 | think         | —               | NixOS 25.11   | Laptop             | ThinkPad T14                                                        |
 
 ## SSH Configuration
@@ -186,7 +184,25 @@ sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
 
 ### Secret Management
 
-Secrets are encrypted with [age](https://github.com/FiloSottile/age) and stored in `servers/hub/quadlets/secrets/*.age`. They are decrypted during setup by `setup-quadlets.sh`.
+Secrets are encrypted with [age](https://github.com/FiloSottile/age) using the SSH ed25519 key (`~/.ssh/id_ed25519`). Decrypt from any machine with that key:
+
+```bash
+age -d -i ~/.ssh/id_ed25519 <file>.age
+```
+
+### Nebula PKI (`nebula/pki/`)
+
+- **Certs (`*.crt`)** — committed plain (public, no secrets)
+- **Private keys (`*.key.age`)** — encrypted with age, committed to git
+- **Raw keys (`*.key`)** — gitignored, never committed
+- **Phone config (`configs/phone.yaml.age`)** — encrypted (has embedded private key)
+- **`secrets.nix`** — defines recipient keys for agenix workflows
+
+The CA private key (`ca.key.age`) can sign arbitrary nebula certs — treat it as critical infrastructure.
+
+### Application secrets (`servers/hub/quadlets/secrets/*.age`)
+
+Encrypted with age, decrypted during setup by `setup-quadlets.sh`.
 
 **Prerequisites:**
 

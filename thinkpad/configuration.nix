@@ -117,8 +117,8 @@
   # Only charges between 75–80%, prevents constant top-up wear.
   # Uses the thinkpad_acpi sysfs interface directly (same mechanism TLP used).
   services.udev.extraRules = ''
-    # Set battery charge thresholds at boot / power supply change
-    ACTION=="change", SUBSYSTEM=="power_supply", KERNEL=="BAT0", \
+    # Set battery charge thresholds when battery device appears
+    ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="BAT0", \
       ATTR{charge_control_start_threshold}="75", \
       ATTR{charge_control_end_threshold}="80"
   '';

@@ -17,8 +17,12 @@ Overlay CIDR: `10.10.0.0/24`
 - `10.10.0.1` - local lighthouse identity on `hub` (container, UDP `4243`, discovery-only)
 - `10.10.0.2` - Hetzner lighthouse + relay (public, UDP `4242`)
 - `10.10.0.3` - TrueNAS host
+- `10.10.0.4` - k1 utility server
 - `10.10.0.5` - AI server host
 - `10.10.0.6` - `hub` host/services endpoint (Caddy/backends)
+- `10.10.0.7` - k2 utility server
+- `10.10.0.8` - k3 media server (Jellyfin, Radarr, Sonarr, etc.)
+- `10.10.0.9` - k4 utility server (Immich)
 - `10.10.0.10` - thinkpad
 - `10.10.0.11` - phone
 

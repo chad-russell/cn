@@ -6,6 +6,11 @@
 { config, lib, pkgs, ... }:
 
 {
+  imports = [
+    ./server-shell.nix
+    ./nebula-hosts.nix
+  ];
+
   # ── Time / Locale ────────────────────────────────────────────────
   time.timeZone = "America/New_York";
   i18n.defaultLocale = "en_US.UTF-8";
@@ -49,6 +54,8 @@
     jq
     ethtool
     nfs-utils
+    ripgrep
+    fd
   ];
 
   # ── Nix settings ─────────────────────────────────────────────────

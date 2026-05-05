@@ -1,0 +1,23 @@
+# ── Nebula Host Entries ────────────────────────────────────────────
+#
+# Adds /etc/hosts entries for all Nebula overlay IPs.
+# Imported by base-server.nix so every connected machine can
+# resolve nebula hostnames. Also import on roaming clients (thinkpad, etc.).
+
+{ config, lib, ... }:
+
+{
+  networking.extraHosts = ''
+    10.10.0.1   nebula-lh
+    10.10.0.2   nebula-hetzner
+    10.10.0.3   nas
+    10.10.0.4   k1
+    10.10.0.5   bees
+    10.10.0.6   k2-nebula
+    10.10.0.12  bee
+    10.10.0.7   k2
+    10.10.0.8   k3
+    10.10.0.9   k4
+    10.10.0.10  think
+  '';
+}

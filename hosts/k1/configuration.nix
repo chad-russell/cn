@@ -1,11 +1,13 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, unstable, ... }:
 
 {
   imports = [
     ../../modules/elitedesk-hardware.nix
     ../../modules/base-server.nix
     ../../modules/elitedesk-disk-config.nix
-    # ../../modules/nebula-client.nix  # Enable once certs are deployed
+    ../../modules/nebula-client.nix
+    ./gloo.nix
+    ./buildspace.nix
   ];
 
   networking.hostName = "k1";
@@ -27,9 +29,19 @@
   };
 
   # ── Nebula ──────────────────────────────────────────────────────
-  services.nebula.networks.homelab.enable = false;  # Enable after certs deployed
+  services.nebula.networks.homelab.enable = true;
 
-  # ── Services will be added as needed ─────────────────────────────
+  # ── Gloo / Buildspace dev stacks ────────────────────────────────
+  # These are mutually exclusive — enable only the one you're working on.
+  services.gloo.enable = true;
+  # services.buildspace.enable = true;
+
+  # ── Dev tools ────────────────────────────────────────────────────
+  environment.systemPackages = [
+    pkgs.bun
+    pkgs.nodejs
+    unstable."pi-coding-agent"
+  ];
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";
