@@ -49,7 +49,7 @@
   # ── SSH ──────────────────────────────────────────────────────────────
   services.openssh.enable = true;
 
-  # ── Nebula VPN ──────────────────────────────────────────────────────
+  # ── Nebula VPN ─────────────────────────────────────────────────────
   services.nebula.networks.homelab = {
     enable = true;
     ca = "/etc/nebula/ca.crt";

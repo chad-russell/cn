@@ -115,6 +115,7 @@
           { nixpkgs.overlays = [ (final: prev: { slk = final.callPackage ./thinkpad/pkgs/slk/package.nix { }; }) ]; }
           ./thinkpad/hardware-configuration.nix
           ./thinkpad/configuration.nix
+          ./modules/nebula-hosts.nix
           nixos-hardware.nixosModules.lenovo-thinkpad-t14-intel-gen6
           { _module.args.username = username; }
           noctalia-shell.nixosModules.default
