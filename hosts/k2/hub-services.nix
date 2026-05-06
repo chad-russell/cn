@@ -1,11 +1,11 @@
-# ── Hub Services (Podman Quadlets) ───────────────────────────────
+# ── Shared Web Services (Podman Quadlets on k2) ──────────────────
 #
-# Linkding, Papra, and Open-WebUI migrated from hub as Podman containers.
-# Data lives in /srv/<service>/data/ on the host.
+# Linkding, Papra, and Open-WebUI run as system Podman Quadlets.
+# Data lives in /srv/<service>/data/ on k2.
 #
-# Prerequisites (run once before enabling):
-#   1. rsync data from hub: /srv/{linkding,papra,open-webui}/data -> /srv/ on k2
-#   2. podman pull images (or they'll auto-pull on first start)
+# Prerequisites for a fresh k2 restore:
+#   1. Restore /srv/{linkding,papra,open-webui}/data from backup/migration source.
+#   2. podman pull images (or they'll auto-pull on first start).
 #
 # Deploy: nix run .#deploy -- k2
 

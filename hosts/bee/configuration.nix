@@ -1,6 +1,6 @@
-# ── Hub: Main Infrastructure Server ────────────────────────────────
+# ── bee: Beelink Mini PC ───────────────────────────────────────────
 #
-# Fresh NixOS install on Crucial P3 Plus 1TB NVMe, 32GB RAM.
+# NixOS install on Crucial P3 Plus 1TB NVMe, 32GB RAM.
 # General-purpose server — services to be added incrementally.
 
 { config, lib, pkgs, ... }:
@@ -10,6 +10,9 @@
     ../../modules/base-server.nix
     ../../modules/hub-disk-config.nix
     ../../modules/nebula-client.nix
+    ./gloo.nix
+    ./gloo-containerized.nix
+    ./buildspace.nix
   ];
 
   networking.hostName = "bee";
@@ -45,6 +48,65 @@
 
   # ── Nebula ──────────────────────────────────────────────────────
   services.nebula.networks.homelab.enable = true;
+
+  # ── Nebula: Local lighthouse (10.10.0.1) ───────────────────────
+  #
+  # Migrated from k2. Runs a second nebula instance as the local
+  # lighthouse on port 4243. Uses tun.disabled = true (discovery only).
+  # Certs live in /etc/nebula-lh/.
+
+  services.nebula.networks.lighthouse = {
+    enable = true;
+
+    ca = "/etc/nebula-lh/ca.crt";
+    cert = "/etc/nebula-lh/host.crt";
+    key = "/etc/nebula-lh/host.key";
+
+    isLighthouse = true;
+
+    listen.host = "0.0.0.0";
+    listen.port = 4243;
+
+    tun.disable = true;
+
+    firewall.outbound = [{ port = "any"; proto = "any"; host = "any"; }];
+    firewall.inbound  = [{ port = "any"; proto = "any"; host = "any"; }];
+
+    settings = {
+      logging = { level = "info"; format = "text"; };
+      punchy = { punch = true; respond = true; };
+      firewall.conntrack = {
+        tcp_timeout = "120h";
+        udp_timeout = "3m";
+        default_timeout = "10m";
+        max_connections = 100000;
+      };
+    };
+  };
+
+  # Ensure lighthouse cert permissions
+  systemd.tmpfiles.rules = [
+    "Z /etc/nebula-lh/ca.crt  0440 root nebula-lighthouse -"
+    "Z /etc/nebula-lh/host.crt 0440 root nebula-lighthouse -"
+    "Z /etc/nebula-lh/host.key 0440 root nebula-lighthouse -"
+  ];
+
+  # Lighthouse needs UDP 4243 open
+  networking.firewall.allowedUDPPorts = [ 4243 ];
+
+  # ── Dev tools ───────────────────────────────────────────────────
+  environment.systemPackages = [
+    pkgs.git
+    pkgs.github-cli
+  ];
+
+  # Firewall ports managed by gloo-containerized and buildspace modules
+
+  # ── Dev stacks ──────────────────────────────────────────────────
+  # Native Gloo disabled — migrated to containerized stack.
+  # services.gloo.enable = true;
+  services.gloo-containerized.enable = true;
+  services.buildspace.enable = true;
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";

@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: docker.io/library/postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "0.0.0.0:5433:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 15s
+      retries: 20
+      start_period: 150s
+      timeout: 5s
+
+  rustfs:
+    image: docker.io/rustfs/rustfs:latest
+    ports:
+      - "0.0.0.0:9000:9000"
+      - "0.0.0.0:9001:9001"
+    volumes:
+      - rustfs_data:/data
+      - rustfs_logs:/logs
+    restart: unless-stopped
+
+  pgadmin:
+    image: docker.io/dpage/pgadmin4:8
+    ports:
+      - "0.0.0.0:5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_LISTEN_PORT: 80
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rustfs_data:
+  rustfs_logs:
+  pgadmin_data:

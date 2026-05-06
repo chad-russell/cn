@@ -1,235 +1,249 @@
 # Nebula Network Reference
 
-This document is the source of truth for the current Nebula setup in this repo.
+This document describes the current Nebula overlay. The live NixOS host configuration in `hosts/*/configuration.nix` and `modules/nebula-client.nix` is the source of truth for Nix-managed machines; files under `nebula/configs/` are manual/non-Nix templates.
 
-It is written for both humans and coding agents and focuses on current state, operations, and expansion.
+Last reviewed: 2026-05-05.
 
 ## Goals
 
-- Keep homelab access working from outside home networks.
-- Keep local access working at home even if ISP/public internet is down.
-- Avoid pinning service traffic to LAN-only addresses for roaming clients.
+- Keep homelab services reachable from roaming clients.
+- Keep local mesh discovery working on the LAN even if public internet is down.
+- Route public ingress through Hetzner to the home service endpoint without exposing home WAN details.
 
 ## Current Topology
 
 Overlay CIDR: `10.10.0.0/24`
 
-- `10.10.0.1` - local lighthouse identity on `hub` (container, UDP `4243`, discovery-only)
-- `10.10.0.2` - Hetzner lighthouse + relay (public, UDP `4242`)
-- `10.10.0.3` - TrueNAS host
-- `10.10.0.4` - k1 utility server
-- `10.10.0.5` - AI server host
-- `10.10.0.6` - `hub` host/services endpoint (Caddy/backends)
-- `10.10.0.7` - k2 utility server
-- `10.10.0.8` - k3 media server (Jellyfin, Radarr, Sonarr, etc.)
-- `10.10.0.9` - k4 utility server (Immich)
-- `10.10.0.10` - thinkpad
-- `10.10.0.11` - phone
+| Nebula IP | Role |
+| --- | --- |
+| `10.10.0.1` | Local lighthouse on `k2`, UDP `4243`, discovery-only/tun disabled |
+| `10.10.0.2` | Hetzner lighthouse + relay, public UDP `4242` |
+| `10.10.0.3` | TrueNAS host |
+| `10.10.0.4` | `k1` utility/dev server |
+| `10.10.0.5` | `bees` legacy/AI identity in PKI |
+| `10.10.0.6` | `k2` service endpoint used by Caddy/public ingress |
+| `10.10.0.7` | `k2` host identity cert exists in PKI but unused; live `k2` uses `10.10.0.6` |
+| `10.10.0.8` | `k3` media server |
+| `10.10.0.9` | `k4` Immich server |
+| `10.10.0.10` | `think` laptop |
+| `10.10.0.11` | phone |
+| `10.10.0.12` | `bee` Beelink mini PC |
 
-Important split identity on `hub`:
+Important split identity on `k2`:
 
-- Local lighthouse: `10.10.0.1`
-- Service host identity: `10.10.0.6`
+- Local lighthouse identity: `10.10.0.1`
+- Service endpoint identity: `10.10.0.6`
 
-This split is what allows both reliable roaming and local-only resiliency.
+This keeps service traffic stable while still allowing a dedicated local lighthouse.
 
 ## Traffic Flow
 
-At home (Wi-Fi):
+At home:
 
-- Client discovers peers via local lighthouse (`10.10.0.1`)
-- Client prefers LAN underlay (`192.168.20.0/24`) and talks directly to `10.10.0.6`
+- Clients discover peers via local lighthouse `10.10.0.1` at `192.168.20.62:4243`.
+- Clients prefer LAN underlay addresses with `preferred_ranges: ["192.168.20.0/24"]`.
+- Service traffic to `10.10.0.6` lands on `k2`.
 
 Away from home:
 
-- Client reaches Hetzner lighthouse (`10.10.0.2`)
-- Direct path is attempted first; relay via Hetzner is used when needed
+- Clients reach Hetzner lighthouse/relay `10.10.0.2` at `178.156.171.212:4242`.
+- Direct peer paths are attempted first; relay via Hetzner is available when direct NAT traversal fails.
 
 Public ingress (`*.crussell.io`):
 
-- Internet -> Hetzner nginx stream proxy -> `10.10.0.6:443` -> Caddy -> backend service
+```text
+Internet -> Hetzner nginx stream proxy -> 10.10.0.6:80/443 -> Caddy on k2 -> backend service
+```
 
 Internal DNS (`*.internal.crussell.io`):
 
-- Route53 points to `10.10.0.6`
+- Route53 points at the Nebula service endpoint `10.10.0.6`.
+- Caddy on `k2` terminates TLS and routes to LAN/Nebula backends.
 
 ## Important Files
 
-Repo:
+Nix-managed current config:
 
-- `nebula/configs/hub-host.yaml` - main `hub` host config (`10.10.0.6`)
-- `nebula/configs/hub-lighthouse.yaml` - local lighthouse config (`10.10.0.1`)
-- `nebula/configs/gateway.yaml` - Hetzner public lighthouse/relay config
-- `nebula/configs/phone.yaml` - phone config (embedded cert/key)
-- `nebula/configs/thinkpad.yaml` - laptop template
-- `nebula/configs/nas.yaml` - TrueNAS config
-- `nebula/configs/ai.yaml` - AI server config
-- `nebula/quadlets/nebula-lh-local.container` - local lighthouse quadlet
-- `nebula/pki/` - CA and host cert/key material
-- `nebula/scripts/nebula` and `nebula/scripts/nebula-cert` - local binaries
+- `modules/nebula-client.nix` - shared client defaults for NixOS servers.
+- `modules/nebula-hosts.nix` - `/etc/hosts` entries for overlay names.
+- `hosts/k2/configuration.nix` - `k2` service endpoint plus local lighthouse.
+- `hosts/{k1,k3,k4,bee}/configuration.nix` - Nebula client enablement.
+- `thinkpad/configuration.nix` - laptop Nebula config.
 
-Live on `hub`:
+Manual/templates:
 
-- `/etc/nebula/config.yaml` - active host config for `10.10.0.6`
-- `/etc/nebula/*.crt|*.key` - active host certs/keys
-- `/etc/nebula-lh/config.yaml` - local lighthouse config
-- `/etc/nebula-lh/*.crt|*.key` - local lighthouse certs/keys
-- `/etc/containers/systemd/nebula-lh-local.container` - quadlet source
+- `nebula/configs/gateway.yaml` - Hetzner lighthouse/relay template.
+- `nebula/configs/bee.yaml` - manual template for `bee`.
+- `nebula/configs/thinkpad.yaml` - manual laptop template; Nix config is preferred for `think`.
+- `nebula/configs/nas.yaml` - TrueNAS template.
+- `nebula/configs/ai.yaml` - legacy `bees`/AI host template.
+- `nebula/configs/hub-lighthouse.yaml` - legacy/manual local lighthouse template; live lighthouse is NixOS `services.nebula.networks.lighthouse` on `k2`.
+- `nebula/configs/phone.yaml.age` - encrypted phone config with embedded key.
+- `nebula/pki/` - CA, certs, and encrypted private keys.
+- `nebula/scripts/nebula` and `nebula/scripts/nebula-cert` - local Nebula helper binaries.
 
-Live on Hetzner:
+## Live Services
 
-- `/etc/nebula/hetzner-lh.yaml`
-- `/etc/nebula/hetzner-lh.crt`
-- `/etc/nebula/hetzner-lh.key`
-- `systemd` service: `nebula`
+On `k2`:
 
-## Active Services
+- `nebula@homelab.service` -> service endpoint identity `10.10.0.6`.
+- `nebula@lighthouse.service` -> local lighthouse identity `10.10.0.1`, UDP `4243`, tun disabled.
 
-On `hub`:
+On other NixOS clients:
 
-- `nebula.service` (binary/systemd) -> host identity `10.10.0.6` on UDP `4242`
-- `nebula-lh-local.service` (quadlet-generated) -> local lighthouse identity `10.10.0.1` on UDP `4243`
+- `nebula@homelab.service`.
 
 On Hetzner:
 
-- `nebula.service` -> lighthouse + relay identity `10.10.0.2` on UDP `4242`
+- `nebula.service` -> lighthouse + relay identity `10.10.0.2`, UDP `4242`.
 
 ## Certificate Model
 
 CA files:
 
-- `nebula/pki/ca.crt`
-- `nebula/pki/ca.key` (do not commit externally)
+- `nebula/pki/ca.crt` - public CA certificate.
+- `nebula/pki/ca.key.age` - encrypted CA private key; critical infrastructure.
+- Plain `*.key` files are gitignored by `nebula/.gitignore` and must not be committed.
 
-Required cert identities:
+Common identities:
 
-- `crussell-lh-local` -> `10.10.0.1/24`, groups: `lighthouse`
-- `hub-host` -> `10.10.0.6/24`, groups: `servers,lighthouse`, unsafe networks: `192.168.20.0/24`
-- `hetzner-lighthouse` -> `10.10.0.2/24`, groups: at least `lighthouse,client`
+- `crussell-lh-local` -> `10.10.0.1/24`, groups: `lighthouse`.
+- `k2-host` -> `10.10.0.6/24`, service endpoint currently installed on `k2` as `/etc/nebula/host.crt`/`host.key`.
+- `hetzner-lighthouse` -> `10.10.0.2/24`, groups include lighthouse/relay access.
+- `k1`, `k3`, `k4`, `bee-host`, `thinkpad`, `nas`, `phone` have matching cert/key files in `nebula/pki/`.
 
-Generate cert examples:
+Example signing command:
 
 ```bash
 cd /home/crussell/Code/cn/nebula/pki
 
-# local lighthouse
 ../scripts/nebula-cert sign \
   -ca-crt ca.crt \
   -ca-key ca.key \
-  -name "crussell-lh-local" \
-  -networks "10.10.0.1/24" \
-  -groups "lighthouse" \
-  -out-crt crussell-lh-local.crt \
-  -out-key crussell-lh-local.key
-
-# hub host/services
-../scripts/nebula-cert sign \
-  -ca-crt ca.crt \
-  -ca-key ca.key \
-  -name "hub-host" \
-  -networks "10.10.0.6/24" \
-  -groups "servers,lighthouse" \
-  -unsafe-networks "192.168.20.0/24" \
-  -out-crt hub-host.crt \
-  -out-key hub-host.key
+  -name "new-host" \
+  -networks "10.10.0.X/24" \
+  -groups "servers" \
+  -out-crt new-host.crt \
+  -out-key new-host.key
 ```
 
-## Deploy / Update Workflow
-
-### Update `hub` host (`10.10.0.6`)
+Encrypt new private keys before committing:
 
 ```bash
-sudo cp /home/crussell/Code/cn/nebula/configs/hub-host.yaml /etc/nebula/config.yaml
-sudo cp /home/crussell/Code/cn/nebula/pki/ca.crt /etc/nebula/ca.crt
-sudo cp /home/crussell/Code/cn/nebula/pki/hub-host.crt /etc/nebula/hub-host.crt
-sudo cp /home/crussell/Code/cn/nebula/pki/hub-host.key /etc/nebula/hub-host.key
-sudo systemctl restart nebula
+age -e -R <(printf '%s\n' 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpNEpdHo8X0L9rgsJ+8fuXA4DodZftJaCd3Q6eCrVsw crussell@fedora') \
+  -o new-host.key.age new-host.key
 ```
 
-### Update local lighthouse (`10.10.0.1`)
+## NixOS Deployment Notes
 
-```bash
-sudo mkdir -p /etc/nebula-lh
-sudo cp /home/crussell/Code/cn/nebula/configs/hub-lighthouse.yaml /etc/nebula-lh/config.yaml
-sudo cp /home/crussell/Code/cn/nebula/pki/ca.crt /etc/nebula-lh/ca.crt
-sudo cp /home/crussell/Code/cn/nebula/pki/crussell-lh-local.crt /etc/nebula-lh/crussell-lh-local.crt
-sudo cp /home/crussell/Code/cn/nebula/pki/crussell-lh-local.key /etc/nebula-lh/crussell-lh-local.key
+For Nix-managed hosts, Nebula config is generated by Nix. Certs are expected at:
 
-sudo cp /home/crussell/Code/cn/nebula/quadlets/nebula-lh-local.container /etc/containers/systemd/nebula-lh-local.container
-sudo systemctl daemon-reload
-sudo systemctl restart nebula-lh-local.service
+```text
+/etc/nebula/ca.crt
+/etc/nebula/host.crt
+/etc/nebula/host.key
 ```
 
-Firewall requirement on `hub`:
+`k2` local lighthouse certs are expected at:
 
-```bash
-sudo firewall-cmd --permanent --add-port=4242/udp
-sudo firewall-cmd --permanent --add-port=4243/udp
-sudo firewall-cmd --reload
+```text
+/etc/nebula-lh/ca.crt
+/etc/nebula-lh/host.crt
+/etc/nebula-lh/host.key
 ```
 
-### Update Hetzner lighthouse/relay
+Deploy NixOS config changes with:
 
 ```bash
-scp -i ~/.ssh/id_rsa nebula/configs/hetzner-lh.yaml root@178.156.171.212:/etc/nebula/hetzner-lh.yaml
-scp -i ~/.ssh/id_rsa nebula/pki/hetzner-lh.crt root@178.156.171.212:/etc/nebula/hetzner-lh.crt
-scp -i ~/.ssh/id_rsa nebula/pki/hetzner-lh.key root@178.156.171.212:/etc/nebula/hetzner-lh.key
-ssh -i ~/.ssh/id_rsa root@178.156.171.212 "systemctl restart nebula"
+nix run .#deploy -- k2
+nix run .#deploy -- k1 k3 k4 bee
+nix run .#deploy -- think
+```
+
+If only certs changed, copy/decrypt cert material on the host and restart:
+
+```bash
+systemctl restart nebula@homelab.service
+# On k2, for the local lighthouse too:
+systemctl restart nebula@lighthouse.service
+```
+
+## Hetzner Lighthouse / Relay
+
+Hetzner is not Nix-managed here. Live details:
+
+- SSH: `root@178.156.171.212`
+- OS: Fedora 42
+- Hostname: `reverse-proxy`
+- Service: `nebula.service`
+- Config/certs live under `/etc/nebula/`
+
+Manual update pattern:
+
+```bash
+scp -o IdentitiesOnly=yes nebula/configs/gateway.yaml root@178.156.171.212:/etc/nebula/config.yaml
+scp -o IdentitiesOnly=yes nebula/pki/ca.crt root@178.156.171.212:/etc/nebula/ca.crt
+# Copy/decrypt host cert and key as needed, then:
+ssh -o IdentitiesOnly=yes root@178.156.171.212 'systemctl restart nebula'
 ```
 
 ## Client Expectations
 
 All roaming clients should:
 
-- statically map only lighthouses
-- list both lighthouses in `lighthouse.hosts`
-- enable relays and include `10.10.0.2` in `relay.relays`
-- include `preferred_ranges: ["192.168.20.0/24"]`
+- statically map the local lighthouse: `10.10.0.1 -> 192.168.20.62:4243`.
+- statically map the public lighthouse/relay: `10.10.0.2 -> 178.156.171.212:4242`.
+- list both lighthouses in `lighthouse.hosts`.
+- enable relay use and include `10.10.0.2` in `relay.relays`.
+- include `preferred_ranges: ["192.168.20.0/24"]`.
 
-Phone template currently follows this pattern in `nebula/configs/phone.yaml`.
+Local-only LAN nodes, such as TrueNAS, may use only the local lighthouse if roaming connectivity is unnecessary.
 
-## Adding A New Machine
+## Adding a New Machine
 
 1. Pick a free Nebula IP in `10.10.0.0/24`.
-2. Sign cert/key with appropriate groups.
-3. Create machine config from a similar host template.
-4. Add lighthouse mappings:
-   - `10.10.0.1 -> 192.168.20.105:4243`
+2. Sign a cert/key with appropriate groups.
+3. Encrypt the private key before committing it.
+4. For NixOS, add/enable `../../modules/nebula-client.nix` in the host config and install certs at `/etc/nebula/`.
+5. For manual clients, copy a similar file from `nebula/configs/` and use current lighthouse mappings:
+   - `10.10.0.1 -> 192.168.20.62:4243`
    - `10.10.0.2 -> 178.156.171.212:4242`
-5. Set `lighthouse.hosts` to both `10.10.0.1` and `10.10.0.2`.
-6. For roaming nodes, enable relay via `10.10.0.2`.
-7. Deploy config/certs, start Nebula, verify with ping and service checks.
+6. Start/restart Nebula and test connectivity.
 
 ## Testing Checklist
 
-On `hub`:
+On `k2`:
 
 ```bash
+systemctl status nebula@homelab.service nebula@lighthouse.service --no-pager -n 20
+ss -ulnp | rg '4242|4243'
 ping -c 3 10.10.0.2
-sudo systemctl status nebula --no-pager -n 15
-sudo systemctl status nebula-lh-local.service --no-pager -n 15
 ```
 
-At home (Wi-Fi):
+On a client:
 
-- Client can reach `10.10.0.6`
-- `karakeep.internal.crussell.io` works
+```bash
+ip addr show nebula.homelab || ip addr show nebula0
+ping -c 3 10.10.0.1
+ping -c 3 10.10.0.2
+ping -c 3 10.10.0.6
+```
 
-Away from home (cellular/public Wi-Fi):
+Service checks:
 
-- Client can reach `10.10.0.2`
-- Client can reach `10.10.0.6`
-- `karakeep.internal.crussell.io` works
+- At home, internal services should use direct LAN underlay where possible.
+- Away from home, `10.10.0.6` should remain reachable through direct NAT traversal or Hetzner relay.
+- `*.internal.crussell.io` should resolve to/reach the service endpoint.
 
 ## Troubleshooting
 
-On `hub`:
+On `k2`:
 
 ```bash
-sudo journalctl -u nebula --no-pager -n 100
-sudo journalctl -u nebula-lh-local.service --no-pager -n 100
-sudo ss -ulnp | rg "4242|4243"
-ip addr show nebula0
+journalctl -u nebula@homelab.service --no-pager -n 100
+journalctl -u nebula@lighthouse.service --no-pager -n 100
+ss -ulnp | rg '4242|4243'
+ip addr show nebula.homelab
 ```
 
 On Hetzner:
@@ -237,16 +251,18 @@ On Hetzner:
 ```bash
 journalctl -u nebula --no-pager -n 100
 systemctl status nebula
+ss -ulnp | rg '4242'
 ```
 
 Useful indicators:
 
-- If roaming can hit `10.10.0.2` but not `10.10.0.6`, verify relay groups on Hetzner cert.
-- If local discovery fails, verify UDP `4243` open and local lighthouse service running.
-- If LAN route to `192.168.20.0/24` fails, verify `unsafe-networks` exists in the cert for the `via` host (`10.10.0.6`).
+- If roaming clients can hit `10.10.0.2` but not `10.10.0.6`, verify relay settings and cert groups on Hetzner.
+- If local discovery fails, verify UDP `4243` on `k2` and `nebula@lighthouse.service`.
+- If LAN route to `192.168.20.0/24` fails through `10.10.0.6`, verify the service endpoint cert and `unsafe-networks` expectations.
 
 ## Security Notes
 
-- Never commit `ca.key` outside trusted private storage.
-- Treat embedded mobile keys in `nebula/configs/phone.yaml` as sensitive.
-- Do not force-push or rewrite cert history unless intentionally rotating/revoking.
+- Never commit raw private keys (`*.key`).
+- Treat `nebula/pki/ca.key.age` as critical infrastructure.
+- Treat embedded mobile configs as sensitive; `phone.yaml` must remain encrypted as `phone.yaml.age`.
+- Do not rewrite cert history unless intentionally rotating/revoking keys.

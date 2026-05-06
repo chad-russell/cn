@@ -1,7 +1,7 @@
 # ── Ntfy Push Notifications ──────────────────────────────────────
 #
 # Native NixOS ntfy-sh service.
-# Migrated from hub's Podman container — cache is transient, no data to migrate.
+# Migrated from the old hub Podman container — cache is transient, no data to migrate.
 
 { config, lib, pkgs, ... }:
 
@@ -20,6 +20,6 @@
   # Ensure attachment dir exists (ntfy won't create it on first run)
   systemd.services.ntfy-sh.serviceConfig.CacheDirectory = "ntfy-sh";
 
-  # Caddy on hub proxies to this port
+  # Caddy on k2 proxies to this port
   networking.firewall.allowedTCPPorts = [ 8090 ];
 }

@@ -1,4 +1,9 @@
-# ── Gloo Dev Stack NixOS Module ────────────────────────────────────
+# ── Legacy Gloo Dev Stack Module Copy (not imported by k3) ────────
+#
+# Current active Gloo hosting is on k1 via hosts/k1/gloo.nix.
+# This k3 copy is retained for reference/possible future reuse only.
+# Do not edit this when changing the active Gloo stack unless you also
+# intentionally re-enable/import it from hosts/k3/configuration.nix.
 #
 # Provides the full Gloo dev stack as user-level systemd services:
 #   - Infra (postgres, rustfs, pgadmin) via Podman Compose

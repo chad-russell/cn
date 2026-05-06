@@ -1,7 +1,7 @@
 # ── SearXNG Meta Search Engine ───────────────────────────────────
 #
 # Native NixOS SearXNG service with local Redis for caching.
-# Migrated from hub's Podman pod (searxng + valkey containers).
+# Migrated from the old hub Podman pod (searxng + valkey containers).
 # Stateless — no data to migrate.
 
 { config, lib, pkgs, ... }:
@@ -34,6 +34,8 @@ in
         safe_search = 0;
         autocomplete = "duckduckgo";
         default_lang = "en";
+        # Enable JSON API for programmatic access (pi agent, etc.)
+        formats = [ "html" "json" ];
       };
 
       ui = {
@@ -61,6 +63,6 @@ in
     fi
   '';
 
-  # Caddy on hub proxies to this port
+  # Caddy on k2 proxies to this port
   networking.firewall.allowedTCPPorts = [ 8080 ];
 }

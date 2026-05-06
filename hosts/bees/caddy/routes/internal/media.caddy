@@ -1,0 +1,31 @@
+# Media server routes (bees — localhost)
+
+@qbittorrent host qbittorrent.internal.crussell.io
+handle @qbittorrent {
+    reverse_proxy 127.0.0.1:8080
+}
+
+@sonarr host sonarr.internal.crussell.io
+handle @sonarr {
+    reverse_proxy 127.0.0.1:8989
+}
+
+@radarr host radarr.internal.crussell.io
+handle @radarr {
+    reverse_proxy 127.0.0.1:7878
+}
+
+@prowlarr host prowlarr.internal.crussell.io
+handle @prowlarr {
+    reverse_proxy 127.0.0.1:9696
+}
+
+@jellyseerr host jellyseerr.internal.crussell.io
+handle @jellyseerr {
+    reverse_proxy 127.0.0.1:5055
+}
+
+@jellyfin-internal host jellyfin.internal.crussell.io
+handle @jellyfin-internal {
+    reverse_proxy 127.0.0.1:8096
+}

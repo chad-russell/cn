@@ -37,12 +37,12 @@
 
     @jellyfin host jellyfin.crussell.io
     handle @jellyfin {
-        reverse_proxy 192.168.20.63:8096
+        reverse_proxy 192.168.20.41:8096
     }
 
     @photos host photos.crussell.io
     handle @photos {
-        reverse_proxy 192.168.20.64:2283
+        reverse_proxy 192.168.20.41:2283
     }
 
     # chex-mix-timer removed — k4 wiped, service retired until next holiday season

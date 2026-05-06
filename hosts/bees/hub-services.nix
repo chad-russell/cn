@@ -1,0 +1,25 @@
+# ── Shared Web Services (Podman Quadlets on bees) ──────────────────
+# Migrated from k2. Linkding, Papra, Open-WebUI.
+
+{ config, lib, pkgs, ... }:
+
+{
+  environment.etc."containers/systemd/linkding.container" = {
+    source = ./linkding.container;
+    mode = "0644";
+  };
+  environment.etc."containers/systemd/papra.container" = {
+    source = ./papra.container;
+    mode = "0644";
+  };
+  environment.etc."containers/systemd/open-webui.container" = {
+    source = ./open-webui.container;
+    mode = "0644";
+  };
+
+  system.activationScripts.hub-services-dirs = lib.stringAfter [ "users" ] ''
+    mkdir -p /srv/linkding/data
+    mkdir -p /srv/papra/data
+    mkdir -p /srv/open-webui/data
+  '';
+}

@@ -8,6 +8,9 @@
   programs.nixvim = {
     enable = true;
 
+    # Pin to unstable neovim for 0.12+ features (pumborder, autocomplete, popup completeopt)
+    package = pkgs.neovim-unwrapped;
+
     # Use the same leader keys as your old config
     globals = {
       mapleader = " ";
@@ -26,7 +29,13 @@
         enable = true;
         nvimRuntime = true;
         configs = true;
-        plugins = true;
+        # Byte-compiling plugins breaks telescope's keymaps picker:
+        # flash.nvim sets callbacks without `desc`, so telescope tries to infer
+        # the function name by reading the source file at the callback's line number.
+        # When the source is byte-compiled, readlines() returns binary garbage and
+        # linedefined=0 never matches the 1-indexed loop, leaving `fname = nil`.
+        # Then `fname:match(...)` crashes with "attempt to index a nil value".
+        plugins = false;
       };
     };
 
@@ -91,7 +100,7 @@
 
       # Native completion (Neovim 0.12)
       completeopt = [ "menuone" "noselect" "popup" ];
-      autocomplete = true;
+      # autocomplete is enabled per-buffer via LspAttach in extraConfigLua,
       pumborder = "rounded";
 
 
@@ -393,7 +402,6 @@
     # --- Persistence (sessions) ---
     plugins.persistence = {
       enable = true;
-      options = [ "buffers" "curdir" "tabpages" "winsize" "help" "globals" "skiprtp" ];
     };
 
     # --- Neo-tree (file explorer) ---
@@ -679,6 +687,12 @@
 
     # =====================================================================
     # Extra packages (LSPs, formatters, etc. — replaces Mason)
+    # Shadow the archived nvim-treesitter's broken query_predicates.lua
+    # with a version that handles Neovim 0.12's match[id] returning a list.
+    extraFiles = {
+      "lua/nvim-treesitter/query_predicates.lua".source = ./query_predicates_fix.lua;
+    };
+
     # =====================================================================
     extraPackages = with pkgs; [
       # LSP servers

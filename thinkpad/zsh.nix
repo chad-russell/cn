@@ -37,6 +37,10 @@ in
 
     # Init content (replaces deprecated initExtra)
     initContent = lib.mkBefore ''
+      # -- Decrypted secrets (every shell, not gated by session guard) --
+      export ZHIPU_API_KEY="$(${pkgs.coreutils}/bin/cat ${config.age.secrets.zhipu-api-key.path})"
+      export OPENROUTER_API_KEY="$(${pkgs.coreutils}/bin/cat ${config.age.secrets.openrouter-api-key.path})"
+
       # -- Oh My Posh prompt --
       if command -v oh-my-posh &>/dev/null; then
         eval "$(oh-my-posh init zsh --config ${config.xdg.configHome}/oh-my-posh/config.json)"
@@ -121,9 +125,7 @@ in
       _ZO_ECHO = "1";
       _ZO_EXCLUDE_DIRS = "${config.home.homeDirectory}/.cache:${config.home.homeDirectory}/.cache/*:${config.home.homeDirectory}/tmp";
 
-      # Decrypted from secrets/*.age via agenix
-      ZHIPU_API_KEY = "$(${pkgs.coreutils}/bin/cat ${config.age.secrets.zhipu-api-key.path})";
-      OPENROUTER_API_KEY = "$(${pkgs.coreutils}/bin/cat ${config.age.secrets.openrouter-api-key.path})";
+
     };
 
     # Shell aliases

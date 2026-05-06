@@ -1,6 +1,6 @@
 # Nebula config for ThinkPad laptop (roaming client)
 # Uses dual lighthouses:
-# - 10.10.0.1 local lighthouse on LAN (192.168.20.105:4243)
+# - 10.10.0.1 local lighthouse on LAN (192.168.20.62:4243)
 # - 10.10.0.2 Hetzner lighthouse+relay (178.156.171.212:4242)
 
 pki:
@@ -9,7 +9,7 @@ pki:
   key: /etc/nebula/host.key
 
 static_host_map:
-  "10.10.0.1": ["192.168.20.105:4243"]
+  "10.10.0.1": ["192.168.20.62:4243"]
   "10.10.0.2": ["178.156.171.212:4242"]
 
 lighthouse:

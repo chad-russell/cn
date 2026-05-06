@@ -153,6 +153,49 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
+  # -- Polymer SSH tunnel (start/stop manually) --
+  # Usage:  systemctl --user start polymer-tunnel
+  #         systemctl --user stop polymer-tunnel
+  systemd.user.services.polymer-tunnel = {
+    Unit.Description = "SSH tunnel: localhost:3001 → bee:3001";
+    Service = {
+      ExecStart = "${pkgs.openssh}/bin/ssh -N -o ExitOnForwardFailure=yes -L 3001:127.0.0.1:3001 bee";
+      RestartSec = 5;
+    };
+  };
+
+  # -- SSH client config (Nebula hosts) --
+  programs.ssh = {
+    enable = true;
+    matchBlocks = {
+      bee = {
+        hostname = "10.10.0.12";
+        identityFile = "~/.ssh/id_ed25519";
+        extraOptions.StrictHostKeyChecking = "accept-new";
+      };
+      k1 = {
+        hostname = "10.10.0.4";
+        identityFile = "~/.ssh/id_ed25519";
+        extraOptions.StrictHostKeyChecking = "accept-new";
+      };
+      k2 = {
+        hostname = "10.10.0.6";
+        identityFile = "~/.ssh/id_ed25519";
+        extraOptions.StrictHostKeyChecking = "accept-new";
+      };
+      k3 = {
+        hostname = "10.10.0.8";
+        identityFile = "~/.ssh/id_ed25519";
+        extraOptions.StrictHostKeyChecking = "accept-new";
+      };
+      k4 = {
+        hostname = "10.10.0.9";
+        identityFile = "~/.ssh/id_ed25519";
+        extraOptions.StrictHostKeyChecking = "accept-new";
+      };
+    };
+  };
+
   # -- Bash (kept as fallback shell) --
   programs.bash = {
     enable = true;

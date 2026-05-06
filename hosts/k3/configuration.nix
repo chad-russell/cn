@@ -3,17 +3,16 @@
 {
   imports = [
     ../../modules/elitedesk-hardware.nix
-    ../../modules/base-server.nix
-    # k3 was installed with its own disk layout (512M EFI, 8G swap, ext4 root)
-    # NOT the standard elitedesk layout. Use the original disk-config.
-    ../../servers/k3/disk-config.nix
-    ../../modules/nebula-client.nix
-    ./media-services.nix
+    ./disk-config.nix
   ];
 
   networking.hostName = "k3";
 
   # ── Networking ───────────────────────────────────────────────────
+  systemd.network.enable = true;
+  networking.useDHCP = false;
+  networking.nameservers = [ "8.8.8.8" "1.1.1.1" ];
+
   systemd.network.networks."40-eno1" = {
     matchConfig.Name = "eno1";
     networkConfig.DHCP = "no";
@@ -22,30 +21,25 @@
     dns = [ "8.8.8.8" "1.1.1.1" ];
   };
 
-  # ── Local HDD mount ─────────────────────────────────────────────
-  fileSystems."/mnt/data" = {
-    device = "/dev/disk/by-uuid/e9c12a3f-6a65-458f-bd9b-ac46537e8839";
-    fsType = "ext4";
-    options = [ "defaults" "nofail" ];
+  # ── SSH (for deployment access) ─────────────────────────────────
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "prohibit-password";
+      PasswordAuthentication = true;
+    };
   };
 
-  # ── NFS: Media from NAS ─────────────────────────────────────────
-  fileSystems."/mnt/media" = {
-    device = "192.168.20.31:/mnt/tank/media";
-    fsType = "nfs";
-    options = [ "defaults" "_netdev" "rw" "hard" "intr" ];
-  };
+  users.users.root.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpNEpdHo8X0L9rgsJ+8fuXA4DodZftJaCd3Q6eCrVsw crussell@fedora"
+  ];
 
-  # ── NFS: Backups from NAS ───────────────────────────────────────
-  fileSystems."/mnt/backups" = {
-    device = "192.168.20.31:/mnt/tank/backups";
-    fsType = "nfs";
-    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
-  };
-
-  # ── Nebula ──────────────────────────────────────────────────────
-  services.nebula.networks.homelab.enable = true;
+  # ── Minimal packages ─────────────────────────────────────────────
+  environment.systemPackages = with pkgs; [ vim curl ];
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";
 }
+
+# Decommissioned: all services migrated to bees (192.168.20.41).
+# This host is retained only for hardware salvage or future repurposing.

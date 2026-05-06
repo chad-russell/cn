@@ -20,9 +20,20 @@
     "pcie_aspm=force"                   # Force PCIe ASPM even if BIOS doesn't advertise
   ];
 
+  # Reduce swap aggression — prevents long-running apps (e.g. Ghostty) from
+  # being slowly pushed to swap and causing I/O stalls when paged back in.
+  boot.kernel.sysctl = { "vm.swappiness" = 10; };
+
   # ── Networking ────────────────────────────────────────────────────────
   networking.hostName = "think";
   networking.networkmanager.enable = true;
+
+  # Palo Alto GlobalProtect VPN support (Wycliffe)
+  # Connect via: sudo openconnect --protocol=gp <portal-url>
+  # Or use NetworkManager: nmcli con add type vpn con-name "Wycliffe" vpn.type openconnect vpn.data "protocol=gp,gateway=<portal-url>"
+  networking.networkmanager.plugins = [ pkgs.networkmanager-openconnect ];
+
+  # Polymer dev: resolve to bee container host
 
   # ── Time & Locale ─────────────────────────────────────────────────────
   time.timeZone = "America/New_York";
@@ -57,7 +68,7 @@
     key = "/etc/nebula/host.key";
 
     staticHostMap = {
-      "10.10.0.1" = [ "192.168.20.105:4243" ];
+      "10.10.0.1" = [ "192.168.20.62:4243" ];
       "10.10.0.2" = [ "178.156.171.212:4242" ];
     };
 
@@ -141,9 +152,29 @@
 
   # Audio codec power saving (matches TLP's SOUND_POWER_SAVE_ON_BAT=1)
   # snd_hda_intel is loaded for the HDMI codec; SOF handles the main audio
+  #
+  # iwlwifi: disable power save to prevent firmware crashes on Lunar Lake
+  # integrated WiFi (8086:a840 / bz-b0-fm-c0 firmware). Without this the
+  # adapter periodically crashes with "SYSTEM_STATISTICS_CMD timeout" →
+  # "Device error - SW reset", causing multi-second system freezes.
   boot.extraModprobeConfig = ''
     options snd_hda_intel power_save=1
+    options iwlwifi power_save=0
   '';
+
+  # iwlwifi TSO/GSO workaround — Intel Lunar Lake integrated WiFi firmware
+  # crashes when TCP/Generic Segmentation Offload is enabled, producing
+  # "SYSTEM_STATISTICS_CMD timeout" and "Device error - SW reset" with
+  # multi-second system freezes. Disable TSO+GSO every time the interface
+  # comes up. See: CachyOS/linux-cachyos#673 for the same bug on BE401.
+  networking.networkmanager.dispatcherScripts = [{
+    source = pkgs.writeShellScript "disable-iwlwifi-tso.sh" ''
+      if [ "$1" = "wlp0s20f3" ] && [ "$2" = "up" ]; then
+        ${pkgs.ethtool}/bin/ethtool -K "$1" tso off gso off
+      fi
+    '';
+    type = "basic";
+  }];
 
   # Bluetooth GUI for pairing + system tray applet
   services.blueman.enable = true;
@@ -158,6 +189,11 @@
 
   # ── Firmware updates ──────────────────────────────────────────────────
   services.fwupd.enable = true;
+
+  # ── Thermal management ────────────────────────────────────────────────
+  # Intel thermal daemon — proactive cooling, smarter fan curves,
+  # prevents sudden throttling under sustained load on Lunar Lake.
+  services.thermald.enable = true;
 
   # ── Audio ─────────────────────────────────────────────────────────────
   services.pipewire = {
@@ -188,6 +224,14 @@
 
     # AI / dev tools
     pi-coding-agent
+
+    # VPN — Palo Alto GlobalProtect (Wycliffe)
+    # Use gp-saml-gui for SAML/SSO auth (handles Cloudflare challenges):
+    #   gp-saml-gui --browser --gateway wpa-pw.iidp.net
+    # Or plain CLI for non-SAML gateways:
+    #   sudo openconnect --protocol=gp <portal>
+    openconnect
+    gp-saml-gui
   ];
 
   # ── Fonts ─────────────────────────────────────────────────────────────
@@ -225,9 +269,15 @@
     "flakes"
   ];
 
-  # Vicinae cachix
-  nix.settings.extra-substituters = [ "https://vicinae.cachix.org" ];
-  nix.settings.extra-trusted-public-keys = [ "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc=" ];
+  # Binary caches
+  nix.settings.extra-substituters = [
+    "https://vicinae.cachix.org"
+    "https://noctalia.cachix.org"
+  ];
+  nix.settings.extra-trusted-public-keys = [
+    "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc="
+    "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+  ];
 
   # ── Garbage collection ────────────────────────────────────────────────
   nix.gc = {

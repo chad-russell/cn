@@ -1,5 +1,7 @@
 #!/bin/bash
-# Deploy Nebula on the ThinkPad (Arch Linux)
+# Legacy/manual Nebula deploy for the ThinkPad.
+# The current ThinkPad is NixOS-managed; prefer: nix run .#deploy -- think
+# Use this only when intentionally installing the staging config by hand.
 # Run with: sudo bash nebula/deploy-thinkpad.sh
 
 set -euo pipefail
@@ -47,8 +49,8 @@ ip addr show nebula0 2>/dev/null || echo "WARNING: nebula0 interface not found y
 
 echo ""
 echo "=== Connectivity Test ==="
-echo "Pinging hub (10.10.0.6)..."
-ping -c 3 -W 5 10.10.0.6 || echo "WARNING: Could not ping hub"
+echo "Pinging k2 service endpoint (10.10.0.6)..."
+ping -c 3 -W 5 10.10.0.6 || echo "WARNING: Could not ping k2 service endpoint"
 
 echo ""
 echo "Pinging Hetzner lighthouse (10.10.0.2)..."

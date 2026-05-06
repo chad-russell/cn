@@ -1,0 +1,21 @@
+# Shared Gloo dev image
+# Node 24 + pnpm + bun + common deps for Next.js/Prisma/native modules
+FROM docker.io/library/node:24-bookworm
+
+# System deps needed by Next.js, Prisma, native npm modules
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    git \
+    curl \
+    jq \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pnpm and bun
+RUN corepack enable && corepack prepare pnpm@latest --activate \
+    && npm install -g bun
+
+ENV PATH="/usr/local/bin:${PATH}"
+
+WORKDIR /work

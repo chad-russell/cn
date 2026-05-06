@@ -5,10 +5,12 @@
     extra-substituters = [
       "https://numtide.cachix.org"
       "https://vicinae.cachix.org"
+      "https://noctalia.cachix.org"
     ];
     extra-trusted-public-keys = [
       "numtide.cachix.org-1:2ps1kLBUWjxIneOy1Ik6cQjb41X0iXVXeHigGmycPPE="
       "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc="
+      "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
     ];
   };
 
@@ -38,7 +40,7 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     noctalia-shell = {
       url = "github:noctalia-dev/noctalia-shell";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     vicinae.url = "github:vicinaehq/vicinae";
     nixvim = {
@@ -108,7 +110,7 @@
       # ── NixOS Configurations ─────────────────────────────────────
 
       # Thinkpad — has its own directory structure (home-manager, pkgs, etc.)
-      nixosConfigurations.think = nixpkgs.lib.nixosSystem {
+      nixosConfigurations.think = nixpkgs-unstable.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = specialArgs // { inherit username; };
         modules = [
@@ -180,6 +182,11 @@
         hostname = "bee";
       };
 
+      # bees — AMD Ryzen AI MAX+ 395 production server
+      nixosConfigurations.bees = mkHost {
+        hostname = "bees";
+      };
+
       # ── Deploy script (nix run .#deploy) ─────────────────────────
       apps.x86_64-linux.deploy = {
         type = "app";
@@ -191,7 +198,7 @@
               echo "Usage: nix run .#deploy -- <host> [host...]"
               echo "  Example: nix run .#deploy -- k2 k3 k4"
               echo ""
-              echo "Available hosts: think k1 k2 k3 k4 bee"
+              echo "Available hosts: think k1 k2 k3 k4 bee bees"
               exit 1
             fi
 
@@ -220,6 +227,9 @@
                 bee)
                   TARGET="crussell@192.168.20.105"
                   ;;
+                bees)
+                  TARGET="crussell@192.168.20.41"
+                  ;;
                 *)
                   echo "Unknown host: $host"
                   exit 1
@@ -229,7 +239,7 @@
               if [ "$host" != "think" ]; then
                 echo ">>> Deploying to $host ($TARGET)..."
                 DEPLOY_ARGS="--flake .#$host --target-host $TARGET --build-host localhost"
-                if [ "$host" = "bee" ]; then
+                if [ "$host" = "bee" ] || [ "$host" = "bees" ]; then
                   DEPLOY_ARGS="$DEPLOY_ARGS --sudo"
                 fi
                 nixos-rebuild switch $DEPLOY_ARGS
@@ -269,6 +279,7 @@
               k3) IP="''${IP:-192.168.20.63}" ;;
               k4) IP="''${IP:-192.168.20.64}" ;;
               bee) IP="''${IP:-192.168.20.105}" ;;
+              bees) IP="''${IP:-192.168.20.41}" ;;
               *)
                 echo "Unknown host: $HOST"
                 exit 1
@@ -280,12 +291,12 @@
             read -p "Continue? [y/N] " confirm
             [ "$confirm" = "y" ] || exit 1
 
-            # Hub has no root SSH; connect as crussell (passwordless sudo)
-            if [ "$HOST" = "bee" ]; then
-              SSH_USER="crussell"
-            else
-              SSH_USER="root"
-            fi
+            # bee/bees connect as crussell (passwordless sudo after install)
+            # k1-k4 connect as root
+            case "$HOST" in
+              bee|bees) SSH_USER="crussell" ;;
+              *)        SSH_USER="root" ;;
+            esac
 
             nix run github:nix-community/nixos-anywhere -- --flake .#$HOST $SSH_USER@$IP
           ''

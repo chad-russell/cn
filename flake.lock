@@ -267,7 +267,7 @@
     "noctalia-shell": {
       "inputs": {
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-unstable"
         ],
         "noctalia-qs": "noctalia-qs"
       },

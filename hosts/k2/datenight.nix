@@ -1,7 +1,7 @@
 # ── Date Night Restaurant Picker ─────────────────────────────────
 #
 # Native NixOS Python/Flask service.
-# Migrated from hub's custom Podman container.
+# Migrated from the old hub custom Podman container.
 # Data: /var/lib/datenight/restaurants.json (migrate via rsync)
 
 { config, lib, pkgs, ... }:
@@ -40,6 +40,6 @@ in
     };
   };
 
-  # Caddy on hub proxies to this port
+  # Caddy on k2 proxies to this port
   networking.firewall.allowedTCPPorts = [ 7890 ];
 }
