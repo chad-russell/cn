@@ -19,17 +19,21 @@ bee (192.168.20.105)
 k2 Caddy routes *.internal.crussell.io → bee (except Polymer, see below)
 ```
 
+**Note:** Dev ingress has migrated to bee's own Caddy + AdGuardHome DNS.
+New `*.dev.crussell.io` domains resolve via Nebula split DNS.
+The old `*.internal.crussell.io` routes on bees are kept as fallback.
+
 ## Browser Access
 
 | Service | URL | Auth |
 |---------|-----|------|
-| Hummingbird Web | `https://hb-web.internal.crussell.io` | Email/password (dev users) |
-| Hummingbird API | `https://hb-api.internal.crussell.io` | API key |
-| GPL | `https://gpl.internal.crussell.io` | Hummingbird SSO |
-| Storyhub | `https://storyhub.internal.crussell.io` | Hummingbird SSO |
+| Hummingbird Web | `https://hb-web.dev.crussell.io` | Email/password (dev users) |
+| Hummingbird API | `https://hb-api.dev.crussell.io` | API key |
+| GPL | `https://gpl.dev.crussell.io` | Hummingbird SSO |
+| Storyhub | `https://storyhub.dev.crussell.io` | Hummingbird SSO |
 | Polymer | `http://localhost:3001` (via SSH tunnel) | WorkOS |
-| pgAdmin | `https://pgadmin.internal.crussell.io` | `admin@example.com` / `admin` |
-| RustFS Console | `https://rustfs-console.internal.crussell.io` | `rustfsadmin` / `rustfsadmin` |
+| pgAdmin | `https://pgadmin.dev.crussell.io` | `admin@example.com` / `admin` |
+| RustFS Console | `https://rustfs-console.dev.crussell.io` | `rustfsadmin` / `rustfsadmin` |
 
 ### Polymer SSH Tunnel
 
@@ -152,13 +156,15 @@ done
 | `hosts/bee/gloo/envs-containerized/*.env` | Per-service env files (container DNS names) |
 | `hosts/bee/configuration.nix` | `services.gloo-containerized.enable = true` |
 | `secrets/gloo-secrets.env.age` | Agenix-encrypted secrets (API keys, session secrets) |
-| `hosts/k2/caddy/routes/internal/gloo.caddy` | Caddy routes `*.internal.crussell.io` → bee |
+| `hosts/bee/adguardhome.nix` | AdGuardHome DNS: split DNS rewrites `*.dev.crussell.io` → `10.10.0.12` |
+| `hosts/bee/caddy-dev.nix` | Caddy dev ingress on bee: `*.dev.crussell.io` → localhost ports |
+| `hosts/bees/caddy/routes/internal/gloo.caddy` | Legacy Caddy routes `*.internal.crussell.io` → bee (fallback) |
 
 ## Networking
 
 - **Container-to-container**: Uses compose service DNS names (`postgres:5432`, `hb-api:8000`, `rustfs:9000`). No Caddy hop.
-- **Browser-to-service**: Routes through k2 Caddy with TLS via `*.internal.crussell.io` (Route53 DNS-01 + Let's Encrypt).
-- **Polymer exception**: Uses `http://localhost:3001` via SSH tunnel because WorkOS requires `localhost` redirect URIs. The `polymer.internal.crussell.io` Caddy route still exists but is not used for the auth flow.
+- **Browser-to-service**: Routes through bee's Caddy with `tls internal` via `*.dev.crussell.io` (AdGuardHome split DNS over Nebula).
+- **Polymer exception**: Uses `http://localhost:3001` via SSH tunnel because WorkOS requires `localhost` redirect URIs. The `polymer.dev.crussell.io` Caddy route exists but is not used for the auth flow.
 
 ## Dev Credentials
 

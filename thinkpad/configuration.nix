@@ -34,7 +34,16 @@
   # the packaged `gpclient` / `gpauth` tools below.
   networking.networkmanager.plugins = [ pkgs.networkmanager-openconnect ];
 
-  # Polymer dev: resolve to bee container host
+  # ── Split DNS: *.dev.crussell.io via AdGuardHome on bee (Nebula) ───
+  # Routes dev domain queries through Nebula to AdGuardHome on bee.
+  # All other DNS uses the default resolver.
+  services.resolved = {
+    enable = true;
+    settings.Resolve = {
+      DNS = [ "10.10.0.12" ];
+      Domains = [ "~dev.crussell.io" ];
+    };
+  };
 
   # ── Time & Locale ─────────────────────────────────────────────────────
   time.timeZone = "America/New_York";
@@ -69,7 +78,7 @@
     key = "/etc/nebula/host.key";
 
     staticHostMap = {
-      "10.10.0.1" = [ "192.168.20.62:4243" ];
+      "10.10.0.1" = [ "192.168.20.105:4243" ];  # bee (local lighthouse)
       "10.10.0.2" = [ "178.156.171.212:4242" ];
     };
 
@@ -275,6 +284,13 @@
   nixpkgs.config.allowUnfree = true;
 
 
+
+  # ── Trust Caddy internal CA from bee ──────────────────────────────
+  # After deploying bee and starting Caddy, extract the root CA:
+  #   ssh bee 'sudo cat /var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt' \
+  #     > thinkpad/certs/bee-caddy-root.pem
+  # Then rebuild the laptop.
+  security.pki.certificateFiles = [ ./certs/bee-caddy-root.pem ];
 
   # ── Nix settings ──────────────────────────────────────────────────────
   nix.settings.experimental-features = [

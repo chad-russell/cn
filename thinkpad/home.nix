@@ -156,6 +156,11 @@ in
   programs.zen-browser = {
     enable = true;
     setAsDefaultBrowser = true;
+    extraPrefs = ''
+      // Exclude dev.crussell.io from DNS-over-HTTPS so split DNS via
+      // AdGuardHome on bee (Nebula) is used instead of the DoH resolver.
+      pref("network.trr.excluded-domains", "dev.crussell.io");
+    '';
   };
 
   # -- Module imports --

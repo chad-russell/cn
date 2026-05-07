@@ -10,6 +10,8 @@
     ../../modules/base-server.nix
     ../../modules/hub-disk-config.nix
     ../../modules/nebula-client.nix
+    ./adguardhome.nix
+    ./caddy-dev.nix
     ./gloo.nix
     ./gloo-containerized.nix
     ./buildspace.nix
