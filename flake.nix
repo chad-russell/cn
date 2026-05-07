@@ -114,7 +114,14 @@
         system = "x86_64-linux";
         specialArgs = specialArgs // { inherit username; };
         modules = [
-          { nixpkgs.overlays = [ (final: prev: { slk = final.callPackage ./thinkpad/pkgs/slk/package.nix { }; }) ]; }
+          {
+            nixpkgs.overlays = [
+              (final: prev: {
+                slk = final.callPackage ./thinkpad/pkgs/slk/package.nix { };
+                globalprotect-openconnect = final.callPackage ./thinkpad/pkgs/globalprotect-openconnect/default.nix { };
+              })
+            ];
+          }
           ./thinkpad/hardware-configuration.nix
           ./thinkpad/configuration.nix
           ./modules/nebula-hosts.nix

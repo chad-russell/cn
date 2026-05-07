@@ -9,6 +9,140 @@
 }:
 let
   username = "crussell";
+  wycliffePortal = "wycliffe.gpcloudservice.com";
+  wycliffeVpn = pkgs.writeShellScriptBin "wycliffe-vpn" ''
+    set -euo pipefail
+
+    PORTAL="${wycliffePortal}"
+    BROWSER="''${WYCLIFFE_VPN_BROWSER:-zen-twilight}"
+    GPCLIENT="${pkgs.globalprotect-openconnect}/bin/gpclient"
+    SUDO="/run/wrappers/bin/sudo"
+    IP="${pkgs.iproute2}/bin/ip"
+    GREP="${pkgs.gnugrep}/bin/grep"
+    SLEEP="${pkgs.coreutils}/bin/sleep"
+    WLPASTE="${pkgs.wl-clipboard}/bin/wl-paste"
+
+    is_connected() {
+      "$IP" route | "$GREP" -q '^default dev tun0 scope link'
+    }
+
+    feed_callback() {
+      local callback="''${1:-}"
+      case "$callback" in
+        globalprotectcallback:*)
+          echo
+          echo "Handing browser callback to gpclient..."
+          "$GPCLIENT" launch-gui "$callback"
+          ;;
+        *)
+          return 1
+          ;;
+      esac
+    }
+
+    if is_connected; then
+      echo "Wycliffe VPN already appears connected."
+      exit 0
+    fi
+
+    echo "Authenticating sudo..."
+    "$SUDO" -v
+
+    initial_clipboard="$($WLPASTE --no-newline 2>/dev/null || true)"
+    tty_ok=0
+    if [ -r /dev/tty ]; then
+      exec 3</dev/tty
+      tty_ok=1
+    fi
+
+    echo "Starting Wycliffe VPN via browser: $BROWSER"
+    "$SUDO" -E "$GPCLIENT" connect "$PORTAL" --browser "$BROWSER" &
+    connect_pid=$!
+
+    instructed=0
+    while kill -0 "$connect_pid" 2>/dev/null; do
+      if [ -f /tmp/gpcallback.port ]; then
+        if [ "$instructed" -eq 0 ]; then
+          cat <<'EOF'
+
+If the browser login finishes but the VPN does not continue automatically:
+  1. In the browser, click "click here" once.
+  2. If nothing happens, right-click "click here" and choose "Copy Link".
+  3. This script will auto-detect the copied globalprotectcallback link.
+  4. Or paste the full globalprotectcallback:... link here and press Enter.
+
+EOF
+          instructed=1
+        fi
+
+        clipboard="$($WLPASTE --no-newline 2>/dev/null || true)"
+        if [ "$clipboard" != "$initial_clipboard" ] && feed_callback "$clipboard"; then
+          initial_clipboard="$clipboard"
+        fi
+
+        if [ "$tty_ok" -eq 1 ]; then
+          if IFS= read -r -t 1 -u 3 line; then
+            if feed_callback "$line"; then
+              :
+            elif [ -n "$line" ]; then
+              echo "Ignoring input that does not start with globalprotectcallback:"
+            fi
+          fi
+        else
+          "$SLEEP" 1
+        fi
+      else
+        "$SLEEP" 1
+      fi
+    done
+
+    set +e
+    wait "$connect_pid"
+    rc=$?
+    set -e
+
+    for _ in 1 2 3 4 5; do
+      if is_connected; then
+        echo "Wycliffe VPN connected."
+        exit 0
+      fi
+      "$SLEEP" 1
+    done
+
+    echo "Wycliffe VPN did not come up."
+    exit "$rc"
+  '';
+  wycliffeVpnDisconnect = pkgs.writeShellScriptBin "wycliffe-vpn-disconnect" ''
+    set -euo pipefail
+
+    GPCLIENT="${pkgs.globalprotect-openconnect}/bin/gpclient"
+    SUDO="/run/wrappers/bin/sudo"
+    IP="${pkgs.iproute2}/bin/ip"
+    GREP="${pkgs.gnugrep}/bin/grep"
+    SLEEP="${pkgs.coreutils}/bin/sleep"
+
+    is_connected() {
+      "$IP" route | "$GREP" -q '^default dev tun0 scope link'
+    }
+
+    if ! is_connected && ! "$IP" link show tun0 >/dev/null 2>&1; then
+      echo "Wycliffe VPN does not appear connected."
+      exit 0
+    fi
+
+    echo "Disconnecting Wycliffe VPN..."
+    "$SUDO" "$GPCLIENT" disconnect
+
+    for _ in 1 2 3 4 5; do
+      if ! is_connected && ! "$IP" link show tun0 >/dev/null 2>&1; then
+        echo "Wycliffe VPN disconnected."
+        exit 0
+      fi
+      "$SLEEP" 1
+    done
+
+    echo "Disconnect requested; tun0 is still present. Check 'ip route' or re-run if needed."
+  '';
 in
 {
   home.username = username;
@@ -114,6 +248,10 @@ in
 
     # TUI apps
     slk
+
+    # VPN helpers
+    wycliffeVpn
+    wycliffeVpnDisconnect
   ];
 
   # -- Git --

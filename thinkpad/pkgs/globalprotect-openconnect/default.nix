@@ -30,7 +30,7 @@ stdenv.mkDerivation rec {
 
   src = fetchzip {
     url = "https://github.com/yuezk/GlobalProtect-openconnect/releases/download/v${version}/globalprotect-openconnect_${version}_x86_64.bin.tar.xz";
-    hash = "sha256-0000000000000000000000000000000000000000000000000000";
+    hash = "sha256-48K1aN5Rp79mrPAy8MqnqLMbklH9/0HBSOV3CbjCgO0=";
   };
 
   nativeBuildInputs = [ autoPatchelfHook makeWrapper ];
@@ -42,6 +42,7 @@ stdenv.mkDerivation rec {
     webkitgtk_4_1
     glib-networking
     openssl
+    libappindicator-gtk3
     libxml2
     zlib
     lz4
@@ -52,33 +53,33 @@ stdenv.mkDerivation rec {
     stdenv.cc.cc.lib
   ];
 
+  dontConfigure = true;
+  dontBuild = true;
+
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/bin $out/share $out/libexec
 
-    cp bin/gpclient $out/bin/
-    cp bin/gpservice $out/bin/
-    cp bin/gpauth $out/bin/
-    cp bin/gpgui $out/bin/
-    chmod +x $out/bin/*
+    # The upstream binary tarball is laid out like a distro package and expects
+    # DESTDIR to stage into a filesystem tree under /usr.
+    make DESTDIR=$out install
 
-    # Copy libexec helpers
-    cp -r libexec/gpclient $out/libexec/ 2>/dev/null || true
+    # Expose the usual Nix top-level paths while keeping the staged /usr tree
+    # intact for the upstream binaries' hardcoded fallback paths.
+    ln -s usr/share $out/share
+    ln -s usr/lib $out/lib
+    ln -s usr/libexec $out/libexec
 
-    # Copy desktop file
-    cp -r share/applications $out/share/ 2>/dev/null || true
-    cp -r share/polkit-1 $out/share/ 2>/dev/null || true
+    mkdir -p $out/bin
+    for prog in gpclient gpservice gpauth gpgui gpgui-helper; do
+      if [ -e "$out/usr/bin/$prog" ]; then
+        makeWrapper "$out/usr/bin/$prog" "$out/bin/$prog" \
+          --prefix PATH : ${lib.makeBinPath [ openconnect ]} \
+          --prefix GIO_EXTRA_MODULES : ${glib-networking}/lib/gio/modules
+      fi
+    done
 
-    # Fix hardcoded paths
-    substituteInPlace $out/bin/* \
-      --replace-fail /usr/libexec/gpclient $out/libexec/gpclient 2>/dev/null || true
-    substituteInPlace $out/share/applications/gpgui.desktop \
-      --replace-fail /usr/bin/gpclient $out/bin/gpclient 2>/dev/null || true
-
-    # Wrap gpclient to find openconnect and glib-networking
-    wrapProgram $out/bin/gpclient \
-      --prefix PATH : ${lib.makeBinPath [ openconnect ]} \
-      --prefix GIO_EXTRA_MODULES : ${glib-networking}/lib/gio/modules
+    substituteInPlace $out/usr/share/applications/gpgui.desktop \
+      --replace-fail 'Exec=/usr/bin/gpclient' 'Exec=$out/bin/gpclient'
 
     runHook postInstall
   '';

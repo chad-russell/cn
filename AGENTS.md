@@ -2,18 +2,19 @@
 
 Root navigation and operating guide for agents working in this personal infrastructure repository.
 
-**Read this first.** The repository is mid-migration from older `servers/` / `brunch/` layouts to a unified Nix flake. Prefer the Nix configuration and live hosts over older docs when facts disagree.
+**Read this first.** The repository uses a unified Nix flake. Prefer the Nix configuration and live host state over older docs when facts disagree.
 
-Last spot-checked via SSH: **2026-05-05**.
+Last validated via SSH: **2026-05-06**.
 
 ## Ground Rules for Agents
 
 1. **Source of truth:** `flake.nix`, `hosts/*/*.nix`, `modules/*.nix`, and live host state are authoritative.
-2. **Do not resurrect legacy paths** such as `servers/hub/...`, `servers/media/...`, or `brunch/...` unless the user explicitly asks. Those paths are deleted or deprecated in the current working tree.
+2. **Do not resurrect legacy paths** such as `servers/hub/...`, `servers/media/...`, or `brunch/...` unless the user explicitly asks. Those paths are deleted or deprecated in the working tree.
 3. **Use Nix for host config changes** whenever possible. Deploy with `nix run .#deploy -- <host>`.
-4. **Caddy route source lives in `hosts/k2/caddy/`** and is installed to `/etc/caddy` by the `hosts/k2/caddy.nix` module; deploy `k2`, then validate/reload Caddy.
+4. **Caddy route source lives in `hosts/bees/caddy/`** and is installed to `/etc/caddy` by the `hosts/bees/caddy.nix` module; deploy `bees`, then validate/reload Caddy.
 5. **Never commit plaintext secrets.** Existing plaintext secret-like files should be treated carefully; do not print or copy their contents into docs, logs, or chat unless explicitly necessary.
 6. **When unsure, verify live state over SSH** using the SSH notes below.
+7. **k1–k4 are decommissioned.** Their NixOS configs remain in `hosts/k1/`–`hosts/k4/` for reference, but all services have been migrated to `bees` and `bee`. Do not deploy changes to k1–k4 unless explicitly asked.
 
 ## Current Repository Map
 
@@ -23,21 +24,35 @@ Last spot-checked via SSH: **2026-05-05**.
 ├── flake.lock
 ├── AGENTS.md                  # This guide
 ├── hosts/
-│   ├── bee/configuration.nix  # Beelink mini PC, general-purpose server
-│   ├── homeassistant/         # HAOS operational docs + helper scripts
-│   ├── k1/                    # Dev host: Gloo enabled, Buildspace optional
-│   ├── k2/                    # Ingress/service host: Caddy, ntfy, searxng, datenight, linkding, papra, open-webui
-│   ├── k3/                    # Media server: Jellyfin/*arr/qBittorrent/Jellyseerr
-│   └── k4/                    # Immich photo server
+│   ├── bee/                   # Beelink mini PC: dev stack (Gloo) + Nebula lighthouse
+│   │   ├── configuration.nix
+│   │   ├── gloo.nix / gloo-containerized.nix
+│   │   ├── buildspace.nix
+│   │   └── gloo/ buildspace/
+│   ├── bees/                  # Production server: all shared + media + ingress services
+│   │   ├── configuration.nix
+│   │   ├── caddy.nix + caddy/ (Caddyfile, routes, aws.env)
+│   │   ├── media-services.nix
+│   │   ├── immich.nix
+│   │   ├── ntfy.nix, searxng.nix, datenight.nix
+│   │   ├── hub-services.nix, linkding.container, papra.container, open-webui.container
+│   │   └── disk-config.nix
+│   ├── k1/                    # [RETIRED] Dev host — Gloo migrated to bee
+│   ├── k2/                    # [RETIRED] Ingress host — services migrated to bees
+│   ├── k3/                    # [RETIRED] Media host — services migrated to bees
+│   ├── k4/                    # [RETIRED] Immich host — services migrated to bees
+│   ├── bee/                   # [RETIRED, same dir as active] Beelink config
+│   ├── migration/             # Migration guide (k1–k4 → bee + bees)
+│   └── homeassistant/         # HAOS operational docs + helper scripts
 ├── modules/
 │   ├── base-server.nix        # Shared server baseline: user, SSH, networkd, packages, GC, NFS client
 │   ├── server-shell.nix       # Shared zsh/CLI setup for servers
 │   ├── nebula-client.nix      # Shared Nebula client defaults for servers
 │   ├── nebula-hosts.nix       # /etc/hosts entries for Nebula overlay names
-│   ├── elitedesk-*.nix        # HP EliteDesk hardware, disk layout, NIC quirks
+│   ├── elitedesk-*.nix        # HP EliteDesk hardware, disk layout, NIC quirks (k1–k4)
 │   └── hub-disk-config.nix    # Beelink/bee btrfs disk layout
 ├── nebula/
-│   ├── configs/               # Nebula config templates; some comments may be stale
+│   ├── configs/               # Nebula config templates
 │   ├── pki/                   # Nebula CA/certs and age-encrypted private keys
 │   ├── quadlets/              # Legacy/manual Nebula Quadlets
 │   └── scripts/               # Nebula helper binaries/scripts
@@ -47,63 +62,77 @@ Last spot-checked via SSH: **2026-05-05**.
 
 ## Current Architecture
 
-```text
-                                Internet
-                                    │
-                                    ▼
-                  ┌──────────────────────────────────┐
-                  │ gateway / Hetzner VPS            │
-                  │ 178.156.171.212 / Fedora 42      │
-                  │ nginx stream passthrough :80/:443│
-                  │ Nebula lighthouse+relay 10.10.0.2│
-                  └────────────────┬─────────────────┘
-                                   │ Nebula to 10.10.0.6
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ k2 — ingress + shared services                                      │
-│ 192.168.20.62 / NixOS 25.11                                        │
-│ Nebula service identity: 10.10.0.6                                  │
-│ Nebula local lighthouse: 10.10.0.1 on UDP 4243                      │
-│ Caddy terminates TLS and routes public/internal domains             │
-│ Native services: ntfy, SearXNG, datenight                           │
-│ Podman Quadlets: linkding, papra, open-webui, caddy                 │
-└───────────────────────────┬─────────────────────────────────────────┘
-                            │ LAN / Nebula
-        ┌───────────────────┼────────────────────┬────────────────────┐
-        ▼                   ▼                    ▼                    ▼
-┌──────────────┐    ┌──────────────┐     ┌──────────────┐    ┌──────────────┐
-│ k1           │    │ k3           │     │ k4           │    │ bee          │
-│ 192.168.20.61│    │ 192.168.20.63│     │ 192.168.20.64│    │ 192.168.20.105│
-│ Nebula .4    │    │ Nebula .8    │     │ Nebula .9    │    │ Nebula .12   │
-│ Dev stacks   │    │ Media stack  │     │ Immich       │    │ General use  │
-└──────────────┘    └──────────────┘     └──────────────┘    └──────────────┘
-        │                   │                    │
-        └───────────────────┴──────────┬─────────┘
-                                       ▼
-                              ┌─────────────────┐
-                              │ nas / TrueNAS   │
-                              │ 192.168.20.31   │
-                              │ NFS exports     │
-                              └─────────────────┘
+```
+                              Internet
+                                  │
+                                  ▼
+                ┌──────────────────────────────────┐
+                │ gateway / Hetzner VPS             │
+                │ 178.156.171.212 / Fedora 42       │
+                │ nginx stream → bees :80/:443     │
+                │ Nebula lighthouse+relay 10.10.0.2 │
+                └───────────────┬──────────────────┘
+                                │ Nebula to 10.10.0.6
+                ┌───────────────┴──────────────┐
+                ▼                              ▼
+  ┌──────────────────────────┐   ┌──────────────────────────┐
+  │ bees — production server │   │ bee — dev + Nebula LH    │
+  │ 192.168.20.41            │   │ 192.168.20.105           │
+  │ Nebula 10.10.0.6         │   │ Nebula 10.10.0.12        │
+  │                          │   │ Nebula LH 10.10.0.1      │
+  │ AMD Ryzen AI MAX+ 395    │   │ AMD Ryzen 7 7840HS       │
+  │ 16C/32T, ~62 GB RAM     │   │ 8C/16T, 27 GB RAM        │
+  │ 2 TB NVMe, dual 10GbE   │   │ 1 TB NVMe, 1 GbE         │
+  │                          │   │                          │
+  │ ALL PRODUCTION SERVICES: │   │ SERVICES:                │
+  │  Caddy (TLS ingress)     │   │  Nebula lighthouse       │
+  │  ntfy, SearXNG, datenight│   │  Gloo dev stack          │
+  │  linkding, papra         │   │  Buildspace (disabled)   │
+  │  open-webui              │   │                          │
+  │  Jellyfin, Sonarr,       │   │                          │
+  │  Radarr, Prowlarr,       │   │                          │
+  │  qBittorrent, Jellyseerr │   │                          │
+  │  Immich (server + ML)    │   │                          │
+  └──────────┬───────────────┘   └──────────┬───────────────┘
+             │ NFS (10GbE)                   │ NFS
+             ▼                                ▼
+    ┌─────────────────┐            ┌─────────────────┐
+    │ nas / TrueNAS   │            │ nas / TrueNAS   │
+    │ 192.168.20.31   │            │ 192.168.20.31   │
+    │ NFS: media,     │            │ NFS: backups    │
+    │ photos, backups │            └─────────────────┘
+    └─────────────────┘
 
 Also on LAN: homeassistant / HAOS at 192.168.20.51.
 Laptop: think / NixOS 25.11, configured under `thinkpad/`.
+Decommissioned (still on LAN but idle): k1 (.61), k2 (.62), k3 (.63), k4 (.64).
 ```
 
 ## Machine Registry
 
-| Host | LAN / Public IP | Nebula IP | OS | Config | Purpose / services |
+### Active Hosts
+
+| Host | LAN IP | Nebula IP | OS | Config | Purpose / services |
 | --- | --- | --- | --- | --- | --- |
-| `k1` | `192.168.20.61` | `10.10.0.4` | NixOS 25.11 | `hosts/k1/` | Dev host. Gloo enabled; Buildspace module present but disabled. Bun/Node/pi-coding-agent. |
-| `k2` | `192.168.20.62` | `10.10.0.6` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/k2/` | Main ingress and shared services: Caddy, ntfy, SearXNG, datenight, linkding, papra, open-webui. |
-| `k3` | `192.168.20.63` | `10.10.0.8` | NixOS 25.11 | `hosts/k3/` | Media server: Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr. |
-| `k4` | `192.168.20.64` | `10.10.0.9` | NixOS 25.11 | `hosts/k4/` | Immich photo server; `/mnt/photos` from NAS. |
-| `bee` | `192.168.20.105` | `10.10.0.12` | NixOS 25.11 | `hosts/bee/` | Beelink mini PC, general-purpose server; no major app services configured. |
+| `bees` | `192.168.20.41` | `10.10.0.6` | NixOS 25.11 | `hosts/bees/` | Production server: Caddy, ntfy, SearXNG, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. Took over k2's Nebula identity (10.10.0.6). |
+| `bee` | `192.168.20.105` | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/` | Dev server: Gloo stack, Nebula lighthouse. |
 | `think` | varies | `10.10.0.10` | NixOS 25.11 | `thinkpad/` | Laptop with home-manager, niri, Noctalia, Podman, dev tools. |
-| `nas` | `192.168.20.31` | `10.10.0.3` | TrueNAS | not Nix-managed here | NFS storage: media, photos, backups. |
+| `nas` | `192.168.20.31` | `10.10.0.3` | TrueNAS | not Nix-managed | NFS storage: media, photos, backups. |
 | `homeassistant` | `192.168.20.51` | — | HAOS | `hosts/homeassistant/` docs only | Home Assistant OS. |
-| `gateway` | `178.156.171.212` | `10.10.0.2` | Fedora 42 | not Nix-managed here | Hetzner nginx stream proxy plus Nebula lighthouse/relay. |
-| `bees` | — | `10.10.0.5` | not current Nix host | Nebula PKI only | Legacy/AI host identity remains in Nebula PKI. |
+| `gateway` | `178.156.171.212` | `10.10.0.2` | Fedora 42 | not Nix-managed | Hetzner nginx stream proxy → bees (`10.10.0.6:80/443`). Nebula lighthouse/relay. |
+
+### Decommissioned Hosts (k1–k4)
+
+All services migrated to `bees` and `bee` on 2026-05-05. Machines are idle on LAN but still physically present. Configs kept in repo for reference.
+
+| Host | LAN IP | Former Nebula IP | Former role | Current state |
+| --- | --- | --- | --- | --- |
+| `k1` | `192.168.20.61` | `10.10.0.4` | Dev stacks (Gloo) | Idle; Nebula still connected but no services |
+| `k2` | `192.168.20.62` | was `10.10.0.6` | Ingress + shared services | Stripped to bare OS; Nebula disabled; identity taken by bees |
+| `k3` | `192.168.20.63` | was `10.10.0.8` | Media server | Idle; Nebula disabled; no media services |
+| `k4` | `192.168.20.64` | was `10.10.0.9` | Immich | Idle; Nebula disabled; no immich services |
+
+Migration details: `hosts/migration/MIGRATION-GUIDE.md`.
 
 ## SSH Access
 
@@ -113,23 +142,29 @@ Use the ed25519 key and force identities when automating:
 ssh -o IdentitiesOnly=yes <user>@<host>
 ```
 
-Common targets:
+Active targets:
 
 ```bash
-# NixOS servers installed for root SSH
-ssh -o IdentitiesOnly=yes root@192.168.20.61   # k1
-ssh -o IdentitiesOnly=yes root@192.168.20.62   # k2
-ssh -o IdentitiesOnly=yes root@192.168.20.63   # k3
-ssh -o IdentitiesOnly=yes root@192.168.20.64   # k4
+# Production server (deployed as crussell with sudo)
+ssh -o IdentitiesOnly=yes crussell@192.168.20.41   # bees
 
-# bee is deployed as crussell with sudo
-ssh -o IdentitiesOnly=yes crussell@192.168.20.105
+# Dev server + lighthouse (deployed as crussell with sudo)
+ssh -o IdentitiesOnly=yes crussell@192.168.20.105  # bee
 
 # Hetzner gateway
 ssh -o IdentitiesOnly=yes root@178.156.171.212
 ```
 
-Home Assistant SSH is different: see `hosts/homeassistant/README.md` and helper scripts under `hosts/homeassistant/scripts/`.
+Decommissioned (still accessible on LAN if needed):
+
+```bash
+ssh -o IdentitiesOnly=yes root@192.168.20.61   # k1 (still has Nebula)
+ssh -o IdentitiesOnly=yes root@192.168.20.62   # k2 (bare OS)
+ssh -o IdentitiesOnly=yes root@192.168.20.63   # k3 (bare OS)
+ssh -o IdentitiesOnly=yes root@192.168.20.64   # k4 (bare OS)
+```
+
+Home Assistant SSH: see `hosts/homeassistant/README.md` and helper scripts under `hosts/homeassistant/scripts/`.
 
 ## Nix Operations
 
@@ -137,15 +172,20 @@ Available flake hosts:
 
 ```bash
 nix flake show
-# NixOS configs: think, k1, k2, k3, k4, bee
+# NixOS configs: think, k1, k2, k3, k4, bee, bees
 ```
 
-Deploy existing machines:
+Deploy active machines:
 
 ```bash
-# One or more remote servers
-nix run .#deploy -- k2
-nix run .#deploy -- k1 k2 k4 bee
+# Production server
+nix run .#deploy -- bees
+
+# Dev server + lighthouse
+nix run .#deploy -- bee
+
+# Both
+nix run .#deploy -- bee bees
 
 # Laptop, local rebuild
 nix run .#deploy -- think
@@ -155,58 +195,134 @@ Install/wipe a new host with nixos-anywhere:
 
 ```bash
 # WARNING: destructive
-nix run .#install -- k1 192.168.20.61
+nix run .#install -- bees 192.168.20.41
 nix run .#install -- bee 192.168.20.105
 ```
 
 Useful validation before deploy:
 
 ```bash
-# Fast eval check for a host
-nix eval .#nixosConfigurations.k2.config.networking.hostName --raw
+# Fast eval check
+nix eval .#nixosConfigurations.bees.config.networking.hostName --raw
 
 # Build without switching
-nix build .#nixosConfigurations.k2.config.system.build.toplevel
+nix build .#nixosConfigurations.bees.config.system.build.toplevel
 ```
 
 ### Known Nix Drift / Footguns
 
-- Some historical comments may still say “hub” for services now running on `k2`. Prefer `hosts/k2/configuration.nix` and live `k2` state.
-- `hosts/k2/caddy/aws.env` is still a plaintext Route53 credential file in the working tree. Treat it as sensitive; prefer moving it to agenix in a dedicated follow-up.
+- `hosts/k1/`–`hosts/k4/` configs still exist in the flake but the machines are retired. Don't deploy to them unless explicitly asked.
+- `hosts/bees/caddy/aws.env` is still a plaintext Route53 credential file. Treat it as sensitive; prefer moving it to agenix.
+- `nebula/pki/` still contains certs for k1–k4 — these can be cleaned up when ready.
 
 ## Service Operations by Host
 
-### k1 — Dev stacks
+### bees — Production server (all workloads)
 
 Source files:
 
-- `hosts/k1/configuration.nix`
-- `hosts/k1/gloo.nix`
-- `hosts/k1/buildspace.nix`
-- `hosts/k1/gloo/compose.yaml` and `hosts/k1/gloo/envs/*.env`
-- `hosts/k1/buildspace/compose.yaml`
-- `secrets/gloo-secrets.env.age`
+- `hosts/bees/configuration.nix`
+- `hosts/bees/caddy.nix` + `hosts/bees/caddy/` (Caddyfile, routes, aws.env)
+- `hosts/bees/media-services.nix` — Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr
+- `hosts/bees/immich.nix` — Immich server + ML
+- `hosts/bees/ntfy.nix`, `searxng.nix`, `datenight.nix`
+- `hosts/bees/hub-services.nix` + `*.container` — linkding, papra, open-webui
 
-Current Nix setting:
+Live systemd services:
 
-```nix
-services.gloo.enable = true;
-# services.buildspace.enable = true;
-```
+- `nebula@homelab.service` — service identity `10.10.0.6` (took over from k2)
+- `caddy.service` — Podman Quadlet, container name `systemd-caddy`
+- `ntfy-sh.service` — port `8090`
+- `searx.service` + `redis-searx.service` — SearXNG on port `8888` (changed from 8080, conflict with qBittorrent)
+- `datenight.service` — port `7890`
+- `linkding.service` — publishes `30080 -> 9090`
+- `papra.service` — publishes `30083 -> 1221`
+- `open-webui.service` — publishes `30088 -> 8080`
+- `jellyfin.service` — `8096`
+- `sonarr.service` — `8989`
+- `radarr.service` — `7878`
+- `prowlarr.service` — `9696`
+- `jellyseerr.service` — `5055`
+- `qbittorrent.service` — Web UI `8080`, torrenting `51413`
+- `immich-server.service` — `2283`
+- `immich-machine-learning.service`
+- `postgresql.service` — Immich DB
+- `redis-immich.service`
 
-Gloo and Buildspace are intended to be mutually exclusive work contexts. User units are generated into `/home/crussell/.config/systemd/user/`, and linger is enabled.
+Storage:
 
-Operate user services over SSH as root:
+- `/mnt/media` from `192.168.20.31:/mnt/tank/media`
+- `/mnt/photos` from `192.168.20.31:/mnt/tank/photos`
+- `/mnt/backups` automount from `192.168.20.31:/mnt/tank/backups`
+
+Useful checks:
 
 ```bash
-ssh -o IdentitiesOnly=yes root@192.168.20.61
-export XDG_RUNTIME_DIR=/run/user/$(id -u crussell)
-sudo -u crussell XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl --user status gloo-all.target
-sudo -u crussell XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl --user start gloo-all.target
-sudo -u crussell XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR journalctl --user -u gloo-polymer -f
+ssh -o IdentitiesOnly=yes crussell@192.168.20.41
+systemctl status caddy ntfy-sh searx datenight linkding papra open-webui jellyfin sonarr radarr prowlarr jellyseerr qbittorrent immich-server
+podman ps
+journalctl -u caddy -f
 ```
 
-Gloo ports/routes configured in Caddy:
+#### Caddy public routes
+
+| Public hostname | Backend |
+| --- | --- |
+| `homeassistant.crussell.io` | `192.168.20.51:8123` |
+| `jellyfin.crussell.io` | `localhost:8096` |
+| `photos.crussell.io` | `localhost:2283` |
+| `datenight.crussell.io` | `localhost:7890` |
+
+Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
+
+- `hub-services.caddy` — linkding, papra, ntfy, SearXNG, open-webui
+- `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
+- `gloo.caddy` — Gloo dev stack on `bee`
+- `buildspace.caddy` — Buildspace dev stack on `bee`
+
+#### Updating Caddy Routes
+
+Edit repo source files, deploy `bees` to update `/etc/caddy`, then validate and reload:
+
+```bash
+# from repo root
+nix run .#deploy -- bees
+
+ssh -o IdentitiesOnly=yes crussell@192.168.20.41 '
+  sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile &&
+  sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
+'
+```
+
+`hosts/bees/caddy/aws.env` / `/etc/caddy/aws.env` contains Route53 credentials for DNS-01 certificates. Treat it as sensitive and do not expose its contents.
+
+### bee — Dev server + Nebula lighthouse
+
+Source files:
+
+- `hosts/bee/configuration.nix`
+- `hosts/bee/gloo.nix` / `hosts/bee/gloo-containerized.nix`
+- `hosts/bee/buildspace.nix` (disabled)
+- `hosts/bee/gloo/` — compose.yaml, envs
+- `hosts/bee/buildspace/`
+
+Running services:
+
+- `nebula@homelab.service` — `10.10.0.12`
+- `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
+- Gloo dev stack (user services under `crussell`)
+
+Operate Gloo user services over SSH:
+
+```bash
+ssh -o IdentitiesOnly=yes crussell@192.168.20.105
+export XDG_RUNTIME_DIR=/run/user/$(id -u crussell)
+systemctl --user status gloo-all.target
+systemctl --user start gloo-all.target
+journalctl --user -u gloo-polymer -f
+```
+
+Gloo ports/routes configured in Caddy on bees:
 
 | Service | Port | Internal hostname |
 | --- | ---: | --- |
@@ -219,150 +335,11 @@ Gloo ports/routes configured in Caddy:
 | pgAdmin | 5050 | `pgadmin.internal.crussell.io` |
 | Storyhub | 3007 | `storyhub.internal.crussell.io` |
 
-Buildspace routes are present in `hosts/k2/caddy/routes/internal/buildspace.caddy` and point to `k1` ports `3000`, `3002`-`3006`, and `3010`.
-
-### k2 — Ingress and shared services
-
-Source files:
-
-- `hosts/k2/configuration.nix`
-- `hosts/k2/caddy.nix`
-- `hosts/k2/caddy/Caddyfile`
-- `hosts/k2/caddy/routes/internal/*.caddy`
-- `hosts/k2/ntfy.nix`, `searxng.nix`, `datenight.nix`
-- `hosts/k2/hub-services.nix`
-- `hosts/k2/*.container` for Linkding, Papra, Open WebUI
-
-Live systemd services verified active:
-
-- `nebula@homelab.service` — service identity `10.10.0.6`
-- `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
-- `caddy.service` — Podman Quadlet, container name `systemd-caddy`
-- `ntfy-sh.service` — port `8090`
-- `searx.service` + `redis-searx.service` — SearXNG on port `8080`
-- `datenight.service` — port `7890`
-- `linkding.service` — publishes `30080 -> 9090`
-- `papra.service` — publishes `30083 -> 1221`
-- `open-webui.service` — publishes `30088 -> 8080`
-
-Useful checks:
-
-```bash
-ssh -o IdentitiesOnly=yes root@192.168.20.62
-systemctl status caddy ntfy-sh searx datenight linkding papra open-webui
-podman ps
-journalctl -u caddy -f
-```
-
-Caddy public routes in `hosts/k2/caddy/Caddyfile`:
-
-| Public hostname | Backend |
-| --- | --- |
-| `homeassistant.crussell.io` | `192.168.20.51:8123` |
-| `jellyfin.crussell.io` | `192.168.20.63:8096` |
-| `photos.crussell.io` | `192.168.20.64:2283` |
-| `datenight.crussell.io` | `192.168.20.62:7890` |
-
-Internal route snippets live under `hosts/k2/caddy/routes/internal/`:
-
-- `hub-services.caddy` — linkding, papra, ntfy, SearXNG, open-webui
-- `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
-- `gloo.caddy` — Gloo dev stack on `k1`
-- `buildspace.caddy` — Buildspace dev stack on `k1`
-- `opencode.caddy` — retired placeholder
-
-#### Updating Caddy Routes
-
-Edit repo source files, deploy `k2` to update `/etc/caddy`, then validate and reload:
-
-```bash
-# from repo root
-nix run .#deploy -- k2
-
-ssh -o IdentitiesOnly=yes root@192.168.20.62 '
-  podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile &&
-  podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
-'
-```
-
-`hosts/k2/caddy/aws.env` / `/etc/caddy/aws.env` contains Route53 credentials for DNS-01 certificates. Treat it as sensitive and do not expose its contents.
-
-### k3 — Media server
-
-Source files:
-
-- `hosts/k3/configuration.nix`
-- `hosts/k3/media-services.nix`
-
-Live services verified active:
-
-- `jellyfin.service` — `8096`
-- `sonarr.service` — `8989`
-- `radarr.service` — `7878`
-- `prowlarr.service` — `9696`
-- `jellyseerr.service` — `5055`
-- `qbittorrent.service` — Web UI `8080`, torrenting `51413`
-- `nebula@homelab.service` — `10.10.0.8`
-
-Storage:
-
-- `/mnt/media` from `192.168.20.31:/mnt/tank/media`
-- `/mnt/backups` automount from `192.168.20.31:/mnt/tank/backups`
-- `/mnt/data` local ext4 disk by UUID
-- Shared `media` group has GID `2000`
-
-Common checks:
-
-```bash
-ssh -o IdentitiesOnly=yes root@192.168.20.63
-systemctl status jellyfin sonarr radarr prowlarr jellyseerr qbittorrent
-findmnt /mnt/media /mnt/backups /mnt/data
-journalctl -u qbittorrent -f
-```
-
-### k4 — Immich
-
-Source file: `hosts/k4/configuration.nix`.
-
-Live services verified active:
-
-- `immich-server.service` — port `2283`
-- `immich-machine-learning.service`
-- `redis-immich.service`
-- `nebula@homelab.service` — `10.10.0.9`
-
-Storage and permissions:
-
-- `/mnt/photos` from `192.168.20.31:/mnt/tank/photos`
-- Immich `mediaLocation = /mnt/photos`
-- `nas-photos` group GID `1000` is added to Immich service supplementary groups.
-
-Checks:
-
-```bash
-ssh -o IdentitiesOnly=yes root@192.168.20.64
-systemctl status immich-server immich-machine-learning redis-immich
-findmnt /mnt/photos
-journalctl -u immich-server -f
-```
-
-### bee — Beelink mini PC
-
-Source file: `hosts/bee/configuration.nix`.
-
-- LAN `192.168.20.105`
-- Nebula `10.10.0.12`
-- NixOS 25.11
-- Btrfs layout from `modules/hub-disk-config.nix`
-- Nebula client enabled
-- `/mnt/backups` NAS automount configured
-- No major app services currently configured
-
 Deploy uses `crussell@192.168.20.105 --sudo` per `flake.nix`.
 
 ### gateway — Hetzner VPS
 
-Not Nix-managed by this flake. Verified live state:
+Not Nix-managed by this flake.
 
 - Fedora 42 host named `reverse-proxy`
 - Public IP `178.156.171.212`
@@ -370,8 +347,8 @@ Not Nix-managed by this flake. Verified live state:
 - `nebula.service` active, UDP `4242`
 - `nginx.service` active, TCP `80`/`443`
 - `/etc/nginx/nginx.conf` stream-proxies:
-  - HTTP `:80` -> `10.10.0.6:80`
-  - HTTPS `:443` -> `10.10.0.6:443`
+  - HTTP `:80` -> `10.10.0.6:80` (bees)
+  - HTTPS `:443` -> `10.10.0.6:443` (bees)
 
 Use `ssh -o IdentitiesOnly=yes root@178.156.171.212` to verify.
 
@@ -387,17 +364,20 @@ Current overlay host entries from `modules/nebula-hosts.nix`:
 
 | Nebula IP | Name / role |
 | --- | --- |
-| `10.10.0.1` | `nebula-lh` — local lighthouse on `k2` |
+| `10.10.0.1` | `nebula-lh` — local lighthouse on `bee` |
 | `10.10.0.2` | `nebula-hetzner` — Hetzner lighthouse/relay |
 | `10.10.0.3` | `nas` |
-| `10.10.0.4` | `k1` |
-| `10.10.0.5` | `bees` legacy/AI identity |
-| `10.10.0.6` | `k2` service endpoint (Caddy/public ingress) |
-| `10.10.0.7` | `k2` host identity cert exists in PKI but unused; `k2` maps to `10.10.0.6` |
-| `10.10.0.8` | `k3` |
-| `10.10.0.9` | `k4` |
-| `10.10.0.10` | `think` |
-| `10.10.0.12` | `bee` |
+| `10.10.0.6` | `bees` — production server (took over k2's identity) |
+| `10.10.0.12` | `bee` — dev server |
+| `10.10.0.10` | `think` — laptop |
+
+Decommissioned IPs (no longer in hosts file, but PKI certs exist):
+
+| Nebula IP | Name | Notes |
+| --- | --- | --- |
+| `10.10.0.4` | `k1` | Still connected to Nebula but idle |
+| `10.10.0.8` | `k3` | Nebula disabled |
+| `10.10.0.9` | `k4` | Nebula disabled |
 
 For NixOS hosts, certs are expected at:
 
@@ -407,7 +387,7 @@ For NixOS hosts, certs are expected at:
 /etc/nebula/host.key
 ```
 
-`k2` also has local lighthouse certs at:
+`bee` also has local lighthouse certs at:
 
 ```text
 /etc/nebula-lh/ca.crt
@@ -425,14 +405,14 @@ Nebula PKI files:
 Decrypt Nebula key material with the SSH ed25519 key when needed:
 
 ```bash
-age -d -i ~/.ssh/id_ed25519 nebula/pki/k1.key.age > /tmp/k1.key
+age -d -i ~/.ssh/id_ed25519 nebula/pki/bees.key.age > /tmp/bees.key
 ```
 
 ## Secrets
 
 Agenix and age are both used:
 
-- `secrets/gloo-secrets.env.age` — consumed by `hosts/k1/gloo.nix`; decrypted via `/home/crussell/.config/age/key.txt` on `k1`.
+- `secrets/gloo-secrets.env.age` — consumed by `hosts/bee/gloo.nix`; decrypted via `/home/crussell/.config/age/key.txt` on `bee`.
 - `thinkpad/secrets/*.age` — home-manager/laptop secrets.
 - `nebula/pki/*.key.age` — Nebula private keys encrypted to the SSH ed25519 public key.
 
@@ -452,20 +432,20 @@ Rules:
 4. Deploy with `nix run .#deploy -- <host>`.
 5. Verify with `systemctl status`, `journalctl`, and HTTP checks.
 
-### System Podman Quadlet on k2
+### System Podman Quadlet on bees
 
 Existing examples: `linkding.container`, `papra.container`, `open-webui.container`, `caddy/caddy.container`.
 
-1. Add a `.container` file under `hosts/k2/` or `hosts/k2/caddy/`.
+1. Add a `.container` file under `hosts/bees/` or `hosts/bees/caddy/`.
 2. Add an `environment.etc."containers/systemd/<name>.container"` entry in a Nix module.
 3. Ensure data directories/volumes in activation scripts if needed.
-4. Deploy `k2` and start/restart `<name>.service`.
+4. Deploy `bees` and start/restart `<name>.service`.
 5. Add Caddy route if externally reachable.
 
 ### Caddy route change
 
-1. Edit `hosts/k2/caddy/Caddyfile` for public routes or `hosts/k2/caddy/routes/internal/*.caddy` for internal routes.
-2. Deploy `k2` so Nix updates `/etc/caddy`.
+1. Edit `hosts/bees/caddy/Caddyfile` for public routes or `hosts/bees/caddy/routes/internal/*.caddy` for internal routes.
+2. Deploy `bees` so Nix updates `/etc/caddy`.
 3. Validate and reload Caddy inside the `systemd-caddy` container.
 4. Test with `curl -I https://<host>` from a network that can resolve/reach the domain.
 
@@ -478,6 +458,8 @@ Older docs may refer to:
 - `servers/hub/dev-stacks/...`
 - `servers/media/...`
 - `brunch/config/...`
-- host name `hub` for what is now mostly `k2`
+- host name `hub` for what is now `bees`
+- Services running on k1–k4 (all migrated to bees/bee)
+- `bees` at Nebula IP `10.10.0.5` (now at `10.10.0.6`)
 
-Treat those as historical unless the files still exist and the current Nix config agrees. The current repo root shows many of those paths deleted in git status; do not base new work on them.
+Treat those as historical unless the files still exist and the current Nix config agrees.

@@ -9,7 +9,7 @@
 - [x] Nebula connected at 10.10.0.5
 - [x] SSH verified: `ssh -o IdentitiesOnly=yes crussell@192.168.20.41`
 
-### Phase 1: Migrate k3 → bees (Media stack) — IN PROGRESS
+### Phase 1: Migrate k3 → bees (Media stack) — ✅ DONE
 - [x] Media services config deployed to bees (`hosts/bees/media-services.nix`)
 - [x] All services installed and running on bees
 - [x] k3 services stopped
@@ -20,7 +20,7 @@
 - [x] Cut traffic over (update Caddy routes to point to bees)
 - [x] Final validation
 
-### Phase 2: Migrate k4 → bees (Immich) — IN PROGRESS
+### Phase 2: Migrate k4 → bees (Immich) — ✅ DONE
 - [x] Immich config added to bees (`hosts/bees/immich.nix`)
 - [x] PostgreSQL data transferred (pg_dump/pg_restore PG16→PG17)
 - [x] Redis data transferred
@@ -29,7 +29,7 @@
 - [x] **USER VALIDATION NEEDED** — verify Immich on bees
 - [x] Cut traffic over (Caddy route updated, needs validation)
 - [x] Final validation
-### Phase 3: Migrate k2 → bees (Ingress + shared services) — IN PROGRESS
+### Phase 3: Migrate k2 → bees (Ingress + shared services) — ✅ DONE
 - [x] All k2 service configs copied to bees (ntfy, searxng, datenight, caddy, hub-services)
 - [x] SearXNG port changed to 8888 (conflict with qBittorrent on 8080)
 - [x] Caddy routes updated to point to localhost on bees
@@ -50,10 +50,14 @@
 - [x] k2 lighthouse stopped
 - [x] Nebula connectivity verified (ping lighthouse + gateway)
 - [x] Public services verified through gateway
-### Phase 5: Migrate k1 → bee (Gloo dev stack) — NOT STARTED
-### Phase 6: Repo cleanup — NOT STARTED
+### Phase 5: Migrate k1 → bee (Gloo dev stack) — ✅ DONE
+### Phase 6: Repo cleanup — IN PROGRESS
 ### Phase 7: Final validation sweep — NOT STARTED
 ### Phase 8: Smoke test everything — NOT STARTED
+
+> **Note (2026-05-06)**: Phases 1–5 are complete. k1–k4 are idle (k2–k4 have Nebula disabled;
+> k1 still connected but no services). bees runs all production workloads at 10.10.0.6
+> (took over k2's Nebula identity). bee runs dev stack + Nebula lighthouse.
 
 ## Lessons Learned (2026-05-05)
 

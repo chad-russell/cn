@@ -29,8 +29,9 @@
   networking.networkmanager.enable = true;
 
   # Palo Alto GlobalProtect VPN support (Wycliffe)
-  # Connect via: sudo openconnect --protocol=gp <portal-url>
-  # Or use NetworkManager: nmcli con add type vpn con-name "Wycliffe" vpn.type openconnect vpn.data "protocol=gp,gateway=<portal-url>"
+  # Keep the NetworkManager/OpenConnect plugin for generic GP portals, but
+  # Wycliffe's gpcloudservice portal uses CAS/SAML and works more reliably with
+  # the packaged `gpclient` / `gpauth` tools below.
   networking.networkmanager.plugins = [ pkgs.networkmanager-openconnect ];
 
   # Polymer dev: resolve to bee container host
@@ -106,6 +107,15 @@
     "Z /etc/nebula/ca.crt  0440 root nebula-homelab -"
     "Z /etc/nebula/host.crt 0440 root nebula-homelab -"
     "Z /etc/nebula/host.key 0440 root nebula-homelab -"
+
+    # GlobalProtect-openconnect still execs a few FHS paths internally.
+    "L+ /usr/bin/gpclient - - - - ${pkgs.globalprotect-openconnect}/usr/bin/gpclient"
+    "L+ /usr/bin/gpservice - - - - ${pkgs.globalprotect-openconnect}/usr/bin/gpservice"
+    "L+ /usr/bin/gpauth - - - - ${pkgs.globalprotect-openconnect}/usr/bin/gpauth"
+    "L+ /usr/bin/gpgui - - - - ${pkgs.globalprotect-openconnect}/usr/bin/gpgui"
+    "L+ /usr/bin/gpgui-helper - - - - ${pkgs.globalprotect-openconnect}/usr/bin/gpgui-helper"
+    "L+ /usr/libexec/gpclient/vpnc-script - - - - ${pkgs.globalprotect-openconnect}/usr/libexec/gpclient/vpnc-script"
+    "L+ /usr/libexec/gpclient/hipreport.sh - - - - ${pkgs.globalprotect-openconnect}/usr/libexec/gpclient/hipreport.sh"
   ];
 
   # ── Niri — scrollable-tiling Wayland compositor ───────────────────────
@@ -226,12 +236,15 @@
     pi-coding-agent
 
     # VPN — Palo Alto GlobalProtect (Wycliffe)
-    # Use gp-saml-gui for SAML/SSO auth (handles Cloudflare challenges):
-    #   gp-saml-gui --browser --gateway wpa-pw.iidp.net
-    # Or plain CLI for non-SAML gateways:
-    #   sudo openconnect --protocol=gp <portal>
+    # Wycliffe's gpcloudservice portal requires CAS/SAML. Use either:
+    #   gpauth wycliffe.gpcloudservice.com --browser zen 2>/dev/null \
+    #     | sudo gpclient connect wycliffe.gpcloudservice.com --cookie-on-stdin
+    # or:
+    #   sudo -E gpclient connect wycliffe.gpcloudservice.com --browser zen
+    # Keep OpenConnect + gp-saml-gui as fallbacks for other GP portals.
     openconnect
     gp-saml-gui
+    globalprotect-openconnect
   ];
 
   # ── Fonts ─────────────────────────────────────────────────────────────
