@@ -52,6 +52,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
+
+    # ── Mango (mangowm) — tiling Wayland compositor ───────────────
+    mangowm = {
+      url = "github:mangowm/mango";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs =
@@ -67,6 +73,7 @@
       vicinae,
       nixvim,
       zen-browser,
+      mangowm,
       ...
     }:
     let
@@ -124,10 +131,12 @@
           }
           ./thinkpad/hardware-configuration.nix
           ./thinkpad/configuration.nix
+          ./thinkpad/backup.nix
           ./modules/nebula-hosts.nix
           nixos-hardware.nixosModules.lenovo-thinkpad-t14-intel-gen6
           { _module.args.username = username; }
           noctalia-shell.nixosModules.default
+          mangowm.nixosModules.mango
           home-manager.nixosModules.home-manager
           {
             home-manager.useUserPackages = true;
@@ -137,6 +146,7 @@
               nixvim.homeModules.nixvim
               agenix.homeManagerModules.default
               zen-browser.homeModules.twilight
+              mangowm.hmModules.mango
             ];
             home-manager.users.${username} = import ./thinkpad/home.nix;
             home-manager.extraSpecialArgs = {
@@ -232,10 +242,10 @@
                   TARGET="root@192.168.20.64"
                   ;;
                 bee)
-                  TARGET="crussell@192.168.20.105"
+                  TARGET="crussell@10.10.0.12"
                   ;;
                 bees)
-                  TARGET="crussell@192.168.20.41"
+                  TARGET="crussell@10.10.0.6"
                   ;;
                 *)
                   echo "Unknown host: $host"

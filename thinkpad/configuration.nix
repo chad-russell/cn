@@ -130,6 +130,10 @@
   # ── Niri — scrollable-tiling Wayland compositor ───────────────────────
   programs.niri.enable = true;
 
+  # ── Mango (mangowm) — dwl-based tiling Wayland compositor ──────────────
+  programs.mango.enable = true;
+  services.seatd.enable = true;
+
   # ── Noctalia Shell ────────────────────────────────────────────────────
   services.noctalia-shell.enable = true;
 
@@ -198,12 +202,16 @@
   # Bluetooth GUI for pairing + system tray applet
   services.blueman.enable = true;
 
-  # ── XDG Desktop Portal (needed for niri screen sharing, etc.) ────────
+  # ── XDG Desktop Portal ──────────────────────────────────────────────
+  # niri uses gnome portal; mango uses wlr + gtk portals.
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
       xdg-desktop-portal-gnome
+      xdg-desktop-portal-wlr
+      xdg-desktop-portal-gtk
     ];
+    wlr.enable = true;
   };
 
   # ── Firmware updates ──────────────────────────────────────────────────
@@ -284,6 +292,14 @@
   nixpkgs.config.allowUnfree = true;
 
 
+
+  # ── NFS: Backups to NAS ───────────────────────────────────────────
+  # Used by restic for local backup copy (homelab-backup NAS target)
+  fileSystems."/mnt/backups" = {
+    device = "192.168.20.31:/mnt/tank/backups";
+    fsType = "nfs";
+    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
+  };
 
   # ── Trust Caddy internal CA from bee ──────────────────────────────
   # After deploying bee and starting Caddy, extract the root CA:

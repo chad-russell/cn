@@ -7,7 +7,7 @@
 #
 # Target: consolidate all services from k2, k3, k4 onto this machine.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, unstable, ... }:
 
 {
   imports = [
@@ -21,9 +21,16 @@
     ./datenight.nix
     ./caddy.nix
     ./hub-services.nix
+    ./backup.nix
   ];
 
   networking.hostName = "bees";
+
+  # ── Essential packages ────────────────────────────────────────────────
+  environment.systemPackages = with pkgs; [
+    # AI / dev tools
+    unstable."pi-coding-agent"
+  ];
 
   # ── Boot ─────────────────────────────────────────────────────────
   boot.loader.systemd-boot.enable = true;

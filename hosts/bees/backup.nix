@@ -1,0 +1,71 @@
+# ── bees: Backup Configuration ─────────────────────────────────────
+#
+# Backs up application state and the Immich photo library.
+# Immich photos live on the NAS at /mnt/photos (NFS mount).
+
+{ config, lib, pkgs, ... }:
+
+{
+  imports = [
+    ../../modules/restic-backup.nix
+    ../../modules/btrfs-snapshots.nix
+  ];
+
+  # ── Restic backups (NAS + S3) ──────────────────────────────────
+  services.homelab-backup = {
+    enable = true;
+
+    paths = [
+      # Application state
+      "/var/lib/jellyfin"
+      "/var/lib/postgresql"
+      "/var/lib/sonarr"
+      "/var/lib/radarr"
+      "/var/lib/prowlarr"
+      "/var/lib/qBittorrent"
+      "/var/lib/jellyseerr"
+      "/var/lib/ntfy-sh"
+      "/var/lib/datenight"
+      "/var/lib/searxng"
+      "/var/lib/redis-immich"
+      "/var/lib/redis-searx"
+
+      # Container volumes (Caddy certs, etc.)
+      "/var/lib/containers/storage/volumes"
+
+      # Caddy configuration (installed by nix but includes TLS certs)
+      "/etc/caddy"
+
+      # Immich photo library (on NAS via NFS)
+      "/mnt/photos"
+    ];
+
+    exclude = [
+      # Don't back up container image layers (pullable from registries)
+      "/var/lib/containers/storage/overlay"
+      "/var/lib/containers/storage/overlay-images"
+      "/var/lib/containers/storage/overlay-layers"
+      "/var/lib/containers/storage/imagemanifest"
+      "/var/lib/containers/storage/rocm"
+
+      # Jellyfin transcodes and cache
+      "/var/lib/jellyfin/transcodes"
+      "/var/lib/jellyfin/data/transcodes"
+      "/var/lib/jellyfin/log"
+
+      # qBittorrent incomplete downloads
+      "*.!qB"
+
+      # General caches
+      "*.log"
+      "*.tmp"
+      "*.cache"
+    ];
+  };
+
+  # ── Btrfs snapshots ────────────────────────────────────────────
+  services.btrfs-snapshots = {
+    enable = true;
+    subvolumes = [ "@" "@home" "@var" "@srv" ];
+  };
+}

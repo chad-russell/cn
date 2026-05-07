@@ -105,6 +105,13 @@ in
       if [[ "$TERM" == "xterm-ghostty" ]]; then
         export TERM=xterm-256color
       fi
+
+      # Only set DISPLAY fallback in a Wayland session (not TTY).
+      # Setting DISPLAY on a TTY makes wlroots compositors like Mango
+      # try the X11 nested backend, which fails with "Failed to open xcb connection".
+      if [[ -n "$WAYLAND_DISPLAY" && -z "$DISPLAY" ]]; then
+        export DISPLAY=":0"
+      fi
     '';
 
     # Environment variables
@@ -114,7 +121,7 @@ in
 
       EDITOR = "nvim";
       VISUAL = "zeditor";
-      DISPLAY = "\${DISPLAY:-:0}";
+      # DISPLAY fallback moved to initExtra — only set in graphical sessions
 
       # Cursor themes
       XCURSOR_SIZE = "24";

@@ -142,17 +142,22 @@ Use the ed25519 key and force identities when automating:
 ssh -o IdentitiesOnly=yes <user>@<host>
 ```
 
+**Prefer Nebula overlay IPs over LAN IPs** — Nebula is always reachable regardless of physical network location.
+
 Active targets:
 
 ```bash
 # Production server (deployed as crussell with sudo)
-ssh -o IdentitiesOnly=yes crussell@192.168.20.41   # bees
+ssh -o IdentitiesOnly=yes crussell@10.10.0.6          # bees (Nebula)
+ssh -o IdentitiesOnly=yes crussell@192.168.20.41      # bees (LAN fallback)
 
 # Dev server + lighthouse (deployed as crussell with sudo)
-ssh -o IdentitiesOnly=yes crussell@192.168.20.105  # bee
+ssh -o IdentitiesOnly=yes crussell@10.10.0.12         # bee (Nebula)
+ssh -o IdentitiesOnly=yes crussell@192.168.20.105     # bee (LAN fallback)
 
 # Hetzner gateway
-ssh -o IdentitiesOnly=yes root@178.156.171.212
+ssh -o IdentitiesOnly=yes root@10.10.0.2              # gateway (Nebula)
+ssh -o IdentitiesOnly=yes root@178.156.171.212        # gateway (public IP)
 ```
 
 Decommissioned (still accessible on LAN if needed):
@@ -312,14 +317,16 @@ Running services:
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
 - Gloo dev stack (user services under `crussell`)
 
+Gloo services run **containerized** via `gloo-containerized.nix`. User unit names are prefixed `gloo-c-` (e.g. `gloo-c-polymer`, `gloo-c-gpl`). The older native `gloo-polymer`-style units are remnants and should not be used.
+
 Operate Gloo user services over SSH:
 
 ```bash
-ssh -o IdentitiesOnly=yes crussell@192.168.20.105
+ssh -o IdentitiesOnly=yes crussell@10.10.0.12
 export XDG_RUNTIME_DIR=/run/user/$(id -u crussell)
-systemctl --user status gloo-all.target
-systemctl --user start gloo-all.target
-journalctl --user -u gloo-polymer -f
+systemctl --user status gloo-c-all.target
+systemctl --user start gloo-c-all.target
+journalctl --user -u gloo-c-polymer -f
 ```
 
 Gloo ports/routes configured in Caddy on bees:

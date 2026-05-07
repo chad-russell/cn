@@ -3,7 +3,7 @@
 # NixOS install on Crucial P3 Plus 1TB NVMe, 32GB RAM.
 # General-purpose server — services to be added incrementally.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, unstable, ... }:
 
 {
   imports = [
@@ -15,6 +15,7 @@
     ./gloo.nix
     ./gloo-containerized.nix
     ./buildspace.nix
+    ./backup.nix
   ];
 
   networking.hostName = "bee";
@@ -100,6 +101,7 @@
   environment.systemPackages = [
     pkgs.git
     pkgs.github-cli
+    unstable."pi-coding-agent"
   ];
 
   # Firewall ports managed by gloo-containerized and buildspace modules

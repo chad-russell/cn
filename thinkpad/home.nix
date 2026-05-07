@@ -208,6 +208,163 @@ in
   # -- Niri config --
   xdg.configFile."niri/config.kdl".source = ./configs/niri/config.kdl;
 
+  # -- Mango (mangowm) config --
+  wayland.windowManager.mango = {
+    enable = true;
+    settings = {
+      # Keyboard
+      xkb_rules_layout = "us";
+      xkb_rules_options = "caps:swapescape";
+
+      # Touchpad
+      tap_to_click = true;
+      trackpad_natural_scrolling = false;
+
+      # Visuals
+      blur = 1;
+      blur_optimized = 1;
+      blur_params = {
+        radius = 5;
+        num_passes = 2;
+      };
+      border_radius = 6;
+      shadows = 1;
+      focused_opacity = 1.0;
+
+      # Animations
+      animations = 1;
+      animation_type_open = "slide";
+      animation_type_close = "slide";
+      animation_duration_open = 400;
+      animation_duration_close = 800;
+
+      # Layout
+      gappih = 8;
+      gappiv = 8;
+      borderpx = 2;
+
+      # Overview
+      enable_hotarea = 1;
+      hotarea_size = 10;
+      ov_tab_mode = 0;
+      overviewgappi = 5;
+      overviewgappo = 30;
+
+      # Cursor
+      cursor_theme = "Bibata-Modern-Classic";
+      cursor_size = 18;
+
+      # Keybindings — window management
+      bind = [
+        # Launcher (Vicinae)
+        "SUPER,space,spawn,vicinae toggle"
+
+        # Terminal
+        "SUPER,Return,spawn,ghostty"
+
+        # Browser
+        "SUPER,b,spawn_shell,flatpak run app.zen_browser.zen"
+
+        # Files
+        "SUPER,f,spawn_shell,nautilus --new-window"
+
+        # Close window
+        "SUPER,q,killclient"
+
+        # Focus
+        "SUPER,left,focusdir,left"
+        "SUPER,right,focusdir,right"
+        "SUPER,up,focusdir,up"
+        "SUPER,down,focusdir,down"
+        "SUPER,h,focusdir,left"
+        "SUPER,l,focusdir,right"
+        "SUPER,j,focusdir,down"
+        "SUPER,k,focusdir,up"
+
+        # Move windows
+        "SUPER+CTRL,left,exchange_client,left"
+        "SUPER+CTRL,right,exchange_client,right"
+        "SUPER+CTRL,up,exchange_client,up"
+        "SUPER+CTRL,down,exchange_client,down"
+
+        # Toggle floating
+        "SUPER,v,togglefloating"
+
+        # Fullscreen
+        "SUPER+SHIFT,f,togglefullscreen"
+
+        # Tags 1-9
+        "SUPER,1,view,1"
+        "SUPER,2,view,2"
+        "SUPER,3,view,3"
+        "SUPER,4,view,4"
+        "SUPER,5,view,5"
+        "SUPER,6,view,6"
+        "SUPER,7,view,7"
+        "SUPER,8,view,8"
+        "SUPER,9,view,9"
+
+        # Move window to tag
+        "SUPER+SHIFT,1,tag,1"
+        "SUPER+SHIFT,2,tag,2"
+        "SUPER+SHIFT,3,tag,3"
+        "SUPER+SHIFT,4,tag,4"
+        "SUPER+SHIFT,5,tag,5"
+        "SUPER+SHIFT,6,tag,6"
+        "SUPER+SHIFT,7,tag,7"
+        "SUPER+SHIFT,8,tag,8"
+        "SUPER+SHIFT,9,tag,9"
+
+        # Layout cycling
+        "SUPER,w,switch_layout"
+
+        # Reload config
+        "SUPER+SHIFT,r,reload_config"
+
+        # Quit
+        "SUPER+SHIFT,e,quit"
+
+        # Voxtype voice-to-text
+        "SUPER,r,spawn_shell,voxtype record toggle"
+
+        # Overview toggle
+        "SUPER,o,toggleoverview"
+
+        # Move between tags (workspaces)
+        "SUPER+SHIFT,h,viewtoleft"
+        "SUPER+SHIFT,l,viewtoright"
+        "SUPER+SHIFT,j,focusmon,down"
+        "SUPER+SHIFT,k,focusmon,up"
+
+        # Noctalia Shell keybinds
+        "SUPER,n,spawn_shell,noctalia-shell ipc call notifications toggleDND"
+        "SUPER+CTRL,n,spawn_shell,noctalia-shell ipc call nightLight toggle"
+        "SUPER+SHIFT,m,spawn_shell,noctalia-shell ipc call systemMonitor toggle"
+        "SUPER,e,spawn_shell,noctalia-shell ipc call sessionMenu toggle"
+        "SUPER,x,togglemaximizescreen"
+
+        # Media keys (Noctalia)
+        "NONE,XF86AudioRaiseVolume,spawn_shell,noctalia-shell ipc call volume increase"
+        "NONE,XF86AudioLowerVolume,spawn_shell,noctalia-shell ipc call volume decrease"
+        "NONE,XF86AudioMute,spawn_shell,noctalia-shell ipc call volume muteOutput"
+        "NONE,XF86AudioMicMute,spawn_shell,noctalia-shell ipc call volume muteInput"
+        "NONE,XF86MonBrightnessUp,spawn_shell,noctalia-shell ipc call brightness increase"
+        "NONE,XF86MonBrightnessDown,spawn_shell,noctalia-shell ipc call brightness decrease"
+      ];
+
+      # Touchpad gestures
+      gesturebind = [
+        "none,left,3,focusdir,left"
+        "none,right,3,focusdir,right"
+        "none,up,3,focusdir,up"
+        "none,down,3,focusdir,down"
+      ];
+    };
+    autostart_sh = ''
+      noctalia-shell &
+    '';
+  };
+
   # -- Oh My Posh config --
   xdg.configFile."oh-my-posh/config.json".source = ./configs/oh-my-posh/config.json;
 

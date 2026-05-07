@@ -4,4 +4,12 @@ let
 in
 {
   "gloo-secrets.env.age".publicKeys = [ crussell ];
+
+  # ── Restic backup secrets ──────────────────────────────────────
+  # S3 credentials (shared by all machines)
+  "restic-s3-credentials.age".publicKeys = [ crussell ];
+  # Per-machine restic repo passwords
+  "restic-password-bees.age".publicKeys = [ crussell ];
+  "restic-password-bee.age".publicKeys = [ crussell ];
+  "restic-password-think.age".publicKeys = [ crussell ];
 }
