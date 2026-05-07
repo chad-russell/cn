@@ -152,8 +152,8 @@ done
 |------|---------|
 | `hosts/bee/gloo-containerized.nix` | NixOS module: systemd user units, targets, activation scripts |
 | `hosts/bee/gloo/Containerfile` | Shared container image: Node 24 + pnpm + bun |
-| `hosts/bee/gloo/compose-containerized.yaml` | Compose project: infra + bootstrap + app services + toolbox |
-| `hosts/bee/gloo/envs-containerized/*.env` | Per-service env files (container DNS names) |
+| `hosts/bee/gloo/compose.yaml` | Compose project: infra + bootstrap + app services + toolbox |
+| `hosts/bee/gloo/envs/*.env` | Per-service env files (container DNS names) |
 | `hosts/bee/configuration.nix` | `services.gloo-containerized.enable = true` |
 | `secrets/gloo-secrets.env.age` | Agenix-encrypted secrets (API keys, session secrets) |
 | `hosts/bee/adguardhome.nix` | AdGuardHome DNS: split DNS rewrites `*.dev.crussell.io` → `10.10.0.12` |

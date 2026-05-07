@@ -8,7 +8,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5433:5432"
+      - "0.0.0.0:5433:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
@@ -20,8 +20,8 @@ services:
   rustfs:
     image: docker.io/rustfs/rustfs:latest
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "0.0.0.0:9000:9000"
+      - "0.0.0.0:9001:9001"
     volumes:
       - rustfs_data:/data
       - rustfs_logs:/logs
@@ -30,7 +30,7 @@ services:
   pgadmin:
     image: docker.io/dpage/pgadmin4:8
     ports:
-      - "127.0.0.1:5050:80"
+      - "0.0.0.0:5050:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin

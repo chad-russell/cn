@@ -411,11 +411,11 @@ in
 
     # ── Static files in /etc/gloo-containerized/ ──────────────────
     environment.etc = {
-      "gloo-containerized/compose.yaml".source = ./gloo/compose-containerized.yaml;
+      "gloo-containerized/compose.yaml".source = ./gloo/compose.yaml;
       "gloo-containerized/Containerfile".source = ./gloo/Containerfile;
     } // (lib.listToAttrs (map
-        (name: lib.nameValuePair "gloo-containerized/envs-containerized/${name}.env" {
-          source = ./gloo/envs-containerized/${name}.env;
+        (name: lib.nameValuePair "gloo-containerized/envs/${name}.env" {
+          source = ./gloo/envs/${name}.env;
         })
         ["gpl" "hb-api" "hb-web" "polymer" "storyhub" "storyhub-worker"]
       ));

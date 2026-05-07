@@ -1,4 +1,11 @@
+# Gloo Containerized Dev Stack
+# One container per service, shared infra, bridge network.
+
+name: gloo
+
 services:
+  # ── Shared Infrastructure ──────────────────────────────────────────
+
   postgres:
     image: docker.io/library/postgres:16
     environment:
@@ -42,8 +49,189 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ── Bootstrap Services (one-shot) ─────────────────────────────────
+
+  hummingbird-bootstrap:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work/360-hummingbird
+    volumes: &gloo-volumes
+      - /home/crussell/Gloo:/work
+      - pnpm_store:/home/node/.local/share/pnpm/store
+    userns_mode: "keep-id"
+    command: ["bash", "-c", "pnpm install && pnpm --filter api exec prisma generate && pnpm --filter storyhub-prisma exec prisma generate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gpl-bootstrap:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work/360-gpl
+    volumes: *gloo-volumes
+    userns_mode: "keep-id"
+    command: ["bash", "-c", "CI=true pnpm install"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  polymer-bootstrap:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work/360-polymer
+    volumes: *gloo-volumes
+    userns_mode: "keep-id"
+    command: ["bash", "-c", "CI=true pnpm install"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── App Services ──────────────────────────────────────────────────
+
+  hb-api:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work/360-hummingbird
+    volumes: *gloo-volumes
+    userns_mode: "keep-id"
+    env_file:
+      - envs-containerized/hb-api.env
+      - /run/agenix/gloo-secrets
+    ports:
+      - "0.0.0.0:8000:8000"
+    command: ["bash", "-c", "pnpm --filter api dev"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hummingbird-bootstrap:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  hb-web:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work/360-hummingbird
+    volumes: *gloo-volumes
+    userns_mode: "keep-id"
+    env_file:
+      - envs-containerized/hb-web.env
+      - /run/agenix/gloo-secrets
+    ports:
+      - "0.0.0.0:3100:3100"
+    command: ["bash", "-c", "pnpm --filter web dev -- --host 0.0.0.0 --port 3100"]
+    depends_on:
+      - hb-api
+    restart: unless-stopped
+
+  gpl:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work/360-gpl
+    volumes: *gloo-volumes
+    userns_mode: "keep-id"
+    env_file:
+      - envs-containerized/gpl.env
+      - /run/agenix/gloo-secrets
+    ports:
+      - "0.0.0.0:3106:3106"
+    command: ["bash", "-c", "npx next dev -H 0.0.0.0 -p 3106"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gpl-bootstrap:
+        condition: service_completed_successfully
+      hb-api:
+        condition: service_started
+    restart: unless-stopped
+
+  polymer:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work/360-polymer/apps/polymer
+    volumes: *gloo-volumes
+    userns_mode: "keep-id"
+    env_file:
+      - envs-containerized/polymer.env
+      - /run/agenix/gloo-secrets
+    ports:
+      - "0.0.0.0:3001:3001"
+    command: ["bash", "-c", "rm -f .next/dev/lock && pnpm exec next dev --turbo --hostname 0.0.0.0 --port 3001"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      polymer-bootstrap:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  storyhub:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work/360-hummingbird/storyhub
+    volumes: *gloo-volumes
+    userns_mode: "keep-id"
+    env_file:
+      - envs-containerized/storyhub.env
+      - /run/agenix/gloo-secrets
+    ports:
+      - "0.0.0.0:3007:3007"
+    command: ["bash", "-c", "npx next dev -H 0.0.0.0 --port 3007"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hummingbird-bootstrap:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  storyhub-worker:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work/360-hummingbird/storyhub-worker
+    volumes: *gloo-volumes
+    userns_mode: "keep-id"
+    env_file:
+      - envs-containerized/storyhub-worker.env
+      - /run/agenix/gloo-secrets
+    ports:
+      - "0.0.0.0:8001:8001"
+    command: ["bash", "-c", "bun run dev"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hummingbird-bootstrap:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ── Toolbox ──────────────────────────────────────────────────────
+
+  toolbox:
+    build:
+      context: .
+      dockerfile: Containerfile
+    working_dir: /work
+    volumes: *gloo-volumes
+    userns_mode: "keep-id"
+    env_file:
+      - envs-containerized/hb-api.env
+      - /run/agenix/gloo-secrets
+    command: ["bash"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - tools
+
 volumes:
   postgres_data:
   rustfs_data:
   rustfs_logs:
   pgadmin_data:
+  pnpm_store:
