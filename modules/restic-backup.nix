@@ -101,8 +101,14 @@ in
 
     s3Bucket = lib.mkOption {
       type = lib.types.str;
-      default = "crussell-hub-restic-backup-39bj28x7";
+      default = "crussell-restic-backups";
       description = "S3 bucket name for offsite backups.";
+    };
+
+    s3Region = lib.mkOption {
+      type = lib.types.str;
+      default = "us-east-2";
+      description = "AWS region for the S3 bucket.";
     };
 
     nasMountPoint = lib.mkOption {
@@ -149,7 +155,7 @@ in
       }) //
       (makeBackupJob {
         name = "s3";
-        repo = "s3:${cfg.s3Bucket}/${hostname}";
+        repo = "s3:https://s3.${cfg.s3Region}.amazonaws.com/${cfg.s3Bucket}/${hostname}";
         passwordFile = config.age.secrets.restic-password.path;
         environmentFile = config.age.secrets.restic-s3-credentials.path;
         retention = s3Retention;

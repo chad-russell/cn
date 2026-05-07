@@ -49,6 +49,9 @@
   time.timeZone = "America/New_York";
   i18n.defaultLocale = "en_US.UTF-8";
 
+  # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
+  programs.nix-ld.enable = true;
+
   # ── Zsh ───────────────────────────────────────────────────────────────
   programs.zsh.enable = true;
 
@@ -130,10 +133,6 @@
   # ── Niri — scrollable-tiling Wayland compositor ───────────────────────
   programs.niri.enable = true;
 
-  # ── Mango (mangowm) — dwl-based tiling Wayland compositor ──────────────
-  programs.mango.enable = true;
-  services.seatd.enable = true;
-
   # ── Noctalia Shell ────────────────────────────────────────────────────
   services.noctalia-shell.enable = true;
 
@@ -203,15 +202,13 @@
   services.blueman.enable = true;
 
   # ── XDG Desktop Portal ──────────────────────────────────────────────
-  # niri uses gnome portal; mango uses wlr + gtk portals.
+  # niri uses gnome portal.
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
       xdg-desktop-portal-gnome
-      xdg-desktop-portal-wlr
       xdg-desktop-portal-gtk
     ];
-    wlr.enable = true;
   };
 
   # ── Firmware updates ──────────────────────────────────────────────────

@@ -429,5 +429,13 @@ in
     system.activationScripts.gloo-c-linger = lib.stringAfter [ "users" ] ''
       ${pkgs.systemd}/bin/loginctl enable-linger ${user} 2>/dev/null || true
     '';
+
+    # ── Pi agent skill ─────────────────────────────────────────────
+    system.activationScripts.gloo-c-skill = lib.stringAfter [ "users" ] ''
+      SKILL_DIR="/home/${user}/.pi/agent/skills/gloo-dev"
+      mkdir -p "$SKILL_DIR"
+      cp ${./gloo/SKILL.md} "$SKILL_DIR/SKILL.md"
+      chown ${user}:users "$SKILL_DIR" "$SKILL_DIR/SKILL.md"
+    '';
   };
 }
