@@ -99,7 +99,7 @@ services:
     volumes: *gloo-volumes
     userns_mode: "keep-id"
     env_file:
-      - envs-containerized/hb-api.env
+      - envs/hb-api.env
       - /run/agenix/gloo-secrets
     ports:
       - "0.0.0.0:8000:8000"
@@ -119,7 +119,7 @@ services:
     volumes: *gloo-volumes
     userns_mode: "keep-id"
     env_file:
-      - envs-containerized/hb-web.env
+      - envs/hb-web.env
       - /run/agenix/gloo-secrets
     ports:
       - "0.0.0.0:3100:3100"
@@ -136,7 +136,7 @@ services:
     volumes: *gloo-volumes
     userns_mode: "keep-id"
     env_file:
-      - envs-containerized/gpl.env
+      - envs/gpl.env
       - /run/agenix/gloo-secrets
     ports:
       - "0.0.0.0:3106:3106"
@@ -158,7 +158,7 @@ services:
     volumes: *gloo-volumes
     userns_mode: "keep-id"
     env_file:
-      - envs-containerized/polymer.env
+      - envs/polymer.env
       - /run/agenix/gloo-secrets
     ports:
       - "0.0.0.0:3001:3001"
@@ -178,7 +178,7 @@ services:
     volumes: *gloo-volumes
     userns_mode: "keep-id"
     env_file:
-      - envs-containerized/storyhub.env
+      - envs/storyhub.env
       - /run/agenix/gloo-secrets
     ports:
       - "0.0.0.0:3007:3007"
@@ -198,7 +198,7 @@ services:
     volumes: *gloo-volumes
     userns_mode: "keep-id"
     env_file:
-      - envs-containerized/storyhub-worker.env
+      - envs/storyhub-worker.env
       - /run/agenix/gloo-secrets
     ports:
       - "0.0.0.0:8001:8001"
@@ -220,7 +220,7 @@ services:
     volumes: *gloo-volumes
     userns_mode: "keep-id"
     env_file:
-      - envs-containerized/hb-api.env
+      - envs/hb-api.env
       - /run/agenix/gloo-secrets
     command: ["bash"]
     depends_on:
