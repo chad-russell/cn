@@ -1,0 +1,350 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ── glooctl: Gloo devcontainer manager ────────────────────────────
+#
+# Each Gloo product runs in its own devcontainer.  Hummingbird and
+# storyhub share the same devcontainer (same repo, same compose) but
+# run different dev commands as separate systemd user units.
+#
+# Source: hosts/bee/gloo/glooctl
+
+REPO_BASE="$HOME/Gloo"
+OVERRIDES_DIR="$HOME/.config/gloo/overrides"
+export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+
+# ── Product definitions ───────────────────────────────────────────
+#
+# Each product maps to one devcontainer compose project.  "hummingbird"
+# and "storyhub" share the same project (same repo, same compose) but
+# have independent dev servers (different systemd units).
+#
+# COMPOSE      - docker-compose project name
+# REPO         - path to the git repo on the host
+# COMPOSE_FILE - path to .devcontainer/docker-compose.yml
+# SERVICE      - the app container service name in compose
+# WORKSPACE    - working directory inside the container
+# SETUP        - postCreateCommand (run after up)
+# DEV_CMD      - default dev server command
+
+declare -A COMPOSE REPO COMPOSE_FILE SERVICE WORKSPACE SETUP DEV_CMD
+
+# ── polymer ───────────────────────────────────────────────────────
+COMPOSE[polymer]="gloo-polymer"
+REPO[polymer]="$REPO_BASE/360-polymer"
+COMPOSE_FILE[polymer]="$REPO_BASE/360-polymer/.devcontainer/docker-compose.yml"
+SERVICE[polymer]="app"
+WORKSPACE[polymer]="/workspace"
+SETUP[polymer]="bash .devcontainer/post-create.sh"
+DEV_CMD[polymer]="pnpm dev"
+
+# ── gpl ───────────────────────────────────────────────────────────
+COMPOSE[gpl]="gloo-gpl"
+REPO[gpl]="$REPO_BASE/360-gpl"
+COMPOSE_FILE[gpl]="$REPO_BASE/360-gpl/.devcontainer/docker-compose.yml"
+SERVICE[gpl]="app"
+WORKSPACE[gpl]="/workspace"
+SETUP[gpl]="pnpm install"
+DEV_CMD[gpl]="pnpm dev"
+
+# ── hummingbird (api + web) ───────────────────────────────────────
+COMPOSE[hummingbird]="gloo-hb"
+REPO[hummingbird]="$REPO_BASE/360-hummingbird"
+COMPOSE_FILE[hummingbird]="$REPO_BASE/360-hummingbird/.devcontainer/docker-compose.yml"
+SERVICE[hummingbird]="dev"
+WORKSPACE[hummingbird]="/workspace"
+SETUP[hummingbird]="bash .devcontainer/scripts/post-create-setup.sh"
+DEV_CMD[hummingbird]="pnpm devcontainer:hb"
+
+# ── storyhub (storyhub app) ───────────────────────────────────────
+# Shares the same devcontainer with hummingbird.  up/down are
+# idempotent — just starts/stops the shared compose project.
+COMPOSE[storyhub]="gloo-hb"
+REPO[storyhub]="$REPO_BASE/360-hummingbird"
+COMPOSE_FILE[storyhub]="$REPO_BASE/360-hummingbird/.devcontainer/docker-compose.yml"
+SERVICE[storyhub]="dev"
+WORKSPACE[storyhub]="/workspace"
+SETUP[storyhub]="bash .devcontainer/scripts/post-create-setup.sh"
+DEV_CMD[storyhub]="pnpm devcontainer:storyhub"
+
+# ── Helpers ───────────────────────────────────────────────────────
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+validate_product() {
+  [[ -v COMPOSE[$1] ]] || die "Unknown product: $1 (valid: ${!COMPOSE[*]})"
+  [[ -d "${REPO[$1]}" ]] || die "Repo not found: ${REPO[$1]}"
+}
+
+# Get the override file for a compose project
+get_override_file() {
+  local proj="${COMPOSE[$1]}"
+  # Override files are named by short name (polymer, hb, gpl),
+  # not by the full compose project name (gloo-polymer, etc).
+  local short_name="${proj#gloo-}"
+  local f="$OVERRIDES_DIR/$short_name.yml"
+  [[ -f "$f" ]] && echo "$f" || true
+}
+
+# Run docker-compose with project name + optional port override
+dc() {
+  local product=$1; shift
+  local proj="${COMPOSE[$product]}"
+  local cf="${COMPOSE_FILE[$product]}"
+  local -a args=(--project-name "$proj" -f "$cf")
+  local of
+  of=$(get_override_file "$product") && [[ -n "$of" ]] && args+=(-f "$of") || true
+  docker-compose "${args[@]}" "$@"
+}
+
+# Block until we can exec into the app service
+wait_ready() {
+  local product=$1 svc="${SERVICE[$1]}"
+  echo "  Waiting for container..."
+  for i in $(seq 1 60); do
+    if dc "$product" exec "$svc" true 2>/dev/null; then return 0; fi
+    sleep 2
+  done
+  die "Timed out waiting for $product container"
+}
+
+# Other products sharing the same compose project
+siblings() {
+  local product=$1 proj="${COMPOSE[$product]}"
+  for p in "${!COMPOSE[@]}"; do
+    [[ "$p" != "$product" && "${COMPOSE[$p]}" == "$proj" ]] && echo "$p"
+  done
+}
+
+# ── Commands ──────────────────────────────────────────────────────
+
+cmd_up() {
+  local product=$1
+  validate_product "$product"
+  local svc="${SERVICE[$product]}" ws="${WORKSPACE[$product]}"
+
+  echo "=== glooctl up $product ==="
+  echo "  Building and starting containers..."
+  dc "$product" up -d --build
+  wait_ready "$product"
+
+  echo "  Running setup..."
+  dc "$product" exec -T "$svc" bash -c "cd $ws && yes | ${SETUP[$product]}"
+
+  echo ""
+  echo "=== $product is ready ==="
+  echo "  Shell:    glooctl shell $product"
+  echo "  Dev:      glooctl start $product"
+  echo "  Logs:     glooctl logs $product -f"
+}
+
+cmd_down() {
+  local product=$1
+  validate_product "$product"
+
+  # Stop this product's dev server
+  systemctl --user stop "gloo-$product.service" 2>/dev/null || true
+
+  # Warn if sibling products have running dev servers
+  for sib in $(siblings "$product"); do
+    if systemctl --user is-active "gloo-$sib.service" &>/dev/null; then
+      echo "WARNING: $sib dev server is still running (shares the same devcontainer)"
+      echo "  Stop it first: glooctl stop $sib"
+      echo "  Or tear down anyway with: glooctl down --force $product"
+      return 0
+    fi
+  done
+
+  dc "$product" down
+  echo "$product stopped."
+}
+
+cmd_down_force() {
+  local product=$1
+  validate_product "$product"
+  # Stop all siblings' dev servers too
+  for sib in $(siblings "$product"); do
+    systemctl --user stop "gloo-$sib.service" 2>/dev/null || true
+  done
+  systemctl --user stop "gloo-$product.service" 2>/dev/null || true
+  dc "$product" down
+  echo "$product stopped (forced)."
+}
+
+cmd_setup() {
+  local product=$1
+  validate_product "$product"
+  dc "$product" exec -T "${SERVICE[$product]}" bash -c "cd ${WORKSPACE[$product]} && yes | ${SETUP[$product]}"
+}
+
+cmd_shell() {
+  local product=$1
+  validate_product "$product"
+  dc "$product" exec "${SERVICE[$product]}" bash
+}
+
+cmd_exec() {
+  local product=$1; shift
+  validate_product "$product"
+  [[ "${1:-}" == "--" ]] && shift
+  dc "$product" exec -T "${SERVICE[$product]}" bash -lc "cd ${WORKSPACE[$product]} && $*"
+}
+
+cmd_start() {
+  local product=$1; shift
+  validate_product "$product"
+
+  local cmd="${DEV_CMD[$product]}"
+  if [[ $# -gt 0 ]]; then
+    [[ "${1:-}" == "--" ]] && shift
+    cmd="$*"
+  fi
+
+  local unit="gloo-$product"
+  local svc="${SERVICE[$product]}" ws="${WORKSPACE[$product]}"
+  local cf="${COMPOSE_FILE[$product]}"
+  local of
+  of=$(get_override_file "$product")
+
+  # Clean up previous run (stop + remove any persistent unit that would shadow our transient one)
+  systemctl --user stop "$unit.service" 2>/dev/null || true
+  systemctl --user reset-failed "$unit.service" 2>/dev/null || true
+  rm -f "$HOME/.config/systemd/user/$unit.service" 2>/dev/null || true
+  systemctl --user daemon-reload 2>/dev/null || true
+
+  # Build the inner docker-compose exec command
+  local dc_cmd="docker-compose --project-name ${COMPOSE[$product]} -f $cf"
+  [[ -n "$of" ]] && dc_cmd+=" -f $of"
+  dc_cmd+=" exec -T $svc bash -c 'cd $ws && $cmd'"
+
+  echo "Starting $product dev server: $cmd"
+  systemd-run --user \
+    --unit "$unit" \
+    --description "Gloo $product dev server" \
+    --setenv "DOCKER_HOST=$DOCKER_HOST" \
+    --setenv "PATH=$PATH" \
+    bash -c "$dc_cmd"
+
+  echo "View logs: glooctl logs $product -f"
+}
+
+cmd_stop() {
+  local product=$1
+  validate_product "$product"
+  local unit="gloo-$product"
+  if systemctl --user is-active "$unit.service" &>/dev/null; then
+    systemctl --user stop "$unit.service"
+    echo "$product dev server stopped."
+  else
+    echo "$product dev server is not running."
+  fi
+}
+
+cmd_restart() {
+  local product=$1
+  validate_product "$product"
+  cmd_stop "$product"
+  sleep 1
+  cmd_start "$product"
+}
+
+cmd_logs() {
+  local product=$1; shift
+  validate_product "$product"
+  journalctl --user -u "gloo-$product" "$@"
+}
+
+cmd_status() {
+  local product="${1:-}"
+  if [[ -n "$product" ]]; then
+    validate_product "$product"
+    echo "=== $product ==="
+    echo -n "  Devcontainer: "
+    local proj="${COMPOSE[$product]}"
+    if docker-compose --project-name "$proj" -f "${COMPOSE_FILE[$product]}" ps "${SERVICE[$product]}" 2>/dev/null | grep -q .; then
+      echo "running"
+    else
+      echo "stopped"
+    fi
+    echo -n "  Dev server:   "
+    if systemctl --user is-active "gloo-$product.service" &>/dev/null; then
+      echo "running"
+    else
+      echo "stopped"
+    fi
+  else
+    for p in "${!COMPOSE[@]}"; do
+      cmd_status "$p"
+      echo ""
+    done
+  fi
+}
+
+# ── Usage ─────────────────────────────────────────────────────────
+
+usage() {
+  cat << 'EOF'
+glooctl — Gloo devcontainer manager on bee
+
+Usage: glooctl <command> [args...]
+
+Commands:
+  up <product>                Build + start devcontainer, run setup
+  down <product>              Stop devcontainer (warns if sibling running)
+  down --force <product>      Stop devcontainer + siblings
+  setup <product>             Re-run postCreateCommand
+  shell <product>             Open interactive shell
+  exec <product> -- <cmd>     Run a command in devcontainer
+  start <product> [-- <cmd>]  Start dev server (default: see below)
+  stop <product>              Stop dev server
+  restart <product>           Restart dev server
+  logs <product> [-f]         View dev server logs
+  status [product]            Show status
+
+Products:
+  polymer      ~/Gloo/360-polymer       pnpm dev  (polymer + admin360)
+  gpl          ~/Gloo/360-gpl           pnpm dev   (Next.js)
+  hummingbird  ~/Gloo/360-hummingbird   pnpm devcontainer:hb  (api + web)
+  storyhub     ~/Gloo/360-hummingbird   pnpm devcontainer:storyhub
+
+  hummingbird and storyhub share the same devcontainer but have
+  separate dev servers.  "glooctl up" is idempotent — safe to run
+  for either product.
+
+Examples:
+  glooctl up hummingbird
+  glooctl start hummingbird
+  glooctl logs hummingbird -f
+
+  glooctl up storyhub       # reuses same devcontainer
+  glooctl start storyhub    # runs storyhub dev server
+
+From thinkpad (SSH port forwarding):
+  ssh -L 3000:localhost:3000 -L 8000:localhost:8000 crussell@10.10.0.12
+  ssh -L 3001:localhost:3001 crussell@10.10.0.12
+EOF
+}
+
+# ── Main ──────────────────────────────────────────────────────────
+
+case "${1:-}" in
+  up)      shift; cmd_up "$@" ;;
+  down)
+    shift
+    if [[ "${1:-}" == "--force" ]]; then
+      shift; cmd_down_force "$@"
+    else
+      cmd_down "$@"
+    fi ;;
+  setup)   shift; cmd_setup "$@" ;;
+  shell)   shift; cmd_shell "$@" ;;
+  exec)    shift; cmd_exec "$@" ;;
+  start)   shift; cmd_start "$@" ;;
+  stop)    shift; cmd_stop "$@" ;;
+  restart) shift; cmd_restart "$@" ;;
+  logs)    shift; cmd_logs "$@" ;;
+  status)  shift; cmd_status "$@" ;;
+  -h|--help|help) usage ;;
+  *)       echo "Unknown command: ${1:-}" >&2; usage; exit 1 ;;
+esac

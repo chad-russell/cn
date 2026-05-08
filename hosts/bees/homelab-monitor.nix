@@ -1,0 +1,69 @@
+# ── Homelab Infrastructure Monitor ─────────────────────────────────
+#
+# AI-powered infrastructure monitoring using pi and Prometheus.
+# - Every 3 hours: critical check (alerts via ntfy only if issues found)
+# - Daily at 8 AM ET: comprehensive health report (always sent)
+#
+# Data collection:
+#   - Prometheus metrics (CPU, memory, disk, network) for NixOS hosts
+#   - SSH to NAS and gateway for status (until migrated to NixOS)
+#   - Local journalctl/dmesg on bees
+#
+# AI analysis via: pi -p --no-tools
+# Notifications via: ntfy topic "homelab-monitor"
+
+{ config, lib, pkgs, unstable, ... }:
+
+let
+  pi-pkg = unstable."pi-coding-agent";
+in
+{
+  # System prompt file for pi analysis
+  environment.etc."homelab-monitor/system-prompt.md".source = ./homelab-monitor/system-prompt.md;
+
+  # ── 3-hourly critical check ────────────────────────────────────
+  systemd.services.homelab-monitor-check = {
+    description = "Homelab Monitor — Critical Check";
+    path = [ pkgs.curl pkgs.jq pkgs.openssh pi-pkg ];
+    serviceConfig = {
+      Type = "oneshot";
+      User = "crussell";
+      ExecStart = "${pkgs.bash}/bin/bash ${./homelab-monitor/collect.sh} check";
+      TimeoutStartSec = "300";
+    };
+  };
+
+  # ── Daily comprehensive report ─────────────────────────────────
+  systemd.services.homelab-monitor-daily = {
+    description = "Homelab Monitor — Daily Report";
+    path = [ pkgs.curl pkgs.jq pkgs.openssh pi-pkg ];
+    serviceConfig = {
+      Type = "oneshot";
+      User = "crussell";
+      ExecStart = "${pkgs.bash}/bin/bash ${./homelab-monitor/collect.sh} daily";
+      TimeoutStartSec = "300";
+    };
+  };
+
+  # ── Timer: every 3 hours ───────────────────────────────────────
+  systemd.timers.homelab-monitor-check = {
+    description = "Homelab critical check every 3 hours";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "*-*-* 00/3:00:00";
+      Persistent = true;
+      RandomizedDelaySec = "5m";
+    };
+  };
+
+  # ── Timer: daily at 8 AM ───────────────────────────────────────
+  systemd.timers.homelab-monitor-daily = {
+    description = "Homelab daily report at 8 AM";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "*-*-* 08:00:00";
+      Persistent = true;
+      RandomizedDelaySec = "10m";
+    };
+  };
+}

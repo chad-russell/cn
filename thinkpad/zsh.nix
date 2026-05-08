@@ -107,8 +107,7 @@ in
       fi
 
       # Only set DISPLAY fallback in a Wayland session (not TTY).
-      # Setting DISPLAY on a TTY makes wlroots compositors like Mango
-      # try the X11 nested backend, which fails with "Failed to open xcb connection".
+      # Setting DISPLAY on a TTY can cause issues with Wayland compositors.
       if [[ -n "$WAYLAND_DISPLAY" && -z "$DISPLAY" ]]; then
         export DISPLAY=":0"
       fi

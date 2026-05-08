@@ -1,183 +1,92 @@
-# Gloo Containerized Dev Stack
+# Gloo Devcontainers on bee
 
-The Gloo dev stack running on **bee** (`192.168.20.105` / Nebula `10.10.0.12`) inside rootless Podman containers. One container per app service, shared infra, managed via NixOS user units.
+Each Gloo product runs in its own devcontainer via `glooctl`. No shared host infra, no distrobox, no per-service Nix modules. The repo's `.devcontainer/` is the source of truth.
 
-## Architecture
-
-```
-bee (192.168.20.105)
-├── postgres:5433          (infra, shared by all apps)
-├── rustfs:9000/9001       (infra, S3-compatible object store)
-├── pgadmin:5050           (infra, database admin)
-├── hb-api:8000            (Hummingbird API, Express + Prisma)
-├── hb-web:3100            (Hummingbird Web, Vite React)
-├── gpl:3106               (GPL, Next.js + Drizzle)
-├── polymer:3001           (Polymer, Next.js + Drizzle)
-├── storyhub:3007          (Storyhub, Next.js + Prisma)
-└── storyhub-worker:8001   (Storyhub Worker, Bun)
-
-k2 Caddy routes *.internal.crussell.io → bee (except Polymer, see below)
-```
-
-**Note:** Dev ingress has migrated to bee's own Caddy + AdGuardHome DNS.
-New `*.dev.crussell.io` domains resolve via Nebula split DNS.
-The old `*.internal.crussell.io` routes on bees are kept as fallback.
-
-## Browser Access
-
-| Service | URL | Auth |
-|---------|-----|------|
-| Hummingbird Web | `https://hb-web.dev.crussell.io` | Email/password (dev users) |
-| Hummingbird API | `https://hb-api.dev.crussell.io` | API key |
-| GPL | `https://gpl.dev.crussell.io` | Hummingbird SSO |
-| Storyhub | `https://storyhub.dev.crussell.io` | Hummingbird SSO |
-| Polymer | `http://localhost:3001` (via SSH tunnel) | WorkOS |
-| pgAdmin | `https://pgadmin.dev.crussell.io` | `admin@example.com` / `admin` |
-| RustFS Console | `https://rustfs-console.dev.crussell.io` | `rustfsadmin` / `rustfsadmin` |
-
-### Polymer SSH Tunnel
-
-Polymer uses WorkOS for auth, which requires `http://localhost:3001/callback` as the redirect URI. Since Polymer runs on bee, you need an SSH tunnel from your laptop:
+## Quick Start
 
 ```bash
-# Start the tunnel (defined in thinkpad/home.nix)
-systemctl --user start polymer-tunnel
+ssh -o IdentitiesOnly=yes crussell@10.10.0.12
 
-# Open in browser
-xdg-open http://localhost:3001
-
-# Stop when done
-systemctl --user stop polymer-tunnel
+# Start a devcontainer + dev server
+glooctl up polymer && glooctl start polymer
+glooctl up hummingbird && glooctl start hummingbird
+glooctl up storyhub && glooctl start storyhub    # shares devcontainer with hummingbird
 ```
 
-The tunnel service is defined but does **not** auto-start. It only runs when you start it manually.
-
-## Service Management
-
-All management happens over SSH as `crussell` on bee:
+## Access from thinkpad
 
 ```bash
-ssh bee  # or: ssh -o IdentitiesOnly=yes crussell@192.168.20.105
-export XDG_RUNTIME_DIR=/run/user/$(id -u)
+# Start the tunnel (forwards all Gloo ports)
+systemctl --user start gloo-tunnel
+
+# Then browse on laptop:
+#   http://localhost:3000  polymer app / hummingbird web
+#   http://localhost:3001  admin360 / storyhub
+#   http://localhost:3006  gpl
+#   http://localhost:8000  hummingbird API
 ```
 
-### Starting / Stopping
+Polymer and hummingbird/storyhub both use port 3000 — don't run them simultaneously.
 
-```bash
-# Start everything from scratch
-systemctl --user start gloo-c-all.target
+## glooctl Commands
 
-# Start by work context
-systemctl --user start gloo-c-hummingbird.target   # hb-api + hb-web
-systemctl --user start gloo-c-gpl.target            # gpl (+ hb-api)
-systemctl --user start gloo-c-polymer.target        # polymer
-systemctl --user start gloo-c-storyhub.target       # storyhub + storyhub-worker
-
-# Stop individual services
-systemctl --user stop gloo-c-hb-web.service
-systemctl --user stop gloo-c-all.target             # stop everything
-
-# Check status
-systemctl --user status 'gloo-c-*'
-podman ps
+```
+glooctl up <product>                Build + start devcontainer, run setup
+glooctl down <product>              Stop devcontainer (warns if sibling running)
+glooctl down --force <product>      Stop devcontainer + sibling dev servers
+glooctl setup <product>             Re-run postCreateCommand
+glooctl shell <product>             Interactive shell
+glooctl exec <product> -- <cmd>     Run one command
+glooctl start <product> [-- <cmd>]  Start dev server (detached)
+glooctl stop <product>              Stop dev server
+glooctl restart <product>           Restart dev server
+glooctl logs <product> [-f]         View dev server logs
+glooctl status [product]            Show what's running
 ```
 
-### First-Time Setup / After Dependency Changes
+## Products & Ports
 
-Bootstrap services run `pnpm install` + `prisma generate` into the bind-mounted source repos:
+| Product | Repo | Ports | Dev command | Notes |
+|---------|------|-------|-------------|-------|
+| polymer | `~/Gloo/360-polymer` | 3000 (app), 3001 (admin360) | `pnpm dev` | Turborepo, Drizzle, WorkOS |
+| gpl | `~/Gloo/360-gpl` | 3006 | `pnpm dev` | Next.js, Drizzle, needs hb-api for SSO |
+| hummingbird | `~/Gloo/360-hummingbird` | 8000 (API), 3000 (web) | `pnpm devcontainer:hb` | Turborepo, Prisma |
+| storyhub | `~/Gloo/360-hummingbird` | 3001 (app) | `pnpm devcontainer:storyhub` | Next.js, shares devcontainer with hummingbird |
 
-```bash
-systemctl --user start gloo-c-infra.target          # infra must be running first
-systemctl --user start gloo-c-bootstrap-hummingbird.service
-systemctl --user start gloo-c-bootstrap-gpl.service
-systemctl --user start gloo-c-bootstrap-polymer.service
-```
+**Hummingbird and storyhub share the same devcontainer** (same compose project `gloo-hb`). `glooctl up` is idempotent — running it for either product starts the shared containers. They have separate dev servers (separate systemd units).
 
-### Database Migrations & Seeding
+## Environment Variables
 
-Run via the toolbox container (has all CLI tools + compose network access):
+`.env` / `.env.local` files live inside each repo, are gitignored, and are backed by 1Password. They are NOT managed by Nix or agenix. Each repo's `.devcontainer/scripts/setup-env.sh` creates the correct env files from devcontainer templates on first run.
 
-```bash
-# Hummingbird API (Prisma)
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  toolbox bash -c "cd /work/360-hummingbird && pnpm --filter api exec prisma db push --force-reset --skip-generate"
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  toolbox bash -c "cd /work/360-hummingbird && pnpm --filter api seed"
+## How It Works
 
-# Storyhub (Prisma)
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/storyhub" \
-  -e DIRECT_URL="postgresql://postgres:postgres@postgres:5432/storyhub" \
-  toolbox bash -c "cd /work/360-hummingbird && pnpm --filter storyhub-prisma run prisma:push"
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/storyhub" \
-  -e DIRECT_URL="postgresql://postgres:postgres@postgres:5432/storyhub" \
-  toolbox bash -c "cd /work/360-hummingbird && pnpm --filter storyhub-prisma exec tsx prisma/seed.ts"
+- `glooctl up` runs `docker-compose up -d --build` with the repo's `.devcontainer/docker-compose.yml` plus a port publishing override from `~/.config/gloo/overrides/`.
+- `glooctl start` runs the dev server as a systemd user unit via `docker-compose exec -T`. No blocking TUI — Turbo detects no TTY and outputs plain text.
+- Logs go to `journalctl --user -u gloo-<product>`.
+- Source is bind-mounted (`../:/workspace`), so host edits reflect instantly.
+- Override files add `userns_mode: "keep-id"` to fix rootless podman UID mapping.
 
-# GPL (Drizzle)
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/gpl_db" \
-  toolbox bash -c "cd /work/360-gpl && pnpm run db:push"
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/gpl_db" \
-  toolbox bash -c "cd /work/360-gpl && pnpm exec tsx src/db/seed.ts"
+## Port Override Files
 
-# Polymer (Drizzle)
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e POSTGRES_URL="postgres://postgres:postgres@postgres:5432/polymer" \
-  toolbox bash -c "cd /work/360-polymer && pnpm --filter @repo/db run db:push"
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e POSTGRES_URL="postgres://postgres:postgres@postgres:5432/polymer" \
-  toolbox bash -c "cd /work/360-polymer/apps/polymer && pnpm run db:seed"
-```
+The repos' devcontainer compose files don't publish all app ports (they rely on VS Code's `forwardPorts`). `glooctl` adds override files:
 
-### Logs & Debugging
+- `polymer.yml` — publishes 3000, 3001 + UID fix
+- `hb.yml` — publishes 8000, 3000, 3001 + UID fix
+- `gpl.yml` — UID fix (port 3006 already published in devcontainer compose)
 
-```bash
-# Follow logs
-podman logs -f gloo-hb-api-1
-podman compose -f /etc/gloo-containerized/compose.yaml logs -f hb-api
+These live at `~/.config/gloo/overrides/` and are installed by Nix activation.
 
-# Quick health check
-for port in 8000 3100 3106 3001 3007 8001; do
-  printf "Port %5s: " $port
-  curl -s -o /dev/null -w "%{http_code}" --max-time 3 http://127.0.0.1:$port/
-  echo
-done
-```
-
-## Config Files
+## Files
 
 | File | Purpose |
 |------|---------|
-| `hosts/bee/gloo-containerized.nix` | NixOS module: systemd user units, targets, activation scripts |
-| `hosts/bee/gloo/Containerfile` | Shared container image: Node 24 + pnpm + bun |
-| `hosts/bee/gloo/compose.yaml` | Compose project: infra + bootstrap + app services + toolbox |
-| `hosts/bee/gloo/envs/*.env` | Per-service env files (container DNS names) |
-| `hosts/bee/configuration.nix` | `services.gloo-containerized.enable = true` |
-| `secrets/gloo-secrets.env.age` | Agenix-encrypted secrets (API keys, session secrets) |
-| `hosts/bee/adguardhome.nix` | AdGuardHome DNS: split DNS rewrites `*.dev.crussell.io` → `10.10.0.12` |
-| `hosts/bee/caddy-dev.nix` | Caddy dev ingress on bee: `*.dev.crussell.io` → localhost ports |
-| `hosts/bees/caddy/routes/internal/gloo.caddy` | Legacy Caddy routes `*.internal.crussell.io` → bee (fallback) |
+| `hosts/bee/gloo-dev.nix` | NixOS module |
+| `hosts/bee/gloo/glooctl` | CLI script |
+| `hosts/bee/gloo/overrides/*.yml` | Port overrides |
+| `hosts/bee/gloo/SKILL.md` | Pi agent skill |
+| `hosts/bee/gloo/README.md` | This file |
 
-## Networking
+## Archive
 
-- **Container-to-container**: Uses compose service DNS names (`postgres:5432`, `hb-api:8000`, `rustfs:9000`). No Caddy hop.
-- **Browser-to-service**: Routes through bee's Caddy with `tls internal` via `*.dev.crussell.io` (AdGuardHome split DNS over Nebula).
-- **Polymer exception**: Uses `http://localhost:3001` via SSH tunnel because WorkOS requires `localhost` redirect URIs. The `polymer.dev.crussell.io` Caddy route exists but is not used for the auth flow.
-
-## Dev Credentials
-
-| App | Users | Notes |
-|-----|-------|-------|
-| Hummingbird | `admin`, `sfc`, `fc`, `collaborator`, `vision`, `uploader`, `sfc2`, `reporter`, `regional` | Seeded from `api/prisma/seed.ts` |
-| GPL | `admin@gpl.org` / `admin123`, `viewer@gpl.org` / `viewer123` | Seeded from `src/db/seed.ts` |
-| Polymer | WorkOS SSO | Uses real WorkOS org users |
-| Storyhub | Same as Hummingbird (SSO) | `storyhub` DB seeded from `storyhub-prisma/prisma/seed.ts` |
-
-## Known Quirks
-
-- **Prisma binary permissions**: Prisma generates engine binaries with 555 perms, which causes EACCES in rootless podman with `keep-id`. The Nix module runs a host-level `chmod -R u+w` after the Hummingbird bootstrap (`ExecStartPost`).
-- **hb-api crashes on malformed JWT**: Unhandled `jwt malformed` error kills the process. The container has `restart: unless-stopped` so it recovers, but you may see brief 502s.
-- **`pnpm install` needs `CI=true`**: The bootstrap commands pass `CI=true` to avoid TTY detection issues in the one-shot containers.
-- **No named volumes for node_modules**: pnpm workspace symlinks break with overlay bind mounts. Source `node_modules` live directly on the bind mount.
+Old module attempts have been removed. Git history preserves them if ever needed.

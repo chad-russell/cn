@@ -1,403 +1,272 @@
 ---
 name: gloo-dev
-description: Develop the Gloo stack (Polymer, GPL, Hummingbird, Storyhub) on bee. Covers starting/stopping containerized services, running commands inside containers, editing env vars, updating pnpm packages, database migrations, and the full dev workflow. Load this skill when working on any Gloo project code or infrastructure on bee.
+description: Develop the Gloo stack using devcontainers on bee. Covers running commands, starting dev servers, managing containers, and the full dev workflow. Load this skill when working on any Gloo project code or when interacting with the devcontainer infrastructure on bee.
 ---
 
-# Gloo Dev Stack on bee
+# Gloo Dev Workflow on bee
 
-You are running on **bee** (`192.168.20.105` / Nebula `10.10.0.12`), the dev server. The Gloo stack runs as rootless Podman containers managed by systemd user units. All source code lives at `/home/crussell/Gloo/`.
+You are working on **bee** (`10.10.0.12`). Gloo products run inside **devcontainers** — one per repo. All app commands go through `glooctl`. Never run `pnpm`, `npm`, `node`, or any dev tool directly on the host.
 
-## Architecture at a Glance
+## Architecture
 
 ```
-bee (this machine)
-├── Podman containers (rootless, user crussell)
-│   ├── postgres:5433        (shared infra, data in named volume)
-│   ├── rustfs:9000/9001     (S3-compatible object store)
-│   ├── pgadmin:5050         (database admin UI)
-│   ├── hb-api:8000          (Hummingbird API, Express + Prisma)
-│   ├── hb-web:3100          (Hummingbird Web, Vite React)
-│   ├── gpl:3106             (GPL, Next.js + Drizzle)
-│   ├── polymer:3001         (Polymer, Next.js + Drizzle + WorkOS)
-│   ├── storyhub:3007        (Storyhub, Next.js + Prisma)
-│   └── storyhub-worker:8001 (Storyhub Worker, Bun/Hono)
-│
-├── ~/Gloo/                  (source repos, bind-mounted into containers)
-│   ├── 360-hummingbird/     (monorepo: api/, web/, storyhub/, storyhub-worker/)
-│   ├── 360-gpl/             (monorepo: GPL Next.js app)
-│   └── 360-polymer/         (monorepo: apps/polymer/, apps/admin360/, packages/*)
-│
-├── Caddy (system service)   (TLS reverse proxy: *.dev.crussell.io → localhost:PORT)
-└── AdGuardHome              (DNS: *.dev.crussell.io → 10.10.0.12)
+bee (10.10.0.12)
+└── Per-repo devcontainers (podman + docker-compose)
+    ├── polymer      ~/Gloo/360-polymer      ports 3000, 3001
+    ├── gpl          ~/Gloo/360-gpl          port 3006
+    ├── hummingbird  ~/Gloo/360-hummingbird  ports 8000 (API), 3000 (web)
+    └── storyhub     ~/Gloo/360-hummingbird  port 3001 (shares devcontainer with hummingbird)
 ```
 
-**Key insight:** Source files are edited directly on disk at `~/Gloo/`. Containers bind-mount `/home/crussell/Gloo` → `/work`. Dev servers (Next.js, Vite, Express) watch for file changes and hot-reload. You edit files on the host; the container picks up changes automatically.
+Hummingbird and storyhub share the same devcontainer (same repo, same compose project `gloo-hb`). They have separate dev servers (separate systemd units). Both can run simultaneously.
 
-**Important:** The `pnpm store` lives in a Podman named volume (`gloo_pnpm_store`), NOT on the host filesystem. Running `pnpm install` on the host will NOT work. All package operations must run inside a container.
+## The Golden Rule
 
-## Service Management
-
-All services are **systemd user units** running as `crussell`. You need `XDG_RUNTIME_DIR` set (it should already be set in your shell, but if not: `export XDG_RUNTIME_DIR=/run/user/$(id -u)`).
-
-### Starting Services
+**ALL app commands run inside the devcontainer via `glooctl`.** Source files are bind-mounted (`../:/workspace`), so edits on the host are immediately reflected inside the container.
 
 ```bash
-# Start everything (infra + all apps)
-systemctl --user start gloo-c-all.target
+# CORRECT
+glooctl exec polymer -- pnpm install
+glooctl start hummingbird
+glooctl exec hummingbird -- pnpm --filter api exec prisma generate
 
-# Start by work context
-systemctl --user start gloo-c-infra.target          # postgres + rustfs + pgadmin
-systemctl --user start gloo-c-hummingbird.target     # hb-api + hb-web (needs infra)
-systemctl --user start gloo-c-gpl.target             # gpl (+ hb-api dependency)
-systemctl --user start gloo-c-polymer.target         # polymer
-systemctl --user start gloo-c-storyhub.target        # storyhub + storyhub-worker
-
-# Order matters: infra must be up before apps
-systemctl --user start gloo-c-infra.target && sleep 5 && systemctl --user start gloo-c-polymer.target
+# WRONG — never do this on the host
+pnpm install
+npm run dev
+node -e "..."
 ```
 
-### Stopping Services
+## glooctl Reference
 
 ```bash
-systemctl --user stop gloo-c-polymer.service         # stop one service
-systemctl --user stop gloo-c-all.target               # stop all apps (infra keeps running)
-systemctl --user stop gloo-c-infra.target             # stop infra too
+glooctl up <product>                # Build + start devcontainer, run setup
+glooctl down <product>              # Stop devcontainer (warns if sibling running)
+glooctl down --force <product>      # Stop devcontainer + sibling dev servers
+glooctl setup <product>             # Re-run postCreateCommand
+glooctl shell <product>             # Interactive shell in devcontainer
+glooctl exec <product> -- <cmd>     # Run one command
+glooctl start <product> [-- <cmd>]  # Start dev server (detached, default: pnpm dev)
+glooctl stop <product>              # Stop dev server
+glooctl restart <product>           # Restart dev server
+glooctl logs <product> [-f]         # View dev server logs (journalctl)
+glooctl status [product]            # Show what's running
 ```
 
-### Restarting a Single Service
+Products: `polymer`, `gpl`, `hummingbird`, `storyhub`
+
+## Typical Session
 
 ```bash
-# For app services: just restart the unit (compose handles the container lifecycle)
-systemctl --user restart gloo-c-polymer.service
+ssh -o IdentitiesOnly=yes crussell@10.10.0.12
 
-# If the container is in a bad state, stop the unit, remove the container, start fresh:
-systemctl --user stop gloo-c-polymer.service
-podman rm -f gloo-polymer-1 2>/dev/null
-systemctl --user start gloo-c-polymer.service
+# First time or after down:
+glooctl up hummingbird
+
+# Start the dev server (runs detached under systemd, no blocking TUI)
+glooctl start hummingbird
+
+# Follow logs
+glooctl logs hummingbird -f
+
+# Stop when done
+glooctl stop hummingbird
+
+# Tear down the devcontainer entirely
+glooctl down hummingbird
 ```
 
-### Checking Status
+## How glooctl Works
+
+- `glooctl up` runs `docker-compose up -d --build` with the repo's `.devcontainer/docker-compose.yml` plus a port publishing override from `~/.config/gloo/overrides/`.
+- `glooctl start` runs the dev server as a **systemd user transient unit** via `docker-compose exec -T`. No blocking TUI — Turbo detects no TTY and outputs plain text. `yes` is piped into the setup command for non-interactive prompts.
+- `glooctl exec` uses `docker-compose exec -T` (no TTY allocation) so it works from agents and scripts.
+- Logs go to `journalctl --user -u gloo-<product>`.
+- Source is bind-mounted (`../:/workspace`), so host edits reflect instantly.
+- The override files add `userns_mode: "keep-id"` to fix rootless podman UID mapping — without this, the `node` user inside the container can't write to bind-mounted host directories.
+
+## Shared Devcontainers
+
+Hummingbird and storyhub share the same compose project (`gloo-hb`). This means:
+
+- `glooctl up hummingbird` and `glooctl up storyhub` both start the same containers. Running either is idempotent.
+- `glooctl start hummingbird` and `glooctl start storyhub` create separate systemd units. Both can run simultaneously.
+- `glooctl down hummingbird` will **warn** if the storyhub dev server is still running. Use `glooctl down --force` to tear down anyway.
+- `glooctl down storyhub` likewise warns if hummingbird is running.
+
+## Editing Code
+
+Edit files normally on the host. Changes take effect immediately inside the devcontainer. After editing `package.json` or any dependency file, run:
 
 ```bash
-systemctl --user status 'gloo-c-*'         # all gloo units
-systemctl --user status gloo-c-polymer      # one service
-podman ps                                   # running containers
+glooctl exec polymer -- pnpm install
 ```
 
-### Viewing Logs
+## Environment Variables
+
+Each repo uses `.env` / `.env.local` files (gitignored, backed by 1Password). They live inside the repo directory on the host and are bind-mounted into the devcontainer. They are **NOT** managed by Nix or agenix.
+
+- `glooctl up` runs the repo's `.devcontainer/scripts/setup-env.sh` which copies devcontainer-specific env templates into place (e.g., `api/.env`, `storyhub/.env`). These point to the devcontainer's own services (`db_hb:5432`, `polymer_db:5432`, `minio:9000`).
+- Some repos have multiple `.env.local` files (e.g., polymer has `apps/polymer/.env.local`, `packages/db/.env.local`, root `.env.local`). All must point to devcontainer services, not `127.0.0.1`.
+- If env vars need overriding for a specific command, pass them inline:
 
 ```bash
-# Via systemd (includes restart history)
-journalctl --user -u gloo-c-polymer -f      # follow
-journalctl --user -u gloo-c-polymer --no-pager -n 50  # last 50 lines
-
-# Via podman (raw container stdout)
-podman logs -f gloo-polymer-1               # follow
-podman logs --tail 50 gloo-polymer-1        # last 50 lines
+glooctl exec polymer -- DATABASE_URL="postgres://..." pnpm db:push
 ```
 
-## Running Commands Inside Containers
+## Dev Server Management
 
-This is the core of the dev workflow. You cannot run `pnpm`, `npx`, `node`, etc. on the host. Use the compose project to run commands inside the container environment.
+`glooctl start` runs the dev server as a systemd user unit:
+- **Detached** — no blocking TUI, safe for agents
+- Logs: `glooctl logs <product> -f` or `journalctl --user -u gloo-<product> -f`
+- Status: `glooctl status`
+- If a dev server crashes, check logs for the specific product, not the container
 
-### The Compose File
-
-The compose project lives at `/etc/gloo-containerized/compose.yaml`. All compose commands reference it:
+## Adding NPM Packages
 
 ```bash
-COMPOSE="podman compose -f /etc/gloo-containerized/compose.yaml"
+glooctl exec polymer -- pnpm add some-package
+glooctl exec hummingbird -- pnpm add some-package
 ```
 
-### The Toolbox Container
+## Database Operations
 
-The `toolbox` service is a persistent shell in the compose network with all tools (Node, pnpm, bun, git) and access to all source repos. It's in the `tools` profile so it doesn't auto-start.
+Each devcontainer has its own postgres. Connection details are in the repo's env files (set by `setup-env.sh`).
+
+**Polymer** (Drizzle):
+```bash
+glooctl exec polymer -- pnpm db:push          # push schema
+glooctl exec polymer -- pnpm db:seed           # seed data
+```
+
+**Hummingbird API** (Prisma):
+```bash
+glooctl exec hummingbird -- pnpm --filter api exec prisma generate
+glooctl exec hummingbird -- pnpm --filter api exec prisma db push --force-reset --skip-generate
+glooctl exec hummingbird -- pnpm --filter api seed
+```
+
+**Storyhub** (Prisma):
+```bash
+glooctl exec storyhub -- pnpm run seed:storyhub
+```
+
+**GPL** (Drizzle):
+```bash
+glooctl exec gpl -- pnpm run db:push
+```
+
+## Linting / Type Checking / Building
 
 ```bash
-# Run a one-off command via toolbox
-$COMPOSE --profile tools run --rm toolbox bash -c "cd /work/360-polymer && pnpm check-types"
-
-# Run an interactive shell (add -it if you need TTY)
-$COMPOSE --profile tools run --rm toolbox bash
-
-# With custom env vars
-$COMPOSE --profile tools run --rm \
-  -e POSTGRES_URL="postgres://postgres:postgres@postgres:5432/polymer" \
-  toolbox bash -c "cd /work/360-polymer && pnpm --filter @repo/db run db:push"
+glooctl exec polymer -- pnpm lint
+glooctl exec polymer -- pnpm check-types
+glooctl exec polymer -- pnpm build
+glooctl exec hummingbird -- pnpm run lint:all
+glooctl exec gpl -- pnpm lint
 ```
 
-### Running Commands for a Specific App
-
-You can also use the app's own container service to run commands:
-
-```bash
-# Run pnpm check-types in the polymer container context
-$COMPOSE run --rm --no-deps polymer bash -c "cd /work/360-polymer && pnpm check-types"
-
-# Run a build
-$COMPOSE run --rm --no-deps polymer bash -c "cd /work/360-polymer && pnpm build"
-```
-
-**Note:** `--no-deps` skips starting dependencies (postgres, etc.) which is fine for type-checking and linting but NOT for commands that need database access.
-
-### Container DNS Names
-
-Inside the compose network, services reach each other by compose service name:
-
-| Service | DNS Name | Port |
-|---------|----------|------|
-| PostgreSQL | `postgres` | `5432` |
-| RustFS (S3) | `rustfs` | `9000` |
-| Hummingbird API | `hb-api` | `8000` |
-| Hummingbird Web | `hb-web` | `3100` |
-| GPL | `gpl` | `3106` |
-| Polymer | `polymer` | `3001` |
-| Storyhub | `storyhub` | `3007` |
-| Storyhub Worker | `storyhub-worker` | `8001` |
-
-The toolbox container can use these DNS names directly. That's why env files say `postgres:5432` not `localhost:5433`.
-
-## Common Dev Workflows
-
-### Editing Source Code
-
-1. Edit files directly in `~/Gloo/<repo>/` on the host (that's what you're doing when you use this agent).
-2. The running container bind-mounts the source, so Next.js/Vite/Express dev servers will hot-reload automatically.
-3. If hot-reload doesn't pick up a change (e.g., you changed an env var or a config file), restart the service unit.
-
-### Updating pnpm Packages
-
-You cannot run `pnpm add` on the host. Use the toolbox or the bootstrap services:
-
-**For a quick package add (e.g., adding a npm package to polymer):**
-```bash
-# Run pnpm add inside the container
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  toolbox bash -c "cd /work/360-polymer && pnpm add <package-name> --filter polymer"
-```
-
-**For a full reinstall (e.g., after switching branches with different lockfiles):**
-```bash
-# Re-run the bootstrap service for the relevant project
-systemctl --user restart gloo-c-bootstrap-polymer.service
-
-# Watch progress
-journalctl --user -u gloo-c-bootstrap-polymer -f
-```
-
-**The bootstrap services** run `pnpm install` + any code generation (Prisma generate, etc.) into the bind-mounted source. They also share the `pnpm_store` named volume so packages are cached across runs.
-
-### Editing Environment Variables
-
-Env vars come from **three sources**, in order of preference:
-
-1. **Per-service env files** at `/etc/gloo-containerized/envs-containerized/<service>.env` — these are the non-secret config. **These are installed by NixOS from the repo at `hosts/bee/gloo/envs-containerized/*.env`.** To change them:
-   - Edit the source file in the repo: `hosts/bee/gloo/envs-containerized/<service>.env`
-   - Deploy bee: `nix run .#deploy -- bee` (from the infra repo on thinkpad)
-   - Restart the service: `systemctl --user restart gloo-c-<service>.service`
-
-2. **Agenix-encrypted secrets** at `/run/agenix/gloo-secrets` — API keys, session secrets, etc. To change a secret:
-   - Edit `secrets/gloo-secrets.env.age` in the infra repo
-   - Deploy bee: `nix run .#deploy -- bee`
-   - Restart the relevant service(s)
-
-3. **Compose-level env vars** — set in `compose-containerized.yaml` (rarely used directly).
-
-**Quick-and-dirty env var testing:** You can pass env vars directly via the toolbox without editing files:
-```bash
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e SOME_VAR=some_value \
-  toolbox bash -c "cd /work/360-polymer && pnpm --filter polymer dev"
-```
-
-But for persistent changes, always update the env files in the repo and deploy.
-
-### Database Migrations & Schema Changes
-
-Run these via the toolbox container. The database is accessible at `postgres:5432` from inside the compose network.
-
-**Polymer (Drizzle ORM):**
-```bash
-# Push schema changes (dev mode — no migration files)
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e POSTGRES_URL="postgres://postgres:postgres@postgres:5432/polymer" \
-  toolbox bash -c "cd /work/360-polymer && pnpm --filter @repo/db run db:push"
-
-# Seed the database
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e POSTGRES_URL="postgres://postgres:postgres@postgres:5432/polymer" \
-  toolbox bash -c "cd /work/360-polymer/apps/polymer && pnpm run db:seed"
-
-# Generate migration files (if using migrations instead of push)
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e POSTGRES_URL="postgres://postgres:postgres@postgres:5432/polymer" \
-  toolbox bash -c "cd /work/360-polymer && pnpm --filter @repo/db run db:generate"
-```
-
-**Hummingbird (Prisma):**
-```bash
-# Push schema + force reset
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  toolbox bash -c "cd /work/360-hummingbird && pnpm --filter api exec prisma db push --force-reset --skip-generate"
-
-# Seed
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  toolbox bash -c "cd /work/360-hummingbird && pnpm --filter api seed"
-```
-
-**GPL (Drizzle):**
-```bash
-# Push schema
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/gpl_db" \
-  toolbox bash -c "cd /work/360-gpl && pnpm run db:push"
-
-# Seed
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/gpl_db" \
-  toolbox bash -c "cd /work/360-gpl && pnpm exec tsx src/db/seed.ts"
-```
-
-**Storyhub (Prisma):**
-```bash
-# Push schema
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/storyhub" \
-  -e DIRECT_URL="postgresql://postgres:postgres@postgres:5432/storyhub" \
-  toolbox bash -c "cd /work/360-hummingbird && pnpm --filter storyhub-prisma run prisma:push"
-
-# Seed
-podman compose -f /etc/gloo-containerized/compose.yaml --profile tools run --rm \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/storyhub" \
-  -e DIRECT_URL="postgresql://postgres:postgres@postgres:5432/storyhub" \
-  toolbox bash -c "cd /work/360-hummingbird && pnpm --filter storyhub-prisma exec tsx prisma/seed.ts"
-```
-
-### Direct Database Access
-
-```bash
-# psql via the postgres container (from host, port 5433)
-podman exec -it gloo-postgres-1 psql -U postgres -d polymer
-
-# Or from inside the compose network (e.g., via toolbox)
-$COMPOSE --profile tools run --rm toolbox bash -c "psql -h postgres -U postgres -d polymer"
-
-# pgAdmin web UI: https://pgadmin.dev.crussell.io (admin@example.com / admin)
-```
-
-### Linting, Formatting, Type Checking
-
-These run inside containers. The source files are on the host bind mount, so changes are immediate.
-
-```bash
-# Polymer
-$COMPOSE --profile tools run --rm toolbox bash -c "cd /work/360-polymer && pnpm lint"
-$COMPOSE --profile tools run --rm toolbox bash -c "cd /work/360-polymer && pnpm format"
-$COMPOSE --profile tools run --rm toolbox bash -c "cd /work/360-polymer && pnpm check-types"
-
-# Hummingbird
-$COMPOSE --profile tools run --rm toolbox bash -c "cd /work/360-hummingbird && pnpm run lint:all"
-
-# GPL
-$COMPOSE --profile tools run --rm toolbox bash -c "cd /work/360-gpl && pnpm lint"
-```
-
-**Tip:** You can skip `--profile tools` and use a specific service container with `--no-deps` for faster startup if you just need linting/type-checking (no DB needed):
-
-```bash
-$COMPOSE run --rm --no-deps polymer bash -c "cd /work/360-polymer && pnpm check-types"
-```
-
-### Building
-
-```bash
-# Build a specific app
-$COMPOSE --profile tools run --rm toolbox bash -c "cd /work/360-polymer && pnpm build"
-
-# Build a specific app with turbo filter
-$COMPOSE --profile tools run --rm toolbox bash -c "cd /work/360-polymer && pnpm --filter polymer build"
-```
-
-## Project-Specific Notes
+## Product Details
 
 ### Polymer (`~/Gloo/360-polymer/`)
-
-- **Monorepo**: pnpm + Turborepo. Apps: `apps/polymer` (main), `apps/admin360` (admin panel). Packages: `packages/ui`, `packages/db`, `packages/auth`, `packages/reports`, `packages/typescript-config`.
-- **ORM**: Drizzle. Schema in `packages/db/` and `apps/polymer/lib/db/`.
-- **Auth**: WorkOS (AuthKit). Requires `http://localhost:3001/callback` as redirect URI — users access via SSH tunnel from their laptop.
-- **Dev server port**: 3001. Runs with `--turbo` (Turbopack).
-- **Working dir in container**: `/work/360-polymer/apps/polymer` (the dev server starts here).
-- **Container unit**: `gloo-c-polymer.service`.
-- **Env file**: `/etc/gloo-containerized/envs-containerized/polymer.env`.
-- **Database**: `polymer` on the shared postgres.
-- **S3 bucket**: `polymer-bucket` on RustFS.
+- **Monorepo**: pnpm + Turborepo. `pnpm dev` runs `turbo run dev` which starts:
+  - `polymer` (`next dev --turbo`) → port **3000**
+  - `admin360` (`next dev --turbo --port 3001`) → port **3001**
+  - `@repo/db#db:studio` (Drizzle Studio, internal)
+- **ORM**: Drizzle. Schema in `packages/db/`.
+- **Auth**: WorkOS (AuthKit). Redirect URI: `http://localhost:3000/callback`.
+- **Database**: `polymer_db` in devcontainer (postgres 16, host port 54324).
+- **Object storage**: `polymer_minio` in devcontainer (host ports 9004/9005).
+- **Env files**: `apps/polymer/.env.local`, `packages/db/.env.local`, root `.env.local`. All three must have correct `POSTGRES_URL`.
+- **Override**: `~/.config/gloo/overrides/polymer.yml` publishes ports 3000, 3001 and fixes rootless podman UID mapping.
 
 ### GPL (`~/Gloo/360-gpl/`)
-
-- **Monorepo**: Single Next.js app with Drizzle ORM.
-- **Auth**: Better Auth with Hummingbird SSO.
-- **Dev server port**: 3106.
-- **Container unit**: `gloo-c-gpl.service`.
-- **Depends on**: `hb-api` (for SSO and API calls).
-- **Database**: `gpl_db` on shared postgres.
+- **Single Next.js app** with Drizzle ORM.
+- **Auth**: Better Auth with Hummingbird SSO. **Requires hummingbird API running** for login.
+- **Dev server**: port 3006.
+- **Database**: `db` in devcontainer (postgres 15, host port 5432).
+- **Object storage**: `minio` in devcontainer (host ports 9000/9001).
+- **Override**: `~/.config/gloo/overrides/gpl.yml` fixes rootless podman UID mapping. Port 3006 already published in devcontainer compose.
 
 ### Hummingbird (`~/Gloo/360-hummingbird/`)
+- **Dev command**: `pnpm devcontainer:hb` = `turbo dev --filter api --filter web`
+- **Packages**:
+  - `api/` — Express + Prisma, `tsx watch server` → port **8000**
+  - `web/` — Vite React → port **3000**
+- **Database**: `db_hb` in devcontainer (postgres 16, host port 5567). Env: `api/.env` with `CONN_URL=postgresql://postgres:postgres@db_hb:5432/postgres`.
+- **Minio**: defined in compose but behind `minio` profile — **not started by default**. S3 features won't work unless started manually: `docker-compose --project-name gloo-hb -f ... -f ... up -d minio`.
+- **storyhub-worker**: separate compose service with its own Dockerfile, port **8001**, always runs when the devcontainer is up.
+- **Env files**: `api/.env`, `storyhub/.env`, `storyhub-worker/.env`, `storyhub-prisma/.env` — all created by `setup-env.sh` from `.devcontainer/envs/*.env.devcontainer` templates.
+- **Override**: `~/.config/gloo/overrides/hb.yml` publishes ports 8000, 3000, 3001 and fixes rootless podman UID mapping.
+- **Login credentials**: `admin`, `sfc`, `fc`, `collaborator`, `vision`, `uploader`, `sfc2`, `reporter`, `regional`.
 
-- **Monorepo**: pnpm + Turborepo. Packages: `api/` (Express + Prisma), `web/` (Vite React), `storyhub/` (Next.js), `storyhub-worker/` (Bun/Hono), `storyhub-prisma/` (shared Prisma schema).
-- **Ports**: API 8000, Web 3100, Storyhub 3007, Worker 8001.
-- **Container units**: `gloo-c-hb-api`, `gloo-c-hb-web`, `gloo-c-storyhub`, `gloo-c-storyhub-worker`.
-- **Database**: `postgres` (default) for API, `storyhub` for Storyhub services.
+### Storyhub (same repo as hummingbird)
+- **Dev command**: `pnpm devcontainer:storyhub` = `turbo dev --filter storyhub`
+- **App**: Next.js (`next dev --port 3001`) → port **3001**
+- **Database**: `db_storyhub` in devcontainer (postgres 16, host port 54322). Env: `DATABASE_URL=postgresql://postgres:postgres@db_storyhub:5432/postgres`.
+- **Shares devcontainer with hummingbird** — same compose project, same containers. `glooctl up storyhub` is idempotent.
+- Can run both hummingbird and storyhub dev servers simultaneously.
+- **Override**: same `hb.yml` as hummingbird.
 
-## Known Quirks
+## Port Access from thinkpad
 
-1. **Prisma binary permissions**: Prisma generates engine binaries with `555` perms, causing EACCES in rootless Podman with `keep-id`. The Nix module runs `chmod -R u+w` after Hummingbird bootstrap. If you see permission errors in `generated/` dirs, run: `chmod -R u+w ~/Gloo/360-hummingbird/api/generated ~/Gloo/360-hummingbird/storyhub-prisma/generated ~/Gloo/360-hummingbird/storyhub/generated`
+A combined SSH tunnel is configured on the thinkpad:
 
-2. **hb-api crashes on malformed JWT**: Unhandled `jwt malformed` error kills the process. The container has `restart: unless-stopped` so it recovers, but you may see brief 502s. Just wait a few seconds.
+```bash
+systemctl --user start gloo-tunnel
+```
 
-3. **`pnpm install` needs `CI=true`**: The bootstrap commands pass `CI=true` to avoid TTY detection issues. If running `pnpm install` manually via toolbox, add `CI=true` if it hangs.
+Forwards: `3000`, `3001`, `3006`, `8000` → bee.
 
-4. **No named volumes for node_modules**: pnpm workspace symlinks break with overlay bind mounts. Source `node_modules` live directly on the bind mount at `~/Gloo/<repo>/node_modules/`.
+| Port | Products | What |
+|------|----------|------|
+| 3000 | polymer (app) OR hummingbird (web) | **Conflict — don't run both** |
+| 3001 | polymer (admin360) OR storyhub | **Conflict — don't run both** |
+| 3006 | gpl | Next.js app |
+| 8000 | hummingbird | API |
 
-5. **Container names follow compose convention**: `gloo-<service>-1` (e.g., `gloo-polymer-1`, `gloo-hb-api-1`). The `1` suffix is Podman/compose convention.
+## Troubleshooting
 
-6. **`pnpm store` is a named volume**: It persists across container rebuilds but is NOT visible on the host filesystem. Don't try to inspect or modify it directly.
+```bash
+glooctl status                                  # what's running
+glooctl logs polymer -f                         # follow dev server logs
+glooctl exec polymer -- pnpm install            # reinstall if node_modules is off
+glooctl down polymer && glooctl up polymer      # full reset (loses container state, keeps host source)
+```
 
-7. **Polymer uses `--turbo` flag**: The dev server runs with Turbopack. If you see Turbopack-specific issues, you can switch to webpack by editing the compose command, but this requires a deploy.
+If the devcontainer won't start:
+```bash
+podman ps -a --filter name=gloo-               # list all gloo containers
+podman logs <container-name>                    # container-level logs
+```
 
-## Quick Reference: URLs
+If port is already in use:
+```bash
+ss -tlnp sport = :3000                          # find what's using the port
+# Likely another devcontainer publishing the same port — stop it first
+glooctl down <conflicting-product>
+```
 
-| Service | URL | Notes |
-|---------|-----|-------|
-| Polymer | `http://localhost:3001` (via SSH tunnel) | WorkOS requires localhost redirect |
-| GPL | `https://gpl.dev.crussell.io` | Hummingbird SSO |
-| Hummingbird Web | `https://hb-web.dev.crussell.io` | Email/password dev users |
-| Hummingbird API | `https://hb-api.dev.crussell.io` | API key |
-| Storyhub | `https://storyhub.dev.crussell.io` | Hummingbird SSO |
-| pgAdmin | `https://pgadmin.dev.crussell.io` | `admin@example.com` / `admin` |
-| RustFS Console | `https://rustfs-console.dev.crussell.io` | `rustfsadmin` / `rustfsadmin` |
+If `pnpm install` fails with EACCES:
+- The override file must include `userns_mode: "keep-id"` — this is required for rootless podman.
+- Verify: `cat ~/.config/gloo/overrides/<product>.yml`
 
-## Quick Reference: Nix Config Files
+If env vars point to wrong services (e.g. `127.0.0.1:5433` instead of `polymer_db:5432`):
+- Re-run setup: `glooctl setup <product>`
+- Or manually edit the repo's `.env` / `.env.local` files on the host
 
-These files control the infrastructure. Changes require a deploy (`nix run .#deploy -- bee` from the infra repo on thinkpad):
+## Nix Config
 
-| File | What it controls |
-|------|-----------------|
-| `hosts/bee/gloo-containerized.nix` | systemd user units, activation scripts |
-| `hosts/bee/gloo/compose-containerized.yaml` | compose services, volumes, networks |
-| `hosts/bee/gloo/Containerfile` | shared container image (Node 24 + pnpm + bun) |
-| `hosts/bee/gloo/envs-containerized/*.env` | per-service env files (installed to `/etc/gloo-containerized/`) |
-| `hosts/bee/caddy-dev.nix` | Caddy reverse proxy routes (`*.dev.crussell.io`) |
-| `hosts/bee/adguardhome.nix` | DNS rewrites for `*.dev.crussell.io` |
-| `secrets/gloo-secrets.env.age` | encrypted secrets (agenix) |
-| `hosts/bee/configuration.nix` | enables `services.gloo-containerized` |
+| File | Purpose |
+|------|---------|
+| `hosts/bee/gloo-dev.nix` | NixOS module: installs glooctl, podman, overrides, skill |
+| `hosts/bee/gloo/glooctl` | CLI script |
+| `hosts/bee/gloo/overrides/polymer.yml` | Polymer port publishing + UID fix |
+| `hosts/bee/gloo/overrides/hb.yml` | Hummingbird/storyhub port publishing + UID fix |
+| `hosts/bee/gloo/overrides/gpl.yml` | GPL UID fix |
+| `hosts/bee/gloo/SKILL.md` | This skill |
+| `hosts/bee/gloo/README.md` | Human-readable docs |
+| `hosts/bee/configuration.nix` | Enables `services.gloo-dev` |
 
-## Quick Reference: Dev Credentials
+## Archive
 
-| App | Users | Notes |
-|-----|-------|-------|
-| Hummingbird | `admin`, `sfc`, `fc`, `collaborator`, `vision`, `uploader`, `sfc2`, `reporter`, `regional` | Seeded from `api/prisma/seed.ts` |
-| GPL | `admin@gpl.org` / `admin123`, `viewer@gpl.org` / `viewer123` | Seeded from `src/db/seed.ts` |
-| Polymer | WorkOS SSO | Uses real WorkOS org users |
-| Storyhub | Same as Hummingbird (SSO) | Seeded from `storyhub-prisma/prisma/seed.ts` |
-| PostgreSQL | `postgres` / `postgres` | Superuser, port 5433 from host |
-| pgAdmin | `admin@example.com` / `admin` | Web UI |
-| RustFS | `rustfsadmin` / `rustfsadmin` | S3-compatible console |
+Old module attempts (gloo.nix, gloo-containerized.nix, gloo-infra.nix) have been removed from the repo. Git history preserves them if ever needed.

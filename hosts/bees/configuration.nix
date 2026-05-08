@@ -21,6 +21,9 @@
     ./datenight.nix
     ./caddy.nix
     ./hub-services.nix
+    ./prometheus.nix
+    ./homelab-monitor.nix
+    ./pipane.nix
     ./backup.nix
   ];
 
@@ -59,6 +62,9 @@
   hardware.enableRedistributableFirmware = lib.mkForce true;
   hardware.enableAllFirmware = true;
   zramSwap.enable = true;
+
+  # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
+  programs.nix-ld.enable = true;
 
   # ── Networking ───────────────────────────────────────────────────
   # Intel E610 dual-port 10GbE — active port is the second function

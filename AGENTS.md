@@ -26,7 +26,7 @@ Last validated via SSH: **2026-05-06**.
 ├── hosts/
 │   ├── bee/                   # Beelink mini PC: dev stack (Gloo) + Nebula lighthouse
 │   │   ├── configuration.nix
-│   │   ├── gloo.nix / gloo-containerized.nix
+│   │   ├── gloo-dev.nix
 │   │   ├── buildspace.nix
 │   │   └── gloo/ buildspace/
 │   ├── bees/                  # Production server: all shared + media + ingress services
@@ -219,6 +219,7 @@ nix build .#nixosConfigurations.bees.config.system.build.toplevel
 - `hosts/k1/`–`hosts/k4/` configs still exist in the flake but the machines are retired. Don't deploy to them unless explicitly asked.
 - `hosts/bees/caddy/aws.env` is still a plaintext Route53 credential file. Treat it as sensitive; prefer moving it to agenix.
 - `nebula/pki/` still contains certs for k1–k4 — these can be cleaned up when ready.
+- `secrets/gloo-secrets.env.age` is no longer consumed by any active module. Gloo env files are managed per-repo (gitignored, backed by 1Password).
 
 ## Service Operations by Host
 
@@ -306,41 +307,31 @@ ssh -o IdentitiesOnly=yes crussell@192.168.20.41 '
 Source files:
 
 - `hosts/bee/configuration.nix`
-- `hosts/bee/gloo.nix` / `hosts/bee/gloo-containerized.nix`
-- `hosts/bee/buildspace.nix` (disabled)
-- `hosts/bee/gloo/` — compose.yaml, envs
-- `hosts/bee/buildspace/`
+- `hosts/bee/gloo-dev.nix` — installs glooctl, podman, devcontainer tooling
+- `hosts/bee/gloo/` — glooctl script, overrides, skill, README
+- `hosts/bee/buildspace.nix`
+- `hosts/bee/gloo-archive/` — old module attempts (not imported)
 
 Running services:
 
 - `nebula@homelab.service` — `10.10.0.12`
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
-- Gloo dev stack (user services under `crussell`)
+- Gloo devcontainers (podman + docker-compose, managed via `glooctl`)
 
-Gloo services run **containerized** via `gloo-containerized.nix`. User unit names are prefixed `gloo-c-` (e.g. `gloo-c-polymer`, `gloo-c-gpl`). The older native `gloo-polymer`-style units are remnants and should not be used.
+Gloo development uses **repo devcontainers** — each Gloo repo has its own `.devcontainer/`. The `glooctl` CLI wraps docker-compose with port overrides and manages dev servers as detached systemd user units.
 
-Operate Gloo user services over SSH:
+Products: `polymer`, `gpl`, `hummingbird`, `storyhub`. Hummingbird and storyhub share the same devcontainer.
+
+Operate Gloo via glooctl over SSH:
 
 ```bash
 ssh -o IdentitiesOnly=yes crussell@10.10.0.12
-export XDG_RUNTIME_DIR=/run/user/$(id -u crussell)
-systemctl --user status gloo-c-all.target
-systemctl --user start gloo-c-all.target
-journalctl --user -u gloo-c-polymer -f
+glooctl status
+glooctl up polymer && glooctl start polymer
+glooctl logs polymer -f
 ```
 
-Gloo ports/routes configured in Caddy on bees:
-
-| Service | Port | Internal hostname |
-| --- | ---: | --- |
-| GPL | 3106 | `gpl.internal.crussell.io` |
-| Hummingbird API | 8000 | `hb-api.internal.crussell.io` |
-| Hummingbird Web | 3100 | `hb-web.internal.crussell.io` |
-| Polymer | 3001 | `polymer.internal.crussell.io` |
-| RustFS API | 9000 | `rustfs.internal.crussell.io` |
-| RustFS console | 9001 | `rustfs-console.internal.crussell.io` |
-| pgAdmin | 5050 | `pgadmin.internal.crussell.io` |
-| Storyhub | 3007 | `storyhub.internal.crussell.io` |
+See `hosts/bee/gloo/SKILL.md` for full documentation.
 
 Deploy uses `crussell@192.168.20.105 --sudo` per `flake.nix`.
 
@@ -419,9 +410,10 @@ age -d -i ~/.ssh/id_ed25519 nebula/pki/bees.key.age > /tmp/bees.key
 
 Agenix and age are both used:
 
-- `secrets/gloo-secrets.env.age` — consumed by `hosts/bee/gloo.nix`; decrypted via `/home/crussell/.config/age/key.txt` on `bee`.
 - `thinkpad/secrets/*.age` — home-manager/laptop secrets.
 - `nebula/pki/*.key.age` — Nebula private keys encrypted to the SSH ed25519 public key.
+
+Gloo env files (`.env` / `.env.local`) are gitignored and backed by 1Password — NOT managed by Nix or agenix.
 
 Rules:
 
@@ -437,7 +429,7 @@ Rules:
 2. Import it from `hosts/<host>/configuration.nix`.
 3. Open firewall ports declaratively with `networking.firewall.allowedTCPPorts` / `allowedUDPPorts` if needed.
 4. Deploy with `nix run .#deploy -- <host>`.
-5. Verify with `systemctl status`, `journalctl`, and HTTP checks.
+5. Verify with `systemctl status`, `journalctl`, `glooctl status`, and HTTP checks.
 
 ### System Podman Quadlet on bees
 

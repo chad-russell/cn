@@ -45,6 +45,10 @@
     };
   };
 
+  # ── LocalSend file sharing (port 53317 TCP+UDP) ──────────────────────
+  networking.firewall.allowedTCPPorts = [ 53317 ];
+  networking.firewall.allowedUDPPorts = [ 53317 ];
+
   # ── Time & Locale ─────────────────────────────────────────────────────
   time.timeZone = "America/New_York";
   i18n.defaultLocale = "en_US.UTF-8";
@@ -337,6 +341,13 @@
   # Keep derivation metadata useful for queries
   nix.settings.keep-outputs = true;
   nix.settings.keep-derivations = true;
+
+  # ── Prometheus node exporter (for homelab monitoring) ──────────
+  services.prometheus.exporters.node = {
+    enable = true;
+    port = 9100;
+    openFirewall = true;
+  };
 
   # ── State version ─────────────────────────────────────────────────────
   system.stateVersion = "25.11";
