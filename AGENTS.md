@@ -60,7 +60,7 @@ Last validated via SSH: **2026-05-06**.
                                   ▼
                 ┌──────────────────────────────────┐
                 │ gateway / Hetzner VPS             │
-                │ 178.156.171.212 / Fedora 42       │
+                │ 178.156.171.212 / NixOS 25.11     │
                 │ nginx stream → bees :80/:443     │
                 │ Nebula lighthouse+relay 10.10.0.2 │
                 └───────────────┬──────────────────┘
@@ -108,7 +108,7 @@ Laptop: think / NixOS 25.11, configured under `thinkpad/`.
 | `think` | varies | `10.10.0.10` | NixOS 25.11 | `thinkpad/` | Laptop with home-manager, niri, Noctalia, Podman, dev tools. |
 | `nas` | `192.168.20.31` | `10.10.0.3` | TrueNAS | not Nix-managed | NFS storage: media, photos, backups. |
 | `homeassistant` | `192.168.20.51` | — | HAOS | `hosts/homeassistant/` docs only | Home Assistant OS. |
-| `gateway` | `178.156.171.212` | `10.10.0.2` | Fedora 42 | not Nix-managed | Hetzner nginx stream proxy → bees (`10.10.0.6:80/443`). Nebula lighthouse/relay. |
+| `gateway` | `178.156.171.212` | `10.10.0.2` | NixOS 25.11 | `hosts/gateway/` | Hetzner Cloud VPS: nginx stream proxy → bees (`10.10.0.6:80/443`). Nebula lighthouse/relay. |
 
 ## SSH Access
 
@@ -299,18 +299,37 @@ See `hosts/bee/gloo/SKILL.md` for full documentation.
 
 Deploy uses `crussell@192.168.20.105 --sudo` per `flake.nix`.
 
-### gateway — Hetzner VPS
+### gateway — Hetzner Cloud VPS
 
-Not Nix-managed by this flake.
+Source files:
 
-- Fedora 42 host named `reverse-proxy`
-- Public IP `178.156.171.212`
-- Nebula `10.10.0.2`
-- `nebula.service` active, UDP `4242`
-- `nginx.service` active, TCP `80`/`443`
-- `/etc/nginx/nginx.conf` stream-proxies:
-  - HTTP `:80` -> `10.10.0.6:80` (bees)
-  - HTTPS `:443` -> `10.10.0.6:443` (bees)
+- `hosts/gateway/configuration.nix`
+- `hosts/gateway/disk-config.nix`
+
+NixOS 25.11 on Hetzner Cloud x86_64 (legacy BIOS boot, GRUB).
+
+- Public IP `178.156.171.212` (DHCP from Hetzner Cloud)
+- Nebula `10.10.0.2` (lighthouse + relay, UDP `4242`)
+- Nginx stream proxy:
+  - TCP `:80` → `10.10.0.6:80` (bees)
+  - TCP `:443` → `10.10.0.6:443` (bees)
+- Firewall: TCP `22`, `80`, `443`; UDP `4242`
+- SSH password auth disabled (public-facing)
+
+Nebula certs at `/etc/nebula/{ca.crt,host.crt,host.key}` (deployed manually).
+PKI source: `nebula/pki/hetzner-lighthouse.{crt,key.age}`.
+
+Deploy:
+
+```bash
+nix run .#deploy -- gateway
+```
+
+Install/rebuild (destructive — same IP preserved):
+
+```bash
+nix run .#install -- gateway
+```
 
 Use `ssh -o IdentitiesOnly=yes root@178.156.171.212` to verify.
 

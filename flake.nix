@@ -215,6 +215,11 @@
         ];
       };
 
+      # gateway — Hetzner Cloud reverse proxy + Nebula lighthouse/relay
+      nixosConfigurations.gateway = mkHost {
+        hostname = "gateway";
+      };
+
       # ── Deploy script (nix run .#deploy) ─────────────────────────
       apps.x86_64-linux.deploy = {
         type = "app";
@@ -226,7 +231,7 @@
               echo "Usage: nix run .#deploy -- <host> [host...]"
               echo "  Example: nix run .#deploy -- bee bees"
               echo ""
-              echo "Available hosts: think bee bees misc nas"
+echo "Available hosts: think bee bees misc nas gateway"
               exit 1
             fi
 
@@ -252,6 +257,9 @@
                 bees)
                   TARGET="crussell@10.10.0.6"
                   ;;
+                gateway)
+                  TARGET="root@178.156.171.212"
+                  ;;
                 *)
                   echo "Unknown host: $host"
                   exit 1
@@ -260,9 +268,7 @@
 
               if [ "$host" != "think" ]; then
                 echo ">>> Deploying to $host ($TARGET)..."
-                DEPLOY_ARGS="--flake .#$host --target-host $TARGET --build-host localhost"
-                if [ "$host" = "bee" ] || [ "$host" = "bees" ] || [ "$host" = "misc" ] || [ "$host" = "nas" ]; then
-                  DEPLOY_ARGS="$DEPLOY_ARGS --sudo"
+DEPLOY_ARGS="--flake .#$host --target-host $TARGET --build-host localhost --sudo"
                 fi
                 nixos-rebuild switch $DEPLOY_ARGS
               fi
@@ -298,8 +304,9 @@
             case "$HOST" in
               bee) IP="''${IP:-192.168.20.105}" ;;
               bees) IP="''${IP:-192.168.20.41}" ;;
-              misc) IP="''${IP:-192.168.20.42}" ;;
+misc) IP="''${IP:-192.168.20.42}" ;;
               nas) IP="''${IP:-192.168.20.31}" ;;
+              gateway) IP="''${IP:-178.156.171.212}" ;;
               *)
                 echo "Unknown host: $HOST"
                 exit 1
@@ -311,8 +318,11 @@
             read -p "Continue? [y/N] " confirm
             [ "$confirm" = "y" ] || exit 1
 
-            # nixos-anywhere always connects as root (installer has no other users)
-            SSH_USER="root"
+# bee/bees connect as crussell; all others connect as root
+            case "$HOST" in
+              bee|bees)  SSH_USER="crussell" ;;
+              *)         SSH_USER="root" ;;
+            esac
 
             nix run github:nix-community/nixos-anywhere -- --flake .#$HOST $SSH_USER@$IP
           ''
