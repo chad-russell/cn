@@ -1,6 +1,6 @@
 # ── Media Services (bees) ──────────────────────────────────────────
 #
-# Migrated from k3. All services run as native NixOS systemd services.
+# All services run as native NixOS systemd services.
 # Shared `media` group (GID 2000) for NFS access.
 
 { config, lib, pkgs, ... }:

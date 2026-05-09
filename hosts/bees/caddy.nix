@@ -1,6 +1,6 @@
 # ── Caddy Reverse Proxy (System Podman Quadlet on bees) ───────────
 #
-# Migrated from k2. Uses a local caddy-route53 image with Route53 DNS challenge.
+# Uses a local caddy-route53 image with Route53 DNS challenge.
 #
 # Caddy terminates TLS for both public (*.crussell.io) and internal
 # (*.internal.crussell.io) domains. Routes point to localhost services

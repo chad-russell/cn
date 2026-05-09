@@ -1,6 +1,6 @@
 # ── Base Server Configuration ──────────────────────────────────────
 #
-# Shared config for all server hosts (k1-k4 and bee).
+# Shared config for all server hosts (bee, bees, misc).
 # Thinkpad is NOT a server and has its own config.
 
 { config, lib, pkgs, ... }:

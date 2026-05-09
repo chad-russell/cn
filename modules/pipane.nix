@@ -80,12 +80,16 @@ in
         Type = "simple";
         User = cfg.user;
         ExecStart = "${lib.getBin nodejs}/bin/npx pipane";
-        Environment = [
-          "PATH=/run/current-system/sw/bin:${lib.getBin nodejs}/bin"
-        ];
+        Environment =
+          [ "PATH=/run/current-system/sw/bin:${lib.getBin nodejs}/bin" ]
+          ++ lib.optional config.services.pi-agent.enable
+            "OPENROUTER_API_KEY=%d/openrouter-api-key";
         # Leading '-' means: don't fail if file is missing on first boot
         # (activation script will create it; pipane falls back to random token)
         EnvironmentFile = "-/etc/pipane/auth.env";
+        # Pass OPENROUTER_API_KEY from pi-agent secret (if module is enabled)
+        LoadCredential = lib.optional config.services.pi-agent.enable
+          "openrouter-api-key:${config.age.secrets.openrouter-api-key.path}";
         Restart = "on-failure";
         RestartSec = "5";
         WorkingDirectory = cfg.workingDir;

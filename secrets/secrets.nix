@@ -4,6 +4,7 @@ let
 in
 {
   "gloo-secrets.env.age".publicKeys = [ crussell ];
+  "openrouter-api-key.age".publicKeys = [ crussell ];
 
   # ── Restic backup secrets ──────────────────────────────────────
   # S3 credentials (shared by all machines)

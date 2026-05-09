@@ -1,5 +1,4 @@
 # ── Ntfy Push Notifications ──────────────────────────────────────
-# Migrated from k2. Identical config.
 
 { config, lib, pkgs, ... }:
 

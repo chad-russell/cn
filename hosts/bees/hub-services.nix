@@ -1,5 +1,5 @@
 # ── Shared Web Services (Podman Quadlets on bees) ──────────────────
-# Migrated from k2. Linkding, Papra, Open-WebUI.
+# Linkding, Papra, Open-WebUI.
 
 { config, lib, pkgs, ... }:
 

@@ -9,12 +9,10 @@ Last validated via SSH: **2026-05-06**.
 ## Ground Rules for Agents
 
 1. **Source of truth:** `flake.nix`, `hosts/*/*.nix`, `modules/*.nix`, and live host state are authoritative.
-2. **Do not resurrect legacy paths** such as `servers/hub/...`, `servers/media/...`, or `brunch/...` unless the user explicitly asks. Those paths are deleted or deprecated in the working tree.
-3. **Use Nix for host config changes** whenever possible. Deploy with `nix run .#deploy -- <host>`.
-4. **Caddy route source lives in `hosts/bees/caddy/`** and is installed to `/etc/caddy` by the `hosts/bees/caddy.nix` module; deploy `bees`, then validate/reload Caddy.
-5. **Never commit plaintext secrets.** Existing plaintext secret-like files should be treated carefully; do not print or copy their contents into docs, logs, or chat unless explicitly necessary.
-6. **When unsure, verify live state over SSH** using the SSH notes below.
-7. **k1–k4 are decommissioned.** Their NixOS configs remain in `hosts/k1/`–`hosts/k4/` for reference, but all services have been migrated to `bees` and `bee`. Do not deploy changes to k1–k4 unless explicitly asked.
+2. **Use Nix for host config changes** whenever possible. Deploy with `nix run .#deploy -- <host>`.
+3. **Caddy route source lives in `hosts/bees/caddy/`** and is installed to `/etc/caddy` by the `hosts/bees/caddy.nix` module; deploy `bees`, then validate/reload Caddy.
+4. **Never commit plaintext secrets.** Existing plaintext secret-like files should be treated carefully; do not print or copy their contents into docs, logs, or chat unless explicitly necessary.
+5. **When unsure, verify live state over SSH** using the SSH notes below.
 
 ## Current Repository Map
 
@@ -37,19 +35,13 @@ Last validated via SSH: **2026-05-06**.
 │   │   ├── ntfy.nix, searxng.nix, datenight.nix
 │   │   ├── hub-services.nix, linkding.container, papra.container, open-webui.container
 │   │   └── disk-config.nix
-│   ├── k1/                    # [RETIRED] Dev host — Gloo migrated to bee
-│   ├── k2/                    # [RETIRED] Ingress host — services migrated to bees
-│   ├── k3/                    # [RETIRED] Media host — services migrated to bees
-│   ├── k4/                    # [RETIRED] Immich host — services migrated to bees
-│   ├── bee/                   # [RETIRED, same dir as active] Beelink config
-│   ├── migration/             # Migration guide (k1–k4 → bee + bees)
-│   └── homeassistant/         # HAOS operational docs + helper scripts
+│   ├── homeassistant/         # HAOS operational docs + helper scripts
+│   └── misc/                  # HP Z820 workstation (temporary backup target)
 ├── modules/
 │   ├── base-server.nix        # Shared server baseline: user, SSH, networkd, packages, GC, NFS client
 │   ├── server-shell.nix       # Shared zsh/CLI setup for servers
 │   ├── nebula-client.nix      # Shared Nebula client defaults for servers
 │   ├── nebula-hosts.nix       # /etc/hosts entries for Nebula overlay names
-│   ├── elitedesk-*.nix        # HP EliteDesk hardware, disk layout, NIC quirks (k1–k4)
 │   └── hub-disk-config.nix    # Beelink/bee btrfs disk layout
 ├── nebula/
 │   ├── configs/               # Nebula config templates
@@ -73,8 +65,8 @@ Last validated via SSH: **2026-05-06**.
                 │ Nebula lighthouse+relay 10.10.0.2 │
                 └───────────────┬──────────────────┘
                                 │ Nebula to 10.10.0.6
-                ┌───────────────┴──────────────┐
-                ▼                              ▼
+                ┌───────────────┴──────────────────┐
+                ▼                                  ▼
   ┌──────────────────────────┐   ┌──────────────────────────┐
   │ bees — production server │   │ bee — dev + Nebula LH    │
   │ 192.168.20.41            │   │ 192.168.20.105           │
@@ -105,34 +97,18 @@ Last validated via SSH: **2026-05-06**.
 
 Also on LAN: homeassistant / HAOS at 192.168.20.51.
 Laptop: think / NixOS 25.11, configured under `thinkpad/`.
-Decommissioned (still on LAN but idle): k1 (.61), k2 (.62), k3 (.63), k4 (.64).
 ```
 
 ## Machine Registry
 
-### Active Hosts
-
 | Host | LAN IP | Nebula IP | OS | Config | Purpose / services |
 | --- | --- | --- | --- | --- | --- |
-| `bees` | `192.168.20.41` | `10.10.0.6` | NixOS 25.11 | `hosts/bees/` | Production server: Caddy, ntfy, SearXNG, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. Took over k2's Nebula identity (10.10.0.6). |
+| `bees` | `192.168.20.41` | `10.10.0.6` | NixOS 25.11 | `hosts/bees/` | Production server: Caddy, ntfy, SearXNG, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
 | `bee` | `192.168.20.105` | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/` | Dev server: Gloo stack, Nebula lighthouse. |
 | `think` | varies | `10.10.0.10` | NixOS 25.11 | `thinkpad/` | Laptop with home-manager, niri, Noctalia, Podman, dev tools. |
 | `nas` | `192.168.20.31` | `10.10.0.3` | TrueNAS | not Nix-managed | NFS storage: media, photos, backups. |
 | `homeassistant` | `192.168.20.51` | — | HAOS | `hosts/homeassistant/` docs only | Home Assistant OS. |
 | `gateway` | `178.156.171.212` | `10.10.0.2` | Fedora 42 | not Nix-managed | Hetzner nginx stream proxy → bees (`10.10.0.6:80/443`). Nebula lighthouse/relay. |
-
-### Decommissioned Hosts (k1–k4)
-
-All services migrated to `bees` and `bee` on 2026-05-05. Machines are idle on LAN but still physically present. Configs kept in repo for reference.
-
-| Host | LAN IP | Former Nebula IP | Former role | Current state |
-| --- | --- | --- | --- | --- |
-| `k1` | `192.168.20.61` | `10.10.0.4` | Dev stacks (Gloo) | Idle; Nebula still connected but no services |
-| `k2` | `192.168.20.62` | was `10.10.0.6` | Ingress + shared services | Stripped to bare OS; Nebula disabled; identity taken by bees |
-| `k3` | `192.168.20.63` | was `10.10.0.8` | Media server | Idle; Nebula disabled; no media services |
-| `k4` | `192.168.20.64` | was `10.10.0.9` | Immich | Idle; Nebula disabled; no immich services |
-
-Migration details: `hosts/migration/MIGRATION-GUIDE.md`.
 
 ## SSH Access
 
@@ -160,15 +136,6 @@ ssh -o IdentitiesOnly=yes root@10.10.0.2              # gateway (Nebula)
 ssh -o IdentitiesOnly=yes root@178.156.171.212        # gateway (public IP)
 ```
 
-Decommissioned (still accessible on LAN if needed):
-
-```bash
-ssh -o IdentitiesOnly=yes root@192.168.20.61   # k1 (still has Nebula)
-ssh -o IdentitiesOnly=yes root@192.168.20.62   # k2 (bare OS)
-ssh -o IdentitiesOnly=yes root@192.168.20.63   # k3 (bare OS)
-ssh -o IdentitiesOnly=yes root@192.168.20.64   # k4 (bare OS)
-```
-
 Home Assistant SSH: see `hosts/homeassistant/README.md` and helper scripts under `hosts/homeassistant/scripts/`.
 
 ## Nix Operations
@@ -177,7 +144,7 @@ Available flake hosts:
 
 ```bash
 nix flake show
-# NixOS configs: think, k1, k2, k3, k4, bee, bees
+# NixOS configs: think, bee, bees, misc
 ```
 
 Deploy active machines:
@@ -216,9 +183,7 @@ nix build .#nixosConfigurations.bees.config.system.build.toplevel
 
 ### Known Nix Drift / Footguns
 
-- `hosts/k1/`–`hosts/k4/` configs still exist in the flake but the machines are retired. Don't deploy to them unless explicitly asked.
 - `hosts/bees/caddy/aws.env` is still a plaintext Route53 credential file. Treat it as sensitive; prefer moving it to agenix.
-- `nebula/pki/` still contains certs for k1–k4 — these can be cleaned up when ready.
 - `secrets/gloo-secrets.env.age` is no longer consumed by any active module. Gloo env files are managed per-repo (gitignored, backed by 1Password).
 
 ## Service Operations by Host
@@ -236,10 +201,10 @@ Source files:
 
 Live systemd services:
 
-- `nebula@homelab.service` — service identity `10.10.0.6` (took over from k2)
+- `nebula@homelab.service` — service identity `10.10.0.6`
 - `caddy.service` — Podman Quadlet, container name `systemd-caddy`
 - `ntfy-sh.service` — port `8090`
-- `searx.service` + `redis-searx.service` — SearXNG on port `8888` (changed from 8080, conflict with qBittorrent)
+- `searx.service` + `redis-searx.service` — SearXNG on port `8888`
 - `datenight.service` — port `7890`
 - `linkding.service` — publishes `30080 -> 9090`
 - `papra.service` — publishes `30083 -> 1221`
@@ -310,7 +275,6 @@ Source files:
 - `hosts/bee/gloo-dev.nix` — installs glooctl, podman, devcontainer tooling
 - `hosts/bee/gloo/` — glooctl script, overrides, skill, README
 - `hosts/bee/buildspace.nix`
-- `hosts/bee/gloo-archive/` — old module attempts (not imported)
 
 Running services:
 
@@ -365,17 +329,10 @@ Current overlay host entries from `modules/nebula-hosts.nix`:
 | `10.10.0.1` | `nebula-lh` — local lighthouse on `bee` |
 | `10.10.0.2` | `nebula-hetzner` — Hetzner lighthouse/relay |
 | `10.10.0.3` | `nas` |
-| `10.10.0.6` | `bees` — production server (took over k2's identity) |
+| `10.10.0.6` | `bees` — production server |
+| `10.10.0.11` | `misc` |
 | `10.10.0.12` | `bee` — dev server |
 | `10.10.0.10` | `think` — laptop |
-
-Decommissioned IPs (no longer in hosts file, but PKI certs exist):
-
-| Nebula IP | Name | Notes |
-| --- | --- | --- |
-| `10.10.0.4` | `k1` | Still connected to Nebula but idle |
-| `10.10.0.8` | `k3` | Nebula disabled |
-| `10.10.0.9` | `k4` | Nebula disabled |
 
 For NixOS hosts, certs are expected at:
 
@@ -458,7 +415,5 @@ Older docs may refer to:
 - `servers/media/...`
 - `brunch/config/...`
 - host name `hub` for what is now `bees`
-- Services running on k1–k4 (all migrated to bees/bee)
-- `bees` at Nebula IP `10.10.0.5` (now at `10.10.0.6`)
 
 Treat those as historical unless the files still exist and the current Nix config agrees.

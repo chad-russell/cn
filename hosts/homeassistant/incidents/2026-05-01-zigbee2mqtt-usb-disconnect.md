@@ -53,4 +53,4 @@ This type of transient USB disconnect cannot be fully prevented by configuration
 - Ensure the USB dongle is physically seated securely
 - Consider using a USB extension cable to reduce physical stress on the dongle
 - Monitor Z2M state and auto-restart on error (Supervisor may already retry, but did not in this case)
-- Add the USB disconnect pattern to the health monitoring system on the current infra host (`k2`)
+- Add the USB disconnect pattern to the health monitoring system on `bees`

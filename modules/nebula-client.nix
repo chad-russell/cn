@@ -1,7 +1,7 @@
 # ── Nebula VPN Client Module ───────────────────────────────────────
 #
 # Standard Nebula client config for homelab machines.
-# Lighthouses: 10.10.0.1 (k2 local) and 10.10.0.2 (Hetzner)
+# Lighthouses: 10.10.0.1 (bee local) and 10.10.0.2 (Hetzner)
 #
 # Usage in host config:
 #   imports = [ ./modules/nebula-client.nix ];

@@ -10,6 +10,7 @@
     ../../modules/base-server.nix
     ../../modules/hub-disk-config.nix
     ../../modules/nebula-client.nix
+    ../../modules/pi-agent.nix
     # ./adguardhome.nix  # paused — not needed with distrobox workflow
     ./caddy-dev.nix
     ./gloo-dev.nix
@@ -54,8 +55,8 @@
 
   # ── Nebula: Local lighthouse (10.10.0.1) ───────────────────────
   #
-  # Migrated from k2. Runs a second nebula instance as the local
-  # lighthouse on port 4243. Uses tun.disabled = true (discovery only).
+  # Runs a second nebula instance as the local lighthouse on port 4243.
+  # Uses tun.disabled = true (discovery only).
   # Certs live in /etc/nebula-lh/.
 
   services.nebula.networks.lighthouse = {
@@ -137,8 +138,10 @@
   environment.systemPackages = [
     pkgs.git
     pkgs.github-cli
-    unstable."pi-coding-agent"
   ];
+
+  # ── pi coding agent ──────────────────────────────────────────
+  services.pi-agent.enable = true;
 
   # Firewall ports managed by gloo-dev and buildspace modules
 

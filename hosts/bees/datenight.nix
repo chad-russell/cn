@@ -1,5 +1,4 @@
 # ── Date Night Restaurant Picker ─────────────────────────────────
-# Migrated from k2. Identical config.
 
 { config, lib, pkgs, ... }:
 

@@ -1,5 +1,4 @@
 # ── SearXNG Meta Search Engine ───────────────────────────────────
-# Migrated from k2. Identical config.
 
 { config, lib, pkgs, ... }:
 

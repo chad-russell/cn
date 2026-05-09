@@ -39,6 +39,8 @@ in
       User = "crussell";
       ExecStart = "${pkgs.bun}/bin/bun ${./homelab-monitor/collect.ts} check";
       TimeoutStartSec = "300";
+      Environment = "OPENROUTER_API_KEY=%d/openrouter-api-key";
+      LoadCredential = "openrouter-api-key:${config.age.secrets.openrouter-api-key.path}";
     };
   };
 
@@ -51,6 +53,8 @@ in
       User = "crussell";
       ExecStart = "${pkgs.bun}/bin/bun ${./homelab-monitor/collect.ts} daily";
       TimeoutStartSec = "300";
+      Environment = "OPENROUTER_API_KEY=%d/openrouter-api-key";
+      LoadCredential = "openrouter-api-key:${config.age.secrets.openrouter-api-key.path}";
     };
   };
 

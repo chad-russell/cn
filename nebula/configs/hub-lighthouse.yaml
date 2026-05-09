@@ -1,6 +1,6 @@
-# Local Lighthouse - k2/manual template
+# Local Lighthouse - manual template
 # Nebula IP 10.10.0.1 is reserved for this dedicated lighthouse identity.
-# Live k2 is Nix-managed via services.nebula.networks.lighthouse.
+# Live lighthouse is Nix-managed via services.nebula.networks.lighthouse on bee.
 # This manual/container template uses UDP 4243 so it can coexist with a primary Nebula host instance on 4242.
 
 pki:

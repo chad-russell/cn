@@ -4,8 +4,6 @@
 # 128 GB RAM (shared with iGPU; ~32 GB visible to OS)
 # 2 TB NVMe (Crucial P310), dual Intel E610 10GbE
 # Active NIC: enp196s0f1 (second port; enp196s0f0 is unplugged)
-#
-# Target: consolidate all services from k2, k3, k4 onto this machine.
 
 { config, lib, pkgs, unstable, ... }:
 
@@ -14,6 +12,7 @@
     ../../modules/base-server.nix
     ./disk-config.nix
     ../../modules/nebula-client.nix
+    ../../modules/pi-agent.nix
     ./media-services.nix
     ./immich.nix
     ./ntfy.nix
@@ -31,8 +30,6 @@
 
   # ── Essential packages ────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
-    # AI / dev tools
-    unstable."pi-coding-agent"
   ];
 
   # ── Boot ─────────────────────────────────────────────────────────
@@ -103,6 +100,9 @@
 
   # ── Nebula ──────────────────────────────────────────────────────
   services.nebula.networks.homelab.enable = true;
+
+  # ── pi coding agent ──────────────────────────────────────────
+  services.pi-agent.enable = true;
 
   # ── Firewall: public ingress for Caddy ──────────────────────────
   networking.firewall.allowedTCPPorts = [ 80 443 ];

@@ -1,7 +1,5 @@
 # ── Immich Photo Server ───────────────────────────────────────────
-# Migrated from k4 (192.168.20.64).
 # Photos are on NFS at /mnt/photos (already mounted in configuration.nix).
-# PostgreSQL data must be transferred from k4 before starting.
 
 { config, lib, pkgs, ... }:
 

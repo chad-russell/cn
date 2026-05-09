@@ -154,38 +154,6 @@
         ];
       };
 
-      # k1 — general purpose server (NixOS)
-      nixosConfigurations.k1 = mkHost {
-        hostname = "k1";
-        extraModules = [
-          ./modules/elitedesk-hardware.nix
-        ];
-      };
-
-      # k2 — utility server (NixOS)
-      nixosConfigurations.k2 = mkHost {
-        hostname = "k2";
-        extraModules = [
-          ./modules/elitedesk-hardware.nix
-        ];
-      };
-
-      # k3 — media server (NixOS)
-      nixosConfigurations.k3 = mkHost {
-        hostname = "k3";
-        extraModules = [
-          ./modules/elitedesk-hardware.nix
-        ];
-      };
-
-      # k4 — utility server (NixOS)
-      nixosConfigurations.k4 = mkHost {
-        hostname = "k4";
-        extraModules = [
-          ./modules/elitedesk-hardware.nix
-        ];
-      };
-
       # bee — Beelink mini PC (general-purpose server)
       nixosConfigurations.bee = mkHost {
         hostname = "bee";
@@ -232,9 +200,9 @@
 
             if [ $# -lt 1 ]; then
               echo "Usage: nix run .#deploy -- <host> [host...]"
-              echo "  Example: nix run .#deploy -- k2 k3 k4"
+              echo "  Example: nix run .#deploy -- bee bees"
               echo ""
-              echo "Available hosts: think k1 k2 k3 k4 bee bees misc"
+              echo "Available hosts: think bee bees misc"
               exit 1
             fi
 
@@ -247,18 +215,6 @@
                   # Local machine — just rebuild
                   echo ">>> Deploying to $host (local)..."
                   sudo nixos-rebuild switch --flake .#$host
-                  ;;
-                k1)
-                  TARGET="root@192.168.20.61"
-                  ;;
-                k2)
-                  TARGET="root@192.168.20.62"
-                  ;;
-                k3)
-                  TARGET="root@192.168.20.63"
-                  ;;
-                k4)
-                  TARGET="root@192.168.20.64"
                   ;;
                 misc)
                   TARGET="crussell@10.10.0.11"
@@ -302,7 +258,7 @@
 
             if [ $# -lt 1 ]; then
               echo "Usage: nix run .#install -- <host> <ip>"
-              echo "  Example: nix run .#install -- k1 192.168.20.61"
+              echo "  Example: nix run .#install -- bees 192.168.20.41"
               echo ""
               echo "This runs nixos-anywhere to wipe and install NixOS."
               echo "WARNING: This will ERASE the target disk."
@@ -313,10 +269,6 @@
             IP="''${2:-}"
 
             case "$HOST" in
-              k1) IP="''${IP:-192.168.20.61}" ;;
-              k2) IP="''${IP:-192.168.20.62}" ;;
-              k3) IP="''${IP:-192.168.20.63}" ;;
-              k4) IP="''${IP:-192.168.20.64}" ;;
               bee) IP="''${IP:-192.168.20.105}" ;;
               bees) IP="''${IP:-192.168.20.41}" ;;
               misc) IP="''${IP:-192.168.20.42}" ;;

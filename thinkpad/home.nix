@@ -332,23 +332,8 @@ in
         identityFile = "~/.ssh/id_ed25519";
         extraOptions.StrictHostKeyChecking = "accept-new";
       };
-      k1 = {
-        hostname = "10.10.0.4";
-        identityFile = "~/.ssh/id_ed25519";
-        extraOptions.StrictHostKeyChecking = "accept-new";
-      };
-      k2 = {
+      bees = {
         hostname = "10.10.0.6";
-        identityFile = "~/.ssh/id_ed25519";
-        extraOptions.StrictHostKeyChecking = "accept-new";
-      };
-      k3 = {
-        hostname = "10.10.0.8";
-        identityFile = "~/.ssh/id_ed25519";
-        extraOptions.StrictHostKeyChecking = "accept-new";
-      };
-      k4 = {
-        hostname = "10.10.0.9";
         identityFile = "~/.ssh/id_ed25519";
         extraOptions.StrictHostKeyChecking = "accept-new";
       };

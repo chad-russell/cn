@@ -1,6 +1,6 @@
 # Nebula config for AI Server (10.10.0.5) - hostname: bees
 # Uses dual lighthouses for roaming client access.
-# Local lighthouse 10.10.0.1 runs on k2 at 192.168.20.62:4243.
+# Local lighthouse 10.10.0.1 runs on bee at 192.168.20.105:4243.
 
 pki:
   ca: /etc/nebula/ca.crt
@@ -8,7 +8,7 @@ pki:
   key: /etc/nebula/host.key
 
 static_host_map:
-  "10.10.0.1": ["192.168.20.62:4243"]
+  "10.10.0.1": ["192.168.20.105:4243"]
   "10.10.0.2": ["178.156.171.212:4242"]
 
 lighthouse:

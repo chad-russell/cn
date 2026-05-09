@@ -8,11 +8,6 @@ in
   "bees.key.age".publicKeys = [ crussell ];
   "crussell-lh-local.key.age".publicKeys = [ crussell ];
   "hetzner-lighthouse.key.age".publicKeys = [ crussell ];
-  "k1.key.age".publicKeys = [ crussell ];
-  "k2-host.key.age".publicKeys = [ crussell ];
-  "k2.key.age".publicKeys = [ crussell ];
-  "k3.key.age".publicKeys = [ crussell ];
-  "k4.key.age".publicKeys = [ crussell ];
   "nas.key.age".publicKeys = [ crussell ];
   "phone.key.age".publicKeys = [ crussell ];
   "thinkpad.key.age".publicKeys = [ crussell ];
