@@ -4,7 +4,7 @@
 # - Every 3 hours: critical check (alerts via ntfy only if issues found)
 # - Daily at 8 AM ET: comprehensive health report (always sent)
 #
-# Data collection:
+# Data collection (TypeScript, runs via bun):
 #   - Prometheus metrics (CPU, memory, disk, network) for NixOS hosts
 #   - SSH to NAS and gateway for status (until migrated to NixOS)
 #   - Local journalctl/dmesg on bees
@@ -21,14 +21,23 @@ in
   # System prompt file for pi analysis
   environment.etc."homelab-monitor/system-prompt.md".source = ./homelab-monitor/system-prompt.md;
 
+  # Install collect.ts at a stable path for on-demand remote use
+  environment.etc."homelab-monitor/collect.ts" = {
+    source = ./homelab-monitor/collect.ts;
+    mode = "0644";
+  };
+
+  # bun available system-wide for SSH on-demand invocations
+  environment.systemPackages = [ pkgs.bun ];
+
   # ── 3-hourly critical check ────────────────────────────────────
   systemd.services.homelab-monitor-check = {
     description = "Homelab Monitor — Critical Check";
-    path = [ pkgs.curl pkgs.jq pkgs.openssh pi-pkg ];
+    path = [ pkgs.bun pkgs.openssh pi-pkg ];
     serviceConfig = {
       Type = "oneshot";
       User = "crussell";
-      ExecStart = "${pkgs.bash}/bin/bash ${./homelab-monitor/collect.sh} check";
+      ExecStart = "${pkgs.bun}/bin/bun ${./homelab-monitor/collect.ts} check";
       TimeoutStartSec = "300";
     };
   };
@@ -36,11 +45,11 @@ in
   # ── Daily comprehensive report ─────────────────────────────────
   systemd.services.homelab-monitor-daily = {
     description = "Homelab Monitor — Daily Report";
-    path = [ pkgs.curl pkgs.jq pkgs.openssh pi-pkg ];
+    path = [ pkgs.bun pkgs.openssh pi-pkg ];
     serviceConfig = {
       Type = "oneshot";
       User = "crussell";
-      ExecStart = "${pkgs.bash}/bin/bash ${./homelab-monitor/collect.sh} daily";
+      ExecStart = "${pkgs.bun}/bin/bun ${./homelab-monitor/collect.ts} daily";
       TimeoutStartSec = "300";
     };
   };

@@ -218,6 +218,8 @@ in
       alias ll='eza -l --icons'
       alias la='eza -la --icons'
       alias cd='z'
+      alias v='nvim'
+      alias vi='nvim'
 
       # -- Zoxide init --
       if command -v zoxide &>/dev/null; then

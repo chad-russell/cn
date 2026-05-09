@@ -189,11 +189,38 @@
       # bee — Beelink mini PC (general-purpose server)
       nixosConfigurations.bee = mkHost {
         hostname = "bee";
+        extraModules = [
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useUserPackages = true;
+            home-manager.useGlobalPkgs = true;
+            home-manager.sharedModules = [
+              nixvim.homeModules.nixvim
+            ];
+            home-manager.users.${username} = import ./modules/server-home.nix;
+          }
+        ];
+      };
+
+      # misc — HP Z820 workstation (temporary backup target, future hypervisor)
+      nixosConfigurations.misc = mkHost {
+        hostname = "misc";
       };
 
       # bees — AMD Ryzen AI MAX+ 395 production server
       nixosConfigurations.bees = mkHost {
         hostname = "bees";
+        extraModules = [
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useUserPackages = true;
+            home-manager.useGlobalPkgs = true;
+            home-manager.sharedModules = [
+              nixvim.homeModules.nixvim
+            ];
+            home-manager.users.${username} = import ./modules/server-home.nix;
+          }
+        ];
       };
 
       # ── Deploy script (nix run .#deploy) ─────────────────────────
@@ -207,7 +234,7 @@
               echo "Usage: nix run .#deploy -- <host> [host...]"
               echo "  Example: nix run .#deploy -- k2 k3 k4"
               echo ""
-              echo "Available hosts: think k1 k2 k3 k4 bee bees"
+              echo "Available hosts: think k1 k2 k3 k4 bee bees misc"
               exit 1
             fi
 
@@ -233,6 +260,9 @@
                 k4)
                   TARGET="root@192.168.20.64"
                   ;;
+                misc)
+                  TARGET="crussell@10.10.0.11"
+                  ;;
                 bee)
                   TARGET="crussell@10.10.0.12"
                   ;;
@@ -248,7 +278,7 @@
               if [ "$host" != "think" ]; then
                 echo ">>> Deploying to $host ($TARGET)..."
                 DEPLOY_ARGS="--flake .#$host --target-host $TARGET --build-host localhost"
-                if [ "$host" = "bee" ] || [ "$host" = "bees" ]; then
+                if [ "$host" = "bee" ] || [ "$host" = "bees" ] || [ "$host" = "misc" ]; then
                   DEPLOY_ARGS="$DEPLOY_ARGS --sudo"
                 fi
                 nixos-rebuild switch $DEPLOY_ARGS
@@ -289,6 +319,7 @@
               k4) IP="''${IP:-192.168.20.64}" ;;
               bee) IP="''${IP:-192.168.20.105}" ;;
               bees) IP="''${IP:-192.168.20.41}" ;;
+              misc) IP="''${IP:-192.168.20.42}" ;;
               *)
                 echo "Unknown host: $HOST"
                 exit 1
@@ -300,12 +331,8 @@
             read -p "Continue? [y/N] " confirm
             [ "$confirm" = "y" ] || exit 1
 
-            # bee/bees connect as crussell (passwordless sudo after install)
-            # k1-k4 connect as root
-            case "$HOST" in
-              bee|bees) SSH_USER="crussell" ;;
-              *)        SSH_USER="root" ;;
-            esac
+            # nixos-anywhere always connects as root (installer has no other users)
+            SSH_USER="root"
 
             nix run github:nix-community/nixos-anywhere -- --flake .#$HOST $SSH_USER@$IP
           ''

@@ -146,6 +146,8 @@ in
       cd = "z";
       # nixos
       nrs = "sudo nixos-rebuild switch --flake /home/${username}/nixos-config#think";
+      # homelab
+      hl = "ssh -o IdentitiesOnly=yes crussell@10.10.0.6 'bun /etc/homelab-monitor/collect.ts report'";
     };
 
     # Extra PATH entries
