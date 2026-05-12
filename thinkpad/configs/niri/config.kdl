@@ -16,22 +16,22 @@ input {
     }
 }
 
-output "eDP-1" {
-    mode "1920x1200@60"
-    scale 1.1
-    position x=2100 y=1080
+output "DP-3" {
+    mode "3840x2160@60.00"
+    scale 1.25
+    position x=0 y=0
 }
 
 output "DP-5" {
     mode "3840x2160@60.00"
     scale 1.25
-    position x=1920 y=0
+    position x=3072 y=0
 }
 
-output "DP-6" {
-    mode "3840x2160@60.00"
-    scale 1.25
-    position x=0 y=0
+output "eDP-1" {
+    mode "1920x1200@60"
+    scale 1.0
+    position x=4224 y=1728
 }
 
 layout {

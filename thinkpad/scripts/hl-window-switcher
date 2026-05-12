@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Window switcher for Hyprland 0.55+ (Lua IPC)
+# Lists all windows via hyprctl, presents them in fuzzel, focuses the selected one.
+set -euo pipefail
+
+# Get windows as JSON, build a menu line for each:
+#   "window-title  [class]  [workspace N]"  +  hidden address marker
+entries=$(hyprctl clients -j | jq -r '
+  .[] |
+  "\(.title)   [\(.class)]   [workspace \(.workspace.name)]\t\(.address)"
+')
+
+if [ -z "$entries" ]; then
+  notify-send "Window Switcher" "No windows found"
+  exit 0
+fi
+
+# Present in fuzzel; tab separates display text from the address
+selected=$(echo "$entries" \
+  | fuzzel --dmenu --prompt="Switch to window: " --match-mode=fuzzy \
+    --columns=1 --lines=15 --cache=/dev/null \
+  | tail -1)
+
+if [ -z "$selected" ]; then
+  exit 0
+fi
+
+address=$(echo "$selected" | sed 's/.*\t//')
+
+# Focus via Hyprland 0.55 Lua eval API
+hyprctl eval "hl.dispatch(hl.dsp.focus({window = 'address:${address}'}))" >/dev/null 2>&1

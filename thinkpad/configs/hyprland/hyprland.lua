@@ -10,28 +10,33 @@
 -- NOTE: Monitor names may differ from niri. Run `hyprctl monitors` after
 -- starting Hyprland and adjust names here if needed.
 
-hl.monitor({
-	output = "eDP-1",
-	mode = "1920x1200@60",
-	position = "2100x1080",
-	scale = 1.0,
-})
+---- Home: two Samsung LS27A800U side by side ----
 
+-- Left Samsung (serial HNMT700185)
 hl.monitor({
-	output = "DP-5",
-	mode = "3840x2160@60",
-	position = "1920x0",
-	scale = 1.25,
-})
-
-hl.monitor({
-	output = "DP-6",
+	output = "desc:Samsung Electric Company LS27A800U HNMT700185",
 	mode = "3840x2160@60",
 	position = "0x0",
 	scale = 1.25,
 })
 
--- Fallback for any unmatched display
+-- Right Samsung (serial HNMT700199)
+hl.monitor({
+	output = "desc:Samsung Electric Company LS27A800U HNMT700199",
+	mode = "3840x2160@60",
+	position = "3072x0",
+	scale = 1.25,
+})
+
+-- Laptop panel (stable as internal display)
+hl.monitor({
+	output = "eDP-1",
+	mode = "1920x1200@60",
+	position = "4224x1728",
+	scale = 1.0,
+})
+
+-- Fallback for any unmatched display (e.g. work monitor)
 hl.monitor({
 	output = "",
 	mode = "preferred",
@@ -153,6 +158,9 @@ hl.animation({ leaf = "workspacesOut", enabled = true, speed = 8, spring = "snap
 -- Alt+Tab / Alt+Shift+Tab to cycle windows in monocle
 hl.bind("ALT + tab", hl.dsp.layout("cyclenext"))
 hl.bind("ALT + SHIFT + tab", hl.dsp.layout("cycleprev"))
+
+-- Alt+Escape: window switcher (fuzzel-based, works across workspaces)
+hl.bind("ALT + escape", hl.dsp.exec_cmd("hl-window-switcher"))
 
 ----------------
 ----  MISC  ----

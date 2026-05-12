@@ -17,6 +17,7 @@
     ./buildspace.nix
     ./pipane.nix
     ./backup.nix
+    ./tailscale.nix
   ];
 
   networking.hostName = "bee";

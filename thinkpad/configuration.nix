@@ -146,6 +146,12 @@
     portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
   };
 
+  # ── Mango — dwm-like Wayland compositor with scroller layout ──────────
+  # Start from TTY with `mangowc` wrapper or `mango`. Coexists with niri/hyprland.
+  # NixOS module handles XDG portal (wlr), polkit, XWayland, and login entry.
+  # Home-manager module handles config, autostart, and systemd session target.
+  programs.mango.enable = true;
+
   # ── Noctalia Shell ────────────────────────────────────────────────────
   services.noctalia-shell.enable = true;
 
@@ -283,6 +289,8 @@
     noto-fonts
     noto-fonts-cjk-sans
     noto-fonts-color-emoji
+    xorg.fontadobe75dpi
+    xorg.fontadobe100dpi
   ];
 
   # ── Podman (rootless containers) ──────────────────────────────────────

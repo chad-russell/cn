@@ -55,6 +55,12 @@
 
     # ── Hyprland (Wayland compositor, Lua config from 0.55+) ───────
     hyprland.url = "github:hyprwm/Hyprland/v0.55.0";
+
+    # ── Mango (Wayland compositor, dwm-like with scroll layout) ────
+    mango = {
+      url = "github:mangowm/mango";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs =
@@ -71,6 +77,7 @@
       nixvim,
       zen-browser,
       hyprland,
+      mango,
       ...
     }:
     let
@@ -133,6 +140,7 @@
           nixos-hardware.nixosModules.lenovo-thinkpad-t14-intel-gen6
           { _module.args.username = username; }
           hyprland.nixosModules.default
+          mango.nixosModules.mango
           noctalia-shell.nixosModules.default
           home-manager.nixosModules.home-manager
           {
@@ -140,6 +148,7 @@
             home-manager.useGlobalPkgs = true;
             home-manager.sharedModules = [
               vicinae.homeManagerModules.default
+              mango.hmModules.mango
               nixvim.homeModules.nixvim
               agenix.homeManagerModules.default
               zen-browser.homeModules.twilight
