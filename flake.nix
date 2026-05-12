@@ -53,6 +53,8 @@
       inputs.home-manager.follows = "home-manager";
     };
 
+    # ── Hyprland (Wayland compositor, Lua config from 0.55+) ───────
+    hyprland.url = "github:hyprwm/Hyprland/v0.55.0";
   };
 
   outputs =
@@ -68,6 +70,7 @@
       vicinae,
       nixvim,
       zen-browser,
+      hyprland,
       ...
     }:
     let
@@ -113,7 +116,7 @@
       # Thinkpad — has its own directory structure (home-manager, pkgs, etc.)
       nixosConfigurations.think = nixpkgs-unstable.lib.nixosSystem {
         system = "x86_64-linux";
-        specialArgs = specialArgs // { inherit username; };
+        specialArgs = specialArgs // { inherit username; inherit hyprland; };
         modules = [
           {
             nixpkgs.overlays = [
@@ -129,6 +132,7 @@
           ./modules/nebula-hosts.nix
           nixos-hardware.nixosModules.lenovo-thinkpad-t14-intel-gen6
           { _module.args.username = username; }
+          hyprland.nixosModules.default
           noctalia-shell.nixosModules.default
           home-manager.nixosModules.home-manager
           {
@@ -142,7 +146,7 @@
             ];
             home-manager.users.${username} = import ./thinkpad/home.nix;
             home-manager.extraSpecialArgs = {
-              inherit noctalia-shell vicinae agenix;
+              inherit noctalia-shell vicinae agenix hyprland;
             };
           }
           disko.nixosModules.disko
@@ -166,6 +170,9 @@
               nixvim.homeModules.nixvim
             ];
             home-manager.users.${username} = import ./modules/server-home.nix;
+            home-manager.extraSpecialArgs = {
+              unstable = nixpkgs-unstable.legacyPackages.x86_64-linux;
+            };
           }
         ];
       };
@@ -173,6 +180,11 @@
       # misc — HP Z820 workstation (temporary backup target, future hypervisor)
       nixosConfigurations.misc = mkHost {
         hostname = "misc";
+      };
+
+      # nas — UGREEN DXP4800 Pro (network-attached storage, btrfs RAID1)
+      nixosConfigurations.nas = mkHost {
+        hostname = "nas";
       };
 
       # bees — AMD Ryzen AI MAX+ 395 production server
@@ -187,6 +199,9 @@
               nixvim.homeModules.nixvim
             ];
             home-manager.users.${username} = import ./modules/server-home.nix;
+            home-manager.extraSpecialArgs = {
+              unstable = nixpkgs-unstable.legacyPackages.x86_64-linux;
+            };
           }
         ];
       };
@@ -202,7 +217,7 @@
               echo "Usage: nix run .#deploy -- <host> [host...]"
               echo "  Example: nix run .#deploy -- bee bees"
               echo ""
-              echo "Available hosts: think bee bees misc"
+              echo "Available hosts: think bee bees misc nas"
               exit 1
             fi
 
@@ -219,6 +234,9 @@
                 misc)
                   TARGET="crussell@10.10.0.11"
                   ;;
+                nas)
+                  TARGET="crussell@10.10.0.3"
+                  ;;
                 bee)
                   TARGET="crussell@10.10.0.12"
                   ;;
@@ -234,7 +252,7 @@
               if [ "$host" != "think" ]; then
                 echo ">>> Deploying to $host ($TARGET)..."
                 DEPLOY_ARGS="--flake .#$host --target-host $TARGET --build-host localhost"
-                if [ "$host" = "bee" ] || [ "$host" = "bees" ] || [ "$host" = "misc" ]; then
+                if [ "$host" = "bee" ] || [ "$host" = "bees" ] || [ "$host" = "misc" ] || [ "$host" = "nas" ]; then
                   DEPLOY_ARGS="$DEPLOY_ARGS --sudo"
                 fi
                 nixos-rebuild switch $DEPLOY_ARGS
@@ -272,6 +290,7 @@
               bee) IP="''${IP:-192.168.20.105}" ;;
               bees) IP="''${IP:-192.168.20.41}" ;;
               misc) IP="''${IP:-192.168.20.42}" ;;
+              nas) IP="''${IP:-192.168.20.31}" ;;
               *)
                 echo "Unknown host: $HOST"
                 exit 1

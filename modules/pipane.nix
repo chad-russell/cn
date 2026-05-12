@@ -13,6 +13,7 @@
 #   PIPANE_SECURE_COOKIE=1  — set Secure flag on cookies (Caddy does TLS)
 #   PORT                  — pipane listen port (default 8222)
 #   PI_CWD                — default working directory for pi sessions
+#   PI_CLI                — override pi binary (defaults to system pi)
 
 { config, lib, pkgs, ... }:
 
@@ -74,6 +75,11 @@ in
         NODE_ENV = "production";
         PIPANE_DISABLE_LOCAL_BYPASS = "1";
         PIPANE_SECURE_COOKIE = "1";
+        # Use the system pi (0.70.5+) instead of pipane's bundled old
+        # version (0.55.3). The old version has stricter models.json
+        # validation that fails on the openai-codex provider config,
+        # causing ALL custom models to be silently dropped.
+        PI_CLI = "/run/current-system/sw/bin/pi";
       };
 
       serviceConfig = {

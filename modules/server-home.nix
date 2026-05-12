@@ -3,7 +3,7 @@
 # Minimal home-manager config for server hosts (bee, bees).
 # Imports the shared neovim config from the thinkpad setup.
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, unstable, ... }:
 
 let
   username = "crussell";
@@ -17,6 +17,10 @@ in
   imports = [
     ../thinkpad/nvim
   ];
+
+  # The shared nvim config uses Neovim 0.12+ features (pumborder, vim.lsp.config, etc.)
+  # but the server nixpkgs (nixos-25.11) ships 0.11.x. Pin to unstable neovim.
+  programs.nixvim.package = lib.mkForce unstable.neovim-unwrapped;
 
   programs.home-manager.enable = true;
 

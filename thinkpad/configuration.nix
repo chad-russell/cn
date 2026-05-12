@@ -2,6 +2,7 @@
   config,
   pkgs,
   username,
+  hyprland,
   ...
 }:
 {
@@ -137,6 +138,14 @@
   # ── Niri — scrollable-tiling Wayland compositor ───────────────────────
   programs.niri.enable = true;
 
+  # ── Hyprland — tiling Wayland compositor (Lua config, 0.55+) ──────────
+  # Start from TTY with `Hyprland`. Coexists with niri.
+  programs.hyprland = {
+    enable = true;
+    package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+    portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
+  };
+
   # ── Noctalia Shell ────────────────────────────────────────────────────
   services.noctalia-shell.enable = true;
 
@@ -239,6 +248,9 @@
     playerctl
     wireplumber
     xwayland-satellite
+    grim
+    slurp
+    bibata-cursors
 
     # Apps (swap these for your preferences)
     ghostty
@@ -310,6 +322,7 @@
   security.pki.certificateFiles = [ ./certs/bee-caddy-root.pem ];
 
   # ── Nix settings ──────────────────────────────────────────────────────
+  nix.settings.trusted-users = [ "root" "@wheel" ];
   nix.settings.experimental-features = [
     "nix-command"
     "flakes"
@@ -319,10 +332,12 @@
   nix.settings.extra-substituters = [
     "https://vicinae.cachix.org"
     "https://noctalia.cachix.org"
+    "https://hyprland.cachix.org"
   ];
   nix.settings.extra-trusted-public-keys = [
     "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc="
     "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+    "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
   ];
 
   # ── Garbage collection ────────────────────────────────────────────────

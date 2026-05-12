@@ -148,6 +148,8 @@ in
       nrs = "sudo nixos-rebuild switch --flake /home/${username}/nixos-config#think";
       # homelab
       hl = "ssh -o IdentitiesOnly=yes crussell@10.10.0.6 'bun /etc/homelab-monitor/collect.ts report'";
+      # tunnels
+      wycliffe-tunnel = "ssh -L 33000:127.0.0.1:33000 -L 33001:127.0.0.1:33001 crussell@10.10.0.12";
     };
 
     # Extra PATH entries

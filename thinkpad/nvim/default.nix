@@ -689,8 +689,11 @@
     # Extra packages (LSPs, formatters, etc. — replaces Mason)
     # Shadow the archived nvim-treesitter's broken query_predicates.lua
     # with a version that handles Neovim 0.12's match[id] returning a list.
+    # Also override markdown highlights to remove conceal_lines directives
+    # that trigger Neovim 0.12 bug #39032 (node:range() on nil).
     extraFiles = {
       "lua/nvim-treesitter/query_predicates.lua".source = ./query_predicates_fix.lua;
+      "queries/markdown/highlights.scm".source = ./markdown-highlights.scm;
     };
 
     # =====================================================================
