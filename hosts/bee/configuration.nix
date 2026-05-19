@@ -11,6 +11,7 @@
     ../../modules/hub-disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/pi-agent.nix
+    ../../modules/opencode.nix
     # ./adguardhome.nix  # paused — not needed with distrobox workflow
     ./caddy-dev.nix
     ./gloo-dev.nix
@@ -143,6 +144,10 @@
 
   # ── pi coding agent ──────────────────────────────────────────
   services.pi-agent.enable = true;
+
+  # ── opencode AI coding agent ────────────────────────────────────
+  services.opencode.enable = true;
+  services.opencode.web.enable = true;
 
   # Firewall ports managed by gloo-dev and buildspace modules
 

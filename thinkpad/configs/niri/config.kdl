@@ -33,7 +33,7 @@ output "DP-5" {
 output "Dell Inc. DELL P3225QE 616K784" {
     mode "3840x2160@59.997"
     scale 1.25
-    position x=0 y=0
+    position x=576 y=0
 }
 
 output "eDP-1" {

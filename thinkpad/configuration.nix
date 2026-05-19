@@ -46,6 +46,9 @@
     };
   };
 
+  # ── KDE Connect (phone↔desktop integration) ──────────────────────────
+  programs.kdeconnect.enable = true;
+
   # ── LocalSend file sharing (port 53317 TCP+UDP) ──────────────────────
   networking.firewall.allowedTCPPorts = [ 53317 ];
   networking.firewall.allowedUDPPorts = [ 53317 ];
@@ -270,6 +273,7 @@
 
     # AI / dev tools
     pi-coding-agent
+    opencode
 
     # VM management
     incus               # incus client for remote hypervisor access

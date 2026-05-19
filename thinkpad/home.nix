@@ -620,6 +620,23 @@ in
     };
   };
 
+  # -- OpenCode web interface (start/stop manually) --
+  # Usage:  systemctl --user start opencode-web
+  #         systemctl --user stop opencode-web
+  #
+  # Starts `opencode web` on port 4096. Open http://localhost:4096
+  # in a browser.  Use OPENCODE_SERVER_PASSWORD env var for basic auth.
+  systemd.user.services.opencode-web = {
+    Unit.Description = "OpenCode Web Interface";
+    Service = {
+      Type = "simple";
+      ExecStart = "${pkgs.opencode}/bin/opencode web --port 4096";
+      WorkingDirectory = config.home.homeDirectory;
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+  };
+
   # -- SSH client config (Nebula hosts) --
   programs.ssh = {
     enable = true;

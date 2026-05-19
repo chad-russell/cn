@@ -683,19 +683,183 @@
         'lua_ls',
         'markdown_oxide',
       })
+
+      -- ==================================================================
+      -- Fix treesitter for Neovim 0.12
+      -- ==================================================================
+      -- The archived nvim-treesitter plugin has two issues on Neovim 0.12:
+      --
+      -- 1. query_predicates.lua: match[id] now returns a list of nodes
+      --    instead of a single node. The plugin's handlers don't unwrap,
+      --    causing nil node errors. Our extraFiles copy is NOT loaded because
+      --    the plugin's version is earlier on rtp and require() caches the
+      --    first hit. Fix: re-register all handlers here with force=true.
+      --
+      -- 2. markdown queries: the merged highlights.scm has conceal_lines
+      --    that triggers bug #39032, and the injections.scm uses
+      --    set-lang-from-info-string! which breaks on 0.12.
+      --    Fix: use query.set() to replace both queries entirely.
+      --
+      do
+        local query = require("vim.treesitter.query")
+
+        -- Re-register all nvim-treesitter predicates/directives with
+        -- Neovim 0.12-compatible handlers (unwrap match[id] lists).
+        -- Using force=true ensures our handlers override the plugin's.
+        local opts = { force = true }
+
+        local function unwrap(match, id)
+          local val = match[id]
+          if not val then return nil end
+          if type(val) == "table" then return val[1] end
+          return val
+        end
+
+        local function valid_args(name, pred, count, strict_count)
+          local arg_count = #pred - 1
+          if strict_count then
+            if arg_count ~= count then return false end
+          elseif arg_count < count then
+            return false
+          end
+          return true
+        end
+
+        query.add_predicate("nth?", function(match, _pattern, _bufnr, pred)
+          if not valid_args("nth?", pred, 2, true) then return end
+          local node = unwrap(match, pred[2])
+          local n = tonumber(pred[3])
+          if node and node:parent() and node:parent():named_child_count() > n then
+            return node:parent():named_child(n) == node
+          end
+          return false
+        end, opts)
+
+        query.add_predicate("is?", function(match, _pattern, bufnr, pred)
+          if not valid_args("is?", pred, 2) then return end
+          local locals = require("nvim-treesitter.locals")
+          local node = unwrap(match, pred[2])
+          local types = { unpack(pred, 3) }
+          if not node then return true end
+          local _, _, kind = locals.find_definition(node, bufnr)
+          return vim.tbl_contains(types, kind)
+        end, opts)
+
+        query.add_predicate("kind-eq?", function(match, _pattern, _bufnr, pred)
+          if not valid_args(pred[1], pred, 2) then return end
+          local node = unwrap(match, pred[2])
+          local types = { unpack(pred, 3) }
+          if not node then return true end
+          return vim.tbl_contains(types, node:type())
+        end, opts)
+
+        query.add_directive("set-lang-from-mimetype!", function(match, _, bufnr, pred, metadata)
+          local capture_id = pred[2]
+          local node = unwrap(match, capture_id)
+          if not node then return end
+          local type_attr_value = vim.treesitter.get_node_text(node, bufnr)
+          local html_script_type_languages = {
+            ["importmap"] = "json",
+            ["module"] = "javascript",
+            ["application/ecmascript"] = "javascript",
+            ["text/ecmascript"] = "javascript",
+          }
+          local configured = html_script_type_languages[type_attr_value]
+          if configured then
+            metadata["injection.language"] = configured
+          else
+            local parts = vim.split(type_attr_value, "/", {})
+            metadata["injection.language"] = parts[#parts]
+          end
+        end, opts)
+
+        query.add_directive("set-lang-from-info-string!", function(match, _, bufnr, pred, metadata)
+          local capture_id = pred[2]
+          local node = unwrap(match, capture_id)
+          if not node then return end
+          local injection_alias = vim.treesitter.get_node_text(node, bufnr):lower()
+          local non_filetype_aliases = {
+            ex = "elixir", pl = "perl", sh = "bash", uxn = "uxntal", ts = "typescript",
+          }
+          local ft = vim.filetype.match { filename = "a." .. injection_alias }
+          metadata["injection.language"] = ft or non_filetype_aliases[injection_alias] or injection_alias
+        end, opts)
+
+        query.add_directive("make-range!", function() end, opts)
+
+        query.add_directive("downcase!", function(match, _, bufnr, pred, metadata)
+          local id = pred[2]
+          local node = unwrap(match, id)
+          if not node then return end
+          local text = vim.treesitter.get_node_text(node, bufnr, { metadata = metadata[id] }) or ""
+          if not metadata[id] then metadata[id] = {} end
+          metadata[id].text = string.lower(text)
+        end, opts)
+
+        -- Replace the merged markdown highlights query to remove
+        -- conceal_lines that triggers Neovim 0.12 bug #39032.
+        local fixed_path = vim.fn.stdpath("config") .. "/queries/markdown/highlights.scm"
+        local f = io.open(fixed_path, "r")
+        if f then
+          local content = f:read("*a")
+          f:close()
+          vim.treesitter.query.set("markdown", "highlights", content)
+        end
+
+        -- Replace the merged markdown injections query. The nvim-treesitter
+        -- plugin's version uses set-lang-from-info-string! which we've fixed
+        -- above, but to avoid any issues from the merge, use the clean
+        -- built-in style with @injection.language capture.
+        vim.treesitter.query.set("markdown", "injections", [=[
+(fenced_code_block
+  (info_string
+    (language) @injection.language)
+  (code_fence_content) @injection.content)
+
+((html_block) @injection.content
+  (#set! injection.language "html")
+  (#set! injection.combined)
+  (#set! injection.include-children))
+
+((minus_metadata) @injection.content
+  (#set! injection.language "yaml")
+  (#offset! @injection.content 1 0 -1 0)
+  (#set! injection.include-children))
+
+((plus_metadata) @injection.content
+  (#set! injection.language "toml")
+  (#offset! @injection.content 1 0 -1 0)
+  (#set! injection.include-children))
+
+([
+  (inline)
+  (pipe_table_cell)
+] @injection.content
+  (#set! injection.language "markdown_inline"))
+]=])
+      end
     '';
 
     # =====================================================================
-    # Extra packages (LSPs, formatters, etc. — replaces Mason)
-    # Shadow the archived nvim-treesitter's broken query_predicates.lua
-    # with a version that handles Neovim 0.12's match[id] returning a list.
-    # Also override markdown highlights to remove conceal_lines directives
-    # that trigger Neovim 0.12 bug #39032 (node:range() on nil).
+    # Treesitter query overrides for Neovim 0.12 compatibility
+    # =====================================================================
+    #
+    # The archived nvim-treesitter plugin has broken query_predicates.lua on
+    # Neovim 0.12 (match[id] now returns a list). Our extraFiles copy is NOT
+    # loaded because require() finds the plugin's version first on rtp.
+    # Instead, the fixed handlers are re-registered in extraConfigLua with
+    # force=true.
+    #
+    # The markdown highlights.scm override is still needed as a file on disk
+    # so that extraConfigLua can read it and pass it to query.set().
+    # (Neovim merges ALL rtp query files, so query.set() is used to replace
+    # the merged result entirely.)
     extraFiles = {
-      "lua/nvim-treesitter/query_predicates.lua".source = ./query_predicates_fix.lua;
       "queries/markdown/highlights.scm".source = ./markdown-highlights.scm;
     };
 
+    # =====================================================================
+    # Extra packages (LSPs, formatters, etc.)
     # =====================================================================
     extraPackages = with pkgs; [
       # LSP servers

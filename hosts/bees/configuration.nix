@@ -13,6 +13,7 @@
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/pi-agent.nix
+    ../../modules/opencode.nix
     ./media-services.nix
     ./immich.nix
     ./ntfy.nix
@@ -103,6 +104,10 @@
 
   # ── pi coding agent ──────────────────────────────────────────
   services.pi-agent.enable = true;
+
+  # ── opencode AI coding agent ────────────────────────────────────
+  services.opencode.enable = true;
+  services.opencode.web.enable = true;
 
   # ── Firewall: public ingress for Caddy ──────────────────────────
   networking.firewall.allowedTCPPorts = [ 80 443 ];
