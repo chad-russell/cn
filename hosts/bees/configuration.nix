@@ -79,21 +79,21 @@
 
   # ── NFS: Media from NAS ─────────────────────────────────────────
   fileSystems."/mnt/media" = {
-    device = "192.168.20.31:/mnt/tank/media";
+    device = "192.168.20.31:/pool/media";
     fsType = "nfs";
-    options = [ "defaults" "_netdev" "rw" "hard" "intr" ];
+    options = [ "_netdev" "rw" "hard" "intr" ];
   };
 
   # ── NFS: Photos from NAS ────────────────────────────────────────
   fileSystems."/mnt/photos" = {
-    device = "192.168.20.31:/mnt/tank/photos";
+    device = "192.168.20.31:/pool/photos";
     fsType = "nfs";
-    options = [ "defaults" "_netdev" "rw" "hard" "intr" ];
+    options = [ "_netdev" "rw" "hard" "intr" ];
   };
 
   # ── NFS: Backups from NAS ───────────────────────────────────────
   fileSystems."/mnt/backups" = {
-    device = "192.168.20.31:/mnt/tank/backups";
+    device = "192.168.20.31:/pool/backups";
     fsType = "nfs";
     options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
   };

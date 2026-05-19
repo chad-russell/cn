@@ -136,6 +136,7 @@
           ./thinkpad/hardware-configuration.nix
           ./thinkpad/configuration.nix
           ./thinkpad/backup.nix
+          ./thinkpad/kde-minimal.nix
           ./modules/nebula-hosts.nix
           nixos-hardware.nixosModules.lenovo-thinkpad-t14-intel-gen6
           { _module.args.username = username; }
@@ -246,7 +247,7 @@ echo "Available hosts: think bee bees misc nas gateway"
                   sudo nixos-rebuild switch --flake .#$host
                   ;;
                 misc)
-                  TARGET="crussell@10.10.0.11"
+                  TARGET="crussell@192.168.20.42" # "crussell@10.10.0.11"
                   ;;
                 nas)
                   TARGET="crussell@10.10.0.3"
@@ -268,8 +269,7 @@ echo "Available hosts: think bee bees misc nas gateway"
 
               if [ "$host" != "think" ]; then
                 echo ">>> Deploying to $host ($TARGET)..."
-DEPLOY_ARGS="--flake .#$host --target-host $TARGET --build-host localhost --sudo"
-                fi
+                DEPLOY_ARGS="--flake .#$host --target-host $TARGET --build-host localhost --sudo"
                 nixos-rebuild switch $DEPLOY_ARGS
               fi
 

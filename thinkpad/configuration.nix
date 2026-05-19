@@ -271,6 +271,10 @@
     # AI / dev tools
     pi-coding-agent
 
+    # VM management
+    incus               # incus client for remote hypervisor access
+    virt-viewer         # SPICE graphical console for VMs
+
     # VPN — Palo Alto GlobalProtect (Wycliffe)
     # Wycliffe's gpcloudservice portal requires CAS/SAML. Use either:
     #   gpauth wycliffe.gpcloudservice.com --browser zen 2>/dev/null \

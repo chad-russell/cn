@@ -46,7 +46,7 @@
 
   # ── NFS: Backups from NAS ───────────────────────────────────────
   fileSystems."/mnt/backups" = {
-    device = "192.168.20.31:/mnt/tank/backups";
+    device = "192.168.20.31:/pool/backups";
     fsType = "nfs";
     options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
   };
@@ -147,8 +147,9 @@
   # Firewall ports managed by gloo-dev and buildspace modules
 
   # ── Dev stacks ──────────────────────────────────────────────────
-  # Each Gloo repo runs in its own devcontainer via glooctl.
-  # No shared infra needed — each repo's .devcontainer/ has its own.
+  # Gloo repos run in their own devcontainers via plain podman compose.
+  # gloo-dev installs override files + skill; buildspace provides
+  # podman/docker-compose/user-linger.
   services.gloo-dev.enable = true;
   services.buildspace.enable = true;
 

@@ -1,8 +1,7 @@
 # ── misc: HP Z820 Workstation ──────────────────────────────────────
 #
-# Temporary role: backup target for TrueNAS → NAS migration.
-# Future role: NixOS hypervisor (VMs, Kubernetes) — will be nuked
-# and re-laid-out when NVMe adapters arrive.
+# Role: Incus hypervisor (VMs + containers) with web UI.
+# Formerly a temporary backup target; now a Proxmox-like VM host.
 #
 # Hardware:
 #   - HP Z820 workstation
@@ -23,6 +22,7 @@
   imports = [
     ../../modules/base-server.nix
     ./disk-config.nix
+    ./hypervisor.nix
     ../../modules/nebula-client.nix
   ];
 
@@ -71,27 +71,27 @@
   #     -out misc.crt -ip "10.10.0.11/24" -name "misc"
   services.nebula.networks.homelab.enable = false;  # enable after certs are in place
 
-  # ── NFS mounts from TrueNAS (for Phase 2: rsync backup) ────────
-  fileSystems."/mnt/truenas-media" = {
-    device = "192.168.20.31:/mnt/tank/media";
-    fsType = "nfs";
-    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "ro" ];
-  };
-  fileSystems."/mnt/truenas-photos" = {
-    device = "192.168.20.31:/mnt/tank/photos";
-    fsType = "nfs";
-    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "ro" ];
-  };
-  fileSystems."/mnt/truenas-w" = {
-    device = "192.168.20.31:/mnt/tank/w";
-    fsType = "nfs";
-    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "ro" ];
-  };
-  fileSystems."/mnt/truenas-backups" = {
-    device = "192.168.20.31:/mnt/tank/backups";
-    fsType = "nfs";
-    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "ro" ];
-  };
+  # ── NFS mounts from NAS (disabled — migration complete) ───────
+  # fileSystems."/mnt/truenas-media" = {
+  #   device = "192.168.20.31:/pool/media";
+  #   fsType = "nfs";
+  #   options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "ro" ];
+  # };
+  # fileSystems."/mnt/truenas-photos" = {
+  #   device = "192.168.20.31:/pool/photos";
+  #   fsType = "nfs";
+  #   options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "ro" ];
+  # };
+  # fileSystems."/mnt/truenas-w" = {
+  #   device = "192.168.20.31:/pool/w";
+  #   fsType = "nfs";
+  #   options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "ro" ];
+  # };
+  # fileSystems."/mnt/truenas-backups" = {
+  #   device = "192.168.20.31:/pool/backups";
+  #   fsType = "nfs";
+  #   options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "ro" ];
+  # };
 
   # ── Backup pool directories ─────────────────────────────────────
   # Created on first deploy. These live on /mnt/backup (btrfs HDD pool).
@@ -102,10 +102,10 @@
     "d /mnt/backup/backups   0755 crussell users -"
   ];
 
-  # ── Extra packages for migration work ───────────────────────────
+  # ── Extra packages ───────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     rsync
-    tmux
+    zellij
     tree
     pigz            # parallel gzip for faster transfers
     pv              # pipe viewer for progress

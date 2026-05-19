@@ -25,7 +25,7 @@
       "gpl.dev.crussell.io" = {
         extraConfig = ''
           tls internal
-          reverse_proxy localhost:3106
+          reverse_proxy localhost:3006
         '';
       };
 
@@ -39,11 +39,18 @@
       "hb-web.dev.crussell.io" = {
         extraConfig = ''
           tls internal
-          reverse_proxy localhost:3100
+          reverse_proxy localhost:3000
         '';
       };
 
       "polymer.dev.crussell.io" = {
+        extraConfig = ''
+          tls internal
+          reverse_proxy localhost:3000
+        '';
+      };
+
+      "polymer-admin.dev.crussell.io" = {
         extraConfig = ''
           tls internal
           reverse_proxy localhost:3001
@@ -53,7 +60,7 @@
       "storyhub.dev.crussell.io" = {
         extraConfig = ''
           tls internal
-          reverse_proxy localhost:3007
+          reverse_proxy localhost:3001
         '';
       };
 

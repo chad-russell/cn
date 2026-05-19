@@ -1,37 +1,35 @@
-# ── nas Disk Layout (UGREEN DXP4800 Pro) ───────────────────────────
+# ── nas Disk Layout (UGREEN DXP4800) ──────────────────────────────
 #
-# Hardware:
-#   - Intel Core i3-1315U (6C/7T: 2P+4E)
-#   - 8GB DDR5 5600 (expandable to 96GB)
-#   - 128GB onboard SSD (system flash)
-#   - 2× M.2 NVMe SSD slots
-#   - 4× 3.5" SATA bays (populated with 4× HDD from TrueNAS)
-#   - 1× 10GbE, 1× 2.5GbE
+# Hardware detected 2026-05-12 from NixOS installer:
+#   CPU: Intel N100 (4C/4T, Alder Lake-N)
+#   RAM: 32GB DDR5
+#   NICs: 2× Intel I226-V (2.5GbE) — enp2s0, enp3s0
+#   NVMe: SPCC M.2 PCIe SSD 512GB (nvme-SPCC_M.2_PCIe_SSD_4E69074C13BF00015309)
+#   HDD 1: HGST Ultrastar HUH721212ALE601 12TB (ata-HUH721212ALE601_2AG2TBBY)
+#   HDD 2: HGST Ultrastar HUH721212ALE601 12TB (ata-HUH721212ALE601_8CKU7ETF)
+#   HDD 3: Seagate SkyHawk ST12000VX0007 12TB (ata-ST12000VX0007-2GU116_ZJV09H1V)
+#   HDD 4: Seagate SkyHawk ST12000VX0007 12TB (ata-ST12000VX0007-2GU116_ZJV4RWH4)
+#   eMMC: 29.1G onboard flash (UGOS Pro) — DO NOT TOUCH
 #
 # Layout:
-#   M.2 NVMe slot 1: NixOS root
+#   NVMe (512GB): NixOS root
 #     p1: 1G    EFI (systemd-boot)
 #     p2: 8G    swap
 #     p3: rest  btrfs subvolumes (@, @home, @nix, @var-log, @srv)
 #
-#   4× SATA HDD: btrfs RAID1 data pool
+#   4× 12TB HDD: btrfs RAID1 data pool (~12TB usable)
 #     data=raid1, metadata=raid1
 #     Subvolumes: media, photos, surveillance, backups, scratch
-#     ~50% raw capacity usable (mirrored)
 #
-# NOTE: Device paths are placeholders until first boot with installer.
-#   lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT
-#   ls -la /dev/disk/by-id/
-# Then update device = "..." lines to stable by-id paths.
+#   eMMC (mmcblk0): UGOS Pro factory install — left untouched
 
 {
   disko.devices = {
     disk = {
-      # ── M.2 NVMe: NixOS root ───────────────────────────────────
-      # TODO: Update with actual by-id path from installer
+      # ── NVMe: NixOS root (SPCC 512GB) ──────────────────────────
       nvme-root = {
         type = "disk";
-        device = "/dev/nvme0n1";
+        device = "/dev/disk/by-id/nvme-SPCC_M.2_PCIe_SSD_4E69074C13BF00015309";
         content = {
           type = "gpt";
           partitions = {
@@ -85,28 +83,28 @@
         };
       };
 
-      # ── 4× SATA HDD: btrfs RAID1 data pool ─────────────────────
+      # ── 4× 12TB HDD: btrfs RAID1 data pool ─────────────────────
       #
       # All 4 HDDs form a single btrfs RAID1 filesystem.
       # data=raid1: every data block exists on 2 devices
       # metadata=raid1: every metadata block exists on 2 devices
       # Survives any single disk failure, and often two.
-      # Usable capacity: ~50% of raw (mirrored).
+      # Usable capacity: ~12TB (50% of 48TB raw).
       #
       # disko creates the filesystem on hdd-1 and passes the other
       # 3 devices via extraArgs. mkfs.btrfs handles them all at once.
       hdd-1 = {
         type = "disk";
-        device = "/dev/sda";
+        device = "/dev/disk/by-id/ata-HUH721212ALE601_2AG2TBBY";
         content = {
           type = "btrfs";
           extraArgs = [
             "-f"
             "-d raid1"
             "-m raid1"
-            "/dev/sdb"
-            "/dev/sdc"
-            "/dev/sdd"
+            "/dev/disk/by-id/ata-HUH721212ALE601_8CKU7ETF"
+            "/dev/disk/by-id/ata-ST12000VX0007-2GU116_ZJV09H1V"
+            "/dev/disk/by-id/ata-ST12000VX0007-2GU116_ZJV4RWH4"
           ];
           subvolumes = {
             "@media" = {
@@ -119,7 +117,8 @@
             };
             "@surveillance" = {
               mountpoint = "/pool/surveillance";
-              # Less compression — video is already compressed
+              # Less compression — video is already compressed.
+              # nodatacow: better write performance for continuous recording.
               mountOptions = [ "compress=lzo" "noatime" "nodatacow" ];
             };
             "@backups" = {

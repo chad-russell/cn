@@ -170,6 +170,8 @@ in
     ./nvim
     ./zsh.nix
     ./gtk.nix
+    ../modules/zellij.nix
+    ../modules/zellij.nix
   ];
 
   # -- Vicinae launcher --
@@ -277,11 +279,31 @@ in
       shadows_size = 4;
 
       # ── Animations ────────────────────────────────────────────────
+      # Approximating niri's critically-damped spring physics (damping-ratio=1.0)
+      # with bezier curves that match the exponential-deceleration profile.
+      # Curve 0.16,1,0.3,1 = fast start, smooth settle, no overshoot.
       animations = 1;
-      animation_type_open = "zoom";
-      animation_type_close = "zoom";
-      animation_duration_open = 300;
-      animation_duration_close = 300;
+
+      # Slide feels closer to niri's view-movement springs than zoom
+      animation_type_open = "slide";
+      animation_type_close = "slide";
+
+      # Durations tuned to niri spring settling times:
+      #   open/close ≈ stiffness 800 (~500ms settle)
+      #   tag switch ≈ stiffness 1000 (~300ms settle)
+      animation_duration_open = 500;
+      animation_duration_close = 350;
+      animation_duration_move = 500;
+      animation_duration_tag = 300;
+
+      # Critically-damped spring approximation curves
+      animation_curve_open = "0.16,1,0.3,1";
+      animation_curve_close = "0.16,1,0.3,1";
+      animation_curve_move = "0.16,1,0.3,1";
+      animation_curve_tag = "0.16,1,0.3,1";
+      animation_curve_focus = "0.16,1,0.3,1";
+      animation_curve_opafadein = "0.16,1,0.3,1";
+      animation_curve_opafadeout = "0.16,1,0.3,1";
 
       # ── Focus behavior ────────────────────────────────────────────
       focus_cross_monitor = 1;
@@ -383,7 +405,9 @@ in
 
         # Cycle tags (workspace up/down, like niri)
         "SUPER+Shift,j,viewtoright,0"
+        "SUPER+Shift,l,viewtoright,0"
         "SUPER+Shift,k,viewtoleft,0"
+        "SUPER+Shift,h,viewtoleft,0"
 
         # Move to monitor
         "SUPER+Ctrl+Shift,Left,tagmon,left"
@@ -408,6 +432,9 @@ in
         "SUPER,b,spawn,flatpak run app.zen_browser.zen"
         "SUPER,f,spawn,nautilus --new-window"
         "SUPER,r,spawn,voxtype record toggle"
+
+        # ── Compositor ──────────────────────────────────────────────
+        "SUPER+Shift,r,reload_config"
 
         # ── Numbered tags (1-9) ─────────────────────────────────────
         "SUPER,1,view,1"
@@ -454,6 +481,9 @@ in
   # -- Oh My Posh config --
   xdg.configFile."oh-my-posh/config.json".source = ./configs/oh-my-posh/config.json;
 
+  # -- Zellij config --
+  xdg.configFile."zellij/config.kdl".source = ./configs/zellij/config.kdl;
+
   # -- Ghostty config --
   xdg.configFile."ghostty/config".source = ./configs/ghostty/config;
 
@@ -486,7 +516,6 @@ in
     github-cli
     yazi
     bun
-    tmux
 
     # Hyprland launcher wrapper — sets XDG_CURRENT_DESKTOP and starts
     # start-hyprland so that portals and systemd services work correctly.

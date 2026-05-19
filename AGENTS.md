@@ -272,27 +272,28 @@ ssh -o IdentitiesOnly=yes crussell@192.168.20.41 '
 Source files:
 
 - `hosts/bee/configuration.nix`
-- `hosts/bee/gloo-dev.nix` — installs glooctl, podman, devcontainer tooling
-- `hosts/bee/gloo/` — glooctl script, overrides, skill, README
-- `hosts/bee/buildspace.nix`
+- `hosts/bee/gloo-dev.nix` — installs podman compose override files + pi agent skill
+- `hosts/bee/gloo/` — override files, skill
+- `hosts/bee/buildspace.nix` — podman, docker-compose, user linger
 
 Running services:
 
 - `nebula@homelab.service` — `10.10.0.12`
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
-- Gloo devcontainers (podman + docker-compose, managed via `glooctl`)
+- Gloo devcontainers (plain `podman compose` in each repo's `.devcontainer/`)
 
-Gloo development uses **repo devcontainers** — each Gloo repo has its own `.devcontainer/`. The `glooctl` CLI wraps docker-compose with port overrides and manages dev servers as detached systemd user units.
+Gloo development uses **repo devcontainers** directly — each Gloo repo has its own `.devcontainer/docker-compose.yml`. No wrappers, no glooctl. Run `podman compose` with override files for port publishing and rootless podman UID mapping.
 
 Products: `polymer`, `gpl`, `hummingbird`, `storyhub`. Hummingbird and storyhub share the same devcontainer.
 
-Operate Gloo via glooctl over SSH:
+Operate Gloo over SSH:
 
 ```bash
 ssh -o IdentitiesOnly=yes crussell@10.10.0.12
-glooctl status
-glooctl up polymer && glooctl start polymer
-glooctl logs polymer -f
+cd ~/Gloo/360-polymer/.devcontainer
+podman compose -f docker-compose.yml -f ~/.config/gloo/overrides/polymer.yml up -d --build
+podman compose exec -d app pnpm dev
+podman compose logs -f app
 ```
 
 See `hosts/bee/gloo/SKILL.md` for full documentation.
@@ -405,7 +406,7 @@ Rules:
 2. Import it from `hosts/<host>/configuration.nix`.
 3. Open firewall ports declaratively with `networking.firewall.allowedTCPPorts` / `allowedUDPPorts` if needed.
 4. Deploy with `nix run .#deploy -- <host>`.
-5. Verify with `systemctl status`, `journalctl`, `glooctl status`, and HTTP checks.
+5. Verify with `systemctl status`, `journalctl`, `podman compose logs`, and HTTP checks.
 
 ### System Podman Quadlet on bees
 
