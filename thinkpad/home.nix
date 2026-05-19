@@ -210,6 +210,7 @@ in
 
   # -- Niri config --
   xdg.configFile."niri/config.kdl".source = ./configs/niri/config.kdl;
+  xdg.configFile."niri/arrange-outputs.sh".source = ./configs/niri/arrange-outputs.sh;
 
   # -- Hyprland config --
   xdg.configFile."hypr/hyprland.lua".source = ./configs/hyprland/hyprland.lua;
