@@ -104,6 +104,15 @@
               disko.nixosModules.disko
               agenix.nixosModules.default
               {
+                # Shared overlay for custom packages
+                nixpkgs.overlays = [
+                  (final: prev: {
+                    antigravity-cli = final.callPackage ./pkgs/antigravity-cli/package.nix { };
+                    gloo-proxy = final.callPackage ./pkgs/gloo-proxy/package.nix { };
+                  })
+                ];
+              }
+              {
                 # Make this flake self-referential for deployments
                 nix.registry.cn.flake = self;
                 nix.settings.experimental-features = [
@@ -130,6 +139,7 @@
               (final: prev: {
                 slk = final.callPackage ./thinkpad/pkgs/slk/package.nix { };
                 globalprotect-openconnect = final.callPackage ./thinkpad/pkgs/globalprotect-openconnect/default.nix { };
+                antigravity-cli = final.callPackage ./pkgs/antigravity-cli/package.nix { };
               })
             ];
           }
@@ -138,6 +148,7 @@
           ./thinkpad/backup.nix
           ./thinkpad/kde-minimal.nix
           ./modules/nebula-hosts.nix
+          ./modules/nebula-client.nix
           nixos-hardware.nixosModules.lenovo-thinkpad-t14-intel-gen6
           { _module.args.username = username; }
           hyprland.nixosModules.default

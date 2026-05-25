@@ -56,6 +56,7 @@
     nfs-utils
     ripgrep
     fd
+    antigravity-cli
   ];
 
   # ── Nix settings ─────────────────────────────────────────────────

@@ -12,11 +12,9 @@
     ../../modules/nebula-client.nix
     ../../modules/pi-agent.nix
     ../../modules/opencode.nix
-    # ./adguardhome.nix  # paused — not needed with distrobox workflow
     ./caddy-dev.nix
     ./gloo-dev.nix
     ./buildspace.nix
-    ./pipane.nix
     ./backup.nix
     ./tailscale.nix
   ];
@@ -133,6 +131,9 @@
   # │ the modules will set dockerCompat = true again automatically.    │
   # └──────────────────────────────────────────────────────────────────┘
 
+  # ── Allow unfree packages ──────────────────────────────────────
+  nixpkgs.config.allowUnfree = true;
+
   # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
   programs.nix-ld.enable = true;
 
@@ -148,6 +149,7 @@
   # ── opencode AI coding agent ────────────────────────────────────
   services.opencode.enable = true;
   services.opencode.web.enable = true;
+  services.opencode.web.hostname = "0.0.0.0";
 
   # Firewall ports managed by gloo-dev and buildspace modules
 

@@ -3,7 +3,7 @@ let
   crussell = "age1uhmefj4e0jhf4nza9efsdz9qa8fq08sf04c3jh268cf3uhmlypfqh60u2v";
 in
 {
-  "gloo-secrets.env.age".publicKeys = [ crussell ];
+  "aws-env.age".publicKeys = [ crussell ];
   "openrouter-api-key.age".publicKeys = [ crussell ];
 
   # ── Restic backup secrets ──────────────────────────────────────
@@ -13,4 +13,7 @@ in
   "restic-password-bees.age".publicKeys = [ crussell ];
   "restic-password-bee.age".publicKeys = [ crussell ];
   "restic-password-think.age".publicKeys = [ crussell ];
+
+  # ── Gloo AI proxy credentials ─────────────────────────────────
+  "gloo-credentials.age".publicKeys = [ crussell ];
 }

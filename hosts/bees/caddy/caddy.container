@@ -10,7 +10,7 @@ Volume=/etc/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
 Volume=/etc/caddy/routes:/etc/caddy/imports/routes:ro
 Volume=caddy_data:/data
 Volume=caddy_config:/config
-EnvironmentFile=/etc/caddy/aws.env
+EnvironmentFile=/run/agenix/aws-env
 
 [Service]
 Restart=unless-stopped

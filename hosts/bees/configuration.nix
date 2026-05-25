@@ -14,6 +14,7 @@
     ../../modules/nebula-client.nix
     ../../modules/pi-agent.nix
     ../../modules/opencode.nix
+    ../../modules/gloo-proxy.nix
     ./media-services.nix
     ./immich.nix
     ./ntfy.nix
@@ -23,7 +24,6 @@
     ./hub-services.nix
     ./prometheus.nix
     ./homelab-monitor.nix
-    ./pipane.nix
     ./backup.nix
   ];
 
@@ -109,8 +109,21 @@
   services.opencode.enable = true;
   services.opencode.web.enable = true;
 
-  # ── Firewall: public ingress for Caddy ──────────────────────────
-  networking.firewall.allowedTCPPorts = [ 80 443 ];
+  # ── Gloo AI Proxy ──────────────────────────────────────────────────
+  services.gloo-proxy = {
+    enable = true;
+    user = "crussell";
+    credentialsFile = config.age.secrets.gloo-credentials.path;
+  };
+
+  age.secrets.gloo-credentials = {
+    file = ../../secrets/gloo-credentials.age;
+    mode = "0440";
+    group = "users";
+  };
+
+  # ── Firewall: public ingress for Caddy + Gloo proxy ──────────────
+  networking.firewall.allowedTCPPorts = [ 80 443 4637 ];
   networking.firewall.allowedUDPPorts = [ 4242 ];
 
   # ── Podman (for Caddy + hub service containers) ─────────────────

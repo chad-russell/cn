@@ -29,26 +29,27 @@ Last validated via SSH: **2026-05-06**.
 │   │   └── gloo/ buildspace/
 │   ├── bees/                  # Production server: all shared + media + ingress services
 │   │   ├── configuration.nix
-│   │   ├── caddy.nix + caddy/ (Caddyfile, routes, aws.env)
+│   │   ├── caddy.nix + caddy/ (Caddyfile, routes)
 │   │   ├── media-services.nix
 │   │   ├── immich.nix
 │   │   ├── ntfy.nix, searxng.nix, datenight.nix
 │   │   ├── hub-services.nix, linkding.container, papra.container, open-webui.container
+│   │   ├── prometheus.nix, homelab-monitor.nix
 │   │   └── disk-config.nix
 │   ├── homeassistant/         # HAOS operational docs + helper scripts
 │   └── misc/                  # HP Z820 workstation (temporary backup target)
 ├── modules/
 │   ├── base-server.nix        # Shared server baseline: user, SSH, networkd, packages, GC, NFS client
 │   ├── server-shell.nix       # Shared zsh/CLI setup for servers
-│   ├── nebula-client.nix      # Shared Nebula client defaults for servers
+│   ├── nebula-client.nix      # Shared Nebula client defaults (used by servers + think)
 │   ├── nebula-hosts.nix       # /etc/hosts entries for Nebula overlay names
+│   ├── fzf-history-widget.zsh # Shared fzf Ctrl+R widget for zsh
 │   └── hub-disk-config.nix    # Beelink/bee btrfs disk layout
 ├── nebula/
 │   ├── configs/               # Nebula config templates
 │   ├── pki/                   # Nebula CA/certs and age-encrypted private keys
-│   ├── quadlets/              # Legacy/manual Nebula Quadlets
 │   └── scripts/               # Nebula helper binaries/scripts
-├── secrets/                   # Agenix secrets used by server modules, e.g. Gloo
+├── secrets/                   # Agenix secrets used by server modules
 └── thinkpad/                  # `think` laptop NixOS + home-manager config
 ```
 
@@ -67,29 +68,30 @@ Last validated via SSH: **2026-05-06**.
                                 │ Nebula to 10.10.0.6
                 ┌───────────────┴──────────────────┐
                 ▼                                  ▼
-  ┌──────────────────────────┐   ┌──────────────────────────┐
-  │ bees — production server │   │ bee — dev + Nebula LH    │
-  │ 192.168.20.41            │   │ 192.168.20.105           │
-  │ Nebula 10.10.0.6         │   │ Nebula 10.10.0.12        │
-  │                          │   │ Nebula LH 10.10.0.1      │
-  │ AMD Ryzen AI MAX+ 395    │   │ AMD Ryzen 7 7840HS       │
-  │ 16C/32T, ~62 GB RAM     │   │ 8C/16T, 27 GB RAM        │
-  │ 2 TB NVMe, dual 10GbE   │   │ 1 TB NVMe, 1 GbE         │
-  │                          │   │                          │
-  │ ALL PRODUCTION SERVICES: │   │ SERVICES:                │
-  │  Caddy (TLS ingress)     │   │  Nebula lighthouse       │
-  │  ntfy, SearXNG, datenight│   │  Gloo dev stack          │
-  │  linkding, papra         │   │  Buildspace (disabled)   │
-  │  open-webui              │   │                          │
-  │  Jellyfin, Sonarr,       │   │                          │
-  │  Radarr, Prowlarr,       │   │                          │
-  │  qBittorrent, Jellyseerr │   │                          │
-  │  Immich (server + ML)    │   │                          │
-  └──────────┬───────────────┘   └──────────┬───────────────┘
-             │ NFS (10GbE)                   │ NFS
-             ▼                                ▼
+   ┌──────────────────────────┐   ┌──────────────────────────┐
+   │ bees — production server │   │ bee — dev + Nebula LH    │
+   │ 192.168.20.41            │   │ 192.168.20.105           │
+   │ Nebula 10.10.0.6         │   │ Nebula 10.10.0.12        │
+   │                          │   │ Nebula LH 10.10.0.1      │
+   │ AMD Ryzen AI MAX+ 395    │   │ AMD Ryzen 7 7840HS       │
+   │ 16C/32T, ~62 GB RAM     │   │ 8C/16T, 27 GB RAM        │
+   │ 2 TB NVMe, dual 10GbE   │   │ 1 TB NVMe, 1 GbE         │
+   │                          │   │                          │
+   │ ALL PRODUCTION SERVICES: │   │ SERVICES:                │
+   │  Caddy (TLS ingress)     │   │  Nebula lighthouse       │
+   │  ntfy, SearXNG, datenight│   │  Gloo dev stack          │
+   │  linkding, papra         │   │  Buildspace (disabled)   │
+   │  open-webui              │   │                          │
+   │  Jellyfin, Sonarr,       │   │                          │
+   │  Radarr, Prowlarr,       │   │                          │
+   │  qBittorrent, Jellyseerr │   │                          │
+   │  Immich (server + ML)    │   │                          │
+   │  Prometheus, monitoring  │   │                          │
+   └──────────┬───────────────┘   └──────────┬───────────────┘
+              │ NFS (10GbE)                   │ NFS
+              ▼                                ▼
     ┌─────────────────┐            ┌─────────────────┐
-    │ nas / TrueNAS   │            │ nas / TrueNAS   │
+    │ nas / NixOS      │            │ nas / NixOS     │
     │ 192.168.20.31   │            │ 192.168.20.31   │
     │ NFS: media,     │            │ NFS: backups    │
     │ photos, backups │            └─────────────────┘
@@ -106,7 +108,7 @@ Laptop: think / NixOS 25.11, configured under `thinkpad/`.
 | `bees` | `192.168.20.41` | `10.10.0.6` | NixOS 25.11 | `hosts/bees/` | Production server: Caddy, ntfy, SearXNG, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
 | `bee` | `192.168.20.105` | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/` | Dev server: Gloo stack, Nebula lighthouse. |
 | `think` | varies | `10.10.0.10` | NixOS 25.11 | `thinkpad/` | Laptop with home-manager, niri, Noctalia, Podman, dev tools. |
-| `nas` | `192.168.20.31` | `10.10.0.3` | TrueNAS | not Nix-managed | NFS storage: media, photos, backups. |
+| `nas` | `192.168.20.31` | `10.10.0.3` | NixOS 25.11 | `hosts/nas/` | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance. |
 | `homeassistant` | `192.168.20.51` | — | HAOS | `hosts/homeassistant/` docs only | Home Assistant OS. |
 | `gateway` | `178.156.171.212` | `10.10.0.2` | NixOS 25.11 | `hosts/gateway/` | Hetzner Cloud VPS: nginx stream proxy → bees (`10.10.0.6:80/443`). Nebula lighthouse/relay. |
 
@@ -181,11 +183,6 @@ nix eval .#nixosConfigurations.bees.config.networking.hostName --raw
 nix build .#nixosConfigurations.bees.config.system.build.toplevel
 ```
 
-### Known Nix Drift / Footguns
-
-- `hosts/bees/caddy/aws.env` is still a plaintext Route53 credential file. Treat it as sensitive; prefer moving it to agenix.
-- `secrets/gloo-secrets.env.age` is no longer consumed by any active module. Gloo env files are managed per-repo (gitignored, backed by 1Password).
-
 ## Service Operations by Host
 
 ### bees — Production server (all workloads)
@@ -193,11 +190,13 @@ nix build .#nixosConfigurations.bees.config.system.build.toplevel
 Source files:
 
 - `hosts/bees/configuration.nix`
-- `hosts/bees/caddy.nix` + `hosts/bees/caddy/` (Caddyfile, routes, aws.env)
+- `hosts/bees/caddy.nix` + `hosts/bees/caddy/` (Caddyfile, routes)
 - `hosts/bees/media-services.nix` — Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr
 - `hosts/bees/immich.nix` — Immich server + ML
 - `hosts/bees/ntfy.nix`, `searxng.nix`, `datenight.nix`
 - `hosts/bees/hub-services.nix` + `*.container` — linkding, papra, open-webui
+- `hosts/bees/prometheus.nix` — Prometheus monitoring
+- `hosts/bees/homelab-monitor.nix` — AI-powered infrastructure monitoring
 
 Live systemd services:
 
@@ -222,9 +221,9 @@ Live systemd services:
 
 Storage:
 
-- `/mnt/media` from `192.168.20.31:/mnt/tank/media`
-- `/mnt/photos` from `192.168.20.31:/mnt/tank/photos`
-- `/mnt/backups` automount from `192.168.20.31:/mnt/tank/backups`
+- `/mnt/media` from `192.168.20.31:/pool/media`
+- `/mnt/photos` from `192.168.20.31:/pool/photos`
+- `/mnt/backups` automount from `192.168.20.31:/pool/backups`
 
 Useful checks:
 
@@ -265,7 +264,7 @@ ssh -o IdentitiesOnly=yes crussell@192.168.20.41 '
 '
 ```
 
-`hosts/bees/caddy/aws.env` / `/etc/caddy/aws.env` contains Route53 credentials for DNS-01 certificates. Treat it as sensitive and do not expose its contents.
+Caddy's Route53 DNS challenge credentials are managed via agenix (`secrets/aws-env.age`), decrypted at runtime to `/run/agenix/aws-env`.
 
 ### bee — Dev server + Nebula lighthouse
 
@@ -338,8 +337,8 @@ Use `ssh -o IdentitiesOnly=yes root@178.156.171.212` to verify.
 
 Nix-managed server defaults live in:
 
-- `modules/nebula-client.nix`
-- `modules/nebula-hosts.nix`
+- `modules/nebula-client.nix` — shared client defaults for all NixOS hosts (servers + thinkpad)
+- `modules/nebula-hosts.nix` — `/etc/hosts` entries for overlay names
 - per-host overrides in `hosts/*/configuration.nix`
 
 Current overlay host entries from `modules/nebula-hosts.nix`:
@@ -387,6 +386,7 @@ age -d -i ~/.ssh/id_ed25519 nebula/pki/bees.key.age > /tmp/bees.key
 
 Agenix and age are both used:
 
+- `secrets/*.age` — server secrets (aws-env, openrouter-api-key, restic passwords, S3 credentials).
 - `thinkpad/secrets/*.age` — home-manager/laptop secrets.
 - `nebula/pki/*.key.age` — Nebula private keys encrypted to the SSH ed25519 public key.
 

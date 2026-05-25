@@ -171,7 +171,6 @@ in
     ./zsh.nix
     ./gtk.nix
     ../modules/zellij.nix
-    ../modules/zellij.nix
   ];
 
   # -- Vicinae launcher --
@@ -485,6 +484,11 @@ in
   # -- Zellij config --
   xdg.configFile."zellij/config.kdl".source = ./configs/zellij/config.kdl;
 
+  # -- pi coding agent extensions --
+  home.file.".pi/agent/extensions/ask/index.ts".source = ../modules/pi-extensions/ask/index.ts;
+  home.file.".pi/agent/extensions/searxng-search/index.ts".source = ../modules/pi-extensions/searxng-search/index.ts;
+  home.file.".pi/agent/extensions/gloo-proxy/index.ts".source = ../modules/pi-extensions/gloo-proxy/index.ts;
+
   # -- Ghostty config --
   xdg.configFile."ghostty/config".source = ./configs/ghostty/config;
 
@@ -516,7 +520,10 @@ in
     oh-my-posh
     github-cli
     yazi
+    unzip
     bun
+    python3
+    distrobox
 
     # Hyprland launcher wrapper — sets XDG_CURRENT_DESKTOP and starts
     # start-hyprland so that portals and systemd services work correctly.
@@ -549,6 +556,9 @@ in
 
     # Node (needed by `pi install` for extension deps)
     nodejs
+
+    # AI coding assistants
+    claude-code
 
     # TUI apps
     slk

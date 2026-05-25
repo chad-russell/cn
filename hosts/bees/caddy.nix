@@ -9,6 +9,8 @@
 { config, lib, pkgs, ... }:
 
 {
+  age.secrets.aws-env.file = ../../secrets/aws-env.age;
+
   environment.etc."containers/systemd/caddy.container" = {
     source = ./caddy/caddy.container;
     mode = "0644";

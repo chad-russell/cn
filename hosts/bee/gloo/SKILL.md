@@ -135,19 +135,7 @@ podman compose exec dev bash -c "cd /workspace && bash .devcontainer/scripts/pos
 
 ## Secrets
 
-Some `.env.local` values (API keys, auth secrets) are sensitive. They are stored encrypted in this infra repo at `secrets/gloo-secrets.env.age` and decrypted on bee at `/run/agenix/gloo-secrets`.
-
-To copy a secret into a devcontainer's `.env.local`:
-
-```bash
-# On bee, read the secrets file
-cat /run/agenix/gloo-secrets
-
-# Then edit the repo's .env.local on the host
-vim ~/Gloo/360-polymer/apps/polymer/.env.local
-```
-
-No automation — just a reference file you check when needed.
+Each repo's `.env.local` values (API keys, auth secrets) are managed per-repo via 1Password. They are gitignored and NOT managed by Nix or agenix.
 
 ## Database Operations
 

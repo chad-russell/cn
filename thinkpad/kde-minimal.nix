@@ -91,6 +91,18 @@
     '';
   };
 
+  # ── Disable KDE Wallet (gnome-keyring handles secrets) ────────────
+  #
+  # GNOME Keyring provides org.freedesktop.secrets across all sessions
+  # (niri, hyprland, mango, KDE).  Disable KWallet so it doesn't conflict
+  # over the D-Bus name when running Plasma.
+  environment.etc."xdg/kwalletrc" = {
+    text = ''
+      [Wallet]
+      Enabled=false
+    '';
+  };
+
   # ── Noctalia: only start with niri ──────────────────────────────────
   #
   # By default the noctalia-shell NixOS module sets

@@ -29,10 +29,8 @@
   networking.hostName = "think";
   networking.networkmanager.enable = true;
 
-  # Palo Alto GlobalProtect VPN support (Wycliffe)
-  # Keep the NetworkManager/OpenConnect plugin for generic GP portals, but
-  # Wycliffe's gpcloudservice portal uses CAS/SAML and works more reliably with
-  # the packaged `gpclient` / `gpauth` tools below.
+  # NetworkManager VPN plugins
+  # - OpenConnect: Palo Alto GlobalProtect (Wycliffe) and generic GP portals
   networking.networkmanager.plugins = [ pkgs.networkmanager-openconnect ];
 
   # ── Split DNS: *.dev.crussell.io via AdGuardHome on bee (Nebula) ───
@@ -84,49 +82,13 @@
   # ── Nebula VPN ─────────────────────────────────────────────────────
   services.nebula.networks.homelab = {
     enable = true;
-    ca = "/etc/nebula/ca.crt";
-    cert = "/etc/nebula/host.crt";
-    key = "/etc/nebula/host.key";
-
-    staticHostMap = {
-      "10.10.0.1" = [ "192.168.20.105:4243" ];  # bee (local lighthouse)
-      "10.10.0.2" = [ "178.156.171.212:4242" ];
-    };
-
-    isLighthouse = false;
-    isRelay = false;
-    lighthouses = [ "10.10.0.1" "10.10.0.2" ];
-    relays = [ "10.10.0.2" ];
-
-    listen.host = "0.0.0.0";
-    listen.port = null; # 0 for non-lighthouse/relay
-
-    tun.disable = false;
     tun.device = "nebula0";
-
-    firewall.outbound = [{ port = "any"; proto = "any"; host = "any"; }];
-    firewall.inbound  = [{ port = "any"; proto = "any"; host = "any"; }];
-
-    settings = {
-      punchy = { punch = true; respond = true; };
-      preferred_ranges = [ "192.168.20.0/24" ];
-      logging = { level = "info"; format = "text"; };
-      lighthouse.interval = 60;
-      firewall.conntrack = {
-        tcp_timeout = "120h";
-        udp_timeout = "3m";
-        default_timeout = "10m";
-        max_connections = 100000;
-      };
-    };
   };
 
   # Ensure the nebula service user can read the cert/key files
   # (systemd runs as nebula-homelab:nebula-homelab)
+  # NOTE: cert tmpfiles rules are now provided by modules/nebula-client.nix
   systemd.tmpfiles.rules = [
-    "Z /etc/nebula/ca.crt  0440 root nebula-homelab -"
-    "Z /etc/nebula/host.crt 0440 root nebula-homelab -"
-    "Z /etc/nebula/host.key 0440 root nebula-homelab -"
 
     # GlobalProtect-openconnect still execs a few FHS paths internally.
     "L+ /usr/bin/gpclient - - - - ${pkgs.globalprotect-openconnect}/usr/bin/gpclient"
@@ -274,6 +236,7 @@
     # AI / dev tools
     pi-coding-agent
     opencode
+    antigravity-cli
 
     # VM management
     incus               # incus client for remote hypervisor access
@@ -289,6 +252,19 @@
     openconnect
     gp-saml-gui
     globalprotect-openconnect
+
+    # VPN — Proton VPN (personal)
+    # GTK GUI app with full feature support: Kill Switch, NetShield, split tunneling,
+    # WireGuard, VPN Accelerator, etc. Requires: NetworkManager (enabled),
+    # gnome-keyring (enabled), systemd-resolved (enabled for split tunneling).
+    # Start from app launcher as "Proton VPN" or run `protonvpn-app`.
+    protonvpn-gui
+    proton-vpn-cli
+
+    # Passwords — Proton Pass CLI
+    # Manage vaults, items, and secrets from the terminal.
+    # Run `proton-pass` to get started.
+    proton-pass-cli
   ];
 
   # ── Fonts ─────────────────────────────────────────────────────────────
@@ -325,7 +301,7 @@
   # ── NFS: Backups to NAS ───────────────────────────────────────────
   # Used by restic for local backup copy (homelab-backup NAS target)
   fileSystems."/mnt/backups" = {
-    device = "192.168.20.31:/mnt/tank/backups";
+    device = "192.168.20.31:/pool/backups";
     fsType = "nfs";
     options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
   };
@@ -382,4 +358,7 @@
 
   # ── State version ─────────────────────────────────────────────────────
   system.stateVersion = "25.11";
+
+  # ── Home Manager settings ─────────────────────────────────────────────
+  home-manager.backupFileExtension = "hm-backup";
 }

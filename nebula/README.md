@@ -18,7 +18,7 @@ Overlay CIDR: `10.10.0.0/24`
 | --- | --- |
 | `10.10.0.1` | Local lighthouse on `bee`, UDP `4243`, discovery-only/tun disabled |
 | `10.10.0.2` | Hetzner lighthouse + relay, public UDP `4242` |
-| `10.10.0.3` | TrueNAS host |
+| `10.10.0.3` | `nas` NixOS host |
 | `10.10.0.5` | `bees` legacy/AI identity in PKI |
 | `10.10.0.6` | `bees` production server (Caddy/public ingress) |
 | `10.10.0.10` | `think` laptop |
@@ -57,14 +57,14 @@ Nix-managed current config:
 - `modules/nebula-hosts.nix` - `/etc/hosts` entries for overlay names.
 - `hosts/bee/configuration.nix` - `bee` client plus local lighthouse.
 - `hosts/bees/configuration.nix` - `bees` client (service endpoint `10.10.0.6`).
-- `thinkpad/configuration.nix` - laptop Nebula config.
+- `thinkpad/configuration.nix` - laptop Nebula config (imports `modules/nebula-client.nix`).
 
 Manual/templates:
 
 - `nebula/configs/gateway.yaml` - Hetzner lighthouse/relay template.
 - `nebula/configs/bee.yaml` - manual template for `bee`.
 - `nebula/configs/thinkpad.yaml` - manual laptop template; Nix config is preferred for `think`.
-- `nebula/configs/nas.yaml` - TrueNAS template.
+- `nebula/configs/nas.yaml` - NAS template (legacy, now Nix-managed).
 - `nebula/configs/ai.yaml` - legacy `bees`/AI host template.
 - `nebula/configs/hub-lighthouse.yaml` - manual local lighthouse template.
 - `nebula/configs/phone.yaml.age` - encrypted phone config with embedded key.
@@ -159,21 +159,17 @@ systemctl restart nebula@lighthouse.service
 
 ## Hetzner Lighthouse / Relay
 
-Hetzner is not Nix-managed here. Live details:
+Hetzner is now Nix-managed via `hosts/gateway/configuration.nix`. Live details:
 
-- SSH: `root@178.156.171.212`
-- OS: Fedora 42
-- Hostname: `reverse-proxy`
-- Service: `nebula.service`
+- SSH: `root@178.156.171.212` (or `root@10.10.0.2` via Nebula)
+- OS: NixOS 25.11
+- Service: `nebula.service` (native NixOS module)
 - Config/certs live under `/etc/nebula/`
 
-Manual update pattern:
+Deploy changes:
 
 ```bash
-scp -o IdentitiesOnly=yes nebula/configs/gateway.yaml root@178.156.171.212:/etc/nebula/config.yaml
-scp -o IdentitiesOnly=yes nebula/pki/ca.crt root@178.156.171.212:/etc/nebula/ca.crt
-# Copy/decrypt host cert and key as needed, then:
-ssh -o IdentitiesOnly=yes root@178.156.171.212 'systemctl restart nebula'
+nix run .#deploy -- gateway
 ```
 
 ## Client Expectations
@@ -186,7 +182,7 @@ All roaming clients should:
 - enable relay use and include `10.10.0.2` in `relay.relays`.
 - include `preferred_ranges: ["192.168.20.0/24"]`.
 
-Local-only LAN nodes, such as TrueNAS, may use only the local lighthouse if roaming connectivity is unnecessary.
+Local-only LAN nodes may use only the local lighthouse if roaming connectivity is unnecessary.
 
 ## Adding a New Machine
 
