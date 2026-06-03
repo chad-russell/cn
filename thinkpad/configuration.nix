@@ -2,12 +2,13 @@
   config,
   pkgs,
   username,
-  hyprland,
+  unstable,
   ...
 }:
 {
   # ── Boot ──────────────────────────────────────────────────────────────
   boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.configurationLimit = 15;
   boot.loader.efi.canTouchEfiVariables = true;
 
   # ── Kernel ────────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@
 
   # ── Networking ────────────────────────────────────────────────────────
   networking.hostName = "think";
+  networking.enableIPv6 = false;
   networking.networkmanager.enable = true;
 
   # NetworkManager VPN plugins
@@ -100,22 +102,49 @@
     "L+ /usr/libexec/gpclient/hipreport.sh - - - - ${pkgs.globalprotect-openconnect}/usr/libexec/gpclient/hipreport.sh"
   ];
 
+  # ── Keyboard: Caps Lock ↔ Escape ────────────────────────────────────
+  # System-wide XKB default.  GNOME and KWin read from the system XKB
+  # directory on Wayland.  Niri overrides this in its own config.kdl.
+  services.xserver.xkb = {
+    layout = "us";
+    options = "caps:swapescape";
+  };
+
   # ── Niri — scrollable-tiling Wayland compositor ───────────────────────
   programs.niri.enable = true;
 
-  # ── Hyprland — tiling Wayland compositor (Lua config, 0.55+) ──────────
-  # Start from TTY with `Hyprland`. Coexists with niri.
-  programs.hyprland = {
-    enable = true;
-    package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
-    portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
-  };
+  # ── Noctalia: only start with niri ──────────────────────────────────
+  #
+  # Prevents noctalia-shell from starting in GNOME or other sessions.
+  # By default the noctalia-shell module sets
+  # WantedBy=graphical-session.target, which starts it in every
+  # Wayland session.  Change to niri.service so it only activates
+  # when niri starts.
+  services.noctalia-shell.target = "niri.service";
 
-  # ── Mango — dwm-like Wayland compositor with scroller layout ──────────
-  # Start from TTY with `mangowc` wrapper or `mango`. Coexists with niri/hyprland.
-  # NixOS module handles XDG portal (wlr), polkit, XWayland, and login entry.
-  # Home-manager module handles config, autostart, and systemd session target.
-  programs.mango.enable = true;
+
+
+  # ── GNOME — full desktop environment ──────────────────────────────────
+  # Provides a complete Wayland DE alongside niri. GDM offers session
+  # selection at login so you can pick GNOME or niri.
+  services.xserver.desktopManager.gnome.enable = true;
+  services.xserver.displayManager.gdm.enable = true;
+
+
+  # Exclude default GNOME apps we don't need (already have alternatives)
+  environment.gnome.excludePackages = with pkgs; [
+    gnome-tour
+    epiphany           # browser (have zen)
+    geary              # email
+    gnome-contacts
+    gnome-maps
+    gnome-music
+    gnome-photos
+    gnome-weather
+    totem              # video player
+    yelp               # help viewer
+    simple-scan
+  ];
 
   # ── Noctalia Shell ────────────────────────────────────────────────────
   services.noctalia-shell.enable = true;
@@ -186,11 +215,11 @@
   services.blueman.enable = true;
 
   # ── XDG Desktop Portal ──────────────────────────────────────────────
-  # niri uses gnome portal.
+  # GNOME module provides xdg-desktop-portal-gnome automatically.
+  # niri also uses the gnome portal. Add gtk portal for file pickers.
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
-      xdg-desktop-portal-gnome
       xdg-desktop-portal-gtk
     ];
   };
@@ -235,8 +264,11 @@
 
     # AI / dev tools
     pi-coding-agent
-    opencode
+    unstable.opencode
     antigravity-cli
+
+    # 3D printing
+    bambu-studio
 
     # VM management
     incus               # incus client for remote hypervisor access
@@ -265,6 +297,14 @@
     # Manage vaults, items, and secrets from the terminal.
     # Run `proton-pass` to get started.
     proton-pass-cli
+
+    (pkgs.writeShellScriptBin "oc-attach" ''
+      case "$1" in
+        bee)  exec opencode attach http://10.10.0.12:4096 ;;
+        bees) exec opencode attach http://10.10.0.6:4096 ;;
+        *)    echo "Usage: oc-attach <bee|bees>" >&2; exit 1 ;;
+      esac
+    '')
   ];
 
   # ── Fonts ─────────────────────────────────────────────────────────────
@@ -283,9 +323,6 @@
     dockerCompat = true;    # provides `docker` alias via podman
     defaultNetwork.settings.dns_enabled = true;
   };
-
-  # ── Flatpak ──────────────────────────────────────────────────────────
-  services.flatpak.enable = true;
 
   # ── Gnome keyring ─────────────────────────────────────────────────────
   services.gnome.gnome-keyring.enable = true;
@@ -324,22 +361,23 @@
   nix.settings.extra-substituters = [
     "https://vicinae.cachix.org"
     "https://noctalia.cachix.org"
-    "https://hyprland.cachix.org"
   ];
   nix.settings.extra-trusted-public-keys = [
     "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc="
     "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
-    "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
   ];
 
   # ── Garbage collection ────────────────────────────────────────────────
   nix.gc = {
     automatic = true;
     dates = "weekly";
-    options = "--delete-older-than 7d";
     persistent = true;          # catch up on missed runs at boot
     randomizedDelaySec = "10m"; # spread load across machines
   };
+
+  systemd.services.nix-gc.preStart = ''
+    ${config.nix.package.out}/bin/nix-env --delete-generations +15 -p /nix/var/nix/profiles/system
+  '';
 
   # ── Nix store optimisation ────────────────────────────────────────────
   # Deduplicate store paths on every build

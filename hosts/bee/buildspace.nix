@@ -242,11 +242,6 @@ in
       enable = true;
       dockerCompat = true;
     };
-
-    # ── Firewall: open app service ports ──────────────────────────
-    networking.firewall.allowedTCPPorts =
-      lib.mapAttrsToList (_: svc: svc.port) appServices;
-
     # ── Static files in /etc/buildspace/ ──────────────────────────
     environment.etc = {
       "buildspace/compose.yaml".source = ./buildspace/compose.yaml;

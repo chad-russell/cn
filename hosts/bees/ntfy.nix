@@ -15,5 +15,4 @@
   };
 
   systemd.services.ntfy-sh.serviceConfig.CacheDirectory = "ntfy-sh";
-  networking.firewall.allowedTCPPorts = [ 8090 ];
 }

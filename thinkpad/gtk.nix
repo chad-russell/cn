@@ -42,6 +42,12 @@
 
   # Tell GTK3/GTK4 and libadwaita apps to prefer dark variant
   dconf.settings = {
+    "org/gnome/desktop/wm/preferences" = {
+      mouse-button-modifier = "<Super>";
+    };
+    "org/gnome/desktop/input-sources" = {
+      xkb-options = [ "caps:swapescape" ];
+    };
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
       gtk-theme = "Adwaita-dark";

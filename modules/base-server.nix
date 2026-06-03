@@ -3,7 +3,7 @@
 # Shared config for all server hosts (bee, bees, misc).
 # Thinkpad is NOT a server and has its own config.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, unstable, ... }:
 
 {
   imports = [
@@ -44,6 +44,7 @@
   systemd.network.enable = true;
   networking.useDHCP = false;
   networking.nameservers = [ "8.8.8.8" "1.1.1.1" ];
+  networking.enableIPv6 = false;
 
   # ── Base packages ────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
@@ -57,18 +58,29 @@
     ripgrep
     fd
     antigravity-cli
+    unstable.cursor-cli
   ];
+
+  # ── Allow unfree packages ────────────────────────────────────────
+  nixpkgs.config.allowUnfree = true;
 
   # ── Nix settings ─────────────────────────────────────────────────
   nix.settings.trusted-users = [ "root" "crussell" ];
   nix.settings.auto-optimise-store = true;
+
+  boot.loader.systemd-boot.configurationLimit = 15;
+  boot.loader.grub.configurationLimit = 15;
+
   nix.gc = {
     automatic = true;
     dates = "weekly";
-    options = "--delete-older-than 7d";
     persistent = true;
     randomizedDelaySec = "10m";
   };
+
+  systemd.services.nix-gc.preStart = ''
+    ${config.nix.package.out}/bin/nix-env --delete-generations +15 -p /nix/var/nix/profiles/system
+  '';
 
   # ── NFS client support ───────────────────────────────────────────
   services.rpcbind.enable = true;

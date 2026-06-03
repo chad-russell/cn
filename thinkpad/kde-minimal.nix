@@ -2,7 +2,7 @@
 {
   # ── Minimal KDE Plasma 6 — Zoom screen sharing ──────────────────────
   #
-  # The existing niri/hyprland/mango compositors have unreliable PipeWire
+  # The existing niri/mangowc compositors have unreliable PipeWire
   # screen sharing.  Plasma Wayland + xdg-desktop-portal-kde handles
   # window/desktop selection and streaming reliably.
   #
@@ -10,7 +10,7 @@
   #   1. Log in on TTY as normal.
   #   2. Run `startplasma-wayland` to enter a Plasma session.
   #   3. Launch Zoom (flatpak run us.zoom.Zoom) and share your screen.
-  #   4. Log out when done — return to niri/hyprland/mango on next login.
+  #   4. Log out when done — return to niri/mangowc/COSMIC on next login.
   #
   # All optional KDE applications are stripped.  Your existing apps
   # (ghostty, nautilus, grim/slurp, fuzzel) work inside Plasma.
@@ -94,7 +94,7 @@
   # ── Disable KDE Wallet (gnome-keyring handles secrets) ────────────
   #
   # GNOME Keyring provides org.freedesktop.secrets across all sessions
-  # (niri, hyprland, mango, KDE).  Disable KWallet so it doesn't conflict
+  # (niri, mangowc, COSMIC, KDE).  Disable KWallet so it doesn't conflict
   # over the D-Bus name when running Plasma.
   environment.etc."xdg/kwalletrc" = {
     text = ''

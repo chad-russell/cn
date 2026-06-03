@@ -138,7 +138,4 @@
       };
     };
   };
-
-  # Caddy needs 80/443 open for HTTPS (and HTTP→HTTPS redirect)
-  networking.firewall.allowedTCPPorts = [ 80 443 ];
 }

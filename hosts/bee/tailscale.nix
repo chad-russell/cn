@@ -3,7 +3,6 @@
 {
   services.tailscale = {
     enable = true;
-    openFirewall = true;
   };
 
   # Allow the tunnel interface to be used for routing

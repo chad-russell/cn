@@ -95,8 +95,8 @@
     "Z /etc/nebula-lh/host.key 0440 root nebula-lighthouse -"
   ];
 
-  # Lighthouse needs UDP 4243 open
-  networking.firewall.allowedUDPPorts = [ 4243 ];
+  # ── Firewall: disabled (router handles it) ───────────────────────
+  networking.firewall.enable = false;
 
   # ┌──────────────────────────────────────────────────────────────────┐
   # │ TEMPORARY: Docker daemon for project work.                       │
@@ -131,9 +131,6 @@
   # │ the modules will set dockerCompat = true again automatically.    │
   # └──────────────────────────────────────────────────────────────────┘
 
-  # ── Allow unfree packages ──────────────────────────────────────
-  nixpkgs.config.allowUnfree = true;
-
   # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
   programs.nix-ld.enable = true;
 
@@ -151,7 +148,7 @@
   services.opencode.web.enable = true;
   services.opencode.web.hostname = "0.0.0.0";
 
-  # Firewall ports managed by gloo-dev and buildspace modules
+  # (Firewall disabled — no per-service port openings needed)
 
   # ── Dev stacks ──────────────────────────────────────────────────
   # Gloo repos run in their own devcontainers via plain podman compose.

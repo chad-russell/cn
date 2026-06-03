@@ -73,9 +73,6 @@ in
         lsof -ti:$1 | xargs kill -9
       }
 
-      cjust_swap_caps_escape_gnome() {
-        gsettings set org.gnome.desktop.input-sources xkb-options "['caps:swapescape']"
-      }
     '';
 
     # Profile extra (top of .zshrc, after env vars)

@@ -54,8 +54,6 @@
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # ── Hardware ─────────────────────────────────────────────────────
-  nixpkgs.config.allowUnfree = true;
-
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   hardware.enableRedistributableFirmware = lib.mkForce true;
   hardware.enableAllFirmware = true;
@@ -108,6 +106,7 @@
   # ── opencode AI coding agent ────────────────────────────────────
   services.opencode.enable = true;
   services.opencode.web.enable = true;
+  services.opencode.web.hostname = "0.0.0.0";
 
   # ── Gloo AI Proxy ──────────────────────────────────────────────────
   services.gloo-proxy = {
@@ -122,9 +121,8 @@
     group = "users";
   };
 
-  # ── Firewall: public ingress for Caddy + Gloo proxy ──────────────
-  networking.firewall.allowedTCPPorts = [ 80 443 4637 ];
-  networking.firewall.allowedUDPPorts = [ 4242 ];
+  # ── Firewall: disabled (router handles it) ───────────────────────
+  networking.firewall.enable = false;
 
   # ── Podman (for Caddy + hub service containers) ─────────────────
   virtualisation.podman = {

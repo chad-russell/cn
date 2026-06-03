@@ -92,5 +92,4 @@
   };
 
   # Open UDP for BitTorrent uTP/DHT — the NixOS module only opens TCP.
-  networking.firewall.allowedUDPPorts = [ 51413 ];
 }

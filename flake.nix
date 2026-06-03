@@ -18,6 +18,8 @@
     # ── Nixpkgs ────────────────────────────────────────────────────
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs-2605.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs-bambu.url = "github:NixOS/nixpkgs/3dc39290654c7c595c9f3fa70c3b998ca2bd61b0";
 
     # ── Home Manager ───────────────────────────────────────────────
     home-manager = {
@@ -53,14 +55,7 @@
       inputs.home-manager.follows = "home-manager";
     };
 
-    # ── Hyprland (Wayland compositor, Lua config from 0.55+) ───────
-    hyprland.url = "github:hyprwm/Hyprland/v0.55.0";
 
-    # ── Mango (Wayland compositor, dwm-like with scroll layout) ────
-    mango = {
-      url = "github:mangowm/mango";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
-    };
   };
 
   outputs =
@@ -68,6 +63,8 @@
       self,
       nixpkgs,
       nixpkgs-unstable,
+      nixpkgs-2605,
+      nixpkgs-bambu,
       home-manager,
       disko,
       agenix,
@@ -76,16 +73,20 @@
       vicinae,
       nixvim,
       zen-browser,
-      hyprland,
-      mango,
       ...
     }:
     let
       # ── Shared args passed to all NixOS hosts ────────────────────
       specialArgs = {
         inherit disko agenix;
-        unstable = nixpkgs-unstable.legacyPackages.x86_64-linux;
+        unstable = import nixpkgs-unstable {
+          system = "x86_64-linux";
+          config.allowUnfree = true;
+        };
       };
+
+      # Same unstable instance for home-manager extraSpecialArgs
+      unstable-pkgs = specialArgs.unstable;
 
       # ── Helper to build a NixOS configuration ────────────────────
       mkHost =
@@ -104,6 +105,7 @@
               disko.nixosModules.disko
               agenix.nixosModules.default
               {
+                nixpkgs.config.allowUnfree = true;
                 # Shared overlay for custom packages
                 nixpkgs.overlays = [
                   (final: prev: {
@@ -130,29 +132,30 @@
       # ── NixOS Configurations ─────────────────────────────────────
 
       # Thinkpad — has its own directory structure (home-manager, pkgs, etc.)
-      nixosConfigurations.think = nixpkgs-unstable.lib.nixosSystem {
+      nixosConfigurations.think = nixpkgs-2605.lib.nixosSystem {
         system = "x86_64-linux";
-        specialArgs = specialArgs // { inherit username; inherit hyprland; };
+        specialArgs = specialArgs // { inherit username; unstable = unstable-pkgs; };
         modules = [
           {
+            nixpkgs.config.allowUnfree = true;
             nixpkgs.overlays = [
               (final: prev: {
                 slk = final.callPackage ./thinkpad/pkgs/slk/package.nix { };
                 globalprotect-openconnect = final.callPackage ./thinkpad/pkgs/globalprotect-openconnect/default.nix { };
                 antigravity-cli = final.callPackage ./pkgs/antigravity-cli/package.nix { };
+                bambu-studio = (import nixpkgs-bambu { system = "x86_64-linux"; config.allowUnfree = true; }).bambu-studio;
               })
             ];
           }
           ./thinkpad/hardware-configuration.nix
           ./thinkpad/configuration.nix
           ./thinkpad/backup.nix
-          ./thinkpad/kde-minimal.nix
+
           ./modules/nebula-hosts.nix
           ./modules/nebula-client.nix
           nixos-hardware.nixosModules.lenovo-thinkpad-t14-intel-gen6
           { _module.args.username = username; }
-          hyprland.nixosModules.default
-          mango.nixosModules.mango
+
           noctalia-shell.nixosModules.default
           home-manager.nixosModules.home-manager
           {
@@ -160,14 +163,15 @@
             home-manager.useGlobalPkgs = true;
             home-manager.sharedModules = [
               vicinae.homeManagerModules.default
-              mango.hmModules.mango
+
               nixvim.homeModules.nixvim
               agenix.homeManagerModules.default
               zen-browser.homeModules.twilight
             ];
             home-manager.users.${username} = import ./thinkpad/home.nix;
             home-manager.extraSpecialArgs = {
-              inherit noctalia-shell vicinae agenix hyprland;
+              inherit noctalia-shell vicinae agenix;
+              unstable = unstable-pkgs;
             };
           }
           disko.nixosModules.disko
@@ -192,7 +196,7 @@
             ];
             home-manager.users.${username} = import ./modules/server-home.nix;
             home-manager.extraSpecialArgs = {
-              unstable = nixpkgs-unstable.legacyPackages.x86_64-linux;
+              unstable = unstable-pkgs;
             };
           }
         ];
@@ -221,7 +225,7 @@
             ];
             home-manager.users.${username} = import ./modules/server-home.nix;
             home-manager.extraSpecialArgs = {
-              unstable = nixpkgs-unstable.legacyPackages.x86_64-linux;
+              unstable = unstable-pkgs;
             };
           }
         ];
@@ -253,9 +257,14 @@ echo "Available hosts: think bee bees misc nas gateway"
               case "$host" in
                 think)
                   TARGET="think"
-                  # Local machine — just rebuild
-                  echo ">>> Deploying to $host (local)..."
-                  sudo nixos-rebuild switch --flake .#$host
+                  BUILD_HOST="''${THINK_BUILD_HOST:-}"
+                  if [ -n "$BUILD_HOST" ]; then
+                    echo ">>> Deploying to $host (local, building on $BUILD_HOST)..."
+                    sudo nixos-rebuild switch --flake .#$host --build-host "$BUILD_HOST"
+                  else
+                    echo ">>> Deploying to $host (local)..."
+                    sudo nixos-rebuild switch --flake .#$host
+                  fi
                   ;;
                 misc)
                   TARGET="crussell@192.168.20.42" # "crussell@10.10.0.11"

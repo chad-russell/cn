@@ -58,7 +58,7 @@ in
     systemd.services.opencode-web = lib.mkIf cfg.web.enable {
       description = "OpenCode Web Interface";
       after = [ "network.target" ];
-      # Deliberately no wantedBy — start on demand only.
+      wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
         Type = "simple";
@@ -66,8 +66,10 @@ in
         Group = "users";
         WorkingDirectory = cfg.web.directory;
         ExecStart = "${unstable.opencode}/bin/opencode web --port ${toString cfg.web.port} --hostname ${cfg.web.hostname}";
-        Restart = "on-failure";
-        RestartSec = 5;
+        Restart = "always";
+        RestartSec = "5";
+        StartLimitIntervalSec = "60";
+        StartLimitBurst = "5";
       };
     };
   };

@@ -34,6 +34,7 @@
     ../../modules/base-server.nix
     ./disk-config.nix
     ./nfs-exports.nix
+    ./samba.nix
     ./btrfs-maintenance.nix
     ../../modules/nebula-client.nix
   ];
