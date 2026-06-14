@@ -33,7 +33,7 @@ let
         globalprotectcallback:*)
           echo
           echo "Handing browser callback to gpclient..."
-          "$GPCLIENT" launch-gui "$callback"
+          "$GPCLIENT" launch-gui "$callback";
           ;;
         *)
           return 1
@@ -165,12 +165,12 @@ in
   };
 
   # -- Module imports --
+  # zsh + GTK are owned by home-manager again (recovered off the deprecated hod profile).
   imports = [
     noctalia-shell.homeModules.default
     ./nvim
     ./zsh.nix
     ./gtk.nix
-    ../modules/zellij.nix
   ];
 
   # -- Vicinae launcher --
@@ -202,93 +202,124 @@ in
     };
   };
 
-  programs.noctalia-shell = {
+  programs.noctalia = {
     enable = true;
-    package = noctalia-shell.packages.${pkgs.stdenv.hostPlatform.system}.default;
   };
 
-  # -- Niri config --
-  xdg.configFile."niri/config.kdl".source = ./configs/niri/config.kdl;
-
-  # -- Oh My Posh config --
-  xdg.configFile."oh-my-posh/config.json".source = ./configs/oh-my-posh/config.json;
-
-  # -- Zellij config --
-  xdg.configFile."zellij/config.kdl".source = ./configs/zellij/config.kdl;
-
-  # -- pi coding agent extensions --
-  home.file.".pi/agent/extensions/ask/index.ts".source = ../modules/pi-extensions/ask/index.ts;
-  home.file.".pi/agent/extensions/searxng-search/index.ts".source = ../modules/pi-extensions/searxng-search/index.ts;
-  home.file.".pi/agent/extensions/gloo-proxy/index.ts".source = ../modules/pi-extensions/gloo-proxy/index.ts;
-
-  # -- Ghostty config --
+  # ── Dotfiles (recovered off hod; home-manager deploys them now) ─────────
   xdg.configFile."ghostty/config".source = ./configs/ghostty/config;
+  xdg.configFile."niri/config.kdl".source = ./configs/niri/config.kdl;
+  xdg.configFile."oh-my-posh/config.json".source = ./configs/oh-my-posh/config.json;
+  xdg.configFile."zellij/config.kdl".source = ./configs/zellij/config.kdl;
+  xdg.configFile."ssh/config".source = ./configs/ssh/config;
+  xdg.configFile."mimeapps.list".source = ./configs/mimeapps.list;
 
-  # Default browser & MIME associations
-  xdg.mimeApps = {
-    enable = true;
-    defaultApplications = {
-      "text/html" = "app.zen_browser.zen.desktop";
-      "x-scheme-handler/http" = "app.zen_browser.zen.desktop";
-      "x-scheme-handler/https" = "app.zen_browser.zen.desktop";
-      "x-scheme-handler/about" = "app.zen_browser.zen.desktop";
-      "x-scheme-handler/unknown" = "app.zen_browser.zen.desktop";
+  # -- dconf settings (dark theme, cursor, caps-escape, Super modifier) --
+  dconf.settings = {
+    "org/gnome/desktop/wm/preferences" = {
+      mouse-button-modifier = "<Super>";
+    };
+    "org/gnome/desktop/input-sources" = {
+      xkb-options = [ "caps:swapescape" ];
+    };
+    "org/gnome/desktop/interface" = {
+      color-scheme = "prefer-dark";
+      gtk-theme = "Adwaita-dark";
+      icon-theme = "Papirus-Dark";
+      cursor-theme = "Adwaita";
+      cursor-size = 24;
+      font-name = "Noto Sans 10";
     };
   };
 
-  # -- Basic CLI / dev tools --
+  # ── Packages (recovered off the deprecated hod profile) ────────────────────
   home.packages = with pkgs; [
+    # --- CLI / dev tools ---
     ripgrep
     fd
     bat
     eza
     fzf
     git
-    curl
-    wget
-    zed-editor-fhs
-    zoxide
+    github-cli
     jq
     oh-my-posh
-    github-cli
+    curl
+    wget
     yazi
+    zoxide
+    file
+    htop
+    less
+    ncdu
+    openssh
+    pv
+    rsync
+    strace
+    tree
     unzip
-    bun
-    python3
-    distrobox
+    lsof
 
-    # GUI apps
+    # --- Dev runtimes / editors ---
+    nodejs
+    bun
+    lazygit
+    tig
+    tmux
+    vim
+    nano
+    wl-clipboard
+    distrobox
+    zed-editor-fhs
+    python3
+    libvirt
+
+    # --- Toolchains ---
+    go
+    rustc
+    cargo
+
+    # --- Security / encryption ---
+    age
+    gnupg
+
+    # --- Wayland CLI utilities ---
+    brightnessctl
+    playerctl
+
+    # --- Terminal (was hod-built) ---
+    ghostty
+
+    # --- GTK theme packages ---
+    gnome-themes-extra
+    papirus-icon-theme
+    adwaita-icon-theme
+
+    # --- GUI apps ---
     slack
     vesktop
     voxtype
     localsend
     zoom-us
+    bazaar
+    gnome-boxes
+    warp-terminal
 
-    # Node (needed by `pi install` for extension deps)
-    nodejs
-
-    # Rust toolchain
-    rustc
-    cargo
-
-    # AI coding assistants
+    # --- AI coding assistants ---
     claude-code
     cursor-cli
 
-    # TUI apps
-    slk
-
-    # VPN helpers
+    # --- VPN helpers ---
     wycliffeVpn
     wycliffeVpnDisconnect
   ];
 
-    # -- Git --
-    # programs.git = {
-    # enable = true;
-    # settings.user.name = "Chad Russell";
-    # settings.user.email = "chaddouglasrussell@gmail.com";
-    # };
+  # -- Git --
+  programs.git = {
+    enable = true;
+    userName = "Chad Russell";
+    userEmail = "chaddouglasrussell@gmail.com";
+  };
 
   # -- Agenix secrets --
   age.secrets.zhipu-api-key = {
@@ -297,10 +328,9 @@ in
   age.secrets.openrouter-api-key = {
     file = ./secrets/openrouter-api-key.age;
   };
-
-  # TODO: Package slk (pkgs/slk/package.nix) for nixpkgs upstream PR
-  # Tell agenix where to find the decryption key
   age.identityPaths = [ "${config.home.homeDirectory}/.ssh/id_ed25519" ];
+
+  # ── systemd user services (recovered off the hod profile) ────────────
 
   # -- Voxtype voice-to-text daemon --
   systemd.user.services.voxtype = {
@@ -309,33 +339,23 @@ in
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session.target" "pipewire.service" "pipewire-pulse.service" ];
     };
-
     Service = {
       Type = "simple";
       ExecStart = "${pkgs.voxtype}/bin/voxtype -q daemon";
       Restart = "on-failure";
       RestartSec = 5;
     };
-
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # -- Gloo SSH tunnel (start/stop manually) --
+  # -- Polymer/Gloo SSH tunnel (start/stop manually) --
   # Usage:  systemctl --user start gloo-tunnel
   #         systemctl --user stop gloo-tunnel
-  #
-  # Forwards all Gloo ports. Polymer and Hummingbird share 3000/3001,
-  # so don't run both simultaneously.
-  #
-  # Ports:
-  #   3000  polymer app / hummingbird web
-  #   3001  admin360 / hummingbird storyhub
-  #   3006  gpl
-  #   8000  hummingbird API
   systemd.user.services.gloo-tunnel = {
-    Unit.Description = "SSH tunnel: Gloo ports → bee";
+    Unit.Description = "SSH tunnel: Gloo ports -> bee";
     Service = {
-      ExecStart = "${pkgs.openssh}/bin/ssh -N -o ExitOnForwardFailure=yes"
+      ExecStart =
+        "${pkgs.openssh}/bin/ssh -N -o ExitOnForwardFailure=yes"
         + " -L 3000:127.0.0.1:3000"
         + " -L 3001:127.0.0.1:3001"
         + " -L 3006:127.0.0.1:3006"
@@ -345,39 +365,8 @@ in
     };
   };
 
-  # -- OpenCode web interface (start/stop manually) --
-  # Usage:  systemctl --user start opencode-web
-  #         systemctl --user stop opencode-web
-  #
-  # Starts `opencode web` on port 4096. Open http://localhost:4096
-  # in a browser.  Use OPENCODE_SERVER_PASSWORD env var for basic auth.
-  systemd.user.services.opencode-web = {
-    Unit.Description = "OpenCode Web Interface";
-    Service = {
-      Type = "simple";
-      ExecStart = "${unstable.opencode}/bin/opencode web --port 4096";
-      WorkingDirectory = config.home.homeDirectory;
-      Restart = "on-failure";
-      RestartSec = 5;
-    };
-  };
-
-  # -- SSH client config (Nebula hosts) --
-  programs.ssh = {
-    enable = true;
-    matchBlocks = {
-      bee = {
-        hostname = "10.10.0.12";
-        identityFile = "~/.ssh/id_ed25519";
-        extraOptions.StrictHostKeyChecking = "accept-new";
-      };
-      bees = {
-        hostname = "10.10.0.6";
-        identityFile = "~/.ssh/id_ed25519";
-        extraOptions.StrictHostKeyChecking = "accept-new";
-      };
-    };
-  };
+  # -- opencode: managed by the system module (modules/opencode.nix),
+  # services.opencode.enable = true in configuration.nix. Run `opencode web` manually.
 
   # -- Bash (kept as fallback shell) --
   programs.bash = {

@@ -24,6 +24,7 @@ Overlay CIDR: `10.10.0.0/24`
 | `10.10.0.10` | `think` laptop |
 | `10.10.0.11` | `phone` / `misc` |
 | `10.10.0.12` | `bee` Beelink mini PC |
+| `10.10.0.51` | `homeassistant` HAOS (via local add-on) |
 
 ## Traffic Flow
 
@@ -41,7 +42,8 @@ Away from home:
 Public ingress (`*.crussell.io`):
 
 ```text
-Internet -> Hetzner nginx stream proxy -> 10.10.0.6:80/443 -> Caddy on bees -> backend service
+Internet -> Hetzner Caddy (TLS, HTTP-01) -> backend over Nebula
+            178.156.171.212   (10.10.0.51 HA, 10.10.0.6 bees, ...)
 ```
 
 Internal DNS (`*.internal.crussell.io`):
@@ -99,7 +101,7 @@ Common identities:
 - `crussell-lh-local` -> `10.10.0.1/24`, groups: `lighthouse`.
 - `bees` -> `10.10.0.6/24`, production server service endpoint.
 - `hetzner-lighthouse` -> `10.10.0.2/24`, groups include lighthouse/relay access.
-- `bee-host`, `thinkpad`, `nas`, `phone` have matching cert/key files in `nebula/pki/`.
+- `bee-host`, `thinkpad`, `nas`, `phone`, `homeassistant` have matching cert/key files in `nebula/pki/`.
 
 Example signing command:
 

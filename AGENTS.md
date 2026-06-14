@@ -36,7 +36,10 @@ Last validated via SSH: **2026-05-06**.
 │   │   ├── hub-services.nix, linkding.container, papra.container, open-webui.container
 │   │   ├── prometheus.nix, homelab-monitor.nix
 │   │   └── disk-config.nix
-│   ├── homeassistant/         # HAOS operational docs + helper scripts
+│   ├── homeassistant/         # HAOS operational docs + helper scripts + Nebula add-on
+│   │   ├── addons/nebula/     # Local HAOS add-on: Nebula VPN client
+│   │   ├── scripts/           # Deploy, SSH, supervisor helpers
+│   │   └── README.md
 │   └── misc/                  # HP Z820 workstation (temporary backup target)
 ├── modules/
 │   ├── base-server.nix        # Shared server baseline: user, SSH, networkd, packages, GC, NFS client
@@ -62,10 +65,11 @@ Last validated via SSH: **2026-05-06**.
                 ┌──────────────────────────────────┐
                 │ gateway / Hetzner VPS             │
                 │ 178.156.171.212 / NixOS 25.11     │
-                │ nginx stream → bees :80/:443     │
+                │ Caddy: *.crussell.io TLS ingress  │
+                │   (HTTP-01) → backends over Nebula│
                 │ Nebula lighthouse+relay 10.10.0.2 │
                 └───────────────┬──────────────────┘
-                                │ Nebula to 10.10.0.6
+                                │ Nebula to 10.10.0.6 / 10.10.0.51
                 ┌───────────────┴──────────────────┐
                 ▼                                  ▼
    ┌──────────────────────────┐   ┌──────────────────────────┐
@@ -78,7 +82,7 @@ Last validated via SSH: **2026-05-06**.
    │ 2 TB NVMe, dual 10GbE   │   │ 1 TB NVMe, 1 GbE         │
    │                          │   │                          │
    │ ALL PRODUCTION SERVICES: │   │ SERVICES:                │
-   │  Caddy (TLS ingress)     │   │  Nebula lighthouse       │
+   │  Caddy (*.internal TLS)  │   │  Nebula lighthouse       │
    │  ntfy, SearXNG, datenight│   │  Gloo dev stack          │
    │  linkding, papra         │   │  Buildspace (disabled)   │
    │  open-webui              │   │                          │
@@ -97,7 +101,7 @@ Last validated via SSH: **2026-05-06**.
     │ photos, backups │            └─────────────────┘
     └─────────────────┘
 
-Also on LAN: homeassistant / HAOS at 192.168.20.51.
+Also on LAN: homeassistant / HAOS at 192.168.20.51, Nebula 10.10.0.51.
 Laptop: think / NixOS 25.11, configured under `thinkpad/`.
 ```
 
@@ -105,12 +109,12 @@ Laptop: think / NixOS 25.11, configured under `thinkpad/`.
 
 | Host | LAN IP | Nebula IP | OS | Config | Purpose / services |
 | --- | --- | --- | --- | --- | --- |
-| `bees` | `192.168.20.41` | `10.10.0.6` | NixOS 25.11 | `hosts/bees/` | Production server: Caddy, ntfy, SearXNG, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
+| `bees` | `192.168.20.41` | `10.10.0.6` | NixOS 25.11 | `hosts/bees/` | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, SearXNG, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
 | `bee` | `192.168.20.105` | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/` | Dev server: Gloo stack, Nebula lighthouse. |
 | `think` | varies | `10.10.0.10` | NixOS 25.11 | `thinkpad/` | Laptop with home-manager, niri, Noctalia, Podman, dev tools. |
 | `nas` | `192.168.20.31` | `10.10.0.3` | NixOS 25.11 | `hosts/nas/` | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance. |
-| `homeassistant` | `192.168.20.51` | — | HAOS | `hosts/homeassistant/` docs only | Home Assistant OS. |
-| `gateway` | `178.156.171.212` | `10.10.0.2` | NixOS 25.11 | `hosts/gateway/` | Hetzner Cloud VPS: nginx stream proxy → bees (`10.10.0.6:80/443`). Nebula lighthouse/relay. |
+| `homeassistant` | `192.168.20.51` | `10.10.0.51` | HAOS | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on. |
+| `gateway` | `178.156.171.212` | `10.10.0.2` | NixOS 25.11 | `hosts/gateway/` | Hetzner Cloud VPS: **Caddy public TLS ingress** for `*.crussell.io` (HTTP-01, reverse-proxies to backends over Nebula). Nebula lighthouse/relay. |
 
 ## SSH Access
 
@@ -234,14 +238,19 @@ podman ps
 journalctl -u caddy -f
 ```
 
-#### Caddy public routes
+#### Public ingress (gateway)
 
-| Public hostname | Backend |
-| --- | --- |
-| `homeassistant.crussell.io` | `192.168.20.51:8123` |
-| `jellyfin.crussell.io` | `localhost:8096` |
-| `photos.crussell.io` | `localhost:2283` |
-| `datenight.crussell.io` | `localhost:7890` |
+Public `*.crussell.io` traffic is handled by **Caddy on the gateway**
+(`hosts/gateway/caddy.nix`), which terminates TLS (Let's Encrypt HTTP-01) and
+reverse-proxies to each backend over Nebula. Bees is **no longer** on the
+public path — see the gateway section above.
+
+#### Internal Caddy routes (bees)
+
+Bees's Caddy (`hosts/bees/caddy/Caddyfile`) handles **only**
+`*.internal.crussell.io` (Route53 DNS-challenge wildcard cert). Public DNS
+resolves `*.internal.crussell.io` → `10.10.0.6` (bees Nebula), so internal
+clients reach bees directly over the overlay, bypassing the gateway.
 
 Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
@@ -264,7 +273,7 @@ ssh -o IdentitiesOnly=yes crussell@192.168.20.41 '
 '
 ```
 
-Caddy's Route53 DNS challenge credentials are managed via agenix (`secrets/aws-env.age`), decrypted at runtime to `/run/agenix/aws-env`.
+Caddy's Route53 DNS challenge credentials are managed via agenix (`secrets/aws-env.age`), decrypted at runtime to `/run/agenix/aws-env`. **Bees uses this only for the internal `*.internal.crussell.io` wildcard cert**; the gateway's public ingress uses HTTP-01 and needs no credentials.
 
 ### bee — Dev server + Nebula lighthouse
 
@@ -299,21 +308,39 @@ See `hosts/bee/gloo/SKILL.md` for full documentation.
 
 Deploy uses `crussell@192.168.20.105 --sudo` per `flake.nix`.
 
-### gateway — Hetzner Cloud VPS
+### gateway — Hetzner Cloud VPS (public ingress)
 
 Source files:
 
 - `hosts/gateway/configuration.nix`
+- `hosts/gateway/caddy.nix` — native NixOS Caddy, public TLS termination
 - `hosts/gateway/disk-config.nix`
 
 NixOS 25.11 on Hetzner Cloud x86_64 (legacy BIOS boot, GRUB).
 
 - Public IP `178.156.171.212` (DHCP from Hetzner Cloud)
 - Nebula `10.10.0.2` (lighthouse + relay, UDP `4242`)
-- Nginx stream proxy:
-  - TCP `:80` → `10.10.0.6:80` (bees)
-  - TCP `:443` → `10.10.0.6:443` (bees)
+- **Caddy terminates TLS for all `*.crussell.io` public hostnames** (native
+  NixOS Caddy, Let's Encrypt HTTP-01 — no Route53, **no secrets on the
+  VPS**) and reverse-proxies to each backend over the Nebula overlay.
+  This replaced the old nginx TCP-passthrough → bees design, which made bees
+  a single point of failure for all public routes.
+- Public DNS: `*.crussell.io` → `178.156.171.212` (gateway).
+  Internal DNS: `*.internal.crussell.io` → `10.10.0.6` (bees) — bypasses the
+  gateway entirely.
 - Firewall: TCP `22`, `80`, `443`; UDP `4242`
+
+Public routes (gateway Caddy → backend over Nebula):
+
+| Public hostname | Backend |
+| --- | --- |
+| `homeassistant.crussell.io` | `10.10.0.51:8123` (HA, direct; X-Forwarded-For stripped — see `hosts/gateway/caddy.nix`) |
+| `jellyfin.crussell.io` | `10.10.0.6:8096` |
+| `photos.crussell.io` | `10.10.0.6:2283` |
+| `datenight.crussell.io` | `10.10.0.6:7890` |
+| `glooai.crussell.io` | `10.10.0.6:4637` |
+
+> To add/change a public route, edit `hosts/gateway/caddy.nix` and `nix run .#deploy -- gateway`. Adding a new hostname requires it to resolve to the gateway (covered by the `*.crussell.io` wildcard) and Caddy auto-issues its cert on first request via HTTP-01.
 - SSH password auth disabled (public-facing)
 
 Nebula certs at `/etc/nebula/{ca.crt,host.crt,host.key}` (deployed manually).

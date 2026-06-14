@@ -75,4 +75,11 @@
       };
     };
   };
+
+  # Mount /home in the initrd (before NixOS activation) so agenix can decrypt
+  # secrets using the identity at /home/crussell/.config/age/key.txt at boot.
+  # Without this, a separate /home subvolume races agenix and age-encrypted
+  # secrets (and services that depend on them) fail to come up after a reboot.
+  # See modules/base-server.nix (age.identityPaths).
+  fileSystems."/home".neededForBoot = true;
 }

@@ -54,6 +54,7 @@ layout {
 }
 
 spawn-at-startup "xwayland-satellite"
+spawn-at-startup "noctalia"
 
 prefer-no-csd
 
@@ -174,13 +175,13 @@ binds {
     // Power Control
     Mod+Shift+P { power-off-monitors; }
 
-    // Noctalia keybinds
-    Mod+N     { spawn "noctalia-shell" "ipc" "call" "notifications" "toggleDND"; }
-    Mod+Comma { spawn "noctalia-shell" "ipc" "call" "settings" "toggle"; }
-    Super+Alt+L { spawn "noctalia-shell" "ipc" "call" "lockScreen" "lock"; }
-    Mod+M     { spawn "noctalia-shell" "ipc" "call" "systemMonitor" "toggle"; }
-    Mod+Alt+N { spawn "noctalia-shell" "ipc" "call" "nightLight" "toggle"; }
-    Mod+E     { spawn "noctalia-shell" "ipc" "call" "sessionMenu" "toggle"; }
+    // Noctalia v5 keybinds
+    Mod+N     { spawn "noctalia" "msg" "notification-dnd-toggle"; }
+    Mod+Comma { spawn "noctalia" "msg" "settings-toggle"; }
+    Super+Alt+L { spawn "noctalia" "msg" "session" "lock"; }
+    Mod+M     { spawn "noctalia" "msg" "panel-toggle" "control-center"; }
+    Mod+Alt+N { spawn "noctalia" "msg" "nightlight-toggle"; }
+    Mod+E     { spawn "noctalia" "msg" "panel-toggle" "session"; }
 
     // Applications
     Mod+T { spawn "ghostty"; }
@@ -188,13 +189,13 @@ binds {
     Mod+F { spawn "nautilus" "--new-window"; }
     Mod+R { spawn "voxtype" "record" "toggle"; }
 
-    // Media keys (Noctalia)
-    XF86AudioRaiseVolume { spawn "noctalia-shell" "ipc" "call" "volume" "increase"; }
-    XF86AudioLowerVolume { spawn "noctalia-shell" "ipc" "call" "volume" "decrease"; }
-    XF86AudioMute        { spawn "noctalia-shell" "ipc" "call" "volume" "muteOutput"; }
-    XF86AudioMicMute     { spawn "noctalia-shell" "ipc" "call" "volume" "muteInput"; }
-    XF86MonBrightnessUp   { spawn "noctalia-shell" "ipc" "call" "brightness" "increase"; }
-    XF86MonBrightnessDown { spawn "noctalia-shell" "ipc" "call" "brightness" "decrease"; }
+    // Media keys (Noctalia v5)
+    XF86AudioRaiseVolume { spawn "noctalia" "msg" "volume-up"; }
+    XF86AudioLowerVolume { spawn "noctalia" "msg" "volume-down"; }
+    XF86AudioMute        { spawn "noctalia" "msg" "volume-mute"; }
+    XF86AudioMicMute     { spawn "noctalia" "msg" "mic-mute"; }
+    XF86MonBrightnessUp   { spawn "noctalia" "msg" "brightness-up"; }
+    XF86MonBrightnessDown { spawn "noctalia" "msg" "brightness-down"; }
 }
 
 animations {
@@ -367,6 +368,6 @@ animations {
 }
 
 layer-rule {
-    match namespace="^noctalia-overview*"
+    match namespace="^noctalia-backdrop"
     place-within-backdrop true
 }

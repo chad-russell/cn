@@ -82,6 +82,16 @@
     ${config.nix.package.out}/bin/nix-env --delete-generations +15 -p /nix/var/nix/profiles/system
   '';
 
+  # ── Agenix: decrypt secrets at boot ────────────────────────────────
+  # The identity lives under the user's $HOME, so any host that mounts /home
+  # as a SEPARATE filesystem MUST mark it `neededForBoot = true` (already done
+  # in hosts/{bees,nas,misc}/disk-config.nix and modules/hub-disk-config.nix).
+  # Otherwise /home mounts after activation and every age secret silently
+  # fails to decrypt on reboot — which took down Caddy (and thus all public
+  # routes incl. homeassistant.crussell.io) on bees after the 2026-06-13 power
+  # outage. Gateway is unaffected: it keeps /home on the single ext4 root fs.
+  age.identityPaths = [ "/home/crussell/.config/age/key.txt" ];
+
   # ── NFS client support ───────────────────────────────────────────
   services.rpcbind.enable = true;
 

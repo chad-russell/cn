@@ -5,6 +5,7 @@ Home Assistant runs on a dedicated Home Assistant OS host on the LAN.
 ## Host Details
 
 - **LAN IP:** `192.168.20.51`
+- **Nebula IP:** `10.10.0.51`
 - **OS:** Home Assistant OS 17.2
 - **Home Assistant Core:** `2026.4.2` at the time this doc was written
 - **Primary URL:** `https://homeassistant.crussell.io`
@@ -176,6 +177,40 @@ This checks for:
 - Keep OTBR on the ZBT-2.
 
 This prevents the specific reboot-induced port renumbering failure documented in `incidents/2026-04-14-zigbee-thread-serial-port-collision.md`.
+
+## Nebula VPN
+
+Home Assistant connects to the Nebula overlay mesh via a standalone Docker container (not a Supervisor add-on, due to Supervisor s6-overlay conflicts).
+
+- **Nebula IP:** `10.10.0.51`
+- **Container:** `nebula` (standalone, `--restart=always`)
+- **Image:** `nebula-standalone` (Alpine + Nebula v1.10.3 with certs baked in)
+- **Certs source:** `nebula/pki/homeassistant.{crt,key}` + `ca.crt` in the repo
+- **Add-on source:** `hosts/homeassistant/addons/nebula/` (Dockerfile, config, entrypoint)
+
+Deploy or update:
+
+```bash
+HA_SSH_PASSWORD=<pw> hosts/homeassistant/scripts/deploy-nebula-addon.sh
+```
+
+Verify from the SSH add-on:
+
+```bash
+ping -c 3 10.10.0.6
+```
+
+Check container:
+
+```bash
+sudo docker logs nebula
+sudo docker ps --filter name=nebula
+```
+
+PKI files in the repo:
+
+- `nebula/pki/homeassistant.crt` (public cert)
+- `nebula/pki/homeassistant.key.age` (encrypted private key)
 
 ## Related Files
 

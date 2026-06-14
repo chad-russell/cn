@@ -1,0 +1,16 @@
+{
+  "name": "Nebula VPN",
+  "slug": "nebula",
+  "description": "Connects Home Assistant to the Nebula overlay mesh network",
+  "url": "https://github.com/slackhq/nebula",
+  "version": "1.0.0",
+  "arch": ["amd64", "aarch64", "armv7"],
+  "startup": "system",
+  "boot": "auto",
+  "init": false,
+  "host_network": true,
+  "privileged": ["NET_ADMIN"],
+  "map": ["ssl:ro"],
+  "options": {},
+  "schema": {}
+}

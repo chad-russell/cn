@@ -50,7 +50,7 @@
             "trim_space": true,
             "cache_duration": "none"
           },
-          "template": "{{- $id := .Output -}}{{ if eq $id \"arch\" }}  {{ else if eq $id \"ubuntu\" }}  {{ else if eq $id \"debian\" }}  {{ else if eq $id \"fedora\" }}  {{ else if or (eq $id \"opensuse\") (eq $id \"opensuse-tumbleweed\") }}  {{ else if eq $id \"nixos\" }}  {{ else if eq $id \"alpine\" }}  {{ else if eq $id \"manjaro\" }}  {{ else if eq $id \"gentoo\" }}  {{ else if or (eq $id \"centos\") (eq $id \"almalinux\") (eq $id \"rocky\") (eq $id \"rhel\") }}  {{ else }}  {{ end }}"
+          "template": "{{- $id := .Output -}}{{ if eq $id \"arch\" }}  {{ else if eq $id \"ubuntu\" }}  {{ else if eq $id \"debian\" }}  {{ else if eq $id \"fedora\" }}  {{ else if or (eq $id \"opensuse\") (eq $id \"opensuse-tumbleweed\") }}  {{ else if eq $id \"nixos\" }}  {{ else if eq $id \"alpine\" }}  {{ else if eq $id \"manjaro\" }}  {{ else if eq $id \"gentoo\" }}  {{ else if or (eq $id \"centos\") (eq $id \"almalinux\") (eq $id \"rocky\") (eq $id \"rhel\") }}  {{ else }}  {{ end }}"
         },
         {
           "properties": {

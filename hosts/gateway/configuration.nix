@@ -1,9 +1,9 @@
 # ── gateway: Hetzner Cloud Reverse Proxy ───────────────────────────
 #
 # Public VPS at 178.156.171.212 (Hetzner Cloud x86_64)
-# Nginx stream proxy: TCP 80/443 → bees (10.10.0.6) via Nebula overlay
+# Caddy terminates TLS for *.crussell.io and reverse-proxies to backends
+# over the Nebula overlay (native NixOS Caddy, Let's Encrypt HTTP-01).
 # Nebula lighthouse + relay: 10.10.0.2, UDP 4242
-# Tailscale: connected for overlay access
 #
 # Install with nixos-anywhere (preserves the existing public IP):
 #   nix run .#install -- gateway
@@ -13,6 +13,7 @@
 {
   imports = [
     ./disk-config.nix
+    ./caddy.nix
     ../../modules/base-server.nix
     # NOTE: Do NOT import nebula-client.nix — this host IS a lighthouse.
     # Nebula is configured manually below with lighthouse/relay overrides.
@@ -52,68 +53,6 @@
   users.users.crussell.openssh.authorizedKeys.keys = [
     "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDsHOYNAog8L5SAhKp551g4oJFSi/GB+Fg38mmBLhwbrCUSfVSFqKeaOuRlLCQVnTWPZYfyp6cTibHBeigky6fjKhQgKnUJgwPdHjxhSvk7m6zgGj71s45bFT918E1J8hysN2wrijoo6oJ1zSeX3FIWOcFZVR4MHxCdYCMr+4mJp8tb1oQRea6GxCFGCms7DoNii+gWL/K2KZTMHKZ6l9Nf5CXq/6+a9Pfog3XuRlpTxLlIVj8YMC8TeRki0m9mG4+gk4OtCzACL/ngY0OxRWN4IN0NhFZOO5FHwytMR9/yNiAzafzaIt2szd69nmPG3DrXSUN1nXZKR78kM5O1kIaEKNeWJjhTXuDF7DtMF61TlXDWmsFxQbF9TAWK7nXJMUzAgXY1vIkTiYV3uwBB9upyKmXD/M5U1cFDvY6sSnINHxaqXp7/IoEHsXzHKmR5yhGLVszMzMlINBTxrWEYbjzNJPEvWeLCt3EbU4LPVffc8MA+l9zujSDjMO78uC7k/Ek="
   ];
-
-  # ── Nginx Stream Proxy ──────────────────────────────────────────
-  #
-  # Forwards all public TCP 80/443 to bees via the Nebula overlay.
-  # Matches the Fedora nginx.conf that was running before migration.
-  services.nginx = {
-    enable = true;
-
-    # Minimal http block — health check endpoint on 8080 only.
-    httpConfig = ''
-      log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-                      '$status $body_bytes_sent "$http_referer" '
-                      '"$http_user_agent"';
-
-      access_log /var/log/nginx/access.log main;
-      sendfile on;
-      tcp_nodelay on;
-      keepalive_timeout 65;
-
-      server {
-        listen 8080;
-        server_name localhost;
-
-        location /health {
-          access_log off;
-          return 200 "healthy\n";
-          add_header Content-Type text/plain;
-        }
-
-        location /status {
-          access_log off;
-          return 200 "proxy server running\n";
-          add_header Content-Type text/plain;
-        }
-      }
-    '';
-
-    # Stream block — TCP passthrough to bees (same as old config).
-    streamConfig = ''
-      upstream homelab_https {
-        server 10.10.0.6:443;
-      }
-
-      upstream homelab_http {
-        server 10.10.0.6:80;
-      }
-
-      server {
-        listen 443;
-        proxy_pass homelab_https;
-        proxy_timeout 300s;
-        proxy_connect_timeout 60s;
-      }
-
-      server {
-        listen 80;
-        proxy_pass homelab_http;
-        proxy_timeout 300s;
-        proxy_connect_timeout 60s;
-      }
-    '';
-  };
 
   # ── Nebula: Lighthouse + Relay ──────────────────────────────────
   #
@@ -173,7 +112,9 @@
   ];
 
   # ── Firewall ─────────────────────────────────────────────────────
-  networking.firewall.allowedTCPPorts = [ 22 80 443 8080 ];
+  # 80/443 for Caddy (TLS + HTTP-01 challenge); no more 8080 health endpoint
+  # (that was nginx-only and nothing scraped it).
+  networking.firewall.allowedTCPPorts = [ 22 80 443 ];
   networking.firewall.allowedUDPPorts = [ 4242 ];
 
   # ── State version ───────────────────────────────────────────────

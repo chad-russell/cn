@@ -11,4 +11,5 @@ in
   "nas.key.age".publicKeys = [ crussell ];
   "phone.key.age".publicKeys = [ crussell ];
   "thinkpad.key.age".publicKeys = [ crussell ];
+  "homeassistant.key.age".publicKeys = [ crussell ];
 }

@@ -62,6 +62,11 @@
   # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
   programs.nix-ld.enable = true;
 
+  # ── Cargo bin on PATH ─────────────────────────────────────────────
+  programs.zsh.interactiveShellInit = ''
+    path+=("$HOME/.cargo/bin")
+  '';
+
   # ── Networking ───────────────────────────────────────────────────
   # Intel E610 dual-port 10GbE — active port is the second function
   # PCI slot: 0000:c4:00.1, MAC: 78:55:36:02:ce:bf
@@ -112,13 +117,6 @@
   services.gloo-proxy = {
     enable = true;
     user = "crussell";
-    credentialsFile = config.age.secrets.gloo-credentials.path;
-  };
-
-  age.secrets.gloo-credentials = {
-    file = ../../secrets/gloo-credentials.age;
-    mode = "0440";
-    group = "users";
   };
 
   # ── Firewall: disabled (router handles it) ───────────────────────

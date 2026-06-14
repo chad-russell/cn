@@ -1,12 +1,20 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 const PROXY_URL = process.env.GLOO_PROXY_URL || "http://10.10.0.6:4637/v1";
+const API_KEY = process.env.GLOO_API_KEY || "";
 
 export default async function (pi: ExtensionAPI) {
   let models: any[] = [];
 
+  if (!API_KEY) {
+    console.error("[gloo-proxy] GLOO_API_KEY env var not set (expected client_id:client_secret)");
+    return;
+  }
+
   try {
-    const res = await fetch(`${PROXY_URL}/models`);
+    const res = await fetch(`${PROXY_URL}/models`, {
+      headers: { Authorization: `Bearer ${API_KEY}` },
+    });
     if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
     const json = (await res.json()) as { data: any[] };
     models = json.data;
@@ -18,7 +26,7 @@ export default async function (pi: ExtensionAPI) {
 
   pi.registerProvider("gloo", {
     baseUrl: PROXY_URL,
-    apiKey: "gloo",
+    apiKey: API_KEY,
     api: "openai-completions",
     models: models.map((m) => ({
       id: m.id,

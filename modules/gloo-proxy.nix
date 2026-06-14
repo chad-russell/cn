@@ -32,10 +32,7 @@ in
       description = "User to run the service as";
     };
 
-    credentialsFile = lib.mkOption {
-      type = lib.types.path;
-      description = "agenix-encrypted file containing GLOO_CLIENT_ID and GLOO_CLIENT_SECRET";
-    };
+
   };
 
   config = lib.mkIf cfg.enable {
@@ -50,7 +47,6 @@ in
       serviceConfig = {
         Type = "simple";
         ExecStart = "${cfg.package}/bin/gloo-proxy";
-        EnvironmentFile = cfg.credentialsFile;
         Environment = "PORT=${toString cfg.port}";
         User = cfg.user;
         Group = "users";

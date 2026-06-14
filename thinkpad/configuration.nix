@@ -73,13 +73,20 @@
       "video"
       "audio"
       "input"
+      "docker"
     ];
+    # subuid/subgid for rootless podman (enables --userns=keep-id).
+    subUidRanges = [{ startUid = 100000; count = 65536; }];
+    subGidRanges = [{ startGid = 100000; count = 65536; }];
     # Change this or use initialPassword / hashedPassword
     initialPassword = "temp";
   };
 
   # ── SSH ──────────────────────────────────────────────────────────────
   services.openssh.enable = true;
+
+  # ── opencode AI coding agent ────────────────────────────────────────
+  services.opencode.enable = true;
 
   # ── Nebula VPN ─────────────────────────────────────────────────────
   services.nebula.networks.homelab = {
@@ -113,15 +120,6 @@
   # ── Niri — scrollable-tiling Wayland compositor ───────────────────────
   programs.niri.enable = true;
 
-  # ── Noctalia: only start with niri ──────────────────────────────────
-  #
-  # Prevents noctalia-shell from starting in GNOME or other sessions.
-  # By default the noctalia-shell module sets
-  # WantedBy=graphical-session.target, which starts it in every
-  # Wayland session.  Change to niri.service so it only activates
-  # when niri starts.
-  services.noctalia-shell.target = "niri.service";
-
 
 
   # ── GNOME — full desktop environment ──────────────────────────────────
@@ -146,8 +144,8 @@
     simple-scan
   ];
 
-  # ── Noctalia Shell ────────────────────────────────────────────────────
-  services.noctalia-shell.enable = true;
+  # ── Noctalia v5 ─────────────────────────────────────────────────────
+  # Installed and configured via Home Manager module (programs.noctalia).
 
   # Required by Noctalia for battery, bluetooth features
   services.upower.enable = true;
@@ -211,8 +209,8 @@
     type = "basic";
   }];
 
-  # Bluetooth GUI for pairing + system tray applet
-  services.blueman.enable = true;
+  # ── Flatpak (for Bazaar app store) ──────────────────────────────────
+  services.flatpak.enable = true;
 
   # ── XDG Desktop Portal ──────────────────────────────────────────────
   # GNOME module provides xdg-desktop-portal-gnome automatically.
@@ -242,10 +240,7 @@
 
   # ── Essential packages ────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
-    # Wayland essentials
-    wl-clipboard
-    brightnessctl
-    playerctl
+    # Wayland essentials (brightnessctl, playerctl, wl-clipboard now in hod profile)
     wireplumber
     xwayland-satellite
     grim
@@ -254,8 +249,6 @@
 
     # Apps (swap these for your preferences)
     ghostty
-    fuzzel
-    swaylock
     nautilus
 
     # Fonts
@@ -264,7 +257,6 @@
 
     # AI / dev tools
     pi-coding-agent
-    unstable.opencode
     antigravity-cli
 
     # 3D printing
@@ -317,12 +309,33 @@
     xorg.fontadobe100dpi
   ];
 
-  # ── Podman (rootless containers) ──────────────────────────────────────
+  # ── Libvirt (VM management) ───────────────────────────────────────────
+  virtualisation.libvirtd.enable = true;
+  virtualisation.libvirtd.qemu.package = pkgs.qemu;
+
+  # ── Containers ─────────────────────────────────────────────────────────
+  # Rootless podman, owned by NixOS (moved off the hod profile).
+  # Provides a known-good integrated stack: podman, crun, conmon,
+  # passt/netavark for rootless networking, and containers/storage config.
   virtualisation.podman = {
     enable = true;
-    dockerCompat = true;    # provides `docker` alias via podman
-    defaultNetwork.settings.dns_enabled = true;
+    # Pin a default registry so short names like `fedora:latest` resolve.
+    defaultNetwork.settings = {
+      dns_enabled = true;
+    };
   };
+
+  # Rootless podman runtime (crun is lightweight and rootless-friendly).
+  virtualisation.podman.extraPackages = [ pkgs.crun ];
+
+  # ── Agenix identity ────────────────────────────────────────────────────
+  # Secrets (restic backups, etc.) are encrypted for the user's age key,
+  # not the SSH host key. Match modules/base-server.nix used by other hosts.
+  age.identityPaths = [ "/home/${username}/.config/age/key.txt" ];
+
+  # Docker is enabled separately for workloads that require the real Docker
+  # daemon/CLI instead of a podman-compatible wrapper.
+  virtualisation.docker.enable = true;
 
   # ── Gnome keyring ─────────────────────────────────────────────────────
   services.gnome.gnome-keyring.enable = true;
@@ -333,7 +346,8 @@
   # ── Allow unfree packages ────────────────────────────────────────────────
   nixpkgs.config.allowUnfree = true;
 
-
+  # Bluetooth GUI for pairing + system tray applet
+  services.blueman.enable = true;
 
   # ── NFS: Backups to NAS ───────────────────────────────────────────
   # Used by restic for local backup copy (homelab-backup NAS target)

@@ -1,0 +1,9 @@
+Host bee
+  HostName 10.10.0.12
+  IdentityFile ~/.ssh/id_ed25519
+  StrictHostKeyChecking accept-new
+
+Host bees
+  HostName 10.10.0.6
+  IdentityFile ~/.ssh/id_ed25519
+  StrictHostKeyChecking accept-new

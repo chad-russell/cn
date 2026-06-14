@@ -132,9 +132,6 @@ in
       }
     ];
 
-    # ── Age identity for decrypting secrets ────────────────────────
-    age.identityPaths = [ "/home/crussell/.config/age/key.txt" ];
-
     # ── Restic backup jobs ────────────────────────────────────────
     services.restic.backups =
       let

@@ -41,8 +41,7 @@
     # ── Thinkpad-specific ──────────────────────────────────────────
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     noctalia-shell = {
-      url = "github:noctalia-dev/noctalia-shell";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      url = "github:noctalia-dev/noctalia-shell/v5";
     };
     vicinae.url = "github:vicinaehq/vicinae";
     nixvim = {
@@ -153,10 +152,10 @@
 
           ./modules/nebula-hosts.nix
           ./modules/nebula-client.nix
+          ./modules/opencode.nix
           nixos-hardware.nixosModules.lenovo-thinkpad-t14-intel-gen6
           { _module.args.username = username; }
 
-          noctalia-shell.nixosModules.default
           home-manager.nixosModules.home-manager
           {
             home-manager.useUserPackages = true;

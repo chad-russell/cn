@@ -1,6 +1,8 @@
-# ── think: Backup Configuration ─────────────────────────────────────
+# ── think: Backup Configuration ────────────────────────────────────
 #
-# Backs up code repos, config, and SSH keys from the laptop.
+# Restic backups (NAS + S3) recovered off the deprecated hod profile.
+# Uses the shared services.homelab-backup module (system-level, runs as
+# root via systemd timers). Secrets are decrypted by agenix.
 
 { config, lib, pkgs, username, ... }:
 
@@ -10,7 +12,15 @@
     ../modules/btrfs-snapshots.nix
   ];
 
+  # ── Btrfs snapshots ────────────────────────────────────────────
+  services.btrfs-snapshots = {
+    enable = true;
+    subvolumes = [ "@" "@home" ];
+  };
+
   # ── Restic backups (NAS + S3) ──────────────────────────────────
+  # The homelab-backup module declares its own age.secrets
+  # (restic-password, restic-s3-credentials) using restic-password-<hostname>.age.
   services.homelab-backup = {
     enable = true;
 
@@ -21,10 +31,9 @@
     ];
 
     exclude = [
-      # Large caches / rebuildable state
       "**/node_modules"
       "**/.cache"
-      "**/target"           # Rust build artifacts
+      "**/target"
       "**/.local/share/hod"
       "**/.local/share/vicinae"
       "**/dist"
@@ -32,11 +41,5 @@
       "*.log"
       "*.tmp"
     ];
-  };
-
-  # ── Btrfs snapshots ────────────────────────────────────────────
-  services.btrfs-snapshots = {
-    enable = true;
-    subvolumes = [ "@" "@home" ];
   };
 }

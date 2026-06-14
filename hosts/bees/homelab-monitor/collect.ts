@@ -342,7 +342,7 @@ async function main() {
     "- bee (10.10.0.12): Dev — Gloo stack, Nebula lighthouse",
     "- think (10.10.0.10): Laptop — may be offline",
     "- nas (10.10.0.3): TrueNAS — NFS storage",
-    "- gateway (10.10.0.2): Hetzner VPS — nginx proxy, Nebula relay",
+    "- gateway (10.10.0.2): Hetzner VPS — Caddy public TLS ingress (*.crussell.io, HTTP-01) → backends over Nebula; Nebula relay/lighthouse",
     "",
     promMetrics,
     network,
