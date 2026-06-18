@@ -1,0 +1,31 @@
+# Nebula VPN client image for the ThinkPad (Silverblue).
+#
+# Tiny alpine base + the Nebula binary. Config and certs are NOT baked in —
+# they are provided at runtime via the rootful `nebula-config` podman volume
+# mounted at /etc/nebula by the Quadlet (nebula.container).
+#
+# To upgrade Nebula: bump NEBULA_VERSION and rebuild (image/build.sh).
+# Verify the latest tag: https://github.com/slackhq/nebula/releases
+# NOTE: the homelab CA issues NEBULA CERTIFICATE V2 certs, which require
+# nebula >= 1.10.0. Do NOT pin below 1.10.x or cert loading fails with
+# "unsupported certificate format: NEBULA CERTIFICATE V2".
+FROM docker.io/alpine:3.21
+
+# Latest stable as of 2026-02-06. V2 cert format support since 1.10.0.
+ARG NEBULA_VERSION=1.10.3
+
+# ca-certificates : TLS for lighthouse / relay endpoints
+# iproute2        : `ip` for in-container debugging (Nebula itself uses
+#                   netlink directly and does not shell out)
+RUN apk add --no-cache ca-certificates iproute2 \
+ && wget -q -O /tmp/nebula.tar.gz \
+      "https://github.com/slackhq/nebula/releases/download/v${NEBULA_VERSION}/nebula-linux-amd64.tar.gz" \
+ && tar -xzf /tmp/nebula.tar.gz -C /usr/local/bin nebula nebula-cert \
+ && chmod 0755 /usr/local/bin/nebula /usr/local/bin/nebula-cert \
+ && rm -f /tmp/nebula.tar.gz
+
+# Config + certs live in the nebula-config volume (mounted at /etc/nebula).
+VOLUME ["/etc/nebula"]
+
+ENTRYPOINT ["/usr/local/bin/nebula"]
+CMD ["-config", "/etc/nebula/config.yaml"]

@@ -1,0 +1,84 @@
+# Personal podman override for the polymer devcontainer (thinkpad).
+#
+# NOT committed to the product repo: uses userns_mode (breaks Docker Desktop
+# on macOS) and adds a personal `agent` container.
+#
+# Use the wrapper instead of raw compose:
+#   ~/Code/cn/gloo/dev polymer up      # bring up the whole stack
+#   ~/Code/cn/gloo/dev polymer pi      # launch pi in the agent
+#   ~/Code/cn/gloo/dev polymer down
+#
+# What this changes vs the repo's compose:
+#   1. app: command = pnpm dev (Model A — the dev server runs as PID 1, so
+#      "hit play = running" and `podman logs` shows dev output directly).
+#      Auto-installs node_modules on first start. Ports 3000/3001 published.
+#   2. agent: a dev-shell container running pi, with the repo + the rootless
+#      podman socket mounted, so pi can drive the sibling containers.
+#
+# Note: the repo also defines `polymer_web` (a standalone dev server on 3000).
+# The wrapper avoids it by starting an explicit service list. If you run raw
+# `podman compose ... up -d`, it'll start polymer_web too and conflict on 3000
+# — use `dev polymer up`.
+
+services:
+  # The upstream compose mounts postgres at /var/lib/postgresql, but the
+  # postgres image stores data in /var/lib/postgresql/data. Mount the actual
+  # PGDATA directory so `dev polymer down && dev polymer up` keeps the DB.
+  polymer_db:
+    volumes:
+      # Use a fresh volume name because the upstream polymer_dbdata volume was
+      # previously mounted at the parent directory and may contain the wrong
+      # layout for PGDATA.
+      - polymer_pgdata:/var/lib/postgresql/data
+
+  app:
+    # Model A: dev server is PID 1. First start installs deps, then runs dev.
+    # polymer runs on webpack; admin360 on Turbopack. Turbopack panics on
+    # polymer specifically (workspace-root inference lands on apps/polymer/app
+    # and can't resolve next/package.json — see /tmp/next-panic-*.log in the
+    # container). The repo ships a `dev:no-turbo` script for exactly this, so
+    # dropping --turbo here is the sanctioned workaround. The proper upstream
+    # fix is `turbopack.root` in apps/polymer/next.config.ts.
+    command: sh -lc 'test -d node_modules || pnpm install; pnpm --dir apps/polymer exec next dev -H 0.0.0.0 & pnpm --dir apps/admin360 exec next dev --turbo --port 3001 -H 0.0.0.0 & wait'
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    userns_mode: keep-id
+    env_file:
+      # Load the repo's gitignored env into the container environment.
+      # Some package scripts run from subdirectories, so relying on dotenv's
+      # relative .env.local lookup is brittle.
+      - ../.env.local
+    environment:
+      # Force local dev DB to the compose postgres appliance.
+      POSTGRES_URL: postgres://postgres:password@polymer_db:5432/postgres
+      DATABASE_URL: postgres://postgres:password@polymer_db:5432/postgres
+      NODE_ENV: development
+    volumes:
+      # Fedora/SELinux: relabel the bind mount so containers can read it.
+      # This overrides the repo compose mount for the same /workspace target.
+      - ../:/workspace:z
+
+  agent:
+    image: localhost/dev-shell:latest
+    container_name: polymer_agent
+    working_dir: /workspace
+    userns_mode: keep-id          # container runs mapped to host UID 1000
+    depends_on:
+      - app
+    volumes:
+      # The repo (same mount as app) — pi edits files here, reflected on host.
+      - ../:/workspace:z
+      # Rootless podman socket: lets pi run `podman exec` / `podman logs`
+      # against the sibling containers (app, polymer_db, polymer_minio).
+      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock
+      # pi config + skills (state persists on the host).
+      - ${HOME}/.pi:/home/crussell/.pi
+    environment:
+      CONTAINER_HOST: unix:///run/podman/podman.sock
+      HOME: /home/crussell
+      XDG_RUNTIME_DIR: /run/user/1000
+    command: sleep infinity
+
+volumes:
+  polymer_pgdata:

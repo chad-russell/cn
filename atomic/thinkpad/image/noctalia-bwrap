@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${HOME:?HOME is required}"
+: "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
+
+HOST_HOME="${HOME}"
+SANDBOX_HOME="${HOME}"
+VOL_ROOT="${NOCTALIA_VOLUME_ROOT:-${HOST_HOME}/.local/share/bwrap/noctalia}"
+
+# These are XDG *roots* as seen by Noctalia, not app-specific subdirectories.
+# Example: Noctalia's state file lives at
+#   host:    $VOL_XDG_STATE/noctalia/settings.toml
+#   sandbox: $HOME/.local/state/noctalia/settings.toml
+VOL_XDG_CONFIG="${VOL_ROOT}/xdg-config"
+VOL_XDG_STATE="${VOL_ROOT}/xdg-state"
+VOL_XDG_DATA="${VOL_ROOT}/xdg-data"
+VOL_XDG_CACHE="${VOL_ROOT}/xdg-cache"
+
+SANDBOX_CONFIG="${SANDBOX_HOME}/.config"
+SANDBOX_STATE="${SANDBOX_HOME}/.local/state"
+SANDBOX_DATA="${SANDBOX_HOME}/.local/share"
+SANDBOX_CACHE="${SANDBOX_HOME}/.cache"
+SANDBOX_WALLPAPERS="${SANDBOX_HOME}/Pictures/Wallpapers"
+HOST_WALLPAPERS="${NOCTALIA_WALLPAPERS_DIR:-${HOST_HOME}/Pictures/Wallpapers}"
+
+mkdir -p \
+  "${VOL_XDG_CONFIG}" \
+  "${VOL_XDG_STATE}" \
+  "${VOL_XDG_DATA}" \
+  "${VOL_XDG_CACHE}"
+
+# Mount audit:
+# - /                  readonly host OS/runtime, packages, fonts, desktop files
+# - /dev               minimal device tmpfs + /dev/dri for GPU/EGL
+# - /proc              process/system monitor data
+# - /sys               readonly hardware/backlight/hwmon data + inotify source
+# - $XDG_RUNTIME_DIR   rw: Wayland/PipeWire/session-bus/niri sockets to connect to,
+#                       AND the dir Noctalia binds its own IPC socket + single-
+#                       instance lock into. Must be writable (same path in/out) so
+#                       the host-side `noctalia msg …` (niri keybinds) can reach
+#                       the daemon. Without this, `noctalia msg` reports
+#                       "noctalia is not running" — the daemon logs
+#                       "IPC disabled: could not bind socket".
+# - /run/dbus          system bus socket for logind/NetworkManager/etc.
+# - /run/udev          readonly device metadata used by libudev/hardware probes
+# - /tmp               private tmpfs
+# - $HOME              private tmpfs, so the real host HOME is not readable/writable
+# - XDG roots          the only persistent writable state pockets for Noctalia
+# - Wallpapers         explicit readonly media input
+exec bwrap \
+  --ro-bind / / \
+  --dev /dev \
+  --dev-bind-try /dev/dri /dev/dri \
+  --proc /proc \
+  --ro-bind /sys /sys \
+  --bind-try /run/dbus /run/dbus \
+  --ro-bind-try /run/udev /run/udev \
+  --bind "${XDG_RUNTIME_DIR}" "${XDG_RUNTIME_DIR}" \
+  --tmpfs /tmp \
+  --tmpfs "${SANDBOX_HOME}" \
+  --dir "${SANDBOX_HOME}/.config" \
+  --dir "${SANDBOX_HOME}/.local" \
+  --dir "${SANDBOX_HOME}/.local/state" \
+  --dir "${SANDBOX_HOME}/.local/share" \
+  --dir "${SANDBOX_HOME}/.cache" \
+  --dir "${SANDBOX_HOME}/Pictures" \
+  --bind "${VOL_XDG_CONFIG}" "${SANDBOX_CONFIG}" \
+  --bind "${VOL_XDG_STATE}" "${SANDBOX_STATE}" \
+  --bind "${VOL_XDG_DATA}" "${SANDBOX_DATA}" \
+  --bind "${VOL_XDG_CACHE}" "${SANDBOX_CACHE}" \
+  --ro-bind-try "${HOST_WALLPAPERS}" "${SANDBOX_WALLPAPERS}" \
+  --setenv HOME "${SANDBOX_HOME}" \
+  --setenv XDG_RUNTIME_DIR "${XDG_RUNTIME_DIR}" \
+  --setenv WAYLAND_DISPLAY "${WAYLAND_DISPLAY}" \
+  --setenv NIRI_SOCKET "${NIRI_SOCKET:-}" \
+  --setenv XDG_CONFIG_HOME "${SANDBOX_CONFIG}" \
+  --setenv XDG_STATE_HOME "${SANDBOX_STATE}" \
+  --setenv XDG_DATA_HOME "${SANDBOX_DATA}" \
+  --setenv XDG_CACHE_HOME "${SANDBOX_CACHE}" \
+  --chdir "${SANDBOX_HOME}" \
+  noctalia "$@"

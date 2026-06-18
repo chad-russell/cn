@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#
+# qd — thin convenience wrapper around systemctl for the gpl quadlet stack.
+# The raw systemd commands always work; this just saves typing. See README.md.
+#
+#   qd gpl up          start the whole stack (db + minio + app)
+#   qd gpl down        stop the whole stack
+#   qd gpl restart     restart the app (and its db/minio via PartOf)
+#   qd gpl status      status of app + db + minio
+#   qd gpl logs        tail the app journal
+#
+# (No `rebuild` command: gpl uses a published image, not a local build. To update
+# the toolchain image: podman image pull mcr.microsoft.com/devcontainers/javascript-node:22
+# && systemctl --user restart gpl-dev-app)
+set -euo pipefail
+
+if command -v systemctl >/dev/null 2>&1; then
+  SYS=(systemctl --user); JRN=(journalctl --user)
+elif command -v flatpak-spawn >/dev/null 2>&1; then
+  SYS=(flatpak-spawn --host systemctl --user); JRN=(flatpak-spawn --host journalctl --user)
+else
+  echo "FATAL: no systemctl found (run on the host or a toolbox with flatpak-spawn)" >&2
+  exit 1
+fi
+
+proj="${1:-}"; cmd="${2:-up}"
+case "$proj" in
+  gpl) svc="gpl-dev-app" ;;
+  *) echo "usage: $0 <gpl> <up|down|restart|status|logs>" >&2; exit 1 ;;
+esac
+
+case "$cmd" in
+  up)      "${SYS[@]}" start "$svc" ;;
+  down)    "${SYS[@]}" stop "$svc" ;;
+  restart) "${SYS[@]}" restart "$svc" ;;
+  status)  "${SYS[@]}" status gpl-dev-app gpl-dev-db gpl-dev-minio ;;
+  logs)    "${JRN[@]}" -u gpl-dev-app -f ;;
+  *) echo "unknown command: $cmd" >&2
+     echo "commands: up down restart status logs" >&2; exit 1 ;;
+esac

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Enter the cdev container as your own user (not root).
+# Optional $1 = host directory to mount and start in (default: current dir).
+# Mounted at the same path inside so host/container paths match.
+#
+# --userns=keep-id              : run as your real UID/GID; podman also injects
+#                                a passwd entry so the prompt reads "crussell".
+# --security-opt label=disable  : run unconfined (toolbox-style) so we can
+#                                bind-mount $HOME etc. without :Z relabeling.
+# -e HOME + -v $HOME            : deterministic home so zsh history, zoxide,
+#                                and nvim data persist in your real home.
+# nvim-data volume              : shadowed over $HOME's nvim data dir so the
+#                                plugins lazy.nvim already installed persist
+#                                (and stay isolated from any host nvim state).
+set -euo pipefail
+DIR="$(cd "${1:-$PWD}" && pwd)"
+
+args=(
+  --rm -it
+  --userns=keep-id
+  --security-opt label=disable
+  -e HOME="$HOME"
+  -v "$HOME:$HOME"
+  -v nvim-data:"$HOME/.local/share/nvim"
+)
+# Mount the requested working dir too (skip if it IS $HOME — already mounted).
+if [ "$DIR" != "$HOME" ]; then
+  args+=(-v "$DIR:$DIR")
+fi
+args+=(-w "$DIR" cdev)
+
+podman run "${args[@]}"

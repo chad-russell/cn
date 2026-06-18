@@ -1,0 +1,6 @@
+# Persistent PostgreSQL data for the polymer quadlet stack.
+# Default volume name: systemd-polymer-dev-db
+[Unit]
+Description=Polymer quadlet dev stack — PostgreSQL data
+
+[Volume]

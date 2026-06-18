@@ -1,0 +1,22 @@
+# Builds the polymer app image from the repo's OWN devcontainer Dockerfile.
+# Nothing is vendored into the product repo: the build context IS the repo
+# checkout, and the Dockerfile is referenced in place.
+#
+# Resulting image: localhost/polymer-quadlet:latest
+# (distinct tag so it never clashes with the compose-built image)
+[Unit]
+Description=Polymer quadlet dev stack — build app image
+
+[Build]
+# Build context = the product repo root.
+SetWorkingDirectory=/var/home/crussell/Gloo/360-polymer
+# Use the repo's devcontainer Dockerfile (node 24 + pnpm + tools) as-is.
+File=/var/home/crussell/Gloo/360-polymer/.devcontainer/Dockerfile
+# Local-only image tag (never pushed).
+ImageTag=localhost/polymer-quadlet:latest
+
+[Service]
+# .build is Type=oneshot by default (no startup timeout). Keep it "active" after
+# the first build so that start/stop of the app unit does NOT rebuild every time.
+# To force a rebuild after editing the Dockerfile: systemctl --user restart polymer-dev-build
+RemainAfterExit=yes

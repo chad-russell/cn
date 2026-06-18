@@ -1,0 +1,67 @@
+# The gpl dev app (Next.js, :3006) as a podman quadlet container.
+#
+# This ONE unit drives the whole stack:
+#   systemctl --user start gpl-dev-app   # starts db + minio, then app
+#   systemctl --user stop  gpl-dev-app   # stops app + db + minio (via PartOf=)
+#
+# How start/stop cascade works:
+#   - Requires=/After= pull in gpl-dev-db + gpl-dev-minio.
+#   - db & minio declare PartOf=gpl-dev-app, so `stop`/`restart` of this unit
+#     propagates to them.
+#
+# Unlike polymer, gpl's devcontainer uses a PUBLISHED image
+# (mcr.microsoft.com/devcontainers/javascript-node:22) with no custom Dockerfile,
+# so there is NO .build unit — Image= references the registry image directly and
+# podman pulls it on first start.
+#
+# Not [Install]-enabled anywhere: the stack only runs when you start it.
+[Unit]
+Description=GPL quadlet dev stack — app (Next.js :3006)
+Requires=gpl-dev-db.container gpl-dev-minio.container
+After=gpl-dev-db.container gpl-dev-minio.container
+
+[Container]
+Image=mcr.microsoft.com/devcontainers/javascript-node:22
+ContainerName=gpl-quadlet-app
+Network=gpl-dev.network
+# keep-id so files written to the bind-mounted repo are owned by host UID 1000.
+# The devcontainers image runs as `node` (UID 1000); keep-id maps that to the
+# host user, so node_modules/.next stay host-writable as your user.
+UserNS=keep-id
+WorkingDir=/workspace
+
+# Only the browser-facing app port is published to the host.
+PublishPort=3006:3006
+
+# Product repo (read/write). ~/Gloo is already labeled container_file_t:s0 by
+# gloo setup.sh, so no SELinux suffix is needed here. Code changes are picked up
+# live by Next.js HMR — no rebuild for code edits.
+Volume=/var/home/crussell/Gloo/360-gpl:/workspace
+
+# Startup script lives outside the product repo; relabel (:z) + mount read-only.
+Volume=/var/home/crussell/Code/cn/gloo/quadlets/gpl/dev-server.sh:/usr/local/bin/dev-server.sh:z,ro
+
+# Infra wiring: postgres + S3 (MinIO) on the quadlet network. These match the
+# repo's .devcontainer/docker-compose.yml `app` environment, resolved via the
+# gpl-db / gpl-minio network aliases.
+#
+# No EnvironmentFile=: the app boots with zero repo files (better-auth has a dev
+# fallback secret, and these infra vars cover the DB/S3). Next.js still loads
+# /workspace/.env.local natively if you add one for integration secrets
+# (Hummingbird/Salesforce/Google), so nothing else is required to start.
+Environment=NODE_ENV=development
+Environment=DATABASE_URL=postgres://admin:admin@gpl-db:5432/gpl_db
+Environment=S3_ENDPOINT=http://gpl-minio:9000
+Environment=S3_REGION=us-east-1
+Environment=S3_BUCKET_NAME=gpl-assets
+Environment=S3_ACCESS_KEY_ID=minioadmin
+Environment=S3_SECRET_ACCESS_KEY=minioadmin
+Environment=S3_FORCE_PATH_STYLE=true
+
+Exec=/usr/local/bin/dev-server.sh
+
+[Service]
+# First run pulls the image + runs pnpm install (gpl has a lot of deps); give it
+# 10 minutes. Dev server: no auto-restart (default Restart=no) so you see crashes
+# instead of a restart loop.
+TimeoutStartSec=600

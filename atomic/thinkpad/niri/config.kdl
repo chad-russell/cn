@@ -1,0 +1,167 @@
+// Niri config for the niri-dev test container.
+// Baked into the image at /etc/niri/config.kdl (niri's system-wide fallback).
+//
+// This is a trimmed version of niri's upstream default-config.kdl with:
+//   - waybar replaced by Noctalia v5 (spawn-at-startup "noctalia")
+//   - Noctalia's key binds, settings window rule, and xdg-activation flag
+//     (see https://docs.noctalia.dev/v5/compositor-settings/niri/)
+// Edit live: save this file and niri reloads it. Validate with: niri validate
+
+// Ask apps to drop their client-side decorations so niri's rounded corners /
+// focus ring render cleanly.
+prefer-no-csd
+
+// Where on-disk screenshots go.
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%S.png"
+
+input {
+    keyboard {
+        xkb {
+            // Empty: niri reads xkb settings from org.freedesktop.locale1.
+        }
+        numlock
+    }
+
+    touchpad {
+        tap
+        natural-scroll
+    }
+}
+
+layout {
+    gaps 8
+
+    focus-ring {
+        width 4
+        active-color "#7fc8ff"
+        inactive-color "#505050"
+    }
+
+    default-column-width { proportion 0.5; }
+}
+
+// Noctalia is the shell. Launched by niri so it inherits WAYLAND_DISPLAY and
+// the D-Bus session bus set up by dbus-run-session in start.sh.
+spawn-at-startup "noctalia"
+
+hotkey-overlay {
+    // Leave the "Important Hotkeys" popup on; handy for a test session.
+}
+
+// Rounded corners for everything.
+window-rule {
+    geometry-corner-radius 12
+    clip-to-geometry true
+}
+
+// Noctalia's own settings window: float it at a sensible size.
+window-rule {
+    match app-id="dev.noctalia.Noctalia.Settings"
+    open-floating true
+    default-column-width { fixed 1080; }
+    default-window-height { fixed 920; }
+}
+
+// Lets Noctalia activate windows and run notification actions.
+debug {
+    honor-xdg-activation-with-invalid-serial
+}
+
+binds {
+    Mod+Shift+Slash { show-hotkey-overlay; }
+
+    // Programs. Mod = Super on a TTY.
+    Mod+T { spawn "alacritty"; }
+    Mod+D { spawn "fuzzel"; }
+
+    // Noctalia shell controls (replaces default Mod+Space / Mod+Comma binds).
+    Mod+Space { spawn-sh "noctalia msg panel-toggle launcher"; }
+    Mod+S     { spawn-sh "noctalia msg panel-toggle control-center"; }
+    Mod+Comma { spawn-sh "noctalia msg settings-toggle"; }
+
+    // Volume / brightness routed through Noctalia (keeps its OSD in sync).
+    XF86AudioRaiseVolume  { spawn-sh "noctalia msg volume-up"; }
+    XF86AudioLowerVolume  { spawn-sh "noctalia msg volume-down"; }
+    XF86AudioMute         { spawn-sh "noctalia msg volume-mute"; }
+    XF86MonBrightnessUp   { spawn-sh "noctalia msg brightness-up"; }
+    XF86MonBrightnessDown { spawn-sh "noctalia msg brightness-down"; }
+
+    Mod+O repeat=false { toggle-overview; }
+    Mod+Q repeat=false { close-window; }
+
+    Mod+Left  { focus-column-left; }
+    Mod+Down  { focus-window-down; }
+    Mod+Up    { focus-window-up; }
+    Mod+Right { focus-column-right; }
+    Mod+H     { focus-column-left; }
+    Mod+J     { focus-window-down; }
+    Mod+K     { focus-window-up; }
+    Mod+L     { focus-column-right; }
+
+    Mod+Ctrl+Left  { move-column-left; }
+    Mod+Ctrl+Down  { move-window-down; }
+    Mod+Ctrl+Up    { move-window-up; }
+    Mod+Ctrl+Right { move-column-right; }
+    Mod+Ctrl+H     { move-column-left; }
+    Mod+Ctrl+J     { move-window-down; }
+    Mod+Ctrl+K     { move-window-up; }
+    Mod+Ctrl+L     { move-column-right; }
+
+    Mod+Page_Down { focus-workspace-down; }
+    Mod+Page_Up   { focus-workspace-up; }
+    Mod+U         { focus-workspace-down; }
+    Mod+I         { focus-workspace-up; }
+
+    Mod+Ctrl+Page_Down { move-column-to-workspace-down; }
+    Mod+Ctrl+Page_Up   { move-column-to-workspace-up; }
+    Mod+Ctrl+U         { move-column-to-workspace-down; }
+    Mod+Ctrl+I         { move-column-to-workspace-up; }
+
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+
+    Mod+Ctrl+1 { move-column-to-workspace 1; }
+    Mod+Ctrl+2 { move-column-to-workspace 2; }
+    Mod+Ctrl+3 { move-column-to-workspace 3; }
+    Mod+Ctrl+4 { move-column-to-workspace 4; }
+    Mod+Ctrl+5 { move-column-to-workspace 5; }
+    Mod+Ctrl+6 { move-column-to-workspace 6; }
+    Mod+Ctrl+7 { move-column-to-workspace 7; }
+    Mod+Ctrl+8 { move-column-to-workspace 8; }
+    Mod+Ctrl+9 { move-column-to-workspace 9; }
+
+    // Consume / expel windows into/out of columns.
+    Mod+BracketLeft  { consume-or-expel-window-left; }
+    Mod+BracketRight { consume-or-expel-window-right; }
+
+    Mod+R              { switch-preset-column-width; }
+    Mod+Shift+R        { switch-preset-column-width-back; }
+    Mod+Ctrl+R         { reset-window-height; }
+    Mod+F              { maximize-column; }
+    Mod+Shift+F        { fullscreen-window; }
+    Mod+M              { maximize-window-to-edges; }
+    Mod+C              { center-column; }
+
+    Mod+Minus       { set-column-width "-10%"; }
+    Mod+Equal       { set-column-width "+10%"; }
+    Mod+Shift+Minus { set-window-height "-10%"; }
+    Mod+Shift+Equal { set-window-height "+10%"; }
+
+    Mod+V       { toggle-window-floating; }
+    Mod+Shift+V { switch-focus-between-floating-and-tiling; }
+
+    Print      { screenshot; }
+    Ctrl+Print { screenshot-screen; }
+    Alt+Print  { screenshot-window; }
+
+    // Exit (shows a confirmation dialog).
+    Mod+Shift+E     { quit; }
+    Ctrl+Alt+Delete { quit; }
+}

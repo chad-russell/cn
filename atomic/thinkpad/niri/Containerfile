@@ -1,0 +1,59 @@
+# Reproducible bleeding-edge niri + Noctalia v5 image.
+#
+# Base: your local cdev image (Fedora). This adds:
+#   - niri, git/nightly build from the yalter/niri-git COPR
+#   - Noctalia shell v5 (package: noctalia-git) from the lionheartp/Hyprland COPR
+#   - the session plumbing a non-systemd container needs:
+#       * dbus-daemon -> provides dbus-run-session (no session bus otherwise)
+#       * seatd        -> seat broker niri talks to via LIBSEAT_BACKEND=seatd
+#                          (there is no logind inside the container, and the
+#                           builtin libseat backend can't acquire the session
+#                           from a podman exec, same situation as cosmic-comp)
+#   - a terminal (alacritty) and launcher (fuzzel) so the desktop is usable
+#
+# The GL/DRI stack already lives in the base cdev image (it is the same one the
+# cosmic image uses), so nothing extra is needed for GPU rendering.
+#
+# A working niri config that autostarts Noctalia is baked in at
+# /etc/niri/config.kdl. It stays inside the image; nothing is written to the host.
+#
+# Refresh to the latest builds WITHOUT rebuilding the world:
+#   ./update.sh
+# (or force a fully clean rebuild with:
+#    sudo podman build --no-cache -t localhost/niri-dev:latest .)
+
+FROM localhost/cdev:latest
+
+# dnf-plugins-core provides the `copr` subcommand.
+RUN dnf install -y dnf-plugins-core
+
+# niri git/nightly COPR. Fedora ships its own niri, so follow the COPR's own
+# instructions and give it priority=1 so the bleeding-edge build always wins.
+RUN dnf -y copr enable yalter/niri-git && \
+    sed -i '/^\[/a priority=1' /etc/yum.repos.d/*yalter*niri-git*.repo
+
+# Noctalia v5 lives in this COPR (the package is named noctalia-git).
+RUN dnf -y copr enable lionheartp/Hyprland
+
+# niri + Noctalia + the non-systemd session plumbing + a usable terminal and
+# launcher. dnf resolves the newest versions available in the COPRs.
+RUN dnf install -y \
+        niri \
+        noctalia-git \
+        dbus-daemon \
+        seatd \
+        alacritty \
+        fuzzel \
+        dejavu-sans-fonts \
+        dejavu-sans-mono-fonts && \
+    dnf clean all
+
+# Default niri config: autostart Noctalia, sensible key binds, rounded corners.
+# /etc/niri/config.kdl is niri's system-wide fallback (used because no per-user
+# config exists inside the container), so this is picked up automatically.
+COPY config.kdl /etc/niri/config.kdl
+
+# Fail-ish check: report (but do not hard-abort on) any config syntax error so a
+# typo doesn't silently give you a black screen at runtime.
+RUN NIRI_CONFIG=/etc/niri/config.kdl niri validate \
+    || echo "!! niri config validation reported issues above -- check config.kdl"

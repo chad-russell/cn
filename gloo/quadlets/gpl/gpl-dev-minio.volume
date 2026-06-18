@@ -1,0 +1,6 @@
+# Persistent MinIO (S3) data for the gpl quadlet stack.
+# Default volume name: systemd-gpl-dev-minio
+[Unit]
+Description=GPL quadlet dev stack — MinIO data
+
+[Volume]

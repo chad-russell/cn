@@ -1,0 +1,100 @@
+#!/bin/sh
+# noctalia-brightness — change the backlight and show Noctalia's brightness OSD.
+#
+# This runs *inside* the noctalia container (baked in by the Containerfile) and
+# is meant to be triggered from the host niri config via `podman exec`, e.g.:
+#
+#     XF86MonBrightnessUp   { spawn-sh "podman exec noctalia noctalia-brightness up"; }
+#     XF86MonBrightnessDown { spawn-sh "podman exec noctalia noctalia-brightness down"; }
+#
+# Why this exists (and why we don't just use `noctalia msg brightness-up`):
+# In a container, the inotify watch Noctalia places on the backlight sysfs file
+# doesn't deliver events, so Noctalia's cached brightness freezes at its startup
+# value. That breaks two things:
+#   1. `brightness-up/down` are *relative* to the cached value, so they keep
+#      applying (startup_value ± step) and silently miss the real level.
+#   2. No OSD ever fires, because the brightness OSD is driven solely by the
+#      inotify change callback.
+# This script sidesteps both: it drives the backlight directly with brightnessctl
+# (which talks to logind over the forwarded system bus) and then shows the OSD
+# explicitly via `noctalia msg brightness-osd`, which takes an absolute value and
+# does not touch the frozen cache.
+#
+# Set NOCTALIA_BRIGHTNESS_DEBUG=1 for a per-step trace on stderr.
+# Every invocation also appends a one-line summary to the log file below — this
+# script is normally launched headlessly (niri spawn-sh, no terminal), so the log
+# is the only way to see what a keypress actually did.
+
+log() {
+  if [ -n "${NOCTALIA_BRIGHTNESS_DEBUG:-}" ]; then
+    echo "noctalia-brightness: $*" >&2
+  fi
+}
+
+LOG_FILE="${NOCTALIA_BRIGHTNESS_LOG:-/tmp/noctalia-brightness.log}"
+ts() { date '+%Y-%m-%d %H:%M:%S'; }
+logline() { printf '%s %s\n' "$(ts)" "$*" >>"$LOG_FILE" 2>/dev/null || true; }
+
+die() {
+  echo "noctalia-brightness: $*" >&2
+  logline "ERROR $*"
+  exit 1
+}
+
+usage() {
+  echo "usage: noctalia-brightness <up|down> [step-percent]" >&2
+  exit 2
+}
+
+command -v brightnessctl >/dev/null 2>&1 || die "brightnessctl not found on PATH"
+command -v noctalia >/dev/null 2>&1      || die "noctalia not found on PATH"
+
+direction="${1:-}"
+step="${2:-5}"
+
+# Step must be a plain non-negative integer (a number of percentage points).
+case "$step" in
+  ''|*[!0-9]*) usage ;;
+esac
+
+case "$direction" in
+  up)   delta="+${step}%" ;;
+  down) delta="${step}%-" ;;
+  *)    usage ;;
+esac
+
+logline "invoke dir=$direction step=$step ppid=$PPID uid=$(id -u 2>/dev/null || echo '?')"
+
+# Drive the backlight. brightnessctl routes the write through logind over the
+# forwarded system bus, so it works even though /sys is mounted read-only here.
+# Capture the exit status explicitly instead of `|| die` so the log always
+# records what happened (a headless failure is otherwise invisible).
+log "running: brightnessctl set '$delta'"
+set_out="$(brightnessctl set "$delta" 2>&1)"
+set_rc=$?
+log "brightnessctl rc=$set_rc out=$(printf '%s' "$set_out" | tr '\n' ' ')"
+if [ "$set_rc" -ne 0 ]; then
+  die "brightnessctl set failed (rc=$set_rc): $set_out"
+fi
+
+# Read back the resulting (already-clamped) percent and reflect it in the OSD.
+# brightnessctl -m prints "device,class,max,current,percent%" for each device;
+# the percent is the 4th comma-separated field. Take the first (primary) device,
+# which is the same one `brightnessctl set` just changed. Strip only the trailing
+# '%' — brightnessctl may emit a decimal like "75.5%", which Noctalia accepts.
+raw="$(brightnessctl -m 2>/dev/null | head -n1)"
+percent="$(printf '%s' "$raw" | cut -d, -f4 | tr -d '%')"
+log "read percent='$percent' from: $raw"
+[ -n "$percent" ] || die "could not read brightness percentage (raw: $raw)"
+
+# Best-effort OSD: if Noctalia's IPC socket is unreachable we still exit clean,
+# so the brightness change we just made isn't unwound.
+if noctalia msg brightness-osd "$percent" >/dev/null 2>&1; then
+  log "osd shown at ${percent}%"
+  logline "ok dir=$direction set->${percent}%"
+else
+  log "osd call failed (brightness still changed)"
+  logline "ok(osd-failed) dir=$direction set->${percent}%"
+fi
+
+exit 0

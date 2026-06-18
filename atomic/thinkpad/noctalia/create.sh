@@ -1,0 +1,52 @@
+podman create 
+--hostname "fedora"
+--name "noctalia"
+--privileged
+--security-opt label=disable
+--security-opt apparmor=unconfined
+--pids-limit=-1
+--user root:root
+--ipc host
+--network host
+--pid host
+--label "manager=distrobox"
+--label "distrobox.unshare_groups=0"
+--env "SHELL=bash"
+--env "HOME=/var/home/crussell"
+--env "container=podman"
+--env "TERMINFO_DIRS=/usr/share/terminfo:/run/host/usr/share/terminfo"
+--env "CONTAINER_ID=cdev"
+--volume /tmp:/tmp:rslave
+--volume "/usr/bin/distrobox-init":/usr/bin/entrypoint:ro
+--volume "/usr/bin/distrobox-export":/usr/bin/distrobox-export:ro
+--volume "/usr/bin/distrobox-host-exec":/usr/bin/distrobox-host-exec:ro
+--volume "/var/home/crussell":"/var/home/crussell":rslave
+--volume /:/run/host/:rslave
+--volume /dev:/dev:rslave
+--volume /sys:/sys:rslave
+--volume /dev/pts
+--volume /dev/null:/dev/ptmx
+--volume /sys/fs/selinux
+--volume /var/log/journal
+--volume /run/user/1000:/run/user/1000:rslave
+--volume /etc/hosts:/etc/hosts:ro
+--volume /etc/resolv.conf:/etc/resolv.conf:ro
+--volume /etc/hostname:/etc/hostname:ro
+--runtime=crun
+--annotation run.oci.keep_original_groups=1
+--ulimit host
+--userns keep-id:size=65536
+
+--entrypoint /usr/bin/entrypoint
+cdev
+--verbose
+--name "crussell"
+--user 1000
+--group 1000
+--home "/var/home/crussell"
+--init "0"
+--nvidia "0"
+--pre-init-hooks ""
+--additional-packages ""
+-- ''
+

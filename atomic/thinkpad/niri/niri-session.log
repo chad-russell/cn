@@ -1,0 +1,46 @@
+[2m2026-06-18T13:16:08.688800Z[0m [32m INFO[0m [2mniri[0m[2m:[0m starting version 26.04 (0.0.git.2807.fdb6d85f)
+[2m2026-06-18T13:16:08.692164Z[0m [34mDEBUG[0m [2mniri_config[0m[2m:[0m loaded config from "/etc/niri/config.kdl"
+[2m2026-06-18T13:16:08.918233Z[0m [32m INFO[0m [2mniri::backend::tty[0m[2m:[0m using as the render node: "/dev/dri/renderD128"
+[2m2026-06-18T13:16:08.960797Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m adding device: 57857 "/dev/dri/card1"
+[2m2026-06-18T13:16:08.960886Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m this is the primary node
+[2m2026-06-18T13:16:09.063934Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m got render node: renderD128
+[2m2026-06-18T13:16:09.063987Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m initializing the primary renderer
+[2m2026-06-18T13:16:09.271614Z[0m [33m WARN[0m [2mniri::backend::tty[0m[2m:[0m error initializing DRM leasing for card1: UnableToDropMaster(Os { code: 22, kind: InvalidInput, message: "Invalid argument" })
+[2m2026-06-18T13:16:09.271649Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m device changed: 57857
+[2m2026-06-18T13:16:09.727852Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m new connector: eDP-1 "AU Optronics B140UAN02.7  Unknown"
+[2m2026-06-18T13:16:09.728026Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m new connector: DP-4 "Samsung Electric Company LS27A800U HNMT700185"
+[2m2026-06-18T13:16:09.728127Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m new connector: DP-7 "Samsung Electric Company LS27A800U HNMT700199"
+[2m2026-06-18T13:16:09.728813Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m connecting connector: eDP-1
+[2m2026-06-18T13:16:09.728889Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m picking mode: Mode { name: "1920x1200", clock: 156300, size: (1920, 1200), hsync: (1968, 2000, 2084), vsync: (1203, 1208, 1250), hskew: 0, vscan: 0, vrefresh: 60, mode_type: ModeTypeFlags(PREFERRED | DRIVER) }
+[2m2026-06-18T13:16:09.750295Z[0m [34mDEBUG[0m [2mniri::niri[0m[2m:[0m putting output eDP-1 at x=0 y=0
+[2m2026-06-18T13:16:09.750338Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m connecting connector: DP-4
+[2m2026-06-18T13:16:09.750390Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m picking mode: Mode { name: "3840x2160", clock: 522580, size: (3840, 2160), hsync: (3864, 3880, 3920), vsync: (2163, 2168, 2222), hskew: 0, vscan: 0, vrefresh: 60, mode_type: ModeTypeFlags(PREFERRED | DRIVER) }
+[2m2026-06-18T13:16:09.750497Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m failed to set HDR properties: couldn't find property: "HDR_OUTPUT_METADATA"
+[2m2026-06-18T13:16:09.769785Z[0m [34mDEBUG[0m [2mniri::niri[0m[2m:[0m putting output DP-4 at x=1536 y=0
+[2m2026-06-18T13:16:09.769838Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m connecting connector: DP-7
+[2m2026-06-18T13:16:09.769889Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m picking mode: Mode { name: "3840x2160", clock: 525960, size: (3840, 2160), hsync: (3864, 3880, 3896), vsync: (2168, 2178, 2250), hskew: 0, vscan: 0, vrefresh: 60, mode_type: ModeTypeFlags(PREFERRED | DRIVER) }
+[2m2026-06-18T13:16:09.769965Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m failed to set HDR properties: couldn't find property: "HDR_OUTPUT_METADATA"
+[2m2026-06-18T13:16:09.776746Z[0m [34mDEBUG[0m [2mniri::niri[0m[2m:[0m putting output DP-7 at x=4096 y=0
+[2m2026-06-18T13:16:09.777139Z[0m [32m INFO[0m [2mniri[0m[2m:[0m listening on Wayland socket: wayland-1
+[2m2026-06-18T13:16:09.777159Z[0m [32m INFO[0m [2mniri[0m[2m:[0m IPC listening on: /run/xdg/niri.wayland-1.41.sock
+[2m2026-06-18T13:16:09.792601Z[0m [32m INFO[0m [2mniri[0m[2m:[0m listening on X11 socket: :2
+[0;1;31mFailed to connect to user scope bus via local transport: No such file or directory[0m
+[2m2026-06-18T13:16:09.828070Z[0m [33m WARN[0m [2mniri[0m[2m:[0m error inhibiting power key: I/O error: No such file or directory (os error 2)
+
+Caused by:
+    No such file or directory (os error 2)
+[2m2026-06-18T13:16:09.839859Z[0m [33m WARN[0m [2mniri::dbus[0m[2m:[0m error starting login1 watcher: I/O error: No such file or directory (os error 2)
+
+Caused by:
+    No such file or directory (os error 2)
+[2m2026-06-18T13:16:09.840010Z[0m [33m WARN[0m [2mniri::dbus[0m[2m:[0m error starting locale1 watcher: I/O error: No such file or directory (os error 2)
+
+Caused by:
+    No such file or directory (os error 2)
+dbus-daemon[40]: [session uid=0 pid=40 pidfd=5] Activating service name='org.a11y.Bus' requested by ':1.8' (uid=0 pid=41 comm="niri --session" label="unconfined_u:unconfined_r:spc_t:s0")
+dbus-daemon[40]: [session uid=0 pid=40 pidfd=5] Successfully activated service 'org.a11y.Bus'
+[2m2026-06-18T13:16:11.140372Z[0m [33m WARN[0m [2mniri::niri[0m[2m:[0m env var 'XDG_SESSION_ID' is unset or invalid; logind LockedHint won't be set
+dbus-run-session: ignoring unknown child process 106
+dbus-run-session: ignoring unknown child process 138
+[2m2026-06-18T13:17:54.825178Z[0m [32m INFO[0m [2mniri::input[0m[2m:[0m quitting after confirming exit dialog
+[2m2026-06-18T13:17:55.841196Z[0m [34mDEBUG[0m [2mniri::utils::watcher[0m[2m:[0m exiting watcher thread for Regular { user_path: "/usr/share/dev-shell/niri/config.kdl", system_path: "/etc/niri/config.kdl" }

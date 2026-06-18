@@ -1,0 +1,39 @@
+# Nebula VPN client — rootful Quadlet unit.
+#
+# Generated service name: nebula.service
+#   sudo systemctl start nebula     # VPN on
+#   sudo systemctl stop nebula      # VPN off (stays off until start or reboot)
+#   sudo systemctl status nebula
+#   sudo journalctl -u nebula -f
+#
+# Auto-starts at boot (WantedBy=multi-user.target + enabled by install.sh).
+# On failure it restarts; an explicit `systemctl stop` is NOT overridden.
+#
+# Why rootful + host network: Nebula creates the `nebula0` TUN device and
+# installs routes on the HOST so host traffic uses the overlay. That requires
+# a host network namespace and real CAP_NET_ADMIN, which means rootful
+# podman. Rootless + host-net + TUN is possible but fragile.
+
+[Unit]
+Description=Nebula VPN client (homelab overlay)
+Documentation=https://github.com/slackhq/nebula
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/nebula:thinkpad
+ContainerName=nebula
+# Nebula needs to manage a host TUN and host routes.
+Network=host
+AddCapability=NET_ADMIN
+PodmanArgs=--device=/dev/net/tun
+# Config + certs come from the seeded nebula-config volume.
+Volume=nebula-config:/etc/nebula
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${HOME:?HOME is required}"
+: "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
+
+wait_for_wayland_socket() {
+  local sock
+  local i
+
+  for ((i = 0; i < 100; i++)); do
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+      sock="${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}"
+      if [[ -S "${sock}" ]]; then
+        return 0
+      fi
+    fi
+
+    for sock in "${XDG_RUNTIME_DIR}"/wayland-*; do
+      [[ -S "${sock}" ]] || continue
+      export WAYLAND_DISPLAY="${sock##*/}"
+      return 0
+    done
+
+    sleep 0.05
+  done
+
+  echo "vicinae-bwrap: Wayland socket not ready under ${XDG_RUNTIME_DIR}" >&2
+  return 1
+}
+
+wait_for_wayland_socket
+
+HOST_HOME="${HOME}"
+SANDBOX_HOME="${HOME}"
+VOL_ROOT="${VICINAE_VOLUME_ROOT:-${HOST_HOME}/.local/share/bwrap/vicinae}"
+
+# These are XDG *roots* as seen by Vicinae, not app-specific subdirectories.
+# Example: Vicinae's settings file lives at
+#   host:    $VOL_XDG_CONFIG/vicinae/settings.json
+#   sandbox: $HOME/.config/vicinae/settings.json
+VOL_XDG_CONFIG="${VOL_ROOT}/xdg-config"
+VOL_XDG_STATE="${VOL_ROOT}/xdg-state"
+VOL_XDG_DATA="${VOL_ROOT}/xdg-data"
+VOL_XDG_CACHE="${VOL_ROOT}/xdg-cache"
+
+SANDBOX_CONFIG="${SANDBOX_HOME}/.config"
+SANDBOX_STATE="${SANDBOX_HOME}/.local/state"
+SANDBOX_DATA="${SANDBOX_HOME}/.local/share"
+SANDBOX_CACHE="${SANDBOX_HOME}/.cache"
+
+# Host-user app roots hidden by the private HOME tmpfs. Re-expose only the
+# discovery paths Vicinae actually needs, at stable synthetic locations.
+HOST_USER_SHARE="${HOST_HOME}/.local/share"
+HOST_USER_APPS="${HOST_USER_SHARE}/applications"
+HOST_USER_ICONS="${HOST_USER_SHARE}/icons"
+HOST_USER_FLATPAK="${HOST_USER_SHARE}/flatpak"
+# These synthetic discovery roots must live somewhere writable inside the
+# sandbox. /run is read-only here because we ro-bind the host root at /, so use
+# private /tmp-backed paths instead.
+SANDBOX_HOST_USER_SHARE="/tmp/host-user-share"
+SANDBOX_HOST_USER_FLATPAK="/tmp/host-user-flatpak"
+
+TEMPLATE_CONFIG="/usr/share/vicinae-bwrap/settings.json"
+LEGACY_CONTAINER_HOME="${HOST_HOME}/.local/share/vicinae-container"
+LEGACY_CONFIG="${LEGACY_CONTAINER_HOME}/.config/vicinae/settings.json"
+LEGACY_STATE="${LEGACY_CONTAINER_HOME}/.local/state/vicinae"
+LEGACY_DATA="${LEGACY_CONTAINER_HOME}/.local/share/vicinae"
+LEGACY_CACHE="${LEGACY_CONTAINER_HOME}/.cache/vicinae"
+LEGACY_THEMES="${HOST_HOME}/.local/share/vicinae/themes"
+
+mkdir -p \
+  "${VOL_XDG_CONFIG}" \
+  "${VOL_XDG_STATE}" \
+  "${VOL_XDG_DATA}" \
+  "${VOL_XDG_CACHE}"
+
+copy_dir_once() {
+  local src="$1" dst="$2"
+  if [[ -d "${src}" && ! -e "${dst}" ]]; then
+    mkdir -p "$(dirname "${dst}")"
+    cp -a "${src}" "${dst}"
+  fi
+}
+
+migrate_legacy_state() {
+  copy_dir_once "${LEGACY_STATE}" "${VOL_XDG_STATE}/vicinae"
+  copy_dir_once "${LEGACY_DATA}" "${VOL_XDG_DATA}/vicinae"
+  copy_dir_once "${LEGACY_CACHE}" "${VOL_XDG_CACHE}/vicinae"
+
+  # Older containerized runs may have custom themes outside the container HOME,
+  # under the real host ~/.local/share/vicinae/themes. Pull them into the new
+  # isolated XDG data root on first migration so the host copy can be deleted
+  # later without breaking Vicinae.
+  if [[ -d "${LEGACY_THEMES}" && ! -e "${VOL_XDG_DATA}/vicinae/themes" ]]; then
+    mkdir -p "${VOL_XDG_DATA}/vicinae"
+    cp -a "${LEGACY_THEMES}" "${VOL_XDG_DATA}/vicinae/themes"
+  fi
+
+  # Keep the last container settings file for reference, but do not use it as
+  # the live config: it bakes in container-only application paths.
+  if [[ -f "${LEGACY_CONFIG}" && ! -e "${VOL_XDG_CONFIG}/vicinae/legacy-container-settings.json" ]]; then
+    mkdir -p "${VOL_XDG_CONFIG}/vicinae"
+    cp -a "${LEGACY_CONFIG}" "${VOL_XDG_CONFIG}/vicinae/legacy-container-settings.json"
+  fi
+}
+
+seed_config() {
+  if [[ ! -e "${VOL_XDG_CONFIG}/vicinae/settings.json" ]]; then
+    mkdir -p "${VOL_XDG_CONFIG}/vicinae"
+    cp -a "${TEMPLATE_CONFIG}" "${VOL_XDG_CONFIG}/vicinae/settings.json"
+  fi
+}
+
+migrate_legacy_state
+seed_config
+
+# Preserve the host's system XDG_DATA_DIRS, but prepend the synthetic user app /
+# icon / flatpak export roots that Vicinae needs for discovery now that the real
+# host HOME is hidden behind a tmpfs.
+XDG_DATA_DIRS_BASE="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+SANDBOX_DATA_DIRS="${SANDBOX_HOST_USER_SHARE}:${SANDBOX_HOST_USER_FLATPAK}/exports/share:${XDG_DATA_DIRS_BASE}"
+
+# Mount audit:
+# - /                    readonly host OS/runtime, packages, fonts, desktop files
+# - /dev                 minimal device tmpfs + /dev/dri for GPU/EGL
+# - /proc                process/system monitor data
+# - $XDG_RUNTIME_DIR     rw: Wayland/PipeWire/session-bus/niri sockets, plus the
+#                         Vicinae IPC socket shared with host-side `vicinae toggle`
+# - $HOME                private tmpfs, so the real host HOME is not readable/writable
+# - XDG roots            the only persistent writable state pockets for Vicinae
+# - host-user app dirs   readonly synthetic mounts for ~/.local/share apps/icons/flatpak
+# - launch bridge        `vicinae-host-launch` escapes app launches back to host
+if [[ $# -eq 0 ]]; then
+  set -- server --replace
+fi
+
+exec bwrap \
+  --ro-bind / / \
+  --dev /dev \
+  --dev-bind-try /dev/dri /dev/dri \
+  --proc /proc \
+  --bind "${XDG_RUNTIME_DIR}" "${XDG_RUNTIME_DIR}" \
+  --tmpfs /tmp \
+  --tmpfs "${SANDBOX_HOME}" \
+  --dir "${SANDBOX_HOME}/.config" \
+  --dir "${SANDBOX_HOME}/.local" \
+  --dir "${SANDBOX_HOME}/.local/state" \
+  --dir "${SANDBOX_HOME}/.local/share" \
+  --dir "${SANDBOX_HOME}/.cache" \
+  --dir "${SANDBOX_HOST_USER_SHARE}" \
+  --dir "${SANDBOX_HOST_USER_FLATPAK}" \
+  --bind "${VOL_XDG_CONFIG}" "${SANDBOX_CONFIG}" \
+  --bind "${VOL_XDG_STATE}" "${SANDBOX_STATE}" \
+  --bind "${VOL_XDG_DATA}" "${SANDBOX_DATA}" \
+  --bind "${VOL_XDG_CACHE}" "${SANDBOX_CACHE}" \
+  --ro-bind-try "${HOST_USER_APPS}" "${SANDBOX_HOST_USER_SHARE}/applications" \
+  --ro-bind-try "${HOST_USER_ICONS}" "${SANDBOX_HOST_USER_SHARE}/icons" \
+  --ro-bind-try "${HOST_USER_FLATPAK}" "${SANDBOX_HOST_USER_FLATPAK}" \
+  --setenv HOME "${SANDBOX_HOME}" \
+  --setenv XDG_RUNTIME_DIR "${XDG_RUNTIME_DIR}" \
+  --setenv WAYLAND_DISPLAY "${WAYLAND_DISPLAY}" \
+  --setenv XDG_CONFIG_HOME "${SANDBOX_CONFIG}" \
+  --setenv XDG_STATE_HOME "${SANDBOX_STATE}" \
+  --setenv XDG_DATA_HOME "${SANDBOX_DATA}" \
+  --setenv XDG_CACHE_HOME "${SANDBOX_CACHE}" \
+  --setenv XDG_DATA_DIRS "${SANDBOX_DATA_DIRS}" \
+  --setenv QT_QPA_PLATFORM wayland \
+  --setenv QT_WAYLAND_DISABLE_WINDOWDECORATIONS 1 \
+  --chdir "${SANDBOX_HOME}" \
+  vicinae "$@"

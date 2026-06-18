@@ -1,0 +1,56 @@
+# ARCHIVED container-based Vicinae prototype.
+# Current production path is host `vicinae` + `image/vicinae-bwrap`; see
+# `vicinae/README.md`.
+FROM localhost/cdev:latest
+
+# --- Vicinae itself -----------------------------------------------------------
+RUN dnf -y copr enable quadratech188/vicinae && \
+    dnf install -y vicinae && \
+    dnf clean all
+
+# --- Host-execution bridge ----------------------------------------------------
+# This container runs on an immutable host (Silverblue-style): the GUI apps
+# vicinae launches live on the HOST, not in the container. We bridge that with
+# `host-spawn` -- a standalone reimplementation of `flatpak-spawn --host` that
+# runs a command on the host by talking to `flatpak-session-helper` over the
+# host session D-Bus (which is bind-mounted into the container at runtime).
+#
+# It is used two ways (see run.sh + vicinae-host-launch):
+#   1. `flatpak` is a symlink shim -> host-spawn, so any `flatpak run ...`
+#      executed inside the container transparently runs the host's flatpak.
+#      (host-spawn keys off argv[0]: invoked as `flatpak` it runs host flatpak.)
+#   2. vicinae's "Launch Prefix" is set to `vicinae-host-launch`, which forwards
+#      native .desktop launches through host-spawn as well.
+ARG HOST_SPAWN_VERSION=v1.6.2
+RUN set -eux; \
+    arch=$(uname -m); \
+    case "$arch" in \
+      x86_64|amd64) hsarch=x86_64 ;; \
+      aarch64|arm64) hsarch=aarch64 ;; \
+      armv7l) hsarch=armv7 ;; \
+      *) echo "unsupported arch: $arch" >&2; exit 1 ;; \
+    esac; \
+    command -v curl >/dev/null 2>/dev/null || dnf install -y curl; \
+    curl -fsSL -o /usr/local/bin/host-spawn \
+      "https://github.com/1player/host-spawn/releases/download/${HOST_SPAWN_VERSION}/host-spawn-${hsarch}"; \
+    chmod 0755 /usr/local/bin/host-spawn
+
+# flatpak shim: argv[0] basename "flatpak" -> host-spawn runs the host flatpak.
+#
+# The symlink is placed at TWO locations, for two different reasons:
+#   * /usr/local/bin/flatpak -> on PATH, so launching `flatpak run ...` resolves to
+#     the shim and runs on the host.
+#   * /usr/bin/flatpak        -> REQUIRED FOR DISCOVERY. Every flatpak-exported
+#     .desktop file contains `TryExec=/usr/bin/flatpak` (the flatpak default).
+#     vicinae's scanner (xdg-app-database.cpp, scan()) drops any entry whose
+#     TryExec isn't an executable path it can resolve *inside the container*
+#     (QStandardPaths::findExecutable follows symlinks). Without /usr/bin/flatpak
+#     existing here, every flatpak is silently filtered out of the app list.
+RUN ln -s /usr/local/bin/host-spawn /usr/local/bin/flatpak && \
+    ln -s /usr/local/bin/host-spawn /usr/bin/flatpak
+
+# The launch-prefix wrapper vicinae calls for every app launch (see file header).
+COPY vicinae-host-launch /usr/local/bin/vicinae-host-launch
+RUN chmod 0755 /usr/local/bin/vicinae-host-launch
+
+CMD ["vicinae", "server"]

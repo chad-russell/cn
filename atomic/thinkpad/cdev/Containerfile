@@ -1,0 +1,148 @@
+# Dev toolbox for the ThinkPad (Fedora Silverblue).
+#
+# A reproducible, rebuildable dev environment: shell, CLI tools, language
+# runtimes, and AI coding tools (pi). Config is NOT baked in here — it lives
+# in ./shell and is copied in so a rebuild applies changes fast (dnf layer
+# is cached; only the COPY layer re-runs).
+
+FROM registry.fedoraproject.org/fedora:44
+
+# ---- pinned external tool versions (bump to track upstream) -------------
+ARG OH_MY_POSH_VERSION=29.15.1
+ARG BUN_VERSION=1.3.14
+ARG YAZI_VERSION=26.5.6
+# LSP servers / formatters (GitHub-released ones; bump to track upstream)
+ARG LUA_LS_VERSION=3.15.0
+ARG STYLUA_VERSION=2.0.2
+ARG RUFF_VERSION=0.12.9
+
+# ---- dnf packages -------------------------------------------------------
+# (vim/vim-enhanced: old config used nvim; vim included as fallback editor)
+RUN dnf -y install \
+      zsh \
+      git \
+      gh \
+      ripgrep \
+      fd-find \
+      bat \
+      eza \
+      nodejs \
+      fzf \
+      jq \
+      zoxide \
+      tmux \
+      tig \
+      vim-enhanced \
+      neovim \
+      python3 \
+      golang \
+      rust \
+      cargo \
+      age \
+      gnupg2 \
+      wl-clipboard \
+      brightnessctl \
+      playerctl \
+      htop \
+      ncdu \
+      pv \
+      rsync \
+      strace \
+      tree \
+      unzip \
+      lsof \
+      less \
+      file \
+      curl \
+      which \
+      findutils \
+      diffutils \
+      iproute \
+      procps-ng \
+      podman \
+      rust-analyzer \
+      gcc \
+      gcc-c++ \
+      make \
+      awscli2 \
+    && dnf clean all
+
+# ---- node / pi ---------------------------------------------------------
+RUN npm install -g @earendil-works/pi-coding-agent \
+ && npm install -g typescript typescript-language-server pyright prettier \
+ && NODE_BIN="$(dirname "$(command -v node)")" \
+ && ln -sf "$NODE_BIN/node" /usr/local/bin/node \
+ && ln -sf "$NODE_BIN/npm" /usr/local/bin/npm \
+ && ln -sf "$NODE_BIN/npx" /usr/local/bin/npx
+# npm install -g creates /usr/local/bin/pi -> .../dist/cli.js. Do NOT overwrite
+# that symlink: redirecting a wrapper script into /usr/local/bin/pi follows the
+# link and replaces cli.js with bash, which breaks `pi`.
+
+# ---- oh-my-posh ---------------------------------------------------------
+ARG OH_MY_POSH_VERSION
+RUN curl -fsSL "https://github.com/JanDeDobbeleer/oh-my-posh/releases/download/v${OH_MY_POSH_VERSION}/posh-linux-amd64" -o /usr/local/bin/oh-my-posh \
+ && chmod 0755 /usr/local/bin/oh-my-posh
+
+# ---- yazi ---------------------------------------------------------------
+# yazi ships release tarballs with the binary + prebuilt ya (file transfer)
+ARG YAZI_VERSION
+RUN curl -fsSL "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-x86_64-unknown-linux-gnu.zip" -o /tmp/yazi.zip \
+ && unzip -o /tmp/yazi.zip -d /tmp/yazi-extract \
+ && install -m 0755 "$(find /tmp/yazi-extract -name yazi -type f | head -1)" /usr/local/bin/yazi \
+ && rm -rf /tmp/yazi.zip /tmp/yazi-extract
+
+# ---- LSP servers + formatters (GitHub releases) ------------------------
+# npm/dnf already covered: typescript-language-server, pyright, prettier
+# (npm global), rust-analyzer (dnf). These three ship only as GitHub
+# release artifacts.
+ARG LUA_LS_VERSION
+RUN mkdir -p /opt/lua-language-server \
+ && curl -fsSL "https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LS_VERSION}/lua-language-server-${LUA_LS_VERSION}-linux-x64.tar.gz" \
+      | tar xz -C /opt/lua-language-server \
+ && ln -sf /opt/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server
+
+ARG STYLUA_VERSION
+RUN curl -fsSL "https://github.com/JohnnyMorganz/StyLua/releases/download/v${STYLUA_VERSION}/stylua-linux-x86_64.zip" -o /tmp/stylua.zip \
+ && unzip -o /tmp/stylua.zip -d /tmp/stylua-extract \
+ && install -m 0755 /tmp/stylua-extract/stylua /usr/local/bin/stylua \
+ && rm -rf /tmp/stylua.zip /tmp/stylua-extract
+
+ARG RUFF_VERSION
+RUN curl -fsSL "https://github.com/astral-sh/ruff/releases/download/${RUFF_VERSION}/ruff-x86_64-unknown-linux-gnu.tar.gz" -o /tmp/ruff.tgz \
+ && tar xzf /tmp/ruff.tgz -C /tmp \
+ && install -m 0755 /tmp/ruff-x86_64-unknown-linux-gnu/ruff /usr/local/bin/ruff \
+ && rm -rf /tmp/ruff.tgz /tmp/ruff-x86_64-unknown-linux-gnu
+
+RUN curl https://cursor.com/install -fsS | bash
+
+# ---- 6. shell config baked in (NOT in $HOME) --------------------------
+# Copied to /usr/share/crussell. /etc/zshenv (below) sets ZDOTDIR here so
+# zsh reads its config from the image, keeping the host $HOME clean. nvim
+# reads the same tree: ENV XDG_CONFIG_HOME=/usr/share/crussell (below) makes
+# every nvim load /usr/share/crussell/nvim. For live-repo iteration, mount
+# your working copy over that path (no rebuild needed):
+#   podman run ... -v $PWD/shell/nvim:/usr/share/crussell/nvim:Z
+COPY shell/ /usr/share/crussell/
+RUN chmod 0644 /usr/share/crussell/.zshrc \
+ && chmod 0644 /usr/share/crussell/.zshenv \
+ && chmod 0644 /usr/share/crussell/oh-my-posh.json \
+ && chmod -R 0755 /usr/share/crussell/nvim 2>/dev/null || true
+
+# Point neovim at the baked config: it reads $XDG_CONFIG_HOME/nvim, and the
+# image sets no XDG_CONFIG_HOME otherwise. A run-time -v over
+# /usr/share/crussell/nvim shadows the bake for live edits without a rebuild.
+ENV XDG_CONFIG_HOME=/usr/share/crussell
+
+# Force ZDOTDIR for every zsh started in this container, regardless of $HOME.
+# (-l login shells and interactive shells both read /etc/zshenv first.)
+RUN printf 'export ZDOTDIR=/usr/share/crussell\n' > /etc/zshenv
+
+# ---- 7. git config (system-level, HOME-independent) ------------------
+# git reads /etc/gitconfig for every user before $HOME/.gitconfig, so this
+# applies regardless of whether the container runs as root (HOME=/root) or
+# keep-id (HOME=/var/home/...). Keeps the git identity baked into the image
+# with no reliance on a file in the host $HOME.
+COPY shell/gitconfig /etc/gitconfig
+
+# Default command: a login zsh (toolbox enter drops you here).
+CMD ["/usr/bin/zsh", "-l"]
