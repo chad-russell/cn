@@ -1,14 +1,16 @@
 # The polymer dev app (Next.js x2) as a podman quadlet container.
 #
 # This ONE unit drives the whole stack:
-#   systemctl --user start polymer-dev-app   # builds image, starts db+minio, then app
+#   systemctl --user start polymer-dev-app   # pulls image, starts db+minio, then app
 #   systemctl --user stop  polymer-dev-app   # stops app + db + minio (via PartOf=)
 #
 # How start/stop cascade works:
-#   - Requires=/After= pull in polymer-dev-db + polymer-dev-minio (and the build
-#     unit is auto-required via Image=polymer-dev.build).
+#   - Requires=/After= pull in polymer-dev-db + polymer-dev-minio.
 #   - db & minio declare PartOf=polymer-dev-app, so `stop`/`restart` of this unit
 #     propagates to them.
+#
+# Like gpl, polymer now runs from the PUBLISHED devcontainers/javascript-node
+# image (no custom Dockerfile, no .build unit) — podman pulls it on first start.
 #
 # Not [Install]-enabled anywhere: the stack only runs when you start it.
 [Unit]
@@ -17,11 +19,12 @@ Requires=polymer-dev-db.container polymer-dev-minio.container
 After=polymer-dev-db.container polymer-dev-minio.container
 
 [Container]
-Image=polymer-dev.build
+Image=mcr.microsoft.com/devcontainers/javascript-node:24
 ContainerName=polymer-quadlet-app
 Network=polymer-dev.network
-# keep-id so files written to the bind-mounted repo are owned by host UID 1000
-# (matches the compose override, keeps node_modules/.next host-writable).
+# keep-id so files written to the bind-mounted repo are owned by host UID 1000.
+# The devcontainers image runs as `node` (UID 1000); keep-id maps that to the
+# host user, so node_modules/.next stay host-writable as your user.
 UserNS=keep-id
 WorkingDir=/workspace
 
@@ -46,6 +49,7 @@ Environment=DATABASE_URL=postgres://postgres:password@polymer_db:5432/postgres
 Exec=/usr/local/bin/dev-server.sh
 
 [Service]
-# First run may build/pull; subsequent runs are fast. Dev server: no auto-restart
-# (default Restart=no) so you see crashes instead of a restart loop.
-TimeoutStartSec=300
+# First run pulls the image + runs pnpm install; subsequent runs are fast. Dev
+# server: no auto-restart (default Restart=no) so you see crashes instead of a
+# restart loop.
+TimeoutStartSec=600

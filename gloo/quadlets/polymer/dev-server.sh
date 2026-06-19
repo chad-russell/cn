@@ -17,16 +17,37 @@ set -u
 
 cd /workspace || { echo "FATAL: /workspace not mounted" >&2; exit 1; }
 
+# The devcontainers/javascript-node image ships pnpm via corepack; enable it if
+# `pnpm` isn't already on PATH (the old custom image pre-baked pnpm, this one
+# doesn't).
+command -v pnpm >/dev/null 2>&1 || corepack enable >/dev/null 2>&1 || true
+
 if [ ! -d node_modules ]; then
   echo "==> first start: pnpm install"
   pnpm install || { echo "FATAL: pnpm install failed" >&2; exit 1; }
 fi
 
+# The devcontainers base image has no pg_isready (the old custom image did); use
+# node's net module for a TCP readiness check. Postgres accepts connections as
+# soon as the socket is open, which is good enough before db:push / the dev server.
 echo "==> waiting for postgres at polymer_db:5432 ..."
-until pg_isready -h polymer_db -p 5432 -U postgres >/dev/null 2>&1; do
-  sleep 1
-done
-echo "==> postgres is ready"
+node <<'NODE' || { echo "FATAL: postgres not reachable" >&2; exit 1; }
+const net = require("net");
+(function check(attempt) {
+  const s = net.createConnection({ host: "polymer_db", port: 5432 }, () => {
+    s.end();
+    console.log("==> postgres is ready");
+    process.exit(0);
+  });
+  s.on("error", () => {
+    if (attempt >= 90) {
+      console.error("postgres not reachable after ~90s");
+      process.exit(1);
+    }
+    setTimeout(() => check(attempt + 1), 1000);
+  });
+})(0);
+NODE
 
 echo "==> apps/polymer  -> http://0.0.0.0:3000 (webpack, no turbo)"
 pnpm --dir apps/polymer exec next dev -H 0.0.0.0 &

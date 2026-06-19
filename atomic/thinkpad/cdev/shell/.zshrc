@@ -33,7 +33,7 @@ bindkey '^R' fzf-history-widget
 
 # ---- oh-my-posh --------------------------------------------------------
 if command -v oh-my-posh >/dev/null 2>&1; then
-  eval "$(oh-my-posh init zsh --config /usr/share/crussell/oh-my-posh.json)"
+  eval "$(oh-my-posh init zsh --config "${XDG_CONFIG_HOME:-$HOME/.config}/oh-my-posh.json")"
 fi
 
 # ---- fnm (node/npm) ----------------------------------------------------

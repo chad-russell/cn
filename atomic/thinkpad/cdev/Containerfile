@@ -113,29 +113,31 @@ RUN curl -fsSL "https://github.com/astral-sh/ruff/releases/download/${RUFF_VERSI
  && install -m 0755 /tmp/ruff-x86_64-unknown-linux-gnu/ruff /usr/local/bin/ruff \
  && rm -rf /tmp/ruff.tgz /tmp/ruff-x86_64-unknown-linux-gnu
 
-RUN curl https://cursor.com/install -fsS | bash
+RUN install -d /opt/cursor \                                                                                                                                                              
+ && curl https://cursor.com/install -fsS | env HOME=/opt/cursor bash \                                                                                                                    
+ && ln -sf /opt/cursor/.local/bin/agent /usr/local/bin/agent
 
 # ---- 6. shell config baked in (NOT in $HOME) --------------------------
-# Copied to /usr/share/crussell. /etc/zshenv (below) sets ZDOTDIR here so
-# zsh reads its config from the image, keeping the host $HOME clean. nvim
-# reads the same tree: ENV XDG_CONFIG_HOME=/usr/share/crussell (below) makes
-# every nvim load /usr/share/crussell/nvim. For live-repo iteration, mount
-# your working copy over that path (no rebuild needed):
-#   podman run ... -v $PWD/shell/nvim:/usr/share/crussell/nvim:Z
-COPY shell/ /usr/share/crussell/
-RUN chmod 0644 /usr/share/crussell/.zshrc \
- && chmod 0644 /usr/share/crussell/.zshenv \
- && chmod 0644 /usr/share/crussell/oh-my-posh.json \
- && chmod -R 0755 /usr/share/crussell/nvim 2>/dev/null || true
+# Copied to $HOME/.config (/home/cdev/.config). /etc/zshenv (below) sets
+# ZDOTDIR here so zsh reads its config from the image, keeping the host
+# $HOME clean. nvim reads the same tree via the XDG_CONFIG_HOME ENV below
+# ($XDG_CONFIG_HOME/nvim). For live-repo iteration, mount your working copy
+# over that path (no rebuild needed):
+#   podman run ... -v $PWD/shell/nvim:/home/cdev/.config/nvim:Z
+COPY shell/ /home/cdev/.config/
+RUN chmod 0644 /home/cdev/.config/.zshrc \
+ && chmod 0644 /home/cdev/.config/.zshenv \
+ && chmod 0644 /home/cdev/.config/oh-my-posh.json \
+ && chmod -R 0755 /home/cdev/.config/nvim 2>/dev/null || true
 
-# Point neovim at the baked config: it reads $XDG_CONFIG_HOME/nvim, and the
-# image sets no XDG_CONFIG_HOME otherwise. A run-time -v over
-# /usr/share/crussell/nvim shadows the bake for live edits without a rebuild.
-ENV XDG_CONFIG_HOME=/usr/share/crussell
+# Point neovim at the baked config: it reads $XDG_CONFIG_HOME/nvim. A run-time
+# -v over /home/cdev/.config/nvim shadows the bake for live edits without a
+# rebuild.
+ENV XDG_CONFIG_HOME=/home/cdev/.config
 
 # Force ZDOTDIR for every zsh started in this container, regardless of $HOME.
 # (-l login shells and interactive shells both read /etc/zshenv first.)
-RUN printf 'export ZDOTDIR=/usr/share/crussell\n' > /etc/zshenv
+RUN printf 'export ZDOTDIR=/home/cdev/.config\n' > /etc/zshenv
 
 # ---- 7. git config (system-level, HOME-independent) ------------------
 # git reads /etc/gitconfig for every user before $HOME/.gitconfig, so this

@@ -21,9 +21,12 @@ else
 fi
 
 proj="${1:-}"; cmd="${2:-up}"
+# (No `rebuild` command: polymer now uses a published image, not a local build.
+# To update the toolchain image: podman image pull mcr.microsoft.com/devcontainers/javascript-node:24
+# && systemctl --user restart polymer-dev-app)
 case "$proj" in
   polymer) svc="polymer-dev-app" ;;
-  *) echo "usage: $0 <polymer> <up|down|restart|status|logs|rebuild>" >&2; exit 1 ;;
+  *) echo "usage: $0 <polymer> <up|down|restart|status|logs>" >&2; exit 1 ;;
 esac
 
 case "$cmd" in
@@ -32,9 +35,6 @@ case "$cmd" in
   restart) "${SYS[@]}" restart "$svc" ;;
   status)  "${SYS[@]}" status polymer-dev-app polymer-dev-db polymer-dev-minio ;;
   logs)    "${JRN[@]}" -u polymer-dev-app -f ;;
-  rebuild) "${SYS[@]}" restart polymer-dev-build
-           echo "image rebuilt; restart the app to use it:"
-           echo "  ${SYS[*]} restart $svc" ;;
   *) echo "unknown command: $cmd" >&2
-     echo "commands: up down restart status logs rebuild" >&2; exit 1 ;;
+     echo "commands: up down restart status logs" >&2; exit 1 ;;
 esac

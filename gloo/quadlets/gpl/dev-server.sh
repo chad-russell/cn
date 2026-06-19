@@ -33,9 +33,10 @@ if [ ! -d node_modules ]; then
     || { echo "FATAL: pnpm install failed" >&2; exit 1; }
 fi
 
-# The base image has no pg_isready (unlike polymer's custom image); use node's
-# net module for a TCP readiness check. Postgres accepts connections as soon as
-# the socket is open, which is good enough before db:push / the dev server.
+# The base image has no pg_isready; use node's net module for a TCP readiness
+# check. Postgres accepts connections as soon as the socket is open, which is
+# good enough before db:push / the dev server. (polymer's dev-server.sh does the
+# same, now that it also runs from this published image.)
 echo "==> waiting for postgres at gpl-db:5432 ..."
 node <<'NODE' || { echo "FATAL: postgres not reachable" >&2; exit 1; }
 const net = require("net");

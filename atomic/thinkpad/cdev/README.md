@@ -8,6 +8,11 @@ nothing outside the explicit mounts can be reached or modified.**
 The image is just a base. **All of the safety comes from `run.sh`** — i.e.
 from how the container is invoked, not from what's installed in it.
 
+> Separate concern: [`impermanence/`](./impermanence) holds a script +
+> allow-list that wipes the **host** `$HOME` (Silverblue) on demand,
+> keeping only listed dirs (`.ssh`, `~/Code`, `~/.config`, …). See its
+> README. It runs on the host, not in the sandbox.
+
 ## The isolation model
 
 Rootless Podman on a SELinux-Enforcing host gives you five independent layers

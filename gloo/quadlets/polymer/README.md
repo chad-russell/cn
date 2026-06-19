@@ -17,16 +17,18 @@ its own container / network / volume / image names so the two never collide.
 | `polymer-dev.network`         | `polymer-dev-network.service`       | network `systemd-polymer-dev`        |
 | `polymer-dev-db.volume`       | `polymer-dev-db-volume.service`     | volume `systemd-polymer-dev-db`      |
 | `polymer-dev-minio.volume`    | `polymer-dev-minio-volume.service`  | volume `systemd-polymer-dev-minio`   |
-| `polymer-dev.build`           | `polymer-dev-build.service`         | image `localhost/polymer-quadlet:latest` |
 | `polymer-dev-db.container`    | `polymer-dev-db.service`            | container `polymer-quadlet-db` (alias `polymer_db`)   |
 | `polymer-dev-minio.container` | `polymer-dev-minio.service`         | container `polymer-quadlet-minio` (alias `polymer_minio`) |
 | `polymer-dev-app.container`   | `polymer-dev-app.service`           | container `polymer-quadlet-app` (publishes **3000 + 3001**) |
 
-The app image is built from the repo's **own** `.devcontainer/Dockerfile`
-(`node:24-bookworm` + pnpm + tools) — nothing is vendored into the polymer repo.
-Only `.env` / `.env.local` in the repo are fair game to edit, and we don't even
-need to: the app reaches postgres/minio via the `polymer_db` / `polymer_minio`
-network aliases, which match what `.env.local` already expects.
+The app runs from the **published** `mcr.microsoft.com/devcontainers/javascript-node:24`
+image (node 24, pnpm via corepack) — the same `node:24-bookworm` base the repo's
+own `.devcontainer/Dockerfile` starts from, so behavior is equivalent. There is
+**no `.build` unit**: podman pulls the image on first start. Nothing is vendored
+into the polymer repo — only the repo itself is bind-mounted (live code), and
+`dev-server.sh` lives outside the repo. The app reaches postgres/minio via the
+`polymer_db` / `polymer_minio` network aliases, which match what `.env.local`
+already expects.
 
 ## Install (once, and after any edit to a unit file)
 
@@ -40,7 +42,7 @@ This symlinks the unit files into `~/.config/containers/systemd/` and runs
 ## Daily use
 
 ```bash
-# Start the whole stack (builds the image the first time):
+# Start the whole stack (pulls the image + installs deps the first time):
 systemctl --user start polymer-dev-app
 
 # Stop the whole stack (db + minio stop too, via PartOf=):
@@ -73,6 +75,7 @@ Then browse to **http://localhost:3000** (polymer) and **http://localhost:3001**
   it isn't here.)
 - **Only 3000 and 3001 are published** to the host. Postgres and MinIO are
   reachable on the internal network only (no `54324` / `9004` / `9005`).
+- **Postgres readiness via node**, not `pg_isready` (the base image lacks it).
 - **Dev server is PID 1, no auto-restart.** If a Next.js server crashes, the
   container stops so you can read the logs and `restart` it — no restart loop.
 - **DB data persists** in the `systemd-polymer-dev-db` volume across stop/start.
@@ -88,15 +91,15 @@ podman exec polymer-quadlet-app pnpm db:push
 podman exec polymer-quadlet-app pnpm db:seed   # optional
 ```
 
-## Rebuilding the image
+## Updating the toolchain image
 
-Only needed when the repo's Dockerfile or base toolchain changes (code changes
-are picked up live via the bind mount — no rebuild). To rebuild:
+Only needed when you want a newer `javascript-node:24` (code changes are picked
+up live via the bind mount — no rebuild). polymer has no local build, so just
+re-pull:
 
 ```bash
-systemctl --user restart polymer-dev-build
+podman image pull mcr.microsoft.com/devcontainers/javascript-node:24
 systemctl --user restart polymer-dev-app
-# or: ~/Code/cn/gloo/quadlets/polymer/qd polymer rebuild
 ```
 
 ## Editing the units
