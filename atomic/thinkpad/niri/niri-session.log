@@ -1,0 +1,94 @@
+[2m2026-06-20T03:56:41.493960Z[0m [32m INFO[0m [2mniri[0m[2m:[0m starting version 26.04 (0.0.git.2807.fdb6d85f)
+[2m2026-06-20T03:56:41.502546Z[0m [34mDEBUG[0m [2mniri_config[0m[2m:[0m loaded config from "/etc/niri/config.kdl"
+[2m2026-06-20T03:56:41.617273Z[0m [32m INFO[0m [2mniri::backend::tty[0m[2m:[0m using as the render node: "/dev/dri/renderD128"
+[2m2026-06-20T03:56:41.659147Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m adding device: 57857 "/dev/dri/card1"
+[2m2026-06-20T03:56:41.659193Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m this is the primary node
+[2m2026-06-20T03:56:41.800453Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m got render node: renderD128
+[2m2026-06-20T03:56:41.800485Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m initializing the primary renderer
+[2m2026-06-20T03:56:42.248121Z[0m [33m WARN[0m [2mniri::backend::tty[0m[2m:[0m error initializing DRM leasing for card1: UnableToDropMaster(Os { code: 22, kind: InvalidInput, message: "Invalid argument" })
+[2m2026-06-20T03:56:42.248162Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m device changed: 57857
+[2m2026-06-20T03:56:42.260654Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m new connector: eDP-1 "AU Optronics B140UAN02.7  Unknown"
+[2m2026-06-20T03:56:42.261636Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m connecting connector: eDP-1
+[2m2026-06-20T03:56:42.261669Z[0m [34mDEBUG[0m [2mniri::backend::tty[0m[2m:[0m picking mode: Mode { name: "1920x1200", clock: 156300, size: (1920, 1200), hsync: (1968, 2000, 2084), vsync: (1203, 1208, 1250), hskew: 0, vscan: 0, vrefresh: 60, mode_type: ModeTypeFlags(PREFERRED | DRIVER) }
+[2m2026-06-20T03:56:42.281170Z[0m [34mDEBUG[0m [2mniri::niri[0m[2m:[0m putting output eDP-1 at x=0 y=0
+[2m2026-06-20T03:56:42.281323Z[0m [32m INFO[0m [2mniri[0m[2m:[0m listening on Wayland socket: wayland-1
+[2m2026-06-20T03:56:42.281331Z[0m [32m INFO[0m [2mniri[0m[2m:[0m IPC listening on: /run/xdg/niri.wayland-1.41.sock
+[2m2026-06-20T03:56:42.291021Z[0m [32m INFO[0m [2mniri[0m[2m:[0m listening on X11 socket: :2
+[0;1;31mFailed to connect to user scope bus via local transport: No such file or directory[0m
+[2m2026-06-20T03:56:42.307123Z[0m [33m WARN[0m [2mniri[0m[2m:[0m error inhibiting power key: I/O error: No such file or directory (os error 2)
+
+Caused by:
+    No such file or directory (os error 2)
+[2m2026-06-20T03:56:42.327466Z[0m [33m WARN[0m [2mniri::dbus[0m[2m:[0m error starting login1 watcher: I/O error: No such file or directory (os error 2)
+
+Caused by:
+    No such file or directory (os error 2)
+[2m2026-06-20T03:56:42.327537Z[0m [33m WARN[0m [2mniri::dbus[0m[2m:[0m error starting locale1 watcher: I/O error: No such file or directory (os error 2)
+
+Caused by:
+    No such file or directory (os error 2)
+dbus-daemon[40]: [session uid=0 pid=40 pidfd=5] Activating service name='org.a11y.Bus' requested by ':1.8' (uid=0 pid=41 comm="niri --session" label="kernel")
+dbus-daemon[40]: [session uid=0 pid=40 pidfd=5] Successfully activated service 'org.a11y.Bus'
+[2m2026-06-20T03:56:42.357832Z[0m [33m WARN[0m [2mniri::niri[0m[2m:[0m env var 'XDG_SESSION_ID' is unset or invalid; logind LockedHint won't be set
+dbus-run-session: ignoring unknown child process 103
+dbus-run-session: ignoring unknown child process 110
+dbus-run-session: ignoring unknown child process 117
+dbus-run-session: ignoring unknown child process 124
+dbus-run-session: ignoring unknown child process 131
+dbus-run-session: ignoring unknown child process 138
+dbus-run-session: ignoring unknown child process 145
+dbus-run-session: ignoring unknown child process 152
+dbus-run-session: ignoring unknown child process 159
+dbus-run-session: ignoring unknown child process 166
+dbus-run-session: ignoring unknown child process 173
+dbus-run-session: ignoring unknown child process 180
+dbus-run-session: ignoring unknown child process 187
+dbus-run-session: ignoring unknown child process 194
+dbus-run-session: ignoring unknown child process 201
+dbus-run-session: ignoring unknown child process 208
+dbus-run-session: ignoring unknown child process 215
+dbus-run-session: ignoring unknown child process 222
+dbus-run-session: ignoring unknown child process 229
+dbus-run-session: ignoring unknown child process 236
+dbus-run-session: ignoring unknown child process 243
+dbus-run-session: ignoring unknown child process 250
+dbus-run-session: ignoring unknown child process 257
+dbus-run-session: ignoring unknown child process 264
+dbus-run-session: ignoring unknown child process 267
+dbus-run-session: ignoring unknown child process 278
+dbus-run-session: ignoring unknown child process 281
+dbus-run-session: ignoring unknown child process 291
+dbus-run-session: ignoring unknown child process 299
+dbus-run-session: ignoring unknown child process 309
+dbus-run-session: ignoring unknown child process 307
+dbus-run-session: ignoring unknown child process 321
+dbus-run-session: ignoring unknown child process 323
+dbus-run-session: ignoring unknown child process 334
+dbus-run-session: ignoring unknown child process 337
+dbus-run-session: ignoring unknown child process 348
+dbus-run-session: ignoring unknown child process 351
+dbus-run-session: ignoring unknown child process 365
+dbus-run-session: ignoring unknown child process 364
+dbus-run-session: ignoring unknown child process 376
+dbus-run-session: ignoring unknown child process 383
+dbus-run-session: ignoring unknown child process 392
+dbus-run-session: ignoring unknown child process 396
+dbus-run-session: ignoring unknown child process 393
+dbus-run-session: ignoring unknown child process 411
+dbus-run-session: ignoring unknown child process 418
+dbus-run-session: ignoring unknown child process 428
+dbus-run-session: ignoring unknown child process 426
+dbus-run-session: ignoring unknown child process 439
+dbus-run-session: ignoring unknown child process 442
+dbus-run-session: ignoring unknown child process 449
+dbus-run-session: ignoring unknown child process 460
+dbus-run-session: ignoring unknown child process 463
+dbus-run-session: ignoring unknown child process 470
+dbus-run-session: ignoring unknown child process 481
+dbus-run-session: ignoring unknown child process 488
+dbus-run-session: ignoring unknown child process 498
+dbus-run-session: ignoring unknown child process 497
+dbus-run-session: ignoring unknown child process 509
+dbus-run-session: ignoring unknown child process 512
+[2m2026-06-20T03:56:58.719581Z[0m [32m INFO[0m [2mniri::input[0m[2m:[0m quitting after confirming exit dialog
+[2m2026-06-20T03:56:59.095869Z[0m [34mDEBUG[0m [2mniri::utils::watcher[0m[2m:[0m exiting watcher thread for Regular { user_path: "/usr/share/dev-shell/niri/config.kdl", system_path: "/etc/niri/config.kdl" }

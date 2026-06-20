@@ -105,6 +105,8 @@ args=(
   -v "cdev-yazi:${SANDBOX_HOME}/.yazi"
   -v "cdev-cursor:${SANDBOX_HOME}/.config/cursor"
   -v "cdev-pi:${SANDBOX_HOME}/.pi"
+  -v "$XDG_RUNTIME_DIR/podman/podman.sock:/run/podman/podman.sock"                                                                                                                           
+  -e CONTAINER_HOST=unix:///run/podman/podman.sock
 )
 # --userns=keep-id
 

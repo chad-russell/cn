@@ -16,9 +16,12 @@ echo
 
 sudo podman run --rm -it \
     --name niri-dev-session \
-    --privileged --network=host \
+    --privileged \
+    --network=host \
+    --ipc=host \
     --device /dev/dri --device /dev/input --device /dev/tty \
     -v /run/udev:/run/udev:ro \
+    -v /dev:/dev \
     -e LIBSEAT_BACKEND=seatd \
     -e XDG_RUNTIME_DIR=/run/xdg \
     -e XDG_CURRENT_DESKTOP=niri \

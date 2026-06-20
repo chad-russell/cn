@@ -1,17 +1,10 @@
 # cdev — isolated dev/AI sandbox
 
-A Fedora-toolbox-based dev image (`Containerfile`) plus a hardened runner
-(`run.sh`) whose entire purpose is: **let an AI agent (or you) install
-packages, edit files, and run anything inside, with the guarantee that
-nothing outside the explicit mounts can be reached or modified.**
+A Fedora-toolbox-based dev image (`Containerfile`) and associated runner (`run.sh`) - an opinionated replacement for toolbox/distrobox,
+with less forwarding to the host, and more filesystem isolation by default
 
-The image is just a base. **All of the safety comes from `run.sh`** — i.e.
+The image is just a base. **All of the interesting behavior comes from `run.sh`** — i.e.
 from how the container is invoked, not from what's installed in it.
-
-> Separate concern: [`impermanence/`](./impermanence) holds a script +
-> allow-list that wipes the **host** `$HOME` (Silverblue) on demand,
-> keeping only listed dirs (`.ssh`, `~/Code`, `~/.config`, …). See its
-> README. It runs on the host, not in the sandbox.
 
 ## The isolation model
 

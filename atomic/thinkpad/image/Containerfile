@@ -78,10 +78,6 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # booted image. niri still refreshes on every image rebuild; no third-party repo
 # leaks to /etc.
 #
-# NOTE: niri's built-in default config tries to spawn `waybar`, `fuzzel`, and
-# `alacritty`. None are installed here (apps live in flatpaks/containers per the
-# project rule), so a first login to Niri will be bare. Add those — as host
-# packages, flatpaks, or in the dev container — to get a usable session.
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install dnf5-plugins && \
@@ -147,7 +143,54 @@ COPY vicinae-host-launch /usr/bin/vicinae-host-launch
 COPY vicinae-settings.json /usr/share/vicinae-bwrap/settings.json
 RUN chmod 0755 /usr/bin/vicinae-bwrap /usr/bin/vicinae-host-launch
 
-# ---- 5. build identity (lets `bootc upgrade` detect a rebuild) ----------
+# ---- 4b. Niri-in-bwrap: an EXPERIMENTAL sandboxed session entry ---------
+# The same filesystem-containment idea as noctalia-bwrap / vicinae-bwrap, but
+# applied to the compositor session itself. `niri-bwrap` runs the `niri` binary
+# directly inside a bubblewrap MOUNT namespace (not niri-session, which would
+# start niri via `systemctl --user` outside the sandbox and defeat the point).
+# Within the sandbox, the real host $HOME is hidden behind a tmpfs and the only
+# persistent writable user state is the four XDG roots under
+# ~/.local/share/bwrap/niri-session/xdg-{config,state,data,cache}.
+#
+# Because bubblewrap here creates only a mount namespace (no --unshare-pid / -
+# user / -cgroup), niri's PID stays in the login session's cgroup and logind
+# still makes it the session controller and hands over the DRM/input fds over
+# /run/dbus — so KMS, input, GPU, and VT switching keep working. This is the
+# same reason this is a bwrap mount sandbox and not a Podman container (a full
+# container would break logind's seat/VT mediation, the failure mode noted in
+# section 3 for Noctalia).
+#
+# Adds a SECOND GDM entry alongside the package's stock niri.desktop, so the
+# login gear menu offers both "Niri" (normal) and "Niri (bubblewrap)". The
+# stock entry is left untouched — if the sandboxed session misbehaves, just log
+# out and pick the normal one. See README "Niri session via bwrap".
+COPY niri-bwrap /usr/bin/niri-bwrap
+COPY niri-bwrap.desktop /usr/share/wayland-sessions/niri-bwrap.desktop
+RUN chmod 0755 /usr/bin/niri-bwrap && \
+    chmod 0644 /usr/share/wayland-sessions/niri-bwrap.desktop
+
+# ---- 5. SELinux: disabled (personal-laptop host policy) -----------------
+# This is a single-user personal laptop, and the operator comes from NixOS/
+# Arch where SELinux isn't part of the workflow. Fedora ships the `targeted`
+# policy enabled by default; its friction (label mismatches on relocated paths,
+# audit noise, per-inode relabeling cost) isn't worth the hardening for this
+# threat model — the high-value apps (Noctalia/Vicinae) are already sandboxed
+# by the bwrap wrappers above, and the daemons `targeted` most protects
+# (httpd, named, ...) don't run on a desktop. So: disable it in the image.
+#
+# Mechanism: `SELINUX=disabled` in /etc/selinux/config — the canonical, image-
+# bakeable way. The selinux-policy packages stay installed (removing them
+# breaks a web of dependencies), but no policy is loaded and no enforcement
+# happens, so the host-session features layered on top (the Noctalia/Vicinae
+# bwrap wrappers, which relocate home paths behind tmpfs + bind mounts) need no
+# SELinux-aware machinery at all. For absolute-
+# zero kernel overhead you could additionally
+# `rpm-ostree kargs --append-if-missing selinux=0` on the host, but the config
+# change alone is effectively all the way there.
+RUN sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config && \
+    grep -q '^SELINUX=disabled' /etc/selinux/config
+
+# ---- 6. build identity (lets `bootc upgrade` detect a rebuild) ----------
 # Each build injects a unique IMAGE_VERSION (git SHA + timestamp; see
 # build.sh) two ways:
 #   - as an OCI LABEL, which lives in the image *config* and therefore changes
@@ -167,7 +210,7 @@ RUN printf 'IMAGE_VERSION=%s\n' "${IMAGE_VERSION}" > /usr/lib/silverblue-thinkpa
 LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
 
 
-# ---- 6. finalize: bootc-native validation -----------------------------
+# ---- 7. finalize: bootc-native validation -----------------------------
 # systemd as pid 1 is required for a bootc image. `bootc container lint` then
 # validates the image (catches /run leftovers, /opt issues, etc.) before you
 # ever switch to it — it replaces the old `ostree container commit`.

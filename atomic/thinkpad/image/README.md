@@ -30,7 +30,12 @@ the top-level README:
   not container namespaces. The wrapper `vicinae-bwrap` keeps Vicinae's mutable
   XDG state isolated in the same plain-directory style as Noctalia while
   preserving native-fast `vicinae toggle` IPC from niri.
-
+- **Optional: a whole Niri session run inside bubblewrap.** `niri-bwrap` applies
+  the same containment idea to the compositor *itself* — every writable path in
+  the login session is confined to `~/.local/share/bwrap/niri-session`. It is
+  installed as a SECOND GDM entry ("Niri (bubblewrap)") next to stock Niri, so
+  you can A/B them from the login gear menu. Experimental — see
+  [Niri session via bwrap](#niri-session-via-bwrap-experimental).
 Everything else is stock.
 
 ## bootc, not rpm-ostree (the direction this is heading)
@@ -58,15 +63,17 @@ forward and `dnf5` is the blessed build-time package manager.
 image/
 ├── Containerfile        # FROM silverblue:44 + distrobox + niri + Noctalia/Vicinae bwrap + bootc lint
 ├── noctalia-bwrap       # host-session Noctalia wrapper with isolated XDG state
+├── niri-bwrap           # EXPERIMENTAL: whole Niri session in a bwrap mount sandbox
+├── niri-bwrap.desktop   # the matching GDM wayland-session entry ("Niri (bubblewrap)")
 ├── vicinae-bwrap        # host-session Vicinae wrapper with isolated XDG state
 ├── vicinae-host-launch  # launch-prefix bridge: escape Vicinae app launches back to host
 ├── vicinae-settings.json # seeded Vicinae config (launch prefix, theme/font defaults)
 ├── build.sh             # sudo podman build  (root, so bootc can read it via containers-storage)
-├── switch.sh            # ONE-TIME: bootc switch --transport containers-storage <local image>
+├── switch.sh            # bootc switch  (one-time adopt: install Silverblue, then switch onto this image)
 ├── upgrade.sh           # ROUTINE:  bootc upgrade  (apply a rebuilt :44)
 ├── rollback.sh          # bootc rollback  (atomic undo — no rebuild needed)
 ├── status.sh            # bootc status + local podman images
-└── setup.sh             # one-shot first-time: build.sh then switch.sh
+└── setup.sh             # one-shot build + switch  (first-time adopt)
 ```
 
 ## Lifecycle
@@ -74,16 +81,16 @@ image/
 ```bash
 cd image/
 
-# First time ONLY — adopt the custom image as the boot image:
-./setup.sh              # build + bootc switch
-systemctl reboot        # boot into the new deployment
+# First time: install stock Fedora Silverblue normally (the Anaconda ISO —
+# the "just worked" experience), boot it, then adopt THIS custom image:
+./setup.sh              # = ./build.sh && ./switch.sh  (one-time adopt)
+systemctl reboot        # boot into the custom image
 
-# After that, for every Containerfile change it's build + UPGRADE (not switch):
+# After that, for every Containerfile change it's build + UPGRADE (not install):
 ./build.sh && ./upgrade.sh   # then: systemctl reboot
 
 # Individual steps:
 ./build.sh              # build the image only
-./switch.sh             # bootc switch — ONLY for first adopt / different image
 ./upgrade.sh            # bootc upgrade  — the routine rebuild-apply command
 
 # Check what's deployed / what's built:
@@ -280,10 +287,211 @@ binds {
 `vicinae toggle` is now the native host binary talking directly to the shared
 IPC socket under `$XDG_RUNTIME_DIR`, so the hotkey path stays low-latency.
 
+## Niri session via bwrap (experimental)
+
+This is the compositor-level analogue of the two wrappers above: instead of
+sandboxing a desktop-shell client of an already-running niri, `niri-bwrap`
+sandboxes **niri itself**. Everything the login session writes — niri's config,
+noctalia/vicinae state, anything niri spawns directly — is confined to a single
+volume root, so the usual per-login filesystem cruft (terminal histories,
+browser caches, stray dotfiles, …) physically cannot land on the real host.
+
+It is wired up as a **separate GDM session entry**, so at the login gear menu
+you get both:
+
+- **Niri** — stock, unchanged, reads `~/.config/niri`.
+- **Niri (bubblewrap)** — the sandboxed entry, reads its config from the volume.
+
+Pick the normal one any time the sandboxed one misbehaves; nothing else changes.
+
+```text
+~/.local/share/bwrap/niri-session/
+├── xdg-config/  # mounted as $HOME/.config; XDG_CONFIG_HOME   (niri config here)
+├── xdg-state/   # mounted as $HOME/.local/state; XDG_STATE_HOME
+├── xdg-data/    # mounted as $HOME/.local/share; XDG_DATA_HOME
+└── xdg-cache/   # mounted as $HOME/.cache; XDG_CACHE_HOME
+```
+
+Inside the bubblewrap mount namespace, the real host `$HOME` is hidden behind a
+private tmpfs. The host root filesystem is visible read-only (packages, fonts,
+desktop files). `/dev` is exposed read-write in full (DRM/KMS, GPU render node,
+input devices, `/dev/tty` for VT switching) — a compositor needs real device
+access, and the threat model here is filesystem-cruft containment, not privilege
+reduction on a single-user laptop. `$XDG_RUNTIME_DIR` and `/run/dbus` are exposed
+so the Wayland socket, PipeWire, the user/session bus, niri's IPC socket, and
+logind all keep working exactly as on the stock session.
+
+### Why logind/KMS/input survive the sandbox
+
+`niri-bwrap` creates **only a mount namespace** — it deliberately does NOT pass
+`--unshare-pid` / `--unshare-user` / `--unshare-cgroup`. niri's PID therefore
+stays in the login session's cgroup, `sd_pid_get_session()` still resolves it,
+and logind makes niri the session controller and hands it the DRM + input fds
+over the system bus. No special Linux capabilities are needed in the process.
+This is exactly why this is a bubblewrap mount sandbox and not a Podman container
+(a full container breaks logind's seat/VT mediation — the failure mode noted for
+Noctalia).
+
+### Why it runs `niri`, not `niri-session`
+
+The package's normal launcher, `niri-session`, starts niri indirectly through
+`systemctl --user` — i.e. *outside* any bubblewrap namespace — which would
+defeat the sandbox. So `niri-bwrap` execs the `niri` binary directly and just
+sets the desktop env vars (`XDG_CURRENT_DESKTOP=niri`, etc.) that niri-session
+would otherwise export. niri/Smithay does its own logind seat takeover, so it
+runs fine bare.
+
+Concretely, that also means the wrapper must **not** set `WAYLAND_DISPLAY` or
+`DISPLAY` in the sandbox. niri auto-selects its backend from the environment,
+and if either is set it tries to run *nested* (as a client of an existing
+compositor) and panics at startup with
+`WaylandError(Connection(NoCompositor))`, because there is no parent
+compositor to connect to. The wrapper `--unsetenv`s both, so niri uses its
+native DRM/libseat backend, creates the Wayland socket itself under
+`$XDG_RUNTIME_DIR`, and exports `WAYLAND_DISPLAY` into the environment of the
+children it spawns. (This is the one real difference from `noctalia-bwrap` /
+`vicinae-bwrap`, which *do* set `WAYLAND_DISPLAY` because they are clients of
+niri rather than niri itself.)
+
+#### The launcher: env import + logging
+
+Because niri is exec'd bare rather than through `niri-session`, the wrapper
+itself owes the session two things `niri-session` would otherwise do. So bwrap
+execs a tiny inline launcher (the `NIRI_BWRAP_LAUNCHER` heredoc in the script)
+instead of `niri` directly. It:
+
+1. starts niri with **all** of its stdout/stderr captured to
+   `~/.local/share/bwrap/niri-session/session.log` (previous run rotated to
+   `session.log.old`),
+2. once niri has created `$XDG_RUNTIME_DIR/wayland-0`, publishes
+   `WAYLAND_DISPLAY` (+ the desktop session vars) into **both** the systemd
+   user manager (`systemctl --user import-environment`) **and** the D-Bus
+   activation environment (`dbus-update-activation-environment --all`), and
+3. forwards SIGTERM/SIGINT/SIGHUP onto niri (the launcher, not niri, is the
+   process bwrap waits on) and propagates niri's exit status to GDM.
+
+Step 2 is the fix for the otherwise-inevitable "some apps don't launch"
+symptom: niri only exports `WAYLAND_DISPLAY` into its *own* children's
+environment, so D-Bus-activated apps and `systemctl --user`-started units
+(portals, many Flatpaks, portal-using apps, some terminals) never see the
+compositor until something advertises it on the user bus. The launcher imports
+**only** the compositor-discovery vars — deliberately **not** `XDG_*_HOME`,
+which would pollute the shared user manager (it runs *outside* the sandbox)
+and make user services resolve state against the wrong tree. `dbus-x11` is
+installed in the image specifically to provide `dbus-update-activation-environment`.
+
+### Nested per-app wrappers keep persisting
+
+A subtlety: if your niri config still does `spawn-at-startup "noctalia-bwrap"`
+/ `"vicinae-bwrap"`, those become **nested** bubblewrap invocations inside the
+session sandbox. On their own, their default volume root
+(`$HOME/.local/share/bwrap/...`) would land on the session's tmpfs home and lose
+persistence on logout. To prevent that, `niri-bwrap` re-binds the real host
+`~/.local/share/bwrap` into the sandbox at the *same* path, so the nested
+wrappers resolve their own volume roots to the real on-disk location and keep
+behaving exactly as they do on the stock session. No config change needed.
+
+### First-run config seeding
+
+On first launch, if you already have a stock `~/.config/niri`, `niri-bwrap`
+copies it into `xdg-config/niri` so the sandboxed session doesn't start bare.
+The copy is one-shot and never overwrites an existing volume config, so the two
+entries can later diverge independently.
+
+### What is NOT contained
+
+This contains niri plus what it spawns *directly*. Two intentional escape
+hatches remain (both are already part of this setup's design on the stock
+session too):
+
+- **Apps launched through `vicinae-host-launch` / `host-spawn`** escape back to
+  the host on purpose, so they use their real host profiles/state.
+- **systemd `--user` services** (xdg-desktop-portal, polkit, …) are started by
+  the user manager that PAM launches *outside* the sandbox, so they run
+  uncontained. They're generally well-behaved system services.
+
+### Caveats / things to expect on the first try
+
+- xdg-desktop-portal / D-Bus app discovery is handled by the inline launcher
+  (see *The launcher* above): once niri creates its Wayland socket, it runs
+  `systemctl --user import-environment` and `dbus-update-activation-environment
+  --all`. If portal-based file pickers or D-Bus-activated apps still misbehave,
+  check `~/.local/share/bwrap/niri-session/session.log` for the launcher's
+  status lines — it logs a warning there if either tool is missing or fails
+  (e.g. `dbus-update-activation-environment not found (install dbus-x11)`).
+- niri's full stdout/stderr (panics, Smithay logs, spawn-at-startup child
+  output) plus the launcher's own status lines go to
+  `~/.local/share/bwrap/niri-session/session.log`, rotated to `session.log.old`
+  each session. This is the first place to look when something doesn't start.
+- niri's config for this entry lives at
+  `~/.local/share/bwrap/niri-session/xdg-config/niri/config.kdl`, i.e. a
+  **different file** than stock Niri's `~/.config/niri/config.kdl`. Edit the
+  right one.
+
+Override the state root if desired:
+
+```bash
+NIRI_BWRAP_VOLUME_ROOT="$HOME/Backups/niri-session-state" niri-bwrap
+```
+
+### Iterating on `niri-bwrap` without a rebuild
+
+Rebuilding the image (`./build.sh && ./upgrade.sh && systemctl reboot`) for
+every tweak to `niri-bwrap` is slow. Two facts make a no-rebuild loop possible:
+
+- `/usr/local` is writable on Silverblue (it is `/var/usrlocal`), and
+- `/usr/local/share` is in the default `XDG_DATA_DIRS`, so GDM scans
+  `/usr/local/share/wayland-sessions/` for session entries.
+
+So a **separate** dev session entry dropped there takes effect on the next
+login, with no reboot. The repo ships `niri-bwrap-dev.desktop` for exactly
+this — it is intentionally NOT installed by the Containerfile (it is a
+host-local dev convenience, kept out of the image). Its `Exec` points at a
+stable name `/usr/local/bin/niri-bwrap-dev`, which you symlink once at your
+repo checkout, so editing `image/niri-bwrap` → log out → log back in is a full
+test cycle.
+
+One-time setup (on the laptop):
+
+```bash
+cd /path/to/repo            # wherever atomic/thinkpad is checked out
+
+# 1. Point a stable name at the repo's working-tree script. Re-run only if you
+#    move/re-clone the checkout; nothing else needs to change.
+sudo ln -sf "$PWD/image/niri-bwrap" /usr/local/bin/niri-bwrap-dev
+chmod +x image/niri-bwrap                       # target must be executable
+
+# 2. Install the dev session entry into the writable path GDM scans.
+sudo install -d /usr/local/share/wayland-sessions
+sudo install -m 0644 image/niri-bwrap-dev.desktop \
+     /usr/local/share/wayland-sessions/niri-bwrap-dev.desktop
+```
+
+Log out and the GDM gear menu lists **Niri (bubblewrap, dev)** next to the
+image-shipped **Niri (bubblewrap)**. The dev entry runs whatever bytes are at
+`image/niri-bwrap` *right now*, so the loop is:
+
+```bash
+$EDITOR image/niri-bwrap          # tweak
+# GDM: log out → pick "Niri (bubblewrap, dev)" → reproduce
+tail -n 200 ~/.local/share/bwrap/niri-session/session.log
+```
+
+When the script is good, bake it with the normal
+`./build.sh && ./upgrade.sh && systemctl reboot`; the dev entry keeps working
+afterward because it points at the repo, not `/usr/bin`.
+
+> **Do not test by switching to a VT** (e.g. VT3) and running `niri-bwrap`
+> manually. A raw VT login gives niri a `tty` logind session, not a `wayland`
+> one: `graphical-session.target` never starts, nothing publishes
+> `WAYLAND_DISPLAY` to the session/D-Bus environment, and most apps refuse to
+> launch. The failures you hit there are a *different* bug class than the
+> GDM-session behavior you are fixing — always iterate through GDM.
+
 ## Updating after a change
 
-Edit `Containerfile`, `noctalia-bwrap`, `vicinae-bwrap`,
-`vicinae-host-launch`, or `vicinae-settings.json`, then
+Edit `Containerfile`, `noctalia-bwrap`, `niri-bwrap`, `niri-bwrap.desktop`,
+`vicinae-bwrap`, `vicinae-host-launch`, or `vicinae-settings.json`, then
 `./build.sh && ./upgrade.sh && systemctl reboot`. Note this is **upgrade**, not
 switch — see below. Because the image is rebuilt fresh each time, this is a
 clean, reproducible cycle — no accumulating client-side `rpm-ostree install`
@@ -322,8 +530,9 @@ and see exactly which build you're on.) This is the only layer that changes per
 build, so the expensive `dnf5` layers above it stay cached and rebuilds stay
 fast. `bootc status` shows the `Version` label and the image digest.
 
-**Summary of the loop:** `switch.sh` once (first adopt / different image), then
-`./build.sh && ./upgrade.sh` for every subsequent change.
+**Summary of the loop:** `./setup.sh` once to adopt (build + `bootc switch` onto
+an installed Silverblue), then `./build.sh && ./upgrade.sh` for every subsequent
+change.
 
 ## Customizing further
 
