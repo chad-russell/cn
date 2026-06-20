@@ -41,7 +41,7 @@ layout {
 }
 
 // Noctalia is the shell. Launched by niri so it inherits WAYLAND_DISPLAY and
-// the D-Bus session bus set up by dbus-run-session in start.sh.
+// the D-Bus session bus set up by the container session helper.
 spawn-at-startup "noctalia"
 
 hotkey-overlay {
@@ -79,12 +79,19 @@ binds {
     Mod+S     { spawn-sh "noctalia msg panel-toggle control-center"; }
     Mod+Comma { spawn-sh "noctalia msg settings-toggle"; }
 
-    // Volume / brightness routed through Noctalia (keeps its OSD in sync).
+    // Volume goes through Noctalia -> PipeWire: the host pipewire-0 socket is
+    // reachable because start.sh forwards the real /run/user/$UID.
+    //
+    // Brightness uses the baked niri-brightness helper instead of
+    // `noctalia msg brightness-up`: brightnessctl drives the backlight via
+    // logind over the forwarded system bus, and pokes Noctalia's OSD directly.
+    // Noctalia's own brightness-up/down freezes in a container because sysfs
+    // inotify never fires (see ./niri-brightness).
     XF86AudioRaiseVolume  { spawn-sh "noctalia msg volume-up"; }
     XF86AudioLowerVolume  { spawn-sh "noctalia msg volume-down"; }
     XF86AudioMute         { spawn-sh "noctalia msg volume-mute"; }
-    XF86MonBrightnessUp   { spawn-sh "noctalia msg brightness-up"; }
-    XF86MonBrightnessDown { spawn-sh "noctalia msg brightness-down"; }
+    XF86MonBrightnessUp   { spawn-sh "niri-brightness up"; }
+    XF86MonBrightnessDown { spawn-sh "niri-brightness down"; }
 
     Mod+O repeat=false { toggle-overview; }
     Mod+Q repeat=false { close-window; }

@@ -3,12 +3,20 @@
 # Base: your local cdev image (Fedora). This adds:
 #   - niri, git/nightly build from the yalter/niri-git COPR
 #   - Noctalia shell v5 (package: noctalia-git) from the lionheartp/Hyprland COPR
-#   - the session plumbing a non-systemd container needs:
-#       * dbus-daemon -> provides dbus-run-session (no session bus otherwise)
-#       * seatd        -> seat broker niri talks to via LIBSEAT_BACKEND=seatd
-#                          (there is no logind inside the container, and the
-#                           builtin libseat backend can't acquire the session
-#                           from a podman exec, same situation as cosmic-comp)
+#   - the session plumbing a container needs to run a compositor:
+#       * dbus-daemon -> provides dbus-run-session (a fresh session bus scoped
+#                        to niri, so `niri --session` can publish WAYLAND_DISPLAY
+#                        into the D-Bus activation environment)
+#       * seatd        -> runs AS ROOT inside the container to acquire DRM master
+#                        and open input devices, then hands those fds to niri over
+#                        a unix socket. niri (and everything it spawns) runs AS
+#                        THE REAL USER, which is the whole point: PipeWire
+#                        authenticates clients by uid, so a uid-1000 Noctalia can
+#                        talk to the host pipewire-0 socket (root could not), and
+#                        logind trusts the session owner (uid 1000) for
+#                        SetBrightness. This is the textbook seatd deployment.
+#   - brightnessctl + niri-brightness -> backlight keys that work despite sysfs
+#                        inotify not firing in a container (see ./niri-brightness)
 #   - a terminal (alacritty) and launcher (fuzzel) so the desktop is usable
 #
 # The GL/DRI stack already lives in the base cdev image (it is the same one the
@@ -35,18 +43,31 @@ RUN dnf -y copr enable yalter/niri-git && \
 # Noctalia v5 lives in this COPR (the package is named noctalia-git).
 RUN dnf -y copr enable lionheartp/Hyprland
 
-# niri + Noctalia + the non-systemd session plumbing + a usable terminal and
-# launcher. dnf resolves the newest versions available in the COPRs.
+# niri + Noctalia + session/seat plumbing + backlight tooling + a usable
+# terminal and launcher. dnf resolves the newest versions available in the
+# COPRs.
 RUN dnf install -y \
         niri \
         noctalia-git \
         dbus-daemon \
         seatd \
+        brightnessctl \
         alacritty \
         fuzzel \
+        firefox \
         dejavu-sans-fonts \
         dejavu-sans-mono-fonts && \
     dnf clean all
+
+# Container-safe backlight helper: brightnessctl (logind) + Noctalia OSD. Bound
+# to the XF86MonBrightness keys in config.kdl — see ./niri-brightness for why
+# Noctalia's own brightness-up/down freezes in a container.
+COPY niri-brightness /usr/local/bin/niri-brightness
+
+# Session helper: runs seatd as root, then drops to the real host uid/gid for
+# niri + its clients. Keeping this in the image makes start.sh much smaller.
+COPY container-session.sh /usr/local/bin/niri-container-session
+RUN chmod 0755 /usr/local/bin/niri-brightness /usr/local/bin/niri-container-session
 
 # Default niri config: autostart Noctalia, sensible key binds, rounded corners.
 # /etc/niri/config.kdl is niri's system-wide fallback (used because no per-user
