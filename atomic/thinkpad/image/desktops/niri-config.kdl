@@ -1,17 +1,17 @@
-// Niri config for the niri-dev test container.
-// Baked into the image at /etc/niri/config.kdl (niri's system-wide fallback).
+// Desktop-blueprint prototype niri config.
 //
-// This is a trimmed version of niri's upstream default-config.kdl with:
-//   - waybar replaced by Noctalia v5 (spawn-at-startup "noctalia")
-//   - Noctalia's key binds, settings window rule, and xdg-activation flag
-//     (see https://docs.noctalia.dev/v5/compositor-settings/niri/)
-// Edit live: save this file and niri reloads it. Validate with: niri validate
+// This is a copy of niri/config.kdl with intentional behavioral changes:
+//   Mod+T/B/E -> launch host apps / Flatpaks via systemd-run --user
+//   (bridged by session-spawn; the host's flatpak-session-helper does the
+//   actual spawning on the host session bus).
+//
+// The goal is to prove the control-plane split:
+//   - niri + Noctalia live in the desktop session sandbox
+//   - app launching escapes to the host via systemd-run --user
+//   - apps themselves stay as host Flatpaks / host binaries
 
-// Ask apps to drop their client-side decorations so niri's rounded corners /
-// focus ring render cleanly.
 prefer-no-csd
 
-// Where on-disk screenshots go.
 screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%S.png"
 
 input {
@@ -40,21 +40,17 @@ layout {
     default-column-width { proportion 0.5; }
 }
 
-// Noctalia is the shell. Launched by niri so it inherits WAYLAND_DISPLAY and
-// the D-Bus session bus set up by the container session helper.
-spawn-at-startup "noctalia"
+// Keep the prototype minimal: no host-installed shell helpers required.
 
 hotkey-overlay {
     // Leave the "Important Hotkeys" popup on; handy for a test session.
 }
 
-// Rounded corners for everything.
 window-rule {
     geometry-corner-radius 12
     clip-to-geometry true
 }
 
-// Noctalia's own settings window: float it at a sensible size.
 window-rule {
     match app-id="dev.noctalia.Noctalia.Settings"
     open-floating true
@@ -62,7 +58,6 @@ window-rule {
     default-window-height { fixed 920; }
 }
 
-// Lets Noctalia activate windows and run notification actions.
 debug {
     honor-xdg-activation-with-invalid-serial
 }
@@ -71,27 +66,15 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
     // Programs. Mod = Super on a TTY.
-    Mod+T { spawn "alacritty"; }
+    // Each launches on the host via systemd-run --user (session-spawn);
+    // the spawned app targets this compositor automatically.
+    Mod+T { spawn "/run/desktop-blueprint/bin/session-spawn" "host" "/usr/bin/ptyxis" "-s"; }
+    Mod+B { spawn "/run/desktop-blueprint/bin/session-spawn" "browser"; }
+    Mod+E { spawn "/run/desktop-blueprint/bin/session-spawn" "editor"; }
     Mod+D { spawn "fuzzel"; }
 
-    // Noctalia shell controls (replaces default Mod+Space / Mod+Comma binds).
-    Mod+Space { spawn-sh "noctalia msg panel-toggle launcher"; }
-    Mod+S     { spawn-sh "noctalia msg panel-toggle control-center"; }
-    Mod+Comma { spawn-sh "noctalia msg settings-toggle"; }
-
-    // Volume goes through Noctalia -> PipeWire: the host pipewire-0 socket is
-    // reachable because start.sh forwards the real /run/user/$UID.
-    //
-    // Brightness uses the baked niri-brightness helper instead of
-    // `noctalia msg brightness-up`: brightnessctl drives the backlight via
-    // logind over the forwarded system bus, and pokes Noctalia's OSD directly.
-    // Noctalia's own brightness-up/down freezes in a container because sysfs
-    // inotify never fires (see ./niri-brightness).
-    XF86AudioRaiseVolume  { spawn-sh "noctalia msg volume-up"; }
-    XF86AudioLowerVolume  { spawn-sh "noctalia msg volume-down"; }
-    XF86AudioMute         { spawn-sh "noctalia msg volume-mute"; }
-    XF86MonBrightnessUp   { spawn-sh "niri-brightness up"; }
-    XF86MonBrightnessDown { spawn-sh "niri-brightness down"; }
+    // Leave room for later shell integration, but keep the prototype runnable
+    // with only the rootfs payload + host Flatpaks.
 
     Mod+O repeat=false { toggle-overview; }
     Mod+Q repeat=false { close-window; }
@@ -144,7 +127,6 @@ binds {
     Mod+Ctrl+8 { move-column-to-workspace 8; }
     Mod+Ctrl+9 { move-column-to-workspace 9; }
 
-    // Consume / expel windows into/out of columns.
     Mod+BracketLeft  { consume-or-expel-window-left; }
     Mod+BracketRight { consume-or-expel-window-right; }
 
@@ -168,7 +150,6 @@ binds {
     Ctrl+Print { screenshot-screen; }
     Alt+Print  { screenshot-window; }
 
-    // Exit (shows a confirmation dialog).
     Mod+Shift+E     { quit; }
     Ctrl+Alt+Delete { quit; }
 }

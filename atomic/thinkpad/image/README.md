@@ -30,11 +30,11 @@ the top-level README:
   not container namespaces. The wrapper `vicinae-bwrap` keeps Vicinae's mutable
   XDG state isolated in the same plain-directory style as Noctalia while
   preserving native-fast `vicinae toggle` IPC from niri.
-- **Optional: a whole Niri session run inside bubblewrap.** `niri-bwrap` applies
-  the same containment idea to the compositor *itself* — every writable path in
-  the login session is confined to `~/.local/share/bwrap/niri-session`. It is
-  installed as a SECOND GDM entry ("Niri (bubblewrap)") next to stock Niri, so
-  you can A/B them from the login gear menu. Experimental — see
+- **Optional: a whole Niri session run inside bubblewrap.** The current
+  prototype keeps the GDM entry and launcher in writable `/usr/local`, while the
+  session payload itself lives in `image/desktops/` + an OCI-derived rootfs
+  under `image/state/rootfs/`. That means you can update the launcher script or
+  refresh the rootfs without a `bootc` rebuild. Experimental — see
   [Niri session via bwrap](#niri-session-via-bwrap-experimental).
 Everything else is stock.
 
@@ -63,8 +63,7 @@ forward and `dnf5` is the blessed build-time package manager.
 image/
 ├── Containerfile        # FROM silverblue:44 + distrobox + niri + Noctalia/Vicinae bwrap + bootc lint
 ├── noctalia-bwrap       # host-session Noctalia wrapper with isolated XDG state
-├── niri-bwrap           # EXPERIMENTAL: whole Niri session in a bwrap mount sandbox
-├── niri-bwrap.desktop   # the matching GDM wayland-session entry ("Niri (bubblewrap)")
+├── niri-bwrap.desktop   # GDM wayland-session entry (stable Exec=/usr/local/bin/niri-bwrap-session)
 ├── vicinae-bwrap        # host-session Vicinae wrapper with isolated XDG state
 ├── vicinae-host-launch  # launch-prefix bridge: escape Vicinae app launches back to host
 ├── vicinae-settings.json # seeded Vicinae config (launch prefix, theme/font defaults)
@@ -296,8 +295,10 @@ noctalia/vicinae state, anything niri spawns directly — is confined to a singl
 volume root, so the usual per-login filesystem cruft (terminal histories,
 browser caches, stray dotfiles, …) physically cannot land on the real host.
 
-It is wired up as a **separate GDM session entry**, so at the login gear menu
-you get both:
+It is wired up as a **separate GDM session entry**. On Silverblue the practical
+way to do that without rebuilding the host is to install the entry under
+`/usr/local/share/wayland-sessions/` and point it at a stable writable path,
+`/usr/local/bin/niri-bwrap-session`, which symlinks back into this repo.
 
 - **Niri** — stock, unchanged, reads `~/.config/niri`.
 - **Niri (bubblewrap)** — the sandboxed entry, reads its config from the volume.
@@ -305,11 +306,12 @@ you get both:
 Pick the normal one any time the sandboxed one misbehaves; nothing else changes.
 
 ```text
-~/.local/share/bwrap/niri-session/
+image/state/niri-session/
 ├── xdg-config/  # mounted as $HOME/.config; XDG_CONFIG_HOME   (niri config here)
 ├── xdg-state/   # mounted as $HOME/.local/state; XDG_STATE_HOME
 ├── xdg-data/    # mounted as $HOME/.local/share; XDG_DATA_HOME
-└── xdg-cache/   # mounted as $HOME/.cache; XDG_CACHE_HOME
+├── xdg-cache/   # mounted as $HOME/.cache; XDG_CACHE_HOME
+└── logs/
 ```
 
 Inside the bubblewrap mount namespace, the real host `$HOME` is hidden behind a
@@ -434,52 +436,22 @@ Override the state root if desired:
 NIRI_BWRAP_VOLUME_ROOT="$HOME/Backups/niri-session-state" niri-bwrap
 ```
 
-### Iterating on `niri-bwrap` without a rebuild
+### Iterating without a rebuild
 
-Rebuilding the image (`./build.sh && ./upgrade.sh && systemctl reboot`) for
-every tweak to `niri-bwrap` is slow. Two facts make a no-rebuild loop possible:
-
-- `/usr/local` is writable on Silverblue (it is `/var/usrlocal`), and
-- `/usr/local/share` is in the default `XDG_DATA_DIRS`, so GDM scans
-  `/usr/local/share/wayland-sessions/` for session entries.
-
-So a **separate** dev session entry dropped there takes effect on the next
-login, with no reboot. The repo ships `niri-bwrap-dev.desktop` for exactly
-this — it is intentionally NOT installed by the Containerfile (it is a
-host-local dev convenience, kept out of the image). Its `Exec` points at a
-stable name `/usr/local/bin/niri-bwrap-dev`, which you symlink once at your
-repo checkout, so editing `image/niri-bwrap` → log out → log back in is a full
-test cycle.
-
-One-time setup (on the laptop):
+On Silverblue, `/usr/local` is writable and GDM scans
+`/usr/local/share/wayland-sessions/`, so the fast loop is:
 
 ```bash
-cd /path/to/repo            # wherever atomic/thinkpad is checked out
-
-# 1. Point a stable name at the repo's working-tree script. Re-run only if you
-#    move/re-clone the checkout; nothing else needs to change.
-sudo ln -sf "$PWD/image/niri-bwrap" /usr/local/bin/niri-bwrap-dev
-chmod +x image/niri-bwrap                       # target must be executable
-
-# 2. Install the dev session entry into the writable path GDM scans.
-sudo install -d /usr/local/share/wayland-sessions
-sudo install -m 0644 image/niri-bwrap-dev.desktop \
-     /usr/local/share/wayland-sessions/niri-bwrap-dev.desktop
+cd image/desktops
+./install-gdm-session.sh      # one-time
+./prepare-rootfs.sh --refresh # whenever the OCI image changed
+# edit launch-bwrap-session.sh / bwrap-session.sh / niri-config.kdl
+# then: log out -> choose "Niri (bubblewrap)"
 ```
 
-Log out and the GDM gear menu lists **Niri (bubblewrap, dev)** next to the
-image-shipped **Niri (bubblewrap)**. The dev entry runs whatever bytes are at
-`image/niri-bwrap` *right now*, so the loop is:
-
-```bash
-$EDITOR image/niri-bwrap          # tweak
-# GDM: log out → pick "Niri (bubblewrap, dev)" → reproduce
-tail -n 200 ~/.local/share/bwrap/niri-session/session.log
-```
-
-When the script is good, bake it with the normal
-`./build.sh && ./upgrade.sh && systemctl reboot`; the dev entry keeps working
-afterward because it points at the repo, not `/usr/bin`.
+The shipped desktop file points at a stable path,
+`/usr/local/bin/niri-bwrap-session`, so changing the repo script does not
+require a `bootc` rebuild or a rewritten desktop entry.
 
 > **Do not test by switching to a VT** (e.g. VT3) and running `niri-bwrap`
 > manually. A raw VT login gives niri a `tty` logind session, not a `wayland`
@@ -490,12 +462,12 @@ afterward because it points at the repo, not `/usr/bin`.
 
 ## Updating after a change
 
-Edit `Containerfile`, `noctalia-bwrap`, `niri-bwrap`, `niri-bwrap.desktop`,
+Edit `Containerfile`, `noctalia-bwrap`, `niri-bwrap.desktop`,
 `vicinae-bwrap`, `vicinae-host-launch`, or `vicinae-settings.json`, then
-`./build.sh && ./upgrade.sh && systemctl reboot`. Note this is **upgrade**, not
-switch — see below. Because the image is rebuilt fresh each time, this is a
-clean, reproducible cycle — no accumulating client-side `rpm-ostree install`
-state to drift.
+`./build.sh && ./upgrade.sh && systemctl reboot`. For the experimental Niri
+session launcher itself (`image/desktops/*.sh`) and its OCI rootfs payload, use
+`image/desktops/install-gdm-session.sh` + `prepare-rootfs.sh --refresh` instead;
+those do **not** need a host image rebuild.
 
 To pull newer Fedora updates into the base, `build.sh` uses `--pull=newer`, so
 a rebuild picks up the latest 44.x base automatically.

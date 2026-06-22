@@ -1,8 +1,8 @@
 [Desktop Entry]
 Name=Niri (bubblewrap)
 GenericName=Wayland Compositor
-Comment=Niri compositor run inside a bubblewrap mount sandbox: writable state is confined to ~/.local/share/bwrap/niri-session
-Exec=/usr/bin/niri-bwrap
-TryExec=/usr/bin/niri-bwrap
+Comment=Niri compositor run inside a bubblewrap mount sandbox with self-contained state under image/state/
+Exec=/usr/local/bin/niri-bwrap-session
+TryExec=/usr/local/bin/niri-bwrap-session
 Type=Application
 DesktopNames=Niri

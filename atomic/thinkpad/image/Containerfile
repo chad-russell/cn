@@ -81,12 +81,12 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install dnf5-plugins && \
-    dnf5 -y copr enable yalter/niri && \
-    dnf5 -y install niri && \
-    dnf5 -y copr disable yalter/niri && \
     dnf5 -y install fastfetch && \
-    dnf5 -y remove toolbox && \
-    dnf5 -y remove alacritty
+    dnf5 -y remove alacritty && \
+    dnf5 -y install neovim
+# dnf5 -y copr enable yalter/niri && \
+# dnf5 -y install niri && \
+# dnf5 -y copr disable yalter/niri && \
 
 # ---- 3. Noctalia: host binary + bwrap state isolation ------------------
 # Noctalia is a desktop shell, so it needs native access to the host Wayland
@@ -98,15 +98,15 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 #
 # The Noctalia COPR is enabled only for this install layer, then disabled so no
 # third-party repo persists in the booted image.
-RUN --mount=type=cache,dst=/var/cache/libdnf5 \
-    --mount=type=cache,dst=/var/cache/rpm-ostree \
-    dnf5 -y install brightnessctl && \
-    dnf5 -y copr enable lionheartp/Hyprland && \
-    dnf5 -y install noctalia-git && \
-    dnf5 -y copr disable lionheartp/Hyprland
+# RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    # --mount=type=cache,dst=/var/cache/rpm-ostree \
+    # dnf5 -y install brightnessctl && \
+    # dnf5 -y copr enable lionheartp/Hyprland && \
+    # dnf5 -y install noctalia-git && \
+    # dnf5 -y copr disable lionheartp/Hyprland
 
-COPY noctalia-bwrap /usr/bin/noctalia-bwrap
-RUN chmod 0755 /usr/bin/noctalia-bwrap
+# COPY noctalia-bwrap /usr/bin/noctalia-bwrap
+# RUN chmod 0755 /usr/bin/noctalia-bwrap
 
 # ---- 4. Vicinae: host binary + bwrap state isolation ---------------------
 # Vicinae wants the same thing Noctalia does from this repo's point of view:
@@ -164,10 +164,9 @@ RUN chmod 0755 /usr/bin/vicinae-bwrap /usr/bin/vicinae-host-launch
 # login gear menu offers both "Niri" (normal) and "Niri (bubblewrap)". The
 # stock entry is left untouched — if the sandboxed session misbehaves, just log
 # out and pick the normal one. See README "Niri session via bwrap".
-COPY niri-bwrap /usr/bin/niri-bwrap
 COPY niri-bwrap.desktop /usr/share/wayland-sessions/niri-bwrap.desktop
-RUN chmod 0755 /usr/bin/niri-bwrap && \
-    chmod 0644 /usr/share/wayland-sessions/niri-bwrap.desktop
+RUN chmod 0644 /usr/share/wayland-sessions/niri-bwrap.desktop
+RUN rm /usr/share/wayland-sessions/gnome-classic.desktop
 
 # ---- 5. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/
