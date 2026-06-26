@@ -3,6 +3,9 @@ env.*
 .env
 *.env
 
+# Rust
+**/target/
+
 # Decrypted secrets
 secrets/*.yml
 secrets/*.env

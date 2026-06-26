@@ -1,0 +1,78 @@
+{
+  "$schema": "https://example.invalid/desktoppak-manifest-v1.schema.json",
+  "name": "niri",
+  "display_name": "Niri (bubblewrap)",
+  "session_type": "wayland",
+  "exec": "/usr/bin/niri",
+  "config": {
+    "seed": [
+      {
+        "source": "/usr/share/desktoppak/defaults/niri/config.kdl",
+        "target": "/home/session/.config/niri/config.kdl"
+      },
+      {
+        "source": "/usr/share/desktoppak/defaults/vicinae/settings.json",
+        "target": "/home/session/.config/vicinae/settings.json"
+      }
+    ]
+  },
+  "env": {
+    "XDG_SESSION_DESKTOP": "niri",
+    "XDG_CURRENT_DESKTOP": "niri",
+    "XDG_SESSION_TYPE": "wayland",
+    "LIBSEAT_BACKEND": "logind",
+    "XDG_DATA_DIRS": "/run/desktoppak/host-share:/run/desktoppak/host-system-share:/run/desktoppak/host-flatpak/exports/share:/run/desktoppak/system-flatpak/exports/share:/usr/local/share:/usr/share",
+    "QT_QPA_PLATFORM": "wayland",
+    "QT_WAYLAND_DISABLE_WINDOWDECORATIONS": "1"
+  },
+  "host_paths": [
+    {
+      "type": "ro",
+      "host": "$HOME/Pictures/Wallpapers",
+      "guest": "/home/session/Pictures/Wallpapers",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "$HOME/.local/share/applications",
+      "guest": "/run/desktoppak/host-share/applications",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "$HOME/.local/share/icons",
+      "guest": "/run/desktoppak/host-share/icons",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "/usr/share/applications",
+      "guest": "/run/desktoppak/host-system-share/applications",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "/usr/share/icons",
+      "guest": "/run/desktoppak/host-system-share/icons",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "$HOME/.local/share/flatpak",
+      "guest": "/run/desktoppak/host-flatpak",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "/var/lib/flatpak",
+      "guest": "/run/desktoppak/system-flatpak",
+      "optional": true
+    }
+  ],
+  "binds": [
+    { "type": "ro", "host": "/run/dbus", "guest": "/run/dbus" },
+    { "type": "ro", "host": "/run/udev", "guest": "/run/udev" },
+    { "type": "ro", "host": "/run/systemd", "guest": "/run/systemd" },
+    { "type": "rw", "host": "$XDG_RUNTIME_DIR", "guest": "$XDG_RUNTIME_DIR" }
+  ]
+}

@@ -1,0 +1,37 @@
+ARG FEDORA_MAJOR_VERSION=44
+FROM registry.fedoraproject.org/fedora:${FEDORA_MAJOR_VERSION}
+
+RUN dnf -y install \
+      dnf-plugins-core \
+      niri \
+      xwayland-satellite \
+      fuzzel \
+      flatpak \
+      dbus-x11 \
+      xdg-utils \
+      xdg-desktop-portal \
+      xdg-desktop-portal-gtk \
+      flatpak-xdg-utils \
+      mesa-dri-drivers \
+      mesa-vulkan-drivers \
+      vulkan-loader \
+      pipewire-libs \
+      wireplumber \
+      which \
+      findutils \
+      procps-ng \
+      shadow-utils \
+      bash \
+      coreutils \
+      util-linux \
+      less \
+      && dnf -y copr enable quadratech188/vicinae \
+      && dnf -y copr enable lionheartp/Hyprland \
+      && dnf -y install vicinae noctalia-git \
+      && dnf clean all
+
+COPY manifest.json /usr/share/desktoppak/manifest.json
+COPY niri-config.kdl /usr/share/desktoppak/defaults/niri/config.kdl
+COPY vicinae-settings.json /usr/share/desktoppak/defaults/vicinae/settings.json
+
+CMD ["/usr/bin/bash"]

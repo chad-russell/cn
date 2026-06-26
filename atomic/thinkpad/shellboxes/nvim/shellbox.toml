@@ -1,0 +1,47 @@
+# shellbox nvim — a self-contained neovim
+#
+# Config, data, state, and cache all live inside THIS directory, so nvim is
+# fully self-contained and never touches ~/.config, ~/.local/share, etc. $HOME
+# is left alone, so ~, git config, ssh, and your prompt all behave normally —
+# only nvim's storage is redirected.
+#
+# Because env values are now plain strings (no {manifest_dir} expansion), the
+# XDG paths below are absolute literals. They point at subdirectories of this
+# very directory, which means THIS DIRECTORY must live at the path spelled out
+# below. If you relocate it, update the four paths to match.
+#
+# Recommended workflow (symlink, not copy):
+#
+#   1. Keep this directory somewhere stable and permanent, e.g. in a dotfiles
+#      repo. The path must match the XDG_* paths below.
+#   2. Symlink it into shellbox's boxes dir so shellbox can find it:
+#
+#        shellbox link ~/Code/cn/atomic/thinkpad/shellboxes/nvim
+#        # or, from inside this directory: shellbox link
+#
+#   3. Build, mount, and export as usual:
+#
+#        shellbox build nvim
+#        sudo shellbox mount nvim
+#        shellbox export nvim nvim
+#        # add ~/.local/share/shellbox/exports/bin to PATH once, then:
+#        nvim ~/any/file
+#
+# Why symlink instead of `create --from`? With a symlink, the box directory IS
+# this directory, so nvim reads its config from here and writes its runtime
+# state (plugins, logs, cache) back here. A copy would split the vendored box
+# from your real config, and `rm --purge`/`rename` would only ever touch the
+# symlink — your nvim state in this directory is never endangered.
+
+name = "nvim"
+
+[shell]
+tools = ["nvim"]
+
+[shell.env]
+# All four XDG dirs redirect into subdirectories of this box. Adjust the prefix
+# if you relocate this directory. (The dirs below are created on demand.)
+XDG_CONFIG_HOME = "/var/home/crussell/Code/cn/atomic/thinkpad/shellboxes/nvim/config"
+XDG_DATA_HOME   = "/var/home/crussell/Code/cn/atomic/thinkpad/shellboxes/nvim/data"
+XDG_STATE_HOME  = "/var/home/crussell/Code/cn/atomic/thinkpad/shellboxes/nvim/state"
+XDG_CACHE_HOME  = "/var/home/crussell/Code/cn/atomic/thinkpad/shellboxes/nvim/cache"

@@ -1,0 +1,61 @@
+# shellbox opencode — a self-contained opencode (sst/opencode) coding agent
+#
+# Config, credentials, database, logs, and cache all live inside THIS
+# directory, so opencode is fully self-contained and never touches
+# ~/.config/opencode, ~/.local/share/opencode, etc. $HOME is left alone, so
+# ~, git config, ssh, and your prompt all behave normally — only opencode's
+# storage is redirected.
+#
+# opencode follows the XDG Base Directory spec, so redirecting the four XDG
+# vars is sufficient. Verified layout under the redirected roots:
+#
+#   config/opencode/opencode.json   # global config (auth NOT here)
+#   data/opencode/auth.json         # ← credentials live here (XDG_DATA_HOME)
+#   data/opencode/opencode.db       # session/history sqlite db
+#   data/opencode/{log,repos}/
+#   state/opencode/locks/
+#   cache/opencode/bin/             # opencode-downloaded tools
+#
+# Because env values are now plain strings (no {manifest_dir} expansion), the
+# XDG paths below are absolute literals. They point at subdirectories of this
+# very directory, which means THIS DIRECTORY must live at the path spelled out
+# below. If you relocate it, update the four paths to match.
+#
+# Recommended workflow (symlink via the `link` subcommand):
+#
+#   1. Keep this directory somewhere stable and permanent, e.g. in a dotfiles
+#      repo. The path must match the XDG_* paths below.
+#   2. Link it into shellbox's boxes dir so shellbox can find it:
+#
+#        shellbox link ~/Code/cn/atomic/thinkpad/shellboxes/opencode
+#        # or, from inside this directory: shellbox link
+#
+#   3. Build, mount, and export as usual:
+#
+#        shellbox build opencode
+#        sudo $(which shellbox) mount opencode
+#        shellbox export opencode opencode
+#        # add ~/.local/share/shellbox/exports/bin to PATH once, then:
+#        opencode
+#
+# Why link instead of `create --from`? With a link, the box directory IS this
+# directory, so opencode reads its config from here and writes its runtime
+# state (db, logs, sessions, auth) back here. A copy would split the vendored
+# box from your real config, and `rm --purge`/`rename` would only ever touch
+# the link — your opencode state in this directory is never endangered.
+#
+# NOTE: data/ holds auth.json (API credentials) and the session sqlite db.
+# Both are gitignored here by default; see .gitignore.
+
+name = "opencode"
+
+[shell]
+tools = ["opencode"]
+
+[shell.env]
+# Redirect all of opencode's storage into subdirs of this box. Adjust the
+# prefix if you relocate this directory. (The dirs are created on demand.)
+XDG_CONFIG_HOME = "/var/home/crussell/Code/cn/atomic/thinkpad/shellboxes/opencode/config"
+XDG_DATA_HOME   = "/var/home/crussell/Code/cn/atomic/thinkpad/shellboxes/opencode/data"
+XDG_STATE_HOME  = "/var/home/crussell/Code/cn/atomic/thinkpad/shellboxes/opencode/state"
+XDG_CACHE_HOME  = "/var/home/crussell/Code/cn/atomic/thinkpad/shellboxes/opencode/cache"

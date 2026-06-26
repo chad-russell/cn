@@ -1,0 +1,24 @@
+# shellbox pi — self-contained pi coding agent (TUI)
+#
+# Installs the pi coding agent globally plus the CLI/runtime deps it expects
+# for its bash/read/edit/write tools (git, ripgrep, fd, jq, etc.). The image
+# only provides pi and its toolchain — cwd, $HOME, and identity come from
+# bwrap (see shellbox docs).
+#
+# pi's own config/state is redirected into this box via PI_CODING_AGENT_DIR
+# in shellbox.toml, so settings, extensions, skills, themes, sessions, and
+# auth all live in THIS directory instead of ~/.pi.
+
+FROM fedora:latest
+
+RUN dnf install -y \
+      git ripgrep fd-find \
+      jq \
+      nodejs npm \
+      findutils tar gzip unzip wget curl \
+    && dnf clean all
+
+# Install pi globally.
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
+CMD ["pi"]

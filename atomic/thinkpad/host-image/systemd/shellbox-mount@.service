@@ -1,0 +1,32 @@
+[Unit]
+# shellbox-mount@<box>.service — auto-mount a shellbox's composefs rootfs.
+#
+# This is a TEMPLATE unit: the instance name (%i) is the box name. Enable one
+# instance per box you want mounted at boot:
+#
+#     systemctl enable --now shellbox-mount@default.service
+#     systemctl enable --now shellbox-mount@opencode.service
+#
+# Delegates entirely to `shellbox mount`/`unmount`, which owns all path logic
+# (the image.cfs location, the composefs `basedir=` store, chown-to-user,
+# idempotency, the mounted flag). This unit is therefore a stable one-liner
+# that never needs to know where anything lives — shellbox is the single
+# source of truth, matching the rest of its design.
+Description=Shellbox composefs mount: %i
+# Mount after the user's home filesystem is available, since the image/state
+# live under ~/.local. local-fs.target covers the common single-disk laptop
+# case; home is on the root fs here, so this is sufficient.
+After=local-fs.target
+# Bring mounts up before login sessions start, so user services (e.g.
+# opencode-web.service) that depend on a box can assume it's present.
+Before=systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Root is required for mount(2)/CAP_SYS_ADMIN; `shellbox mount` enforces it.
+ExecStart=/home/crussell/.local/bin/shellbox mount %i
+ExecStop=/home/crussell/.local/bin/shellbox unmount %i
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+# shellbox nvim — self-contained neovim
+#
+# Builds neovim plus the common build/runtime deps that plugin ecosystems
+# (lazy.nvim, packer, nvim-treesitter, LSP servers, etc.) need.
+#
+# Runtime cwd, $HOME, and identity come from bwrap (see shellbox docs); this
+# image only provides the editor and its toolchain.
+
+FROM fedora:latest
+
+RUN dnf install -y \
+      htop \
+      ripgrep \
+      fd-find \
+      bat \
+    && dnf clean all

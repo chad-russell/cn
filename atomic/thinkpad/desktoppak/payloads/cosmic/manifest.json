@@ -1,0 +1,55 @@
+{
+  "$schema": "https://example.invalid/desktoppak-manifest-v1.schema.json",
+  "name": "cosmic",
+  "display_name": "COSMIC (desktoppak)",
+  "session_type": "wayland",
+  "exec": "/usr/bin/cosmic-session",
+  "env": {
+    "XDG_SESSION_DESKTOP": "COSMIC",
+    "XDG_CURRENT_DESKTOP": "COSMIC",
+    "XDG_SESSION_TYPE": "wayland",
+    "LIBSEAT_BACKEND": "logind",
+    "XDG_DATA_DIRS": "/run/desktoppak/host-share:/run/desktoppak/host-system-share:/run/desktoppak/host-flatpak/exports/share:/run/desktoppak/system-flatpak/exports/share:/usr/local/share:/usr/share",
+    "GDK_BACKEND": "wayland,x11",
+    "QT_QPA_PLATFORM": "wayland",
+    "DCONF_PROFILE": "/usr/share/dconf/profile/cosmic"
+  },
+  "host_paths": [
+    {
+      "type": "ro",
+      "host": "$HOME/.local/share/applications",
+      "guest": "/run/desktoppak/host-share/applications",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "$HOME/.local/share/icons",
+      "guest": "/run/desktoppak/host-share/icons",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "/usr/share/applications",
+      "guest": "/run/desktoppak/host-system-share/applications",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "/usr/share/icons",
+      "guest": "/run/desktoppak/host-system-share/icons",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "$HOME/.local/share/flatpak",
+      "guest": "/run/desktoppak/host-flatpak",
+      "optional": true
+    },
+    {
+      "type": "ro",
+      "host": "/var/lib/flatpak",
+      "guest": "/run/desktoppak/system-flatpak",
+      "optional": true
+    }
+  ]
+}

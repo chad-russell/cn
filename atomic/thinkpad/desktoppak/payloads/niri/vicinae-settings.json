@@ -1,0 +1,22 @@
+{
+  "$schema": "https://vicinae.com/schemas/config.json",
+  "font": {
+    "normal": {
+      "family": "Noto Sans Mono",
+      "size": 13
+    }
+  },
+  "theme": {
+    "dark": {
+      "name": "zenwritten-dark"
+    }
+  },
+  "providers": {
+    "applications": {
+      "preferences": {
+        "defaultAction": "focus",
+        "launchPrefix": "desktoppak-spawn host"
+      }
+    }
+  }
+}

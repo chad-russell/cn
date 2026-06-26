@@ -1,0 +1,10 @@
+# Machine-local opencode state — not version controlled.
+# These dirs are created/managed by opencode at runtime via XDG redirection.
+#
+# NOTE: data/ also holds auth.json (API credentials) and opencode.db (session
+# history), which is why the whole tree is ignored by default. Commit config/
+# files (e.g. opencode.json) explicitly if you want them version controlled.
+/config/
+/data/
+/state/
+/cache/
