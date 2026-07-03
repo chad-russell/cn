@@ -23,13 +23,34 @@ over `run`.
 
 ## Source layout
 
-Currently a flat module structure under `src/`:
+Module structure under `src/`:
 
 ```
 src/
-  main.rs        # clap parse + dispatch to app::cmd_*
+  main.rs        # clap parse + dispatch to commands::cmd_*
   cli.rs         # clap structs/enums (Command, CreateArgs, RunArgs, ExportArgs, ...)
-  app.rs         # all command handlers + helpers (prepare, mount, runtime, identity, exports)
+  commands/      # one file per command + shared helpers (see below)
+    mod.rs       # module decls + `pub use` re-exports of cmd_*
+    common.rs    # cross-command helpers: require_manifest, is_mountpoint,
+                 #   remove_tree_force, require_root, normalize_tools, home_dir,
+                 #   describe_source, default_shell, chown_mount_dir_to_sudo_user
+    ui.rs        # output styling: colors_enabled, style_*, InspectStatus,
+                 #   inspect_status, format_last_built_at
+    wrappers.rs  # wrapper-script generation: write_wrapper_script,
+                 #   current_shellbox_invocation, shell_quote
+    create.rs    # cmd_create + Import + import_from_* + copy_dir_contents
+    link.rs      # cmd_link
+    prepare.rs   # cmd_prepare + export_image_rootfs + normalize_rootfs_permissions
+    identity.rs  # prepare-time /etc injection: passwd/group/nsswitch merge,
+                 #   name resolution, desktop + host-exec mount points
+    mount.rs     # cmd_mount + cmd_unmount (siblings, share require_root)
+    run.rs       # cmd_run + cmd_shell + ensure_runtime_ready
+    runtime.rs   # bwrap execution: run_box_command, bwrap_command, run_in_box(_fuse),
+                 #   forwarded_path, create_shell_session, run_host_shell
+    rm.rs        # cmd_rm
+    list.rs      # cmd_list
+    inspect.rs   # cmd_inspect
+    export.rs    # cmd_export + cmd_unexport + cmd_list_exports + ExportRecord
   config.rs      # BoxManifest (TOML, source of truth) + ShellConfig/HostConfig + name/tool validation
   host_exec.rs   # parent-side host-exec socket server + systemd-run pump (the [host] tools bridge)
   metadata.rs    # BoxMetadata (JSON cache/hint)
@@ -38,8 +59,10 @@ src/
   fuse.rs        # rootless FUSE composefs runtime
 ```
 
-There is no `commands/` module split yet; `app.rs` holds everything.
-A future refactor could split it, but keep behavior identical.
+Command dispatch lives in `main.rs`; handlers are `commands::cmd_*`. Each command
+is a thin module over `super::{common, ui, wrappers}` and (where needed)
+`identity`/`runtime`. Helper items are `pub(super)`; the 13 `cmd_*` entry points
+are re-exported from `commands/mod.rs`.
 
 The `shellbox-host-exec` binary lives in the separate `host-exec-helper/`
 workspace member crate (zero dependencies, so it can be statically linked).
@@ -119,7 +142,7 @@ invariants.
 
 ## Commands & behavior
 
-Command dispatch lives in `main.rs`; handlers are `app::cmd_*`.
+Command dispatch lives in `main.rs`; handlers are `commands::cmd_*`.
 
 ### `create`
 - Args: `--name`, `--image`, repeatable `--tool`, `--from`, `--force`
