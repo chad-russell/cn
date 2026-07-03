@@ -9,15 +9,15 @@ implementation reference.
 
 ## What shellbox is
 
-A Rust CLI that builds named dev environments ("boxes") from OCI images or
-Containerfiles into composefs-backed read-only root filesystems, and runs them
-rootlessly with `bwrap`. It supports two workflows:
+A Rust CLI that materializes named dev environments ("boxes") from OCI images
+into composefs-backed read-only root filesystems, and runs them rootlessly with
+`bwrap`. It supports two workflows:
 
 - **devshell** (`shell`, `export`): surface box tools into the host shell
-- **runtime** (`run`, `enter`): execute inside the box rootfs
+- **runtime** (`run`): execute inside the box rootfs
 
-`run` and `enter` are runtime primitives; `shell` and `export` are thin
-surfacing layers over `run`.
+`run` is the runtime primitive; `shell` and `export` are thin surfacing layers
+over `run`.
 
 ---
 
@@ -29,15 +29,20 @@ Currently a flat module structure under `src/`:
 src/
   main.rs        # clap parse + dispatch to app::cmd_*
   cli.rs         # clap structs/enums (Command, CreateArgs, RunArgs, ExportArgs, ...)
-  app.rs         # all command handlers + helpers (build, mount, runtime, identity, exports, migrate)
-  paths.rs       # XDG path resolution (respects SUDO_UID under sudo)
-  config.rs      # BoxManifest (TOML, source of truth) + ShellConfig + name/tool validation
+  app.rs         # all command handlers + helpers (prepare, mount, runtime, identity, exports)
+  config.rs      # BoxManifest (TOML, source of truth) + ShellConfig/HostConfig + name/tool validation
+  host_exec.rs   # parent-side host-exec socket server + systemd-run pump (the [host] tools bridge)
   metadata.rs    # BoxMetadata (JSON cache/hint)
+  paths.rs       # XDG path resolution (respects SUDO_UID under sudo)
   util.rs        # subprocess helpers (run_command, command_output, run_command_inherit)
+  fuse.rs        # rootless FUSE composefs runtime
 ```
 
-There is no `commands/` or `build/` module split yet; `app.rs` holds everything.
+There is no `commands/` module split yet; `app.rs` holds everything.
 A future refactor could split it, but keep behavior identical.
+
+The `shellbox-host-exec` binary lives in the separate `host-exec-helper/`
+workspace member crate (zero dependencies, so it can be statically linked).
 
 ---
 
@@ -45,8 +50,8 @@ A future refactor could split it, but keep behavior identical.
 
 ```bash
 cd /work/bw/shellbox
-./build.sh        # podman-based build -> target-host/shellbox
-cargo build       # if local cargo is available
+./build.sh                          # podman-based build -> target-host/{shellbox,shellbox-host-exec}
+cargo build --workspace             # local build; --workspace also builds the host-exec helper member
 ```
 
 To install an updated binary into place during iteration:
@@ -77,7 +82,7 @@ From `Cargo.toml`:
 
 ### External tools (shelled out)
 
-- `podman` — create/export containers, build from Containerfile
+- `podman` — create/export containers
 - `mkcomposefs` — generate composefs images
 - `mount` / `umount` — composefs mount lifecycle (privileged)
 - `mountpoint` — live mount state checks
@@ -98,17 +103,14 @@ command that needs box definition reads the manifest in place.
 
 Consequences that show up throughout the code:
 
-- **The box name *is* the directory name.** Identity is the directory. Renaming
-  is a first-class operation (`rename`) that moves the manifest dir, the state
-  dir, and rewrites exports.
+- **The box name *is* the directory name.** Identity is the directory; it is
+  fixed at `create` time (there is no rename command — to rename, `rm` and
+  re-create).
 - **No absolute self-referential paths are stored.** Source is `image` in the
-  manifest or a co-located `Containerfile`. There is no `{manifest_dir}` token;
-  env values are plain strings.
+  manifest. There is no `{manifest_dir}` token; env values are plain strings.
 - **Authored files and derived artifacts are split across two roots** so that
   symlinked boxes (dotfiles) don't drag machine-specific state into version
   control, and `rm` can drop artifacts without destroying the manifest.
-- **`migrate`** converts legacy `config.json` boxes to this layout (freezing
-  `{manifest_dir}` tokens to literals).
 
 When extending anything that touches box identity or location, preserve these
 invariants.
@@ -120,18 +122,17 @@ invariants.
 Command dispatch lives in `main.rs`; handlers are `app::cmd_*`.
 
 ### `create`
-- Args: `--name`, `--image`|`--file`, repeatable `--tool`, `--from`, `--force`
+- Args: `--name`, `--image`, repeatable `--tool`, `--from`, `--force`
 - `--from` imports from an external file or directory (auto-discovers
   `./shellbox.toml` if omitted). For `--from <dir>`, the whole directory is
   copied into `boxes/<name>/`; for `--from <file>`, only that manifest.
-- Precedence: CLI `--name`/`--image`/`--file` **override** the import;
-  `--tool` **appends**; exactly one source required total. `image` wins over a
-  stray co-located Containerfile.
+- Precedence: CLI `--name`/`--image` **override** the import;
+  `--tool` **appends**; an `image` is required (from `--image`, the manifest,
+  or `--from`).
 - name resolution: `--name` > manifest `name` field > `--from` dir name
 - Validates name (`[A-Za-z0-9_-]`) and tool names (no whitespace/`/`/NUL)
-- Writes `boxes/<name>/shellbox.toml` (always sets `name = <dir name>`), vendors
-  the Containerfile if containerfile-backed (or removes a stray one if
-  image-backed), and creates an empty `state/<name>/metadata.json`
+- Writes `boxes/<name>/shellbox.toml` (always sets `name = <dir name>`) and
+  creates an empty `state/<name>/metadata.json`
 - `--force` overwrites an existing box (refuses if mounted)
 
 ### `link`
@@ -144,22 +145,10 @@ Command dispatch lives in `main.rs`; handlers are `app::cmd_*`.
 - Creates an empty `state/<name>/metadata.json` so the linked box is usable.
 - `--force` overwrites an existing box (refuses if mounted).
 
-### `rename`
-- Args: `<old>`, `<new>`
-- Validates `<new>`; refuses if `<old>` doesn't exist, `<new>` exists, or
-  `<old>` is mounted
-- `mv boxes/<old> boxes/<new>` (renames the symlink itself if symlinked) and
-  `mv state/<old> state/<new>`
-- Updates the manifest `name` field if it differs from `<new>`
-- Regenerates every export wrapper owned by the box (rewriting the
-  `shellbox run <name>` line) and rewrites export metadata `box_name`
-
-### `build`
+### `prepare`
 - Fails if mounted (must unmount first)
 - Clears/recreates `state/<name>/rootfs/`
-- Source: `image` from manifest, or `build_containerfile` using
-  `boxes/<name>/Containerfile` with **context = `boxes/<name>/`** →
-  `localhost/shellbox-build-<name>:latest`
+- Source: `image` from the manifest
 - `podman create <image>` → capture cid → `podman export <cid> | tar ...` into
   `rootfs/` → `podman rm <cid>` (always, even on failure)
 - `normalize_rootfs_permissions`: `chmod u+r`/`u+rx` on unreadable files so
@@ -179,14 +168,26 @@ Command dispatch lives in `main.rs`; handlers are `app::cmd_*`.
 - Both are idempotent (no-op if already in the target state)
 - Live state is checked via `mountpoint -q`, not trusted from metadata
 
-### `run` / `enter`
-- Require built + mounted (live check via `mountpoint`)
+### `run`
+- Require **built** only (composefs image exists). A box does **not** need to be
+  kernel-mounted: if it isn't, `run` falls back to the fully rootless
+  FUSE runtime (`fuse::run_rootless`) automatically.
 - Load `BoxManifest` and apply `manifest.shell_env()` (**verbatim**, no
   expansion) via bwrap `--setenv` *after* the HOME/USER/LOGNAME/PATH defaults,
   so declared env overrides them
-- `enter` runs an interactive shell; picks `/bin/bash` if present else `/bin/sh`
-- `run` runs the given command (uses clap `last = true` capture so `--` works)
-- Both use `run_in_box`: a plain bwrap invocation (see Runtime below)
+- If the manifest declares `[host]` tools, `run_box_command` starts a
+  `HostExecSession` (`host_exec.rs`) for the lifetime of the command: a
+  session-scoped Unix socket served by the parent process, plus per-tool
+  wrappers bind-mounted into the box at `/run/shellbox-host-bin` (prepended to
+  `PATH`). Wrappers exec the static `shellbox-host-exec` helper, which streams
+  the command over the socket; the parent runs it on the host via
+  `systemd-run --user --wait --pipe`. The session (socket + in-flight host
+  commands) dies with the command. `[host]` tools are a no-op in
+  `shell`/`export` (the real tool is already on the host PATH).
+- With a command (after `--`), runs it; with no command, opens an interactive
+  shell (`/bin/bash` if present else `/bin/sh`) — this covers the former
+  `enter` command. `cmd` uses clap `last = true` capture so `--` works.
+- Uses `run_in_box`: a plain bwrap invocation (see Runtime below)
 - Exit with the child's exit code (`process::exit(code)`)
 
 ### `shell` (devshell mode)
@@ -236,28 +237,9 @@ Command dispatch lives in `main.rs`; handlers are `app::cmd_*`.
 ### `list` / `inspect`
 - `list` scans `boxes/*/shellbox.toml` (follows symlinks); skips unreadable
   manifests with a warning
-- Both compute live status (defined/built/mounted) and show recorded-vs-live
+- Both compute live status (defined/prepared/mounted) and show recorded-vs-live
   with a "drift" indicator when they disagree
 - `inspect` also prints shell tools and env (verbatim)
-
-### `migrate`
-- One-time conversion of legacy `config.json` boxes to the vendored layout
-- For each `boxes/<name>/` that has `config.json` but no `shellbox.toml`:
-  - Refuses if still mounted (legacy mountpoint was `state/mounts/<name>`)
-  - Parses legacy `config.json` (tagged `source` enum, `shell`, `manifest_dir`)
-    and legacy `metadata.json`
-  - Writes `shellbox.toml` (image from `image_ref` source; containerfile source
-    → vendors the referenced file as `Containerfile`)
-  - **Freezes `{manifest_dir}` tokens** in env values to literal absolute paths
-    using the recorded `manifest_dir`; warns if a token is present but no
-    `manifest_dir` was recorded (leaves the literal token in place)
-  - Moves `image.cfs`/`rootfs/` from `boxes/<name>/` and the legacy mountpoint
-    (`state/mounts/<name>`) into `state/<name>/` (cfs, rootfs, mount)
-  - Writes new `metadata.json` (`built`, `mounted: false`, `last_built_at`)
-  - Removes old `config.json` and `metadata.json`
-- Idempotent: boxes already in the new layout are skipped
-
----
 
 ## Data models
 
@@ -265,19 +247,25 @@ Command dispatch lives in `main.rs`; handlers are `app::cmd_*`.
 
 ```toml
 name = "fedora-rg"            # optional; must match the box dir if present
-image = "localhost/local/...:latest"   # OR omit and co-locate a Containerfile
+image = "localhost/local/...:latest"
 [shell]
 tools = ["rg", "fd"]
 [shell.env]
 FOO = "bar"                   # plain string, no expansion
+[host]
+tools = ["podman"]            # host-exec tools, forwarded via systemd-run --user
 ```
 
 - Parsed by `BoxManifest::load_from` whenever a command needs it; also written
-  by `create`/`rename` via `BoxManifest::save` (TOML, pretty-printed).
+  by `create` via `BoxManifest::save` (TOML, pretty-printed).
 - `shell.tools` defaults to `[]`; `shell.env` defaults to `{}`.
-- There is **no** `file` field (legacy field is silently ignored on parse) and
-  **no** `{manifest_dir}` expansion. Env values are applied verbatim everywhere.
+- `host.tools` defaults to `[]` (see `HostConfig`). Host tools are surfaced
+  inside `run` as shims; see the `run` and host-exec notes.
+- There is **no** `{manifest_dir}` expansion. Env values are applied verbatim
+  everywhere.
 - `shell_env()` returns the env as a sorted `(String, String)` vec, verbatim.
+- `host_tools()` returns the host tools vec (validated/deduped by callers via
+  `normalize_tools`).
 
 ### `metadata.json` (`BoxMetadata`, serde JSON) — cache/hint only
 
@@ -295,14 +283,6 @@ commands re-check live state (`cfs_path.exists()`, `mountpoint -q`). Missing
 metadata is treated as default (all false) by callers (`unwrap_or_default()`).
 `last_built_at` is a unix-seconds string.
 
-### Legacy structs (used only by `migrate`)
-
-`LegacyConfig`, `LegacySource` (`ImageRef`/`ContainerfilePath` tagged enum),
-`LegacyShell`, `LegacyMetadata` — serde structs matching the pre-vendoring
-on-disk JSON, defined in `app.rs` and used only by `cmd_migrate`/`migrate_one`.
-
----
-
 ## Storage layout (paths.rs)
 
 Resolved from the real user's home; under `sudo` it uses `SUDO_UID` to find the
@@ -312,7 +292,6 @@ invoking user's home via `nix::unistd::User::from_uid`.
 ~/.local/share/shellbox/
   boxes/<name>/                  # authored files only (may be a symlink)
     shellbox.toml
-    Containerfile                # iff containerfile-backed
   store/                         # composefs digest store (shared across boxes)
   exports/
     bin/<tool>                   # add exports/bin to PATH
@@ -327,7 +306,7 @@ invoking user's home via `nix::unistd::User::from_uid`.
 ```
 
 `BoxPaths` (from `Paths::box_paths(name)`) bundles all of a box's paths:
-`dir`, `manifest_path`, `containerfile_path`, `state_dir`, `metadata_path`,
+`dir`, `manifest_path`, `state_dir`, `metadata_path`,
 `cfs_path`, `rootfs_path`, `mount_path`.
 
 The split between `boxes/<name>/` (authored) and `state/<name>/` (derived) is
@@ -339,7 +318,7 @@ not co-locate derived artifacts back under `boxes/<name>/`.
 
 ## Runtime (bwrap) — `run_in_box`
 
-Identity is baked at build time (see below), so runtime is intentionally
+Identity is baked at prepare time (see below), so runtime is intentionally
 minimal. `run_in_box` builds:
 
 ```
@@ -381,7 +360,7 @@ the host. Network isolation is not a goal of shellbox.
 `/etc/resolv.conf` and `/etc/hosts` are `--ro-bind-try`'d from the host at
 runtime. Container images don't ship a working resolv.conf (the container
 runtime injects it), so without these DNS would fail even with `--share-net`.
-They must also be *baked* into the rootfs at build time (see
+They must also be *baked* into the rootfs at prepare time (see
 `inject_name_resolution`) because composefs is read-only and bwrap can't
 create the mount-point files at runtime; the live ro-bind keeps them correct as
 the host roams networks. `--ro-bind-try` (not `--ro-bind`) is used so a box
@@ -392,7 +371,7 @@ that predates this feature still boots if the files are absent.
 Declared env vars are applied **verbatim** (no token expansion) in all three
 entry points so the box is declarative end-to-end:
 
-- `run` / `enter`: passed to bwrap as `--setenv VAR VAL` *after* the
+- `run`: passed to bwrap as `--setenv VAR VAL` *after* the
   HOME/USER/LOGNAME/PATH defaults, so declared vars override them. (bwrap does
   **not** `--clearenv`, so host env is otherwise inherited.)
 - `shell`: set on the spawned host shell via `Command::env`.
@@ -406,9 +385,9 @@ references paths that moved, the author updates the manifest.
 
 ---
 
-## Identity — `inject_runtime_identity` (build time)
+## Identity — `inject_runtime_identity` (prepare time)
 
-Called during `build`, after permission normalization, while `rootfs/` is still
+Called during `prepare`, after permission normalization, while `rootfs/` is still
 a normal writable directory we own. It:
 
 1. Ensures `rootfs/etc/` exists
@@ -425,7 +404,7 @@ a normal writable directory we own. It:
    don't already use `files`, writes a sane default preserving any existing
    `hosts:` line
 
-`shell` field in passwd uses `default_enter_shell(root)`: `/bin/bash` if
+`shell` field in passwd uses `default_shell(root)`: `/bin/bash` if
 `root/bin/bash` exists else `/bin/sh`.
 
 Then `inject_name_resolution` copies the host's `/etc/resolv.conf` and
@@ -435,16 +414,16 @@ read-only image.
 
 ### Implications for agents
 
-- **Identity is baked per-build.** Changing the user account (uid/gid/username)
-  requires `build` again. Do not try to fix identity at runtime.
-- **Name resolution files are baked per-build too** (as mount-point
+- **Identity is baked per-prepare.** Changing the user account (uid/gid/username)
+  requires `prepare` again. Do not try to fix identity at runtime.
+- **Name resolution files are baked per-prepare too** (as mount-point
   placeholders), but the *values* are refreshed at runtime via `--ro-bind-try`
-  from the host's live copies, so DNS stays correct without rebuilding when you
-  roam networks. You only need to rebuild if the box predates this feature
-  (missing files in rootfs → the ro-bind-try just skips them).
-- Build runs **unprivileged**, as the invoking user — which is exactly the
+  from the host's live copies, so DNS stays correct without re-preparing when
+  you roam networks. You only need to re-prepare if the box predates this
+  feature (missing files in rootfs → the ro-bind-try just skips them).
+- Prepare runs **unprivileged**, as the invoking user — which is exactly the
   identity that will be used at runtime. This is by design.
-- If a future feature needs host identity to differ from build identity, this
+- If a future feature needs host identity to differ from prepare identity, this
   model needs revisiting (e.g. bind-mount `/etc/passwd` at runtime, which we
   deliberately avoided).
 
@@ -452,8 +431,8 @@ read-only image.
 
 ## Privilege model
 
-- Rootless: `create`, `build`, `list`, `inspect`, `run`, `shell`, `enter`,
-  `rm`, `rename`, `export`, `migrate`
+- Rootless: `create`, `prepare`, `list`, `inspect`, `run`, `shell`,
+  `rm`, `export`
 - Privileged (`sudo` required, enforced by `require_root`): `mount`, `unmount`
 
 Under `sudo`, `paths.rs` resolves the *invoking* user's dirs via `SUDO_UID`,
@@ -473,8 +452,8 @@ not root's. Keep privileged code paths small and dumb — no privileged daemon.
 When adding features, prefer clear actionable error messages, e.g.:
 
 ```
-box 'rg' is not mounted
-run: sudo shellbox mount rg
+box 'rg' is not prepared
+run: shellbox prepare rg
 ```
 
 ---
@@ -486,30 +465,31 @@ run: sudo shellbox mount rg
   the directory name.
 - **Tool name charset**: no whitespace, no `/`, no NUL (`config::validate_tool_name`)
 - **`--tool` is repeatable** and deduped via `normalize_tools`
-- **Source exclusivity** is enforced both in clap (`conflicts_with` on
-  `--image`/`--file`) and in `create`'s source resolution
+- **`image` is the only source**: required in the manifest (or supplied via
+  `--image` / `--from` at `create` time)
 - **Manifest `name` vs directory**: if a manifest's `name` field disagrees with
   its directory name, `require_manifest` prints a warning and proceeds using the
-  directory name as authoritative. `rename` keeps them in sync.
+  directory name as authoritative.
 - **Live state is truth**: never trust `metadata.json` alone for mount/built
   status — always `cfs_path.exists()` and `mountpoint -q`
-- **`run`/`shell`/`enter` exit with the child's code** via `process::exit`, so
+- **`run`/`shell` exit with the child's code** via `process::exit`, so
   any code after the handler in `main` won't run for those commands
 - **Sessions cleanup**: `TempDir` must outlive the spawned shell; it's dropped
   after `run_command_inherit` returns
 - **Styling**: `colors_enabled()` checks `is_terminal` + `NO_COLOR` + `TERM!=dumb`
 - **Symlinked boxes**: `boxes/<name>` may be a symlink. Path construction uses
   the name-based path (so state lookups are consistent); file reads follow the
-  symlink. `rename` renames the symlink entry; `rm --purge` on a symlink
-  requires `--force` and removes only the symlink.
+  symlink. `rm --purge` on a symlink requires `--force` and removes only the
+  symlink.
 
 ---
 
 ## Known limitations / future work
 
-- No lock files for concurrent build/mount/rm/rename
-- `rootfs/` is retained after build (no pruning/GC)
-- No auto-mount on `run`/`shell` (intentional for latency/predictability)
+- No lock files for concurrent prepare/mount/rm
+- `rootfs/` is retained after prepare (no pruning/GC)
+- `run`/`shell` auto-mount rootlessly via FUSE (no `sudo`); the
+  optional `mount`/`unmount` are a privileged kernel fast path only
 - `shell` does not annotate the prompt yet (could add `SHELLBOX_NAME`-based
   prompt hooks later)
 - No shell-native activation hook (`eval "$(shellbox shell-hook ...)"`) yet
@@ -526,13 +506,15 @@ minimal and explicit.
 
 ## Design stance (quick reference)
 
-- **Explicit lifecycle**: no hidden auto-build/auto-mount
-- **Immutable boxes**: change = edit source + rebuild
+- **Explicit lifecycle**: no hidden auto-prepare (auto-mount via rootless FUSE is
+  automatic and intended — it needs no `sudo`)
+- **Immutable boxes**: change = edit manifest + re-prepare
 - **Vendored, single source of truth**: `boxes/<name>/shellbox.toml`, read in place
-- **Name = directory**: identity is the directory; `rename` is first-class
+- **Name = directory**: identity is the directory; `rename` is not supported (to
+  rename, `rm` and re-create)
 - **Authored vs derived split**: `boxes/<name>/` vs `state/<name>/` (enables
   symlinked boxes and non-destructive `rm`)
 - **Plain-string env**: no token expansion; authors hardcode paths
 - **Minimal privileges**: only mount/unmount need root
-- **Identity at build time**: not at runtime
+- **Identity at prepare time**: not at runtime
 - **Policy in Rust, mechanics in host tools**

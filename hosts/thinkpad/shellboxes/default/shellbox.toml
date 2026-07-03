@@ -1,0 +1,8 @@
+name = "default"
+image = "localhost/shellbox-default:latest"
+
+[shell]
+tools = ["htop", "rg", "fd", "bat", "eza", "zoxide", "wezterm", "tokei"]
+
+[host]
+tools = ["podman"]

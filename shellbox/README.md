@@ -30,11 +30,11 @@ target-host/shellbox
 
 A **box** is a named dev environment with:
 
-- a **source**: an OCI image (`--image`) or a co-located `Containerfile`
-- build artifacts: an exported rootfs and a composefs image (`.cfs`)
+- a **source**: an OCI image (`--image`)
+- composefs artifacts: an exported rootfs and a composefs image (`.cfs`)
 - a **shell manifest**: the tools to surface from the box
 
-Boxes are **immutable**. To change one, edit its source and rebuild.
+Boxes are **immutable**. To change one, edit its manifest and re-prepare.
 
 ### Single source of truth
 
@@ -48,7 +48,6 @@ A box directory holds authored files only:
 ```
 boxes/<name>/
   shellbox.toml      # the manifest — source of truth
-  Containerfile      # optional; presence (with no `image`) => containerfile source
 ```
 
 The box directory may be a **symlink** (e.g. into a dotfiles repo); see
@@ -58,21 +57,22 @@ The box directory may be a **symlink** (e.g. into a dotfiles repo); see
 
 A box has three states:
 
-1. **defined** — manifest exists, nothing built yet
-2. **built** — composefs artifacts exist, can be mounted
-3. **mounted** — composefs is mounted, can be used by `run` / `shell` / `enter`
+1. **defined** — manifest exists, nothing prepared yet
+2. **prepared** — composefs artifacts exist, can be used (run/shell mount it rootlessly on demand)
+3. **mounted** — (optional) kernel composefs mount exists; run/shell use it as a fast path
 
 Transitions are explicit and predictable:
 
 ```
 create  -> defined
-build   -> built
+prepare -> prepared
 mount   -> mounted
-unmount -> built
+unmount -> prepared
 rm      -> removed
 ```
 
-`run`, `shell`, and `enter` do **not** auto-build or auto-mount.
+`run` and `shell` do **not** auto-prepare. They do auto-mount
+(rootlessly, via FUSE) if the box is not already kernel-mounted.
 
 ### Two workflows
 
@@ -85,15 +85,25 @@ shellbox supports two clearly distinct workflows:
 
 **Runtime workflow** — box rootfs first, for debugging/strict execution:
 
-- `run` — run one command inside the box runtime
-- `enter` — open an interactive shell inside the box runtime
+- `run` — run one command inside the box runtime, or open an interactive shell
+  when no command is given
 
-`run` and `enter` are runtime primitives; `shell` and `export` are thin tool
+`run` is the runtime primitive; `shell` and `export` are thin tool
 surfacing features built on top of `run`.
 
 ### Privilege model
 
-Only `mount` and `unmount` require `sudo`. Everything else is rootless.
+**Nothing requires `sudo` for normal use.** `run` and `shell`
+mount the composefs image via a fully rootless FUSE runtime (a private user +
+mount namespace, with a background FUSE server thread) when the box is not
+already mounted. No persistent host mount is created; the FUSE mount lives only
+for the duration of the command.
+
+`mount` and `unmount` (which create a persistent, host-visible **kernel**
+composefs mount) still require `sudo` and are now **optional** — useful for
+heavy, repeated use where you want the kernel driver's speed and a shared
+mount across invocations. When a box is kernel-mounted, `run`/`shell`
+automatically use that fast path instead of FUSE.
 
 ---
 
@@ -103,13 +113,6 @@ Only `mount` and `unmount` require `sudo`. Everything else is rootless.
 
 ```bash
 shellbox create --name demo --image fedora:latest --tool rg --tool jq
-```
-
-For a containerfile-backed box, point `--file` at a Containerfile; it is copied
-into the box directory as `Containerfile`:
-
-```bash
-shellbox create --name myproj --file ./Containerfile --tool rg
 ```
 
 ### From an external manifest (`--from`)
@@ -123,8 +126,8 @@ shellbox create --name demo --from /path/to/box-dir/
 ```
 
 When given a directory, the entire directory is copied in (its `shellbox.toml`
-becomes the manifest and any `Containerfile` comes along). This is the bridge
-for keeping boxes in a dotfiles repo or sharing them.
+becomes the manifest). This is the bridge for keeping boxes in a dotfiles repo
+or sharing them.
 
 If `--from` is omitted, shellbox auto-discovers `./shellbox.toml` in the current
 directory (like `Cargo.toml`).
@@ -135,11 +138,13 @@ directory (like `Cargo.toml`).
 
 ```toml
 name = "demo"                      # optional; must match the box directory if set
-image = "fedora:latest"            # mutually exclusive with a co-located Containerfile
-# (or place a Containerfile next to this file and omit `image`)
+image = "fedora:latest"            # OCI image reference the box is materialized from
 
 [shell]
 tools = ["rg", "jq"]
+
+[host]
+tools = ["podman"]                 # host tools (see "Host tools" below)
 
 [shell.env]
 # Plain string values — no token expansion.
@@ -150,15 +155,14 @@ FOO = "bar"
 
 CLI flags override or append on top of an imported manifest:
 
-- `--name` / `--image` / `--file` **override** manifest values
+- `--name` / `--image` **override** manifest values
 - `--tool` **appends** to the manifest's tools
-- exactly one source (`image` or a Containerfile) is required across manifest
-  and CLI
+- an `image` is required (from the manifest, `--image`, or `--from`)
 
 ### Environment variables
 
 You can declare env vars to set whenever the box is used (`run`, `shell`,
-`enter`, or via `export`). Values are **plain strings** — there is no token
+or via `export`). Values are **plain strings** — there is no token
 expansion. If you want to redirect a tool's state somewhere self-contained,
 point the env var at an absolute path you choose:
 
@@ -170,8 +174,45 @@ tools = ["nvim"]
 XDG_CONFIG_HOME = "/home/me/.local/share/shellbox/data/nvim/config"
 ```
 
-Because values are literals, renaming or moving a box does not rewrite them —
+Because values are literals, moving a box does not rewrite them —
 update them yourself if they reference paths that changed.
+
+### Host tools
+
+A box's read-only composefs rootfs cannot host tools that need the live host
+(e.g. `podman`, `flatpak`, `rpm-ostree`). Declare them in the `[host]` table
+and they become transparently callable from inside `run`:
+
+```toml
+[host]
+tools = ["podman", "flatpak"]
+```
+
+Then, inside the box:
+
+```bash
+shellbox run demo -- podman ps     # works, even though podman is not in the box
+```
+
+How it works (no daemon, no extra host packages beyond systemd):
+
+- `run` starts a private, session-scoped Unix socket **in the parent
+  `shellbox` process**, then bind a tiny static helper (`shellbox-host-exec`,
+  installed alongside `shellbox`) and a one-line wrapper per host tool into the
+  bwrap at `/run/shellbox-host-bin` (prepended to `PATH`).
+- The wrapper execs the helper, which streams the command over the socket; the
+  parent runs it on the host via `systemd-run --user --wait --pipe` and streams
+  stdio and the exit code back.
+
+The socket and any in-flight host commands **live and die with the box
+session** — nothing outlives `run`. Requirements: a running
+`systemd --user` manager for your user (always present on a desktop login; on
+SSH/headless, `loginctl enable-linger <user>`). `[host]` tools are a no-op in
+`shell`/`export` modes, where the real host tool is already on `PATH`.
+
+For cross-distro portability, build `shellbox-host-exec` statically (e.g.
+`cargo build --release -p shellbox-host-exec --target x86_64-unknown-linux-musl`)
+so it links no host glibc.
 
 ---
 
@@ -183,7 +224,6 @@ Define a box by writing its manifest into `boxes/`.
 
 ```bash
 shellbox create --name <name> --image <ref> [--tool <name>]... [--from <path>] [--force]
-shellbox create --name <name> --file <path> [--tool <name>]... [--from <path>] [--force]
 ```
 
 `--force` overwrites an existing box (refuses if mounted).
@@ -203,12 +243,13 @@ dir basename. The source is canonicalized to an absolute path before linking,
 so relative paths won't dangle. `--force` overwrites an existing box (refuses
 if mounted).
 
-### `build`
+### `prepare`
 
-Build composefs artifacts. Requires podman and `mkcomposefs`.
+Materialize composefs artifacts from the box's image. Requires podman and
+`mkcomposefs`.
 
 ```bash
-shellbox build <name>
+shellbox prepare <name>
 ```
 
 ### `list`
@@ -221,7 +262,7 @@ shellbox list
 
 ### `inspect`
 
-Show a box's source, shell tools, state, paths, and last-built time.
+Show a box's source, shell tools, state, paths, and last-prepared time.
 
 ```bash
 shellbox inspect <name>
@@ -229,7 +270,9 @@ shellbox inspect <name>
 
 ### `mount` / `unmount`
 
-Mount or unmount the composefs image. Require `sudo`.
+**Optional.** Create or remove a persistent, host-visible **kernel** composefs
+mount. Require `sudo`. When present, `run`/`shell` use this kernel
+mount as a fast path; otherwise they fall back to the rootless FUSE runtime.
 
 ```bash
 sudo shellbox mount <name>
@@ -238,11 +281,14 @@ sudo shellbox unmount <name>
 
 ### `run`
 
-Run one command inside the box runtime (rootfs-first). Exits with the command's
-exit code.
+Run one command inside the box runtime (rootfs-first). With no command, opens an
+interactive shell (`/bin/bash` if present, else `/bin/sh`) inside the box
+runtime — useful for inspecting/debugging the box itself. Exits with the
+command's exit code.
 
 ```bash
 shellbox run <name> -- <cmd> [args...]
+shellbox run <name>                 # interactive shell inside the box runtime
 ```
 
 ### `shell` (devshell mode)
@@ -257,15 +303,6 @@ shellbox shell <name>
 Inside, declared tools resolve to wrappers that invoke `shellbox run`. You are
 still "you" — same home, cwd, prompt, git config, SSH agent, etc.
 
-### `enter` (interactive runtime mode)
-
-Open an interactive shell **inside the box runtime** (bwrap, box rootfs as `/`).
-Useful for inspecting/debugging the box itself.
-
-```bash
-shellbox enter <name>
-```
-
 ### `rm`
 
 Remove a box's derived artifacts. The manifest is kept by default.
@@ -279,17 +316,6 @@ shellbox rm <name> --purge --force # required to purge a symlinked box
 Refuses if mounted. `--purge` on a symlinked box requires `--force` (the symlink
 is removed; the target is left untouched). Note any exports that still
 reference the box so you can clean them up.
-
-### `rename`
-
-Rename a box, moving its manifest, derived state, and updating its exports.
-
-```bash
-shellbox rename <old> <new>
-```
-
-Refuses if `<old>` is mounted or `<new>` already exists. Export wrappers owned
-by the box are regenerated with the new name.
 
 ### `export`
 
@@ -348,30 +374,14 @@ shellbox list-exports
 
 ```bash
 shellbox create --name fedora-rg --image localhost/local/fedora-rg:latest --tool rg
-shellbox build fedora-rg
-sudo shellbox mount fedora-rg
+shellbox prepare fedora-rg
+# optional: sudo shellbox mount fedora-rg   (kernel fast path; skip to use rootless FUSE)
 
 shellbox run fedora-rg -- rg --version
-shellbox shell fedora-rg        # nested host shell with rg on PATH
-shellbox enter fedora-rg        # interactive shell inside box runtime
+shellbox run fedora-rg                 # interactive shell inside box runtime
+shellbox shell fedora-rg               # nested host shell with rg on PATH
 
-sudo shellbox unmount fedora-rg
-```
-
-### Containerfile-backed box
-
-```bash
-shellbox create --name myproj --file ./Containerfile
-shellbox build myproj
-sudo shellbox mount myproj
-shellbox shell myproj
-```
-
-### Rename a box
-
-```bash
-shellbox rename myproj myproject
-# manifest, build artifacts, mountpoint, and exports all follow
+# sudo shellbox unmount fedora-rg   (only if you mounted above)
 ```
 
 ### Export a tool for use across shells
@@ -403,15 +413,13 @@ shellbox link ~/dotfiles/shellboxes/nvim --name nvim
 
 This is equivalent to a manual `ln -s <abs-source>
 ~/.local/share/shellbox/boxes/<name>`, and lets you version and share the
-authored manifest (and any companion files like a Containerfile or bundled
-config). Because derived build artifacts live
-under `~/.local/state/shellbox/<name>/` — **not** in the box directory — nothing
-machine-specific is written into your repo.
+authored manifest (and any companion files like bundled config). Because derived
+artifacts live under `~/.local/state/shellbox/<name>/` — **not** in the box
+directory — nothing machine-specific is written into your repo.
 
-`rename` on a symlinked box renames the symlink entry under `boxes/`, not the
-real file. `rm` without `--purge` is always safe (it never touches the symlink
-or its target); `rm --purge` on a symlinked box requires `--force` and removes
-only the symlink.
+`rm` without `--purge` is always safe (it never touches the symlink or its
+target); `rm --purge` on a symlinked box requires `--force` and removes only the
+symlink.
 
 ---
 
@@ -421,7 +429,6 @@ only the symlink.
 ~/.local/share/shellbox/
   boxes/<name>/             # authored files only (may be a symlink)
     shellbox.toml           # manifest — single source of truth
-    Containerfile           # present iff containerfile-backed
   store/                    # shared composefs digest store
   exports/
     bin/<tool>              # persistent tool wrappers (add to PATH)
@@ -429,9 +436,9 @@ only the symlink.
 
 ~/.local/state/shellbox/
   <name>/                   # all per-box derived state
-    metadata.json           # build/mount cache (not authoritative)
+    metadata.json           # prepare/mount cache (not authoritative)
     image.cfs               # composefs image
-    rootfs/                 # exported rootfs (build input)
+    rootfs/                 # exported rootfs (prepare input)
     mount/                  # composefs mountpoint
   sessions/                 # ephemeral devshell wrapper dirs
 ```
@@ -440,26 +447,26 @@ only the symlink.
 
 ## How identity works
 
-When you run or enter a box, tools like `whoami` and your shell prompt need to
-resolve your username. shellbox solves this by **baking your user identity into
-the rootfs at build time**: during `build`, your passwd/group entries are merged
+When you run a box, tools like `whoami` and your shell prompt need to resolve
+your username. shellbox solves this by **baking your user identity into the
+rootfs at prepare time**: during `prepare`, your passwd/group entries are merged
 into the rootfs's `/etc` (while it is still a normal writable directory), before
 `mkcomposefs` freezes it into a read-only image.
 
 Consequences:
 
-- `whoami`, `id`, and prompt username all work inside `run` / `enter`
+- `whoami`, `id`, and prompt username all work inside `run`
 - zero runtime overhead — no temp dirs or overlays per invocation
-- any image works; no Containerfile changes are required
+- any image works
 - identity is per-user, matching the per-user storage model
 
-Because identity is baked at build time, you must **rebuild** after changing the
-user account (e.g. new uid/gid) for it to take effect.
+Because identity is baked at prepare time, you must **re-prepare** after
+changing the user account (e.g. new uid/gid) for it to take effect.
 
 ### Desktop integration
 
-The box runtime is **not** a hermetic desktop sandbox. By default `run` and
-`enter` bind-mount your user runtime directory (`$XDG_RUNTIME_DIR`) and the X11
+The box runtime is **not** a hermetic desktop sandbox. By default `run`
+bind-mount your user runtime directory (`$XDG_RUNTIME_DIR`) and the X11
 socket dir (`/tmp/.X11-unix`) into the box, so the host's **system clipboard**
 (wl-clipboard, xclip/xsel), **D-Bus session bus**, **notifications**, **audio**,
 and **xdg-desktop-portal** are all reachable from inside. This matches the

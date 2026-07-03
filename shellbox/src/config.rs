@@ -10,25 +10,37 @@ use std::path::Path;
 /// needs it. There is no separate "stored" form and no snapshot step: editing
 /// the file is immediately effective.
 ///
-/// The box's source is determined from this manifest plus the box directory:
-/// - if `image` is set, the box is image-backed, or
-/// - otherwise, a co-located `Containerfile` (next to the manifest) is the
-///   source.
-/// Exactly one of these applies; `image` takes precedence if both are present
-/// (a stray `Containerfile` is ignored in that case).
+/// A box is always image-backed: `image` is the OCI image reference the box is
+/// materialized from.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BoxManifest {
     /// Optional box name. If present it must match the box directory name.
     #[serde(default)]
     pub name: Option<String>,
 
-    /// OCI image reference. Mutually exclusive (in practice) with a
-    /// co-located `Containerfile`.
-    #[serde(default)]
-    pub image: Option<String>,
+    /// OCI image reference the box is materialized from. Required.
+    pub image: String,
 
     #[serde(default)]
     pub shell: ShellConfig,
+
+    /// Host-executed tools. Declared here but resolved differently from
+    /// `[shell].tools`: these names are surfaced inside a box runtime
+    /// (`run`) as shims that forward execution to the **host** via the
+    /// user's systemd manager (`systemd-run --user`). They let a box transparently
+    /// use host-only tools (e.g. `podman`) that cannot live inside the read-only
+    /// box rootfs.
+    ///
+    /// In `shell`/`export` (host-side) modes these are a no-op: the real tool is
+    /// already on the host PATH, so no shim is needed.
+    #[serde(default)]
+    pub host: HostConfig,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct HostConfig {
+    #[serde(default)]
+    pub tools: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -73,6 +85,12 @@ impl BoxManifest {
             .iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
+    }
+
+    /// Declared host-exec tools, verbatim. Validation/dedup is the caller's job
+    /// (mirrors how `shell.tools` is consumed via `normalize_tools`).
+    pub fn host_tools(&self) -> Vec<String> {
+        self.host.tools.clone()
     }
 }
 

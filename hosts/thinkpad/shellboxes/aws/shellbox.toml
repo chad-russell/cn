@@ -1,0 +1,16 @@
+# shellbox aws — AWS CLI (v2)
+#
+# Standalone box wrapping the `aws` CLI. AWS config/credentials live in ~/.aws
+# (HOME-relative, bind-mounted into the box), so no [shell.env] redirection is
+# needed by default — add a [shell.env] block here if you want self-contained
+# AWS config/credentials (e.g. redirect AWS_CONFIG_FILE / AWS_SHARED_CREDENTIALS_FILE).
+#
+# Build:    podman build -t localhost/shellbox-aws:latest shellboxes/aws
+# Prepare:  shellbox prepare aws
+# Export:   shellbox export aws --all
+
+name = "aws"
+image = "localhost/shellbox-aws:latest"
+
+[shell]
+tools = ["aws"]

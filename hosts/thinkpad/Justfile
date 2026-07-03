@@ -1,0 +1,254 @@
+# cjust — post-install & maintenance tasks for the thinkpad atomic host.
+#
+# Entry point is the `cjust` shell function (dotfiles/.zshrc):
+#   cjust            → fuzzy recipe chooser (`just --choose`, needs fzf)
+#   cjust <recipe>   → run a recipe directly
+#   cjust -l         → list all recipes
+#
+# thinkpad-only. Recipes assume a Fedora Silverblue/bootc host with `just` and
+# `fzf` baked into the host image (host-image/Containerfile). Both are
+# host-native on purpose: `cjust` must work before any shellbox is set up, and
+# the menu must not depend on the thing it bootstraps. (Previously `just` was
+# borrowed from the `default` box, which is why `--choose` appeared to work
+# without a host fzf — the shim ran inside that box, where fzf lives.)
+#
+# Recipes are cwd-independent: every path into the repo is built from
+# `justfile_directory()`, so `cjust` works from any cwd.
+#
+# To add a new box / boot-mount / user unit / dotfile, edit the four lists in
+# DATA TABLES — no recipe changes needed.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DATA TABLES (single source of truth)
+# ═══════════════════════════════════════════════════════════════════════════
+
+# shellbox boxes, in build/dependency order. Each is a standalone box: built,
+# linked, prepared, and exported individually. There is intentionally no merged
+# `dev` box — each box keeps its own [shell.env], which some use for
+# self-contained state (e.g. nvim/opencode redirect XDG into the repo).
+boxes := "default nvim opencode aws"
+
+# Boxes whose composefs mount should be brought up at boot via the
+# `shellbox-mount@<box>.service` template baked into the host image.
+# (Kernel fast path only — every box auto-mounts rootlessly via FUSE on first
+# run regardless, so leave this to boxes used heavily/repeatedly.)
+boot_mount := "opencode"
+
+# systemd user units (filenames in systemd/user/, WITHOUT the .service suffix)
+# to symlink into ~/.config/systemd/user/.
+user_units := "opencode-web"
+
+# Host-native dotfiles: relative paths under dotfiles/ that mirror $HOME.
+# Each is symlinked dotfiles/<path> → $HOME/<path>. Convention (see
+# dotfiles/.zshenv): dotfiles/ mirrors $HOME-relative layout, so src and dst
+# paths are identical.
+dotfiles := ".config/oh-my-posh.json .zshrc .zshenv"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# setup
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Symlink host-native dotfiles from dotfiles/ into $HOME (idempotent).
+# Ported from the old dotfiles/setup.sh: existing real files are backed up to
+# <path>.bak.<ts>; already-correct symlinks are left alone.
+[group('setup')]
+link:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    paths="{{ dotfiles }}"
+    home="${HOME:-$(getent passwd "${USER:-$(id -un)}" | cut -d: -f6)}"
+    ts="$(date -u +%Y%m%d-%H%M%S)"
+    src_root="{{ justfile_directory() }}/dotfiles"
+    rc=0
+    for rel in $paths; do
+      src="${src_root}/${rel}"
+      dst="${home}/${rel}"
+      if [ ! -e "${src}" ]; then
+        echo "  SKIP  ${rel}: source missing in repo"; rc=1; continue
+      fi
+      if [ -L "${dst}" ] && [ "$(readlink -f "${dst}")" = "$(readlink -f "${src}")" ]; then
+        echo "  OK    ${rel} (already linked)"; continue
+      fi
+      if [ -e "${dst}" ] && [ ! -L "${dst}" ]; then
+        backup="${dst}.bak.${ts}"
+        echo "  BACKUP ${rel} -> ${backup#${home}/}"
+        mv "${dst}" "${backup}"
+      fi
+      mkdir -p "$(dirname "${dst}")"
+      ln -s "${src}" "${dst}"
+      echo "  LINK  ${rel}"
+    done
+    if [ "${rc}" -ne 0 ]; then
+      echo; echo "Completed with warnings (see SKIP lines above)." >&2
+    fi
+
+# Symlink systemd user units from systemd/user/ into ~/.config/systemd/user/,
+# reload the user manager, and enable lingering so user services run at boot.
+# Idempotent. This is the fix for the "Unit opencode-web.service not found"
+# class of problem: the unit lives in the repo and has to be linked into place.
+[group('setup')]
+units:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    units="{{ user_units }}"
+    src_dir="{{ justfile_directory() }}/systemd/user"
+    dst_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    ts="$(date -u +%Y%m%d-%H%M%S)"
+    mkdir -p "${dst_dir}"
+    for u in $units; do
+      src="${src_dir}/${u}.service"
+      dst="${dst_dir}/${u}.service"
+      if [ ! -e "${src}" ]; then
+        echo "  SKIP  ${u}: source missing"; continue
+      fi
+      if [ -L "${dst}" ] && [ "$(readlink -f "${dst}")" = "$(readlink -f "${src}")" ]; then
+        echo "  OK    ${u} (already linked)"; continue
+      fi
+      if [ -e "${dst}" ] && [ ! -L "${dst}" ]; then
+        echo "  BACKUP ${u}.service -> ${u}.service.bak.${ts}"
+        mv "${dst}" "${dst}.bak.${ts}"
+      fi
+      ln -s "${src}" "${dst}"
+      echo "  LINK  ${u}.service"
+    done
+    systemctl --user daemon-reload
+    # Enable lingering so user services start before login (one-time, no-op if set).
+    user="${USER:-$(id -un)}"
+    if ! loginctl show-user "$user" 2>/dev/null | grep -q '^Linger=yes'; then
+      loginctl enable-linger "$user"
+      echo "  LINGER enabled for ${user}"
+    fi
+    echo "Done. Enable a unit with: systemctl --user enable --now <unit>"
+
+# Full first-run setup: dotfiles + units + all shellboxes + boot mounts.
+# Run this on a fresh install (after the host image is booted). Idempotent.
+[group('setup')]
+setup: link units shellboxes mount-boot
+    @echo "==> Setup complete."
+    @echo "    If host-image deps changed (just/fzf/distrobox), rebuild & reboot:"
+    @echo "      cjust image-build && cjust image-upgrade && systemctl reboot"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# shellboxes
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Build each box's OCI image from its Containerfile (podman, rootless).
+# Produces localhost/shellbox-<name>:latest, which `prepare` materializes from.
+[group('shellboxes')]
+shellboxes-images:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for b in {{ boxes }}; do
+      echo "==> podman build shellbox-${b}"
+      podman build -t "localhost/shellbox-${b}:latest" \
+        "{{ justfile_directory() }}/shellboxes/${b}"
+    done
+
+# Symlink each box dir into shellbox's boxes/ dir (idempotent via --force).
+# Source of truth stays in this repo; boxes/<name> is just a symlink.
+[group('shellboxes')]
+shellboxes-link:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for b in {{ boxes }}; do
+      echo "==> shellbox link ${b}"
+      shellbox link --force "{{ justfile_directory() }}/shellboxes/${b}"
+    done
+
+# Materialize each box's rootfs + composefs image from its OCI image.
+# Fails if a box is currently kernel-mounted (unmount first). Safe to re-run
+# otherwise; rebuilds derived state under ~/.local/state/shellbox/<name>/.
+[group('shellboxes')]
+shellboxes-prepare:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for b in {{ boxes }}; do
+      echo "==> shellbox prepare ${b}"
+      shellbox prepare "$b"
+    done
+
+# Export each box's tools onto the host PATH (~/.local/share/shellbox/exports/bin).
+# `--all` exports every tool listed in the box's [shell] tools. Idempotent:
+# re-exporting a tool owned by the same box silently overwrites it.
+[group('shellboxes')]
+shellboxes-export:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for b in {{ boxes }}; do
+      echo "==> shellbox export ${b} --all"
+      shellbox export "$b" --all
+    done
+    echo
+    echo "PATH: ~/.local/share/shellbox/exports/bin is added by dotfiles/.zshenv."
+
+# Build images, link, prepare, and export all boxes in one go.
+[group('shellboxes')]
+shellboxes: shellboxes-images shellboxes-link shellboxes-prepare shellboxes-export
+    @echo "==> All shellboxes built, linked, prepared, and exported."
+
+# Enable the composefs boot mount for boxes in `boot_mount`. Brings the mount
+# up at boot via the shellbox-mount@<box>.service template baked into the host
+# image (needed by user services that order After= it, e.g. opencode-web).
+[group('shellboxes')]
+mount-boot:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for b in {{ boot_mount }}; do
+      echo "==> systemctl enable shellbox-mount@${b}.service"
+      sudo systemctl enable "shellbox-mount@${b}.service"
+    done
+
+# ═══════════════════════════════════════════════════════════════════════════
+# host image (bootc)
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Build the custom Silverblue host image into root podman storage. (sudo)
+# See host-image/README.md. First time on a host, follow with `image-switch`.
+[group('host image')]
+image-build:
+    {{ justfile_directory() }}/host-image/build.sh
+
+# One-time: adopt the custom image as the host's boot image. (sudo)
+# Only for first adoption or changing image reference; for routine rebuilds
+# use `image-upgrade` instead. Reboot after.
+[group('host image')]
+image-switch:
+    {{ justfile_directory() }}/host-image/switch.sh
+
+# Routine: apply a freshly rebuilt image to the host. (sudo)
+# Re-resolves the :44 tag from local storage and stages a new deployment if the
+# digest changed. Reboot after.
+[group('host image')]
+image-upgrade:
+    {{ justfile_directory() }}/host-image/upgrade.sh
+
+# ═══════════════════════════════════════════════════════════════════════════
+# system
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Build + seed + install the Nebula Quadlet (idempotent). See nebula/setup.sh.
+[group('system')]
+nebula:
+    {{ justfile_directory() }}/nebula/setup.sh
+
+# Show the current state of this machine: host-image version, bootc deployment,
+# shellboxes, exports, and linked user units. Read-only.
+[group('system')]
+status:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    echo "=== host image ==="
+    cat /usr/lib/host-image-thinkpad-version 2>/dev/null || echo "(no version file)"
+    echo
+    echo "=== bootc ==="
+    bootc status 2>&1 | head -30 || true
+    echo
+    echo "=== shellboxes ==="
+    shellbox list 2>/dev/null || echo "(shellbox not on PATH)"
+    echo
+    echo "=== exports ==="
+    shellbox list-exports 2>/dev/null || true
+    echo
+    echo "=== user units (~/.config/systemd/user/) ==="
+    dst_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    if ls -1 "${dst_dir}"/*.service 2>/dev/null; then :; else echo "(none linked)"; fi

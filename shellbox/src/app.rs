@@ -1,4 +1,4 @@
-use crate::cli::{CreateArgs, ExportArgs, LinkArgs, NameArgs, RenameArgs, RmArgs, RunArgs, UnexportArgs};
+use crate::cli::{CreateArgs, ExportArgs, LinkArgs, NameArgs, RmArgs, RunArgs, UnexportArgs};
 use crate::config::{self, BoxManifest, ShellConfig};
 use crate::metadata::BoxMetadata;
 use crate::paths::Paths;
@@ -14,34 +14,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tempfile::{Builder, TempDir};
-
-// ===========================================================================
-// Source resolution
-// ===========================================================================
-
-/// The resolved source of a box, used by `build`.
-enum Source {
-    Image(String),
-    Containerfile,
-}
-
-/// Determine a box's source from its manifest and on-disk layout.
-///
-/// `image` in the manifest wins if present. Otherwise a co-located
-/// `Containerfile` is required. A stray `Containerfile` next to an image-backed
-/// box is ignored.
-fn resolve_source(manifest: &BoxManifest, box_paths: &crate::paths::BoxPaths) -> Result<Source> {
-    if let Some(image) = &manifest.image {
-        return Ok(Source::Image(image.clone()));
-    }
-    if box_paths.containerfile_path.exists() {
-        return Ok(Source::Containerfile);
-    }
-    bail!(
-        "box '{}' has no source\nset 'image' in the manifest or add a Containerfile beside it",
-        box_paths.dir.display()
-    );
-}
 
 /// Load the manifest for a box, with a clear error if the box isn't defined.
 fn require_manifest(box_paths: &crate::paths::BoxPaths) -> Result<BoxManifest> {
@@ -71,8 +43,6 @@ fn require_manifest(box_paths: &crate::paths::BoxPaths) -> Result<BoxManifest> {
 
 struct Import {
     manifest: Option<BoxManifest>,
-    /// Path to a Containerfile found in the import source.
-    containerfile: Option<PathBuf>,
     /// Directory whose contents should be copied wholesale into the box dir.
     /// Only set for an explicit `--from <dir>`.
     extras_dir: Option<PathBuf>,
@@ -109,29 +79,15 @@ pub fn cmd_create(args: CreateArgs) -> Result<()> {
 
     let box_paths = paths.box_paths(&name);
 
-    // source: CLI --image/--file override the import; image wins over file.
-    let final_image = args
+    // source: CLI --image overrides the import; otherwise the manifest's
+    // `image` is used. `image` is required.
+    let image = args
         .image
         .clone()
-        .or_else(|| import.manifest.as_ref().and_then(|m| m.image.clone()));
-    let final_containerfile = args
-        .file
-        .as_ref()
-        .map(PathBuf::from)
-        .or_else(|| import.containerfile.clone());
-    // `image_source` is Some for an image-backed box; None means containerfile-backed.
-    let image_source: Option<String> = match (final_image, final_containerfile.clone()) {
-        (Some(image), _) => Some(image),
-        (None, Some(p)) => {
-            if !p.exists() {
-                bail!("containerfile does not exist: {}", p.display());
-            }
-            None
-        }
-        (None, None) => bail!(
-            "exactly one source is required\nprovide --image or --file, set 'image' in the manifest, or place a Containerfile beside the manifest"
-        ),
-    };
+        .or_else(|| import.manifest.as_ref().map(|m| m.image.clone()))
+        .context(
+            "image is required\nprovide --image or set 'image' in the manifest",
+        )?;
 
     // tools: CLI appends to manifest.
     let mut tools = import
@@ -169,31 +125,11 @@ pub fn cmd_create(args: CreateArgs) -> Result<()> {
     // Write the canonical manifest.
     let manifest = BoxManifest {
         name: Some(name.clone()),
-        image: image_source.clone(),
+        image,
         shell: ShellConfig { tools, env },
+        host: config::HostConfig::default(),
     };
     manifest.save(&box_paths.manifest_path)?;
-
-    // Place (or remove) the Containerfile to match the resolved source.
-    match &image_source {
-        None => {
-            // containerfile source: vendor the file in.
-            let src = final_containerfile.expect("containerfile path");
-            std::fs::copy(&src, &box_paths.containerfile_path).with_context(|| {
-                format!(
-                    "failed to copy {} to {}",
-                    src.display(),
-                    box_paths.containerfile_path.display()
-                )
-            })?;
-        }
-        Some(_) => {
-            // image source: avoid an ambiguous on-disk state if the import dragged one in.
-            if box_paths.containerfile_path.exists() {
-                let _ = std::fs::remove_file(&box_paths.containerfile_path);
-            }
-        }
-    }
 
     // Fresh derived-state metadata.
     std::fs::create_dir_all(&box_paths.state_dir)
@@ -203,14 +139,7 @@ pub fn cmd_create(args: CreateArgs) -> Result<()> {
     let colors = colors_enabled();
     println!("{} {}", style_action("created", colors), style_title(&name, colors));
     println!("  {:<12} {}", "manifest", box_paths.manifest_path.display());
-    match &image_source {
-        Some(image) => {
-            println!("  {:<12} {}", "source", format!("image · {image}"));
-        }
-        None => {
-            println!("  {:<12} {}", "source", format!("containerfile · {}", box_paths.containerfile_path.display()));
-        }
-    }
+    println!("  {:<12} {}", "source", format!("image · {}", manifest.image));
     println!("  {:<12} {}", "state", box_paths.state_dir.display());
     if !manifest.shell.tools.is_empty() {
         println!("  {:<12} {}", "tools", manifest.shell.tools.join(", "));
@@ -298,7 +227,6 @@ fn import_from_explicit(from_path: &Path) -> Result<Import> {
         let manifest = BoxManifest::load_from(from_path)?;
         return Ok(Import {
             manifest: Some(manifest),
-            containerfile: None,
             extras_dir: None,
         });
     }
@@ -309,17 +237,8 @@ fn import_from_explicit(from_path: &Path) -> Result<Import> {
         } else {
             None
         };
-        let containerfile = {
-            let p = from_path.join("Containerfile");
-            if p.is_file() {
-                Some(p)
-            } else {
-                None
-            }
-        };
         Ok(Import {
             manifest,
-            containerfile,
             extras_dir: Some(from_path.to_path_buf()),
         })
     } else {
@@ -338,7 +257,6 @@ fn import_from_cwd_auto() -> Result<Import> {
     };
     Ok(Import {
         manifest,
-        containerfile: None,
         extras_dir: None,
     })
 }
@@ -354,10 +272,10 @@ fn copy_dir_contents(src: &Path, dst: &Path) -> Result<()> {
 }
 
 // ===========================================================================
-// build
+// prepare
 // ===========================================================================
 
-pub fn cmd_build(args: NameArgs) -> Result<()> {
+pub fn cmd_prepare(args: NameArgs) -> Result<()> {
     let paths = Paths::new()?;
     paths.ensure_base_dirs()?;
     let box_paths = paths.box_paths(&args.name);
@@ -370,7 +288,7 @@ pub fn cmd_build(args: NameArgs) -> Result<()> {
 
     if is_mountpoint(&box_paths.mount_path) {
         bail!(
-            "box '{}' is mounted at {}\nunmount it before rebuilding",
+            "box '{}' is mounted at {}\nunmount it before preparing again",
             args.name,
             box_paths.mount_path.display()
         );
@@ -382,16 +300,14 @@ pub fn cmd_build(args: NameArgs) -> Result<()> {
     std::fs::create_dir_all(&box_paths.rootfs_path)
         .with_context(|| format!("failed to create {}", box_paths.rootfs_path.display()))?;
 
-    let image_ref = match resolve_source(&manifest, &box_paths)? {
-        Source::Image(image) => image,
-        Source::Containerfile => build_containerfile(&args.name, &box_paths)?,
-    };
+    let image_ref = manifest.image.clone();
 
     export_image_rootfs(&image_ref, &box_paths.rootfs_path)?;
     normalize_rootfs_permissions(&box_paths.rootfs_path)?;
     inject_runtime_identity(&box_paths.rootfs_path)?;
     inject_name_resolution(&box_paths.rootfs_path)?;
     inject_desktop_mount_points(&box_paths.rootfs_path)?;
+    inject_host_exec_mount_points(&box_paths.rootfs_path, &manifest)?;
 
     run_command(
         Command::new("mkcomposefs")
@@ -408,26 +324,12 @@ pub fn cmd_build(args: NameArgs) -> Result<()> {
     meta.save(&box_paths.metadata_path)?;
 
     let colors = colors_enabled();
-    println!("{} {}", style_action("built", colors), style_title(&args.name, colors));
+    println!("{} {}", style_action("prepared", colors), style_title(&args.name, colors));
     println!("  {:<12} {}", "image", image_ref);
     println!("  {:<12} {}", "rootfs", box_paths.rootfs_path.display());
     println!("  {:<12} {}", "cfs", box_paths.cfs_path.display());
     println!("  {:<12} {}", "store", paths.store_dir().display());
     Ok(())
-}
-
-fn build_containerfile(name: &str, box_paths: &crate::paths::BoxPaths) -> Result<String> {
-    let tag = format!("shellbox-build-{name}:latest");
-    run_command(
-        Command::new("podman")
-            .arg("build")
-            .arg("-t")
-            .arg(&tag)
-            .arg("-f")
-            .arg(&box_paths.containerfile_path)
-            .arg(&box_paths.dir),
-    )?;
-    Ok(format!("localhost/{tag}"))
 }
 
 // ===========================================================================
@@ -446,7 +348,7 @@ pub fn cmd_mount(args: NameArgs) -> Result<()> {
 
     let mut meta = BoxMetadata::load(&box_paths.metadata_path).unwrap_or_default();
     if !meta.built || !box_paths.cfs_path.exists() {
-        bail!("box '{}' is not built", args.name);
+        bail!("box '{}' is not prepared", args.name);
     }
 
     std::fs::create_dir_all(&box_paths.mount_path)
@@ -512,7 +414,7 @@ pub fn cmd_unmount(args: NameArgs) -> Result<()> {
 }
 
 // ===========================================================================
-// run / shell / enter
+// run / shell
 // ===========================================================================
 
 pub fn cmd_run(args: RunArgs) -> Result<()> {
@@ -526,8 +428,14 @@ pub fn cmd_run(args: RunArgs) -> Result<()> {
     let meta = BoxMetadata::load(&box_paths.metadata_path).unwrap_or_default();
     ensure_runtime_ready(&args.name, &box_paths, &meta)?;
 
-    let env = manifest.shell_env();
-    let status = run_in_box(&box_paths.mount_path, &env, &args.cmd)?;
+    // If no command is given, open an interactive shell (`/bin/bash` if
+    // present, else `/bin/sh`) — this covers the former `enter` command.
+    let cmd: Vec<String> = if args.cmd.is_empty() {
+        vec![default_shell(&box_paths.mount_path)]
+    } else {
+        args.cmd
+    };
+    let status = run_box_command(&box_paths, &paths.store_dir(), &manifest, &cmd)?;
     let code = status.code().unwrap_or(1);
     std::process::exit(code);
 }
@@ -560,27 +468,8 @@ pub fn cmd_shell(args: NameArgs) -> Result<()> {
     std::process::exit(code);
 }
 
-pub fn cmd_enter(args: NameArgs) -> Result<()> {
-    let paths = Paths::new()?;
-    paths.ensure_base_dirs()?;
-    let box_paths = paths.box_paths(&args.name);
-    if !box_paths.manifest_path.exists() {
-        bail!("box '{}' does not exist", args.name);
-    }
-    let manifest = require_manifest(&box_paths)?;
-    let meta = BoxMetadata::load(&box_paths.metadata_path).unwrap_or_default();
-    ensure_runtime_ready(&args.name, &box_paths, &meta)?;
-
-    let shell = default_enter_shell(&box_paths.mount_path);
-    let cmd = vec![shell];
-    let env = manifest.shell_env();
-    let status = run_in_box(&box_paths.mount_path, &env, &cmd)?;
-    let code = status.code().unwrap_or(1);
-    std::process::exit(code);
-}
-
 // ===========================================================================
-// rm / rename
+// rm
 // ===========================================================================
 
 pub fn cmd_rm(args: RmArgs) -> Result<()> {
@@ -665,83 +554,6 @@ pub fn cmd_rm(args: RmArgs) -> Result<()> {
     Ok(())
 }
 
-pub fn cmd_rename(args: RenameArgs) -> Result<()> {
-    config::validate_name(&args.new_name)?;
-
-    let paths = Paths::new()?;
-    let old = paths.box_paths(&args.old_name);
-    let new = paths.box_paths(&args.new_name);
-
-    if !old.manifest_path.exists() {
-        bail!("box '{}' does not exist", args.old_name);
-    }
-    if new.dir.exists() {
-        bail!("a box named '{}' already exists", args.new_name);
-    }
-    if is_mountpoint(&old.mount_path) {
-        bail!(
-            "box '{}' is mounted; unmount it before renaming",
-            args.old_name
-        );
-    }
-
-    // Move authored dir (handles the symlink case: mv renames the link itself).
-    std::fs::rename(&old.dir, &new.dir)
-        .with_context(|| format!("failed to rename {} -> {}", old.dir.display(), new.dir.display()))?;
-
-    // Move derived state.
-    if old.state_dir.exists() {
-        std::fs::create_dir_all(old.state_dir.parent().unwrap_or(&paths.state_dir))?;
-        std::fs::rename(&old.state_dir, &new.state_dir)
-            .with_context(|| format!("failed to rename {} -> {}", old.state_dir.display(), new.state_dir.display()))?;
-    }
-
-    // Update the manifest's `name` field if present.
-    let manifest = BoxManifest::load_from(&new.manifest_path)?;
-    if manifest.name.as_deref() != Some(args.new_name.as_str()) {
-        let mut updated = manifest;
-        updated.name = Some(args.new_name.clone());
-        updated.save(&new.manifest_path)?;
-    }
-
-    // Rewrite exports owned by this box (regenerate wrappers with the new name).
-    let env = {
-        let m = BoxManifest::load_from(&new.manifest_path)?;
-        m.shell_env()
-    };
-    let records = scan_exports(&paths)?;
-    let mut rewritten = 0;
-    for (tool, record) in records {
-        if record.box_name != args.old_name {
-            continue;
-        }
-        let target = paths.exports_bin_dir().join(&tool);
-        write_wrapper_script(&target, &args.new_name, &tool, &env)?;
-        save_export_record(
-            &paths.exports_metadata_dir().join(format!("{tool}.json")),
-            &ExportRecord {
-                box_name: args.new_name.clone(),
-                command: tool,
-            },
-        )?;
-        rewritten += 1;
-    }
-
-    let colors = colors_enabled();
-    println!(
-        "{} {} -> {}",
-        style_action("renamed", colors),
-        style_title(&args.old_name, colors),
-        style_title(&args.new_name, colors)
-    );
-    println!("  {:<12} {}", "manifest", new.dir.display());
-    println!("  {:<12} {}", "state", new.state_dir.display());
-    if rewritten > 0 {
-        println!("  {:<12} {}", "exports", rewritten);
-    }
-    Ok(())
-}
-
 // ===========================================================================
 // list / inspect
 // ===========================================================================
@@ -787,7 +599,7 @@ pub fn cmd_list() -> Result<()> {
         println!("  {:<12} {}", "source", source);
         println!(
             "  {:<12} {}",
-            "built",
+            "prepared",
             style_recorded_state(meta.built, built_live, colors)
         );
         println!(
@@ -797,6 +609,9 @@ pub fn cmd_list() -> Result<()> {
         );
         if !manifest.shell.tools.is_empty() {
             println!("  {:<12} {}", "tools", manifest.shell.tools.join(", "));
+        }
+        if !manifest.host.tools.is_empty() {
+            println!("  {:<12} {} (host)", "tools", manifest.host.tools.join(", "));
         }
         println!();
     }
@@ -825,11 +640,7 @@ pub fn cmd_inspect(args: NameArgs) -> Result<()> {
         style_status_badge(status, colors)
     );
     println!("{} {}", style_label("source", colors), describe_source(&manifest, &box_paths));
-    if manifest.image.is_some() {
-        println!("{} image", style_label("type", colors));
-    } else {
-        println!("{} containerfile", style_label("type", colors));
-    }
+    println!("{} image", style_label("type", colors));
     println!();
 
     println!("{}", style_section("shell", colors));
@@ -847,6 +658,19 @@ pub fn cmd_inspect(args: NameArgs) -> Result<()> {
     }
     println!();
 
+    println!("{}", style_section("host", colors));
+    if manifest.host.tools.is_empty() {
+        println!("  {:<12} none", "tools");
+    } else {
+        println!(
+            "  {:<12} {}",
+            "tools",
+            manifest.host.tools.join(", "),
+        );
+        println!("  {:<12} {} (run only; forwarded via systemd-run --user)", "note", " ");
+    }
+    println!();
+
     println!("{}", style_section("state", colors));
     println!(
         "  {:<12} {}",
@@ -855,7 +679,7 @@ pub fn cmd_inspect(args: NameArgs) -> Result<()> {
     );
     println!(
         "  {:<12} {}",
-        "built",
+        "prepared",
         style_recorded_state(meta.built, built_live, colors)
     );
     println!(
@@ -868,9 +692,6 @@ pub fn cmd_inspect(args: NameArgs) -> Result<()> {
     println!("{}", style_section("paths", colors));
     println!("  {:<12} {}", "box", box_paths.dir.display());
     println!("  {:<12} {}", "manifest", box_paths.manifest_path.display());
-    if box_paths.containerfile_path.exists() {
-        println!("  {:<12} {}", "containerfile", box_paths.containerfile_path.display());
-    }
     println!("  {:<12} {}", "metadata", box_paths.metadata_path.display());
     println!("  {:<12} {}", "image", box_paths.cfs_path.display());
     println!("  {:<12} {}", "rootfs", box_paths.rootfs_path.display());
@@ -879,19 +700,15 @@ pub fn cmd_inspect(args: NameArgs) -> Result<()> {
 
     println!(
         "{} {}",
-        style_label("last built", colors),
+        style_label("last prepared", colors),
         format_last_built_at(meta.last_built_at.as_deref())
     );
 
     Ok(())
 }
 
-fn describe_source(manifest: &BoxManifest, box_paths: &crate::paths::BoxPaths) -> String {
-    if let Some(image) = &manifest.image {
-        format!("image · {image}")
-    } else {
-        format!("containerfile · {}", box_paths.containerfile_path.display())
-    }
+fn describe_source(manifest: &BoxManifest, _box_paths: &crate::paths::BoxPaths) -> String {
+    format!("image · {}", manifest.image)
 }
 
 // ===========================================================================
@@ -1133,207 +950,16 @@ fn remove_export(paths: &Paths, tool: &str) -> Result<Option<String>> {
 }
 
 // ===========================================================================
-// migrate (legacy config.json -> vendored shellbox.toml)
-// ===========================================================================
-
-#[derive(Deserialize)]
-struct LegacyConfig {
-    source: LegacySource,
-    #[serde(default)]
-    shell: LegacyShell,
-    #[serde(default)]
-    manifest_dir: Option<PathBuf>,
-}
-
-#[derive(Deserialize)]
-#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
-enum LegacySource {
-    ImageRef(String),
-    ContainerfilePath(PathBuf),
-}
-
-#[derive(Default, Deserialize)]
-struct LegacyShell {
-    #[serde(default)]
-    tools: Vec<String>,
-    #[serde(default)]
-    env: std::collections::BTreeMap<String, String>,
-}
-
-#[derive(Default, Deserialize)]
-struct LegacyMetadata {
-    #[serde(default)]
-    built: bool,
-    #[serde(default)]
-    last_built_at: Option<String>,
-}
-
-pub fn cmd_migrate() -> Result<()> {
-    let paths = Paths::new()?;
-    paths.ensure_base_dirs()?;
-
-    let entries: Vec<_> = std::fs::read_dir(paths.boxes_dir())?
-        .filter_map(|e| e.ok())
-        .filter(|e| e.path().is_dir())
-        .collect();
-
-    let mut migrated = 0;
-    let mut skipped = 0;
-    let mut failed = 0;
-
-    for entry in entries {
-        let name = entry.file_name().to_string_lossy().to_string();
-        let box_paths = paths.box_paths(&name);
-        let legacy_config = box_paths.dir.join("config.json");
-
-        // Already migrated (or never legacy)?
-        if box_paths.manifest_path.exists() {
-            skipped += 1;
-            continue;
-        }
-        if !legacy_config.exists() {
-            skipped += 1;
-            continue;
-        }
-
-        if let Err(e) = migrate_one(&paths, &name, &box_paths) {
-            eprintln!("error migrating '{}': {e}", name);
-            failed += 1;
-            continue;
-        }
-        println!("migrated '{}'", name);
-        migrated += 1;
-    }
-
-    println!();
-    println!("migration complete: {} migrated, {} skipped, {} failed", migrated, skipped, failed);
-    Ok(())
-}
-
-fn migrate_one(paths: &Paths, name: &str, box_paths: &crate::paths::BoxPaths) -> Result<()> {
-    let legacy_config_path = box_paths.dir.join("config.json");
-    let legacy_meta_path = box_paths.dir.join("metadata.json");
-
-    // Legacy mountpoint lived at state/mounts/<name>.
-    let legacy_mount = paths.state_dir.join("mounts").join(name);
-    if is_mountpoint(&legacy_mount) {
-        bail!("box is still mounted at {}; unmount it before migrating", legacy_mount.display());
-    }
-
-    let data = std::fs::read(&legacy_config_path)
-        .with_context(|| format!("failed to read {}", legacy_config_path.display()))?;
-    let legacy: LegacyConfig = serde_json::from_slice(&data)
-        .with_context(|| format!("failed to parse {}", legacy_config_path.display()))?;
-
-    let legacy_meta: LegacyMetadata = std::fs::read(&legacy_meta_path)
-        .ok()
-        .and_then(|d| serde_json::from_slice(&d).ok())
-        .unwrap_or_default();
-
-    let mut manifest = BoxManifest {
-        name: Some(name.to_string()),
-        ..Default::default()
-    };
-    let mut containerfile_src: Option<PathBuf> = None;
-    match legacy.source {
-        LegacySource::ImageRef(image) => manifest.image = Some(image),
-        LegacySource::ContainerfilePath(p) => containerfile_src = Some(p),
-    }
-    manifest.shell.tools = legacy.shell.tools;
-
-    // Freeze {manifest_dir} tokens to literal absolute values.
-    for (k, v) in legacy.shell.env {
-        let expanded = match &legacy.manifest_dir {
-            Some(d) => v.replace("{manifest_dir}", &d.display().to_string()),
-            None => {
-                if v.contains("{manifest_dir}") {
-                    eprintln!(
-                        "warning: '{}' has {{manifest_dir}} token but no manifest_dir was recorded; leaving the literal token in place",
-                        name
-                    );
-                }
-                v
-            }
-        };
-        manifest.shell.env.insert(k, expanded);
-    }
-
-    manifest.save(&box_paths.manifest_path)?;
-
-    // Vendor the Containerfile if needed.
-    if let Some(src) = containerfile_src {
-        if src.exists() {
-            std::fs::copy(&src, &box_paths.containerfile_path).with_context(|| {
-                format!("failed to copy {} to {}", src.display(), box_paths.containerfile_path.display())
-            })?;
-        } else {
-            eprintln!(
-                "warning: '{}' references containerfile {} which no longer exists",
-                name,
-                src.display()
-            );
-        }
-    }
-
-    // Move derived artifacts into state/<name>/.
-    std::fs::create_dir_all(&box_paths.state_dir)?;
-    move_path(&box_paths.dir.join("image.cfs"), &box_paths.cfs_path)?;
-    move_path(&box_paths.dir.join("rootfs"), &box_paths.rootfs_path)?;
-    if legacy_mount.exists() {
-        // legacy_mount -> state/<name>/mount
-        move_path(&legacy_mount, &box_paths.mount_path)?;
-    }
-
-    let new_meta = BoxMetadata {
-        built: legacy_meta.built,
-        mounted: false,
-        last_built_at: legacy_meta.last_built_at,
-    };
-    new_meta.save(&box_paths.metadata_path)?;
-
-    // Remove legacy files.
-    let _ = std::fs::remove_file(&legacy_config_path);
-    let _ = std::fs::remove_file(&legacy_meta_path);
-
-    Ok(())
-}
-
-fn move_path(src: &Path, dst: &Path) -> Result<()> {
-    if !src.exists() {
-        return Ok(());
-    }
-    if let Some(parent) = dst.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    // Try a cheap rename; fall back to a recursive copy+delete across devices.
-    if std::fs::rename(src, dst).is_ok() {
-        return Ok(());
-    }
-    run_command(
-        Command::new("cp")
-            .arg("-a")
-            .arg(src)
-            .arg(dst),
-    )?;
-    if src.is_dir() {
-        remove_tree_force(src)?;
-    } else {
-        let _ = std::fs::remove_file(src);
-    }
-    Ok(())
-}
-
-// ===========================================================================
 // runtime (bwrap)
 // ===========================================================================
 
 fn ensure_runtime_ready(name: &str, box_paths: &crate::paths::BoxPaths, meta: &BoxMetadata) -> Result<()> {
     if !meta.built || !box_paths.cfs_path.exists() {
-        bail!("box '{}' is not built", name);
+        bail!("box '{}' is not prepared", name);
     }
-    if !is_mountpoint(&box_paths.mount_path) {
-        bail!("box '{}' is not mounted\nrun: sudo shellbox mount {}", name, name);
-    }
+    // Note: a box does NOT need to be (kernel-)mounted to run. If it is mounted,
+    // `run`/`shell` use that fast path; otherwise they fall back to the
+    // fully rootless FUSE runtime. So we no longer require `mount` here.
     Ok(())
 }
 
@@ -1434,7 +1060,7 @@ fn prepend_path(prefix: &Path) -> Result<OsString> {
 /// Standard system dirs are always appended as a fallback. Host entries
 /// precede them so user-installed tools take precedence over same-named box
 /// binaries. Order is preserved and duplicates are removed.
-fn forwarded_path(home: &Path, mount_path: &Path) -> Result<OsString> {
+fn forwarded_path(home: &Path, mount_path: &Path, host_bin_prefix: Option<&str>) -> Result<OsString> {
     const SYSTEM_FALLBACK: &str =
         "/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin";
 
@@ -1446,6 +1072,12 @@ fn forwarded_path(home: &Path, mount_path: &Path) -> Result<OsString> {
 
     let mut kept: Vec<String> = Vec::new();
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    // Host-tools shim dir goes first so `[host]` tools win over everything.
+    if let Some(prefix) = host_bin_prefix {
+        kept.push(prefix.to_string());
+        seen.insert(prefix.to_string());
+    }
 
     if let Some(path) = std::env::var_os("PATH") {
         for raw in std::env::split_paths(&path) {
@@ -1510,8 +1142,82 @@ fn write_wrapper_script(
 fn run_in_box(
     mount_path: &Path,
     env_vars: &[(String, String)],
+    host: Option<&crate::host_exec::HostExecSession>,
     cmd: &[String],
 ) -> Result<std::process::ExitStatus> {
+    let mut command = bwrap_command(mount_path, env_vars, host, cmd)?;
+    run_command_inherit(&mut command)
+}
+
+/// Run a command inside a box using the fully rootless FUSE runtime (no mount
+/// required). `image` is the composefs `.cfs` file; `store` is the
+/// content-addressed object store. The bwrap invocation is identical to the
+/// kernel-mount path — only the root source differs (a private FUSE mount
+/// instead of a host-visible kernel composefs mount).
+///
+/// `host_tools` (rather than a started session) are passed in because the
+/// session must be started *after* the `unshare(CLONE_NEWUSER|CLONE_NEWNS)`
+/// inside `run_rootless` — starting it here would multithread the caller and
+/// make `CLONE_NEWNS` fail with `EINVAL`.
+fn run_in_box_fuse(
+    image: &Path,
+    store: &Path,
+    env_vars: &[(String, String)],
+    host_tools: &[String],
+    cmd: &[String],
+) -> Result<std::process::ExitStatus> {
+    let env_vars_owned: Vec<(String, String)> = env_vars.to_vec();
+    let cmd_owned: Vec<String> = cmd.to_vec();
+    crate::fuse::run_rootless(image, store, host_tools, move |root, host| {
+        // Same builder as the kernel path; unwraps are safe: inputs were
+        // validated by the caller and only fail on HOME resolution.
+        bwrap_command(root, &env_vars_owned, host, &cmd_owned)
+            .expect("internal: bwrap_command failed inside FUSE runtime")
+    })
+}
+
+/// Decide between the kernel-mount fast path and the rootless FUSE path, then
+/// run. Used by `run`. Owns the host-exec session (if the box declares
+/// `[host]` tools) for exactly the lifetime of the box command.
+///
+/// On the kernel path the session is started here (no unshare, so threading is
+/// fine). On the FUSE path the tools are handed to `run_rootless`, which starts
+/// the session after its `unshare` (which requires a single-threaded caller).
+fn run_box_command(
+    box_paths: &crate::paths::BoxPaths,
+    store: &Path,
+    manifest: &BoxManifest,
+    cmd: &[String],
+) -> Result<std::process::ExitStatus> {
+    let env = manifest.shell_env();
+    let host_tools = normalize_tools(manifest.host_tools())?;
+
+    if is_mountpoint(&box_paths.mount_path) {
+        let host_session = if host_tools.is_empty() {
+            None
+        } else {
+            Some(crate::host_exec::HostExecSession::start(&host_tools)?)
+        };
+        let result = run_in_box(&box_paths.mount_path, &env, host_session.as_ref(), cmd);
+        // Drop before returning so the accept loop joins and the socket is
+        // cleaned up (run then calls process::exit, which would otherwise
+        // kill it mid-teardown).
+        drop(host_session);
+        result
+    } else {
+        run_in_box_fuse(&box_paths.cfs_path, store, &env, &host_tools, cmd)
+    }
+}
+
+/// Build the bwrap `Command` that runs `cmd` inside a box whose root is `root`.
+/// Shared by the kernel-mount path (`run_in_box`) and the rootless FUSE path
+/// (`run_in_box_fuse`), so the two are identical except for the root source.
+fn bwrap_command(
+    root: &Path,
+    env_vars: &[(String, String)],
+    host: Option<&crate::host_exec::HostExecSession>,
+    cmd: &[String],
+) -> Result<std::process::Command> {
     let home = home_dir()?;
     let cwd = std::env::current_dir().unwrap_or_else(|_| home.clone());
     let chdir = if cwd.starts_with(&home) {
@@ -1522,9 +1228,13 @@ fn run_in_box(
     let user = std::env::var("USER").unwrap_or_else(|_| "user".to_string());
     let logname = std::env::var("LOGNAME").unwrap_or_else(|_| user.clone());
 
+    // The host-tools shim dir is prepended to PATH so `[host]` tools resolve
+    // ahead of everything else inside the box.
+    let host_bin_prefix = host.map(|_| crate::host_exec::INBOX_HOSTBIN);
+
     let mut command = Command::new("bwrap");
     command
-        .arg("--bind").arg(mount_path).arg("/")
+        .arg("--bind").arg(root).arg("/")
         .arg("--dev-bind").arg("/dev").arg("/dev")
         .arg("--proc").arg("/proc")
         .arg("--share-net")
@@ -1552,8 +1262,19 @@ fn run_in_box(
         // are explicitly excluded: their wrapper scripts invoke
         // `shellbox run <box>` again, so forwarding them into a box runtime
         // would shadow the box's own tools and recurse indefinitely. Only
-        // genuine host tool directories are forwarded.
-        .arg("--setenv").arg("PATH").arg(forwarded_path(&home, mount_path)?);
+        // genuine host tool directories are forwarded. The host-tools shim dir
+        // (when present) is prepended separately and is safe to forward
+        // because those wrappers exec the host-exec helper, not `shellbox run`.
+        .arg("--setenv").arg("PATH").arg(forwarded_path(&home, root, host_bin_prefix)?);
+
+    if let Some(host) = host {
+        // Bind the helper binary and the per-tool wrapper dir into fixed
+        // in-box paths, and tell the helper which socket to talk to.
+        command
+            .arg("--ro-bind").arg(host.helper_path()).arg(crate::host_exec::INBOX_HELPER)
+            .arg("--bind").arg(host.hostbin_path()).arg(crate::host_exec::INBOX_HOSTBIN)
+            .arg("--setenv").arg(crate::host_exec::SOCK_ENV).arg(host.socket_path());
+    }
 
     if let Ok(xrd) = std::env::var("XDG_RUNTIME_DIR") {
         command.arg("--bind-try").arg(&xrd).arg(&xrd);
@@ -1569,11 +1290,11 @@ fn run_in_box(
         command.arg(part);
     }
 
-    run_command_inherit(&mut command)
+    Ok(command)
 }
 
 // ===========================================================================
-// identity & name resolution injection (build-time)
+// identity & name resolution injection (prepare-time)
 // ===========================================================================
 
 fn inject_runtime_identity(rootfs: &Path) -> Result<()> {
@@ -1591,7 +1312,7 @@ fn inject_runtime_identity(rootfs: &Path) -> Result<()> {
         .filter(|name| !name.is_empty())
         .unwrap_or_else(|| std::env::var("USER").unwrap_or_else(|_| format!("user{uid}")));
     let home = home_dir()?;
-    let shell = default_enter_shell(rootfs);
+    let shell = default_shell(rootfs);
     let gids = current_group_ids(primary_gid)?;
 
     let mut group_names: Vec<(u32, String)> = Vec::new();
@@ -1623,6 +1344,36 @@ fn inject_desktop_mount_points(rootfs: &Path) -> Result<()> {
     let dir = rootfs.join("run").join("user").join(uid.to_string());
     std::fs::create_dir_all(&dir)
         .with_context(|| format!("failed to create {}", dir.display()))?;
+    Ok(())
+}
+
+/// Pre-create the in-box bind targets for `[host]` tools. bwrap binds *over*
+/// existing paths, and the composefs root is read-only at runtime, so the
+/// placeholders must be baked in at prepare time (same pattern as the desktop
+/// mount points and name-resolution files above). No-op when no host tools are
+/// declared, so non-host boxes keep a clean rootfs.
+fn inject_host_exec_mount_points(rootfs: &Path, manifest: &BoxManifest) -> Result<()> {
+    if manifest.host.tools.is_empty() {
+        return Ok(());
+    }
+    // INBOX_* constants are absolute in-box paths ("/run/..."); relativize
+    // them against the rootfs being assembled.
+    let helper_rel = crate::host_exec::INBOX_HELPER.trim_start_matches('/');
+    let bin_rel = crate::host_exec::INBOX_HOSTBIN.trim_start_matches('/');
+
+    // Directory: bind target for the per-tool wrapper dir.
+    let bin_dir = rootfs.join(bin_rel);
+    std::fs::create_dir_all(&bin_dir)
+        .with_context(|| format!("failed to create {}", bin_dir.display()))?;
+    // Regular file: bind target for the static helper binary. Its parent
+    // (/run) already exists, but create it defensively in case INBOX_HELPER
+    // ever moves deeper.
+    let helper_file = rootfs.join(helper_rel);
+    if let Some(parent) = helper_file.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&helper_file, [])
+        .with_context(|| format!("failed to create {}", helper_file.display()))?;
     Ok(())
 }
 
@@ -1741,7 +1492,7 @@ fn current_group_ids(primary_gid: u32) -> Result<Vec<u32>> {
     Ok(gids)
 }
 
-fn default_enter_shell(root: &Path) -> String {
+fn default_shell(root: &Path) -> String {
     if root.join("bin/bash").exists() {
         "/bin/bash".to_string()
     } else {
@@ -1763,7 +1514,7 @@ fn now_string() -> Result<String> {
 #[derive(Clone, Copy)]
 enum InspectStatus {
     Defined,
-    Built,
+    Prepared,
     Mounted,
 }
 
@@ -1771,7 +1522,7 @@ fn inspect_status(mounted_live: bool, built_live: bool) -> InspectStatus {
     if mounted_live {
         InspectStatus::Mounted
     } else if built_live {
-        InspectStatus::Built
+        InspectStatus::Prepared
     } else {
         InspectStatus::Defined
     }
@@ -1812,11 +1563,11 @@ fn style_status_badge(status: InspectStatus, colors: bool) -> String {
                 "* defined".to_string()
             }
         }
-        InspectStatus::Built => {
+        InspectStatus::Prepared => {
             if colors {
-                format!("{} {}", "●".blue().bold(), "built".blue().bold())
+                format!("{} {}", "●".blue().bold(), "prepared".blue().bold())
             } else {
-                "* built".to_string()
+                "* prepared".to_string()
             }
         }
         InspectStatus::Mounted => {

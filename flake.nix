@@ -19,7 +19,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-2605.url = "github:NixOS/nixpkgs/nixos-26.05";
-    nixpkgs-bambu.url = "github:NixOS/nixpkgs/3dc39290654c7c595c9f3fa70c3b998ca2bd61b0";
 
     # ── Home Manager ───────────────────────────────────────────────
     home-manager = {
@@ -63,7 +62,6 @@
       nixpkgs,
       nixpkgs-unstable,
       nixpkgs-2605,
-      nixpkgs-bambu,
       home-manager,
       disko,
       agenix,
@@ -108,7 +106,6 @@
                 # Shared overlay for custom packages
                 nixpkgs.overlays = [
                   (final: prev: {
-                    antigravity-cli = final.callPackage ./pkgs/antigravity-cli/package.nix { };
                     gloo-proxy = final.callPackage ./pkgs/gloo-proxy/package.nix { };
                   })
                 ];
@@ -139,16 +136,14 @@
             nixpkgs.config.allowUnfree = true;
             nixpkgs.overlays = [
               (final: prev: {
-                slk = final.callPackage ./thinkpad/pkgs/slk/package.nix { };
-                globalprotect-openconnect = final.callPackage ./thinkpad/pkgs/globalprotect-openconnect/default.nix { };
-                antigravity-cli = final.callPackage ./pkgs/antigravity-cli/package.nix { };
-                bambu-studio = (import nixpkgs-bambu { system = "x86_64-linux"; config.allowUnfree = true; }).bambu-studio;
+                slk = final.callPackage ./hosts/thinkpad/pkgs/slk/package.nix { };
+                globalprotect-openconnect = final.callPackage ./hosts/thinkpad/pkgs/globalprotect-openconnect/default.nix { };
               })
             ];
           }
-          ./thinkpad/hardware-configuration.nix
-          ./thinkpad/configuration.nix
-          ./thinkpad/backup.nix
+          ./hosts/thinkpad/hardware-configuration.nix
+          ./hosts/thinkpad/configuration.nix
+          ./hosts/thinkpad/backup.nix
 
           ./modules/nebula-hosts.nix
           ./modules/nebula-client.nix
@@ -167,7 +162,7 @@
               agenix.homeManagerModules.default
               zen-browser.homeModules.twilight
             ];
-            home-manager.users.${username} = import ./thinkpad/home.nix;
+            home-manager.users.${username} = import ./hosts/thinkpad/home.nix;
             home-manager.extraSpecialArgs = {
               inherit noctalia-shell vicinae agenix;
               unstable = unstable-pkgs;

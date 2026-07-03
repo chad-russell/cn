@@ -5,6 +5,15 @@ edition = "2024"
 description = "composefs-backed devshell utility"
 license = "MIT OR Apache-2.0"
 
+# The crate at the repository root is both the `shellbox` package and the
+# workspace root. `shellbox-host-exec` is a near-zero-dependency companion
+# binary that runs *inside* a box and bridges to the host-exec socket server
+# in the parent `shellbox` process. It is intentionally a separate crate so it
+# can be built statically (no dynamic glibc tie to the host) and shipped
+# independently to distro packagers.
+[workspace]
+members = ["host-exec-helper"]
+
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
@@ -15,3 +24,20 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tempfile = "3"
 toml = "0.8"
+
+# Rootless FUSE runtime. composefs provides the image parsing + repository;
+# fuser provides the FUSE protocol types. We vendor the TreeFuse serve loop
+# (with readdirplus) rather than depending on composefs-fuse, which lacks it.
+# These pull in tokio transitively — a noticeable dependency hit, accepted in
+# exchange for a fully rootless, daemonless mount path.
+composefs = { git = "https://github.com/composefs/composefs-rs", default-features = false }
+fuser = { version = "0.15", default-features = false, features = ["abi-7-31"] }
+rustix = { version = "1.0", default-features = false, features = ["fs", "mount", "process", "thread", "std"] }
+
+# Speed up heavy transitive deps in dev builds.
+[profile.dev.package.sha2]
+opt-level = 3
+[profile.dev.package.zstd]
+opt-level = 3
+[profile.dev.package.tokio]
+opt-level = 1

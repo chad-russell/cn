@@ -15,8 +15,6 @@ repo-supplied devcontainers the whole team uses.
 ~/Code/cn/gloo/                     THIS — orchestration + agent context (tracked)
 ├── overrides/
 │   └── polymer.yml                 port publish + agent service (personal)
-├── fetch-env.sh                    sync .env.local from bee → local clone
-├── setup.sh                        enable podman socket + link skill
 └── README.md
 ```
 
@@ -24,7 +22,7 @@ Two ideas make this clean:
 
 1. **`.env.local` lives in the repo, gitignored** (confirmed in polymer's
    `.gitignore`). So when pi edits env, it edits it where the app reads it —
-   no sidecar-repo split-brain. `fetch-env.sh` seeds it from bee once.
+   no sidecar-repo split-brain.
 2. **pi runs in an `agent` container** (Option A), a peer of the app/db/minio
    containers on the compose network. It mounts the repo (`/workspace`) and the
    host's **rootless podman socket**, so it can `podman exec` into the app
@@ -33,17 +31,11 @@ Two ideas make this clean:
 ## First-time setup
 
 ```bash
-# 1. enable the podman socket + link the skill into ~/.pi
-~/Code/cn/gloo/setup.sh
-
-# 2. rebuild the dev-shell image so the agent container has `podman`
+# 1. rebuild the dev-shell image so the agent container has `podman`
 #    (this adds the podman client to the image pi/the agent uses)
-cd ~/Code/cn/atomic/thinkpad/toolbox && ./build.sh
+cd ~/Code/cn/hosts/thinkpad/toolbox && ./build.sh
 #    then recreate the dev toolbox if you want podman there too:
 #    ./create.sh
-
-# 3. fetch polymer's .env.local from bee
-~/Code/cn/gloo/fetch-env.sh polymer
 ```
 
 ## Daily workflow

@@ -2,12 +2,15 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-/// Derived build/mount state for a box.
+/// Derived prepare/mount state for a box.
 ///
 /// This is a **cache/hint, not authoritative**. Commands re-check live state
 /// (`cfs_path.exists()`, `mountpoint -q`) because mounts disappear across
 /// reboots. Paths are not stored here: they are always derivable from the box
 /// name via `Paths::box_paths`.
+///
+/// The field names (`built`, `last_built_at`) are kept for on-disk stability
+/// of `metadata.json`; user-facing strings say "prepared".
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BoxMetadata {
     #[serde(default)]

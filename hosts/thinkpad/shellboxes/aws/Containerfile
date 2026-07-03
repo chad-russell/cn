@@ -1,0 +1,15 @@
+# shellbox aws — AWS CLI (v2)
+#
+# A source image consumed by `dev`'s multi-stage build (see ../dev/Containerfile).
+# Provides the `aws` CLI only; runtime cwd, $HOME, and identity come from bwrap.
+#
+# Not linked as a standalone box by default (see ../Justfile `boxes` list) — it
+# exists to be merged into `dev`. Add `aws` to that list if you also want an
+# isolated `shellbox run aws -- aws ...`.
+
+FROM fedora:latest
+
+RUN dnf install -y awscli \
+    && dnf clean all
+
+CMD ["aws"]

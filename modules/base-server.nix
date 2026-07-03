@@ -57,7 +57,6 @@
     nfs-utils
     ripgrep
     fd
-    antigravity-cli
     unstable.cursor-cli
   ];
 

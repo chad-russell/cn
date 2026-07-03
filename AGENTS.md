@@ -39,7 +39,8 @@ Last validated via SSH: **2026-05-06**.
 │   │   ├── addons/nebula/     # Local HAOS add-on: Nebula VPN client
 │   │   ├── scripts/           # Deploy, SSH, supervisor helpers
 │   │   └── README.md
-│   └── misc/                  # HP Z820 workstation (temporary backup target)
+│   ├── misc/                  # HP Z820 workstation (temporary backup target)
+│   └── thinkpad/              # `think` laptop NixOS + home-manager config
 ├── modules/
 │   ├── base-server.nix        # Shared server baseline: user, SSH, networkd, packages, GC, NFS client
 │   ├── server-shell.nix       # Shared zsh/CLI setup for servers
@@ -52,7 +53,6 @@ Last validated via SSH: **2026-05-06**.
 │   ├── pki/                   # Nebula CA/certs and age-encrypted private keys
 │   └── scripts/               # Nebula helper binaries/scripts
 ├── secrets/                   # Agenix secrets used by server modules
-└── thinkpad/                  # `think` laptop NixOS + home-manager config
 ```
 
 ## Current Architecture
@@ -101,7 +101,7 @@ Last validated via SSH: **2026-05-06**.
     └─────────────────┘
 
 Also on LAN: homeassistant / HAOS at 192.168.20.51, Nebula 10.10.0.51.
-Laptop: think / NixOS 25.11, configured under `thinkpad/`.
+Laptop: think / NixOS 25.11, configured under `hosts/thinkpad/`.
 ```
 
 ## Machine Registry
@@ -110,7 +110,7 @@ Laptop: think / NixOS 25.11, configured under `thinkpad/`.
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, SearXNG, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
 | `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Gloo stack, Nebula lighthouse.                                                                                                                                                         |
-| `think`         | varies            | `10.10.0.10`                          | NixOS 25.11 | `thinkpad/`                          | Laptop with home-manager, niri, Noctalia, Podman, dev tools.                                                                                                                                       |
+| `think`         | varies            | `10.10.0.10`                          | NixOS 25.11 | `hosts/thinkpad/`                    | Laptop with home-manager, niri, Noctalia, Podman, dev tools.       |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 25.11 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
 | `gateway`       | `178.156.171.212` | `10.10.0.2`                           | NixOS 25.11 | `hosts/gateway/`                     | Hetzner Cloud VPS: **Caddy public TLS ingress** for `*.crussell.io` (HTTP-01, reverse-proxies to backends over Nebula). Nebula lighthouse/relay.                                                   |
@@ -413,7 +413,7 @@ age -d -i ~/.ssh/id_ed25519 nebula/pki/bees.key.age > /tmp/bees.key
 Agenix and age are both used:
 
 - `secrets/*.age` — server secrets (aws-env, openrouter-api-key, restic passwords, S3 credentials).
-- `thinkpad/secrets/*.age` — home-manager/laptop secrets.
+- `hosts/thinkpad/secrets/*.age` — home-manager/laptop secrets.
 - `nebula/pki/*.key.age` — Nebula private keys encrypted to the SSH ed25519 public key.
 
 Gloo env files (`.env` / `.env.local`) are gitignored and backed by 1Password — NOT managed by Nix or agenix.

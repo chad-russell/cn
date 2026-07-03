@@ -1,0 +1,19 @@
+# shellbox default — general-purpose CLI devshell
+#
+# Common build/runtime CLI tools. Runtime cwd, $HOME, and identity come from
+# bwrap (see shellbox docs); this image only provides the tools.
+
+FROM fedora:latest
+
+RUN dnf copr enable -y wezfurlong/wezterm-nightly;
+
+RUN dnf install -y \
+      htop \
+      ripgrep \
+      fd-find \
+      bat \
+      eza \
+      zoxide \
+      wezterm \
+      tokei \
+    && dnf clean all

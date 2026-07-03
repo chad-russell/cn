@@ -1,0 +1,117 @@
+# Custom Fedora Silverblue image for the ThinkPad — "bluefin-style".
+#
+# A thin layer over stock Silverblue. The active host-level changes are kept
+# intentionally minimal:
+#   - drop `toolbox` (ships IN the base image) and add `distrobox`.
+# Everything desktop-session-specific now lives under ../desktoppak rather than
+# being installed natively on the host image.
+#
+# This image uses the modern bootc-native build model, matching current
+# Bluefin/finpilot (projectbluefin/finpilot):
+#   - `dnf5` for all package changes at build time (NOT `rpm-ostree`).
+#     finpilot's AGENTS.md is explicit: "Use dnf5 exclusively (never dnf, yum,
+#     rpm-ostree)". In a bootc container build dnf5 writes straight into the
+#     image's /usr, so a plain `dnf5 remove` drops a base package — no
+#     `rpm-ostree override remove` needed (that was an rpm-ostree *client*
+#     concept; at build time the tree is just a writable filesystem).
+#   - `bootc container lint` to finalize/validate (replaces the old
+#     `ostree container commit`).
+#   - Switched/deployed with `bootc`, not `rpm-ostree` (see switch.sh).
+#   bootc still uses ostree/libostree under the hood — it's the stable,
+#   future-facing front-end (per bootc-status(8): "bootc and rpm-ostree share
+#   the same code").
+#
+# Built and switched entirely locally — no registry, no GitHub Actions. See
+# build.sh / switch.sh.
+#
+# Base image: the same one ublue/bluefin/finpilot derive from.
+
+ARG FEDORA_MAJOR_VERSION=44
+FROM quay.io/fedora-ostree-desktops/silverblue:${FEDORA_MAJOR_VERSION}
+
+# ---- 1. The swap: toolbox -> distrobox --------------------------------
+# `dnf5 remove` drops a base-image package; `dnf5 install` pulls distrobox from
+# the Fedora repos. The cache mounts persist the dnf cache across rebuilds so
+# repeated builds are fast (finpilot/lina-bh pattern).
+#
+# NOTE: this does NOT change the bespoke dev container in ../toolbox (that one
+# stays a plain podman create with a separate $HOME). distrobox here just gives
+# the `distrobox` CLI on the host for ad-hoc containers, replacing `toolbox`.
+#
+# `just` and `fzf` are host-native on purpose: they back the `cjust` task menu
+# (hosts/thinkpad/Justfile + the cjust function in dotfiles/.zshrc). Like
+# oh-my-posh they can't live in a shellbox — `cjust` must run before any box
+# is set up. (`just` was previously borrowed from the `default` box, which
+# made the menu depend on the thing it bootstraps; `fzf` backs `just --choose`.)
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    dnf5 -y install distrobox zsh just fzf
+                 
+
+# ---- 2. SELinux: disabled (personal-laptop host policy) -----------------
+# This is a single-user personal laptop, and the operator comes from NixOS/
+# Arch where SELinux isn't part of the workflow. Fedora ships the `targeted`
+# policy enabled by default; its friction (label mismatches on relocated paths,
+# audit noise, per-inode relabeling cost) isn't worth the hardening for this
+# threat model — the high-value apps (Noctalia/Vicinae) are already sandboxed
+# by the bwrap wrappers above, and the daemons `targeted` most protects
+# (httpd, named, ...) don't run on a desktop. So: disable it in the image.
+#
+# Mechanism: `SELINUX=disabled` in /etc/selinux/config — the canonical, image-
+# bakeable way. The selinux-policy packages stay installed (removing them
+# breaks a web of dependencies), but no policy is loaded and no enforcement
+# happens, so the host-session features layered on top (the Noctalia/Vicinae
+# bwrap wrappers, which relocate home paths behind tmpfs + bind mounts) need no
+# SELinux-aware machinery at all. For absolute-
+# zero kernel overhead you could additionally
+# `rpm-ostree kargs --append-if-missing selinux=0` on the host, but the config
+# change alone is effectively all the way there.
+# Make zsh the default login shell for newly-created users, while keeping bash
+# available (it stays installed as part of the base image). The default user on
+# this host is created by the installer from these defaults, so new installs get
+# zsh automatically. For an already-installed host, switch the existing account
+# with `chsh -s /usr/bin/zsh` after deploying this image.
+#
+# shadow-utils ships the file at /etc/default/useradd, but in an ostree/bootc
+# image the "default" copy may also live at /usr/etc/default/useradd (the image
+# default that gets copied to /etc on first boot). Handle either location.
+RUN set -e; \
+    edited=0; \
+    for f in /etc/default/useradd /usr/etc/default/useradd; do \
+        if [ -f "$f" ]; then \
+            sed -i 's|^SHELL=.*|SHELL=/usr/bin/zsh|' "$f"; \
+            grep -q '^SHELL=/usr/bin/zsh' "$f"; \
+            edited=1; \
+        fi; \
+    done; \
+    [ "$edited" = 1 ]
+
+RUN sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config && \
+    grep -q '^SELINUX=disabled' /etc/selinux/config
+
+# ---- 3. build identity (lets `bootc upgrade` detect a rebuild) ----------
+# Each build injects a unique IMAGE_VERSION (git SHA + timestamp; see
+# build.sh) two ways:
+#   - as an OCI LABEL, which lives in the image *config* and therefore changes
+#     the image's MANIFEST/CONFIG DIGEST on every build. That digest is exactly
+#     what `bootc upgrade` compares against the booted image, so a rebuilt
+#     `:44` is always detected as new and gets deployed (see README, "switch
+#     once, upgrade thereafter"). Without the label, a rebuild that reuses
+#     podman's layer cache has an identical manifest digest and `bootc upgrade`
+#     correctly — but uselessly — reports "No update available".
+#   - written to /usr as well, so on the booted system you can `cat
+#     /usr/lib/host-image-thinkpad-version` to see exactly which build you're
+#     on without querying bootc/podman.
+# This is the ONLY layer that changes per build, so the dnf layers above stay
+# cached and rebuilds stay fast.
+ARG IMAGE_VERSION=local
+RUN printf 'IMAGE_VERSION=%s\n' "${IMAGE_VERSION}" > /usr/lib/host-image-thinkpad-version
+LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
+
+
+# ---- 4. finalize: bootc-native validation -----------------------------
+# systemd as pid 1 is required for a bootc image. `bootc container lint` then
+# validates the image (catches /run leftovers, /opt issues, etc.) before you
+# ever switch to it — it replaces the old `ostree container commit`.
+CMD ["/sbin/init"]
+RUN bootc container lint

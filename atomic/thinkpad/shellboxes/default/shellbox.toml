@@ -1,4 +1,0 @@
-name = "default"
-
-[shell]
-tools = ["htop", "rg", "fd", "bat"]

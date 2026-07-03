@@ -11,26 +11,23 @@ pub struct Paths {
 /// All filesystem locations that refer to a single box.
 ///
 /// Authored files live under `dir` (which may be a symlink into a dotfiles
-/// repo). Derived/rebuildable artifacts live under `state_dir`/`<name>/` so
+/// repo). Derived/recreatable artifacts live under `state_dir`/`<name>/` so
 /// that symlinked boxes don't drag machine-specific state into version control
 /// and so `rm` can drop artifacts without touching the manifest.
 #[derive(Debug, Clone)]
 pub struct BoxPaths {
-    /// `boxes/<name>` — authored files only (manifest, optional Containerfile).
-    /// May be a symlink.
+    /// `boxes/<name>` — authored files only (the manifest). May be a symlink.
     pub dir: PathBuf,
     /// `dir/shellbox.toml` — the single source of truth.
     pub manifest_path: PathBuf,
-    /// `dir/Containerfile` — present iff the box is containerfile-backed.
-    pub containerfile_path: PathBuf,
 
     /// `state/<name>` — all per-box derived state.
     pub state_dir: PathBuf,
-    /// `state/<name>/metadata.json` — derived build/mount cache.
+    /// `state/<name>/metadata.json` — derived prepare/mount cache.
     pub metadata_path: PathBuf,
     /// `state/<name>/image.cfs` — composefs image.
     pub cfs_path: PathBuf,
-    /// `state/<name>/rootfs` — exported rootfs (build input).
+    /// `state/<name>/rootfs` — exported rootfs (prepare input).
     pub rootfs_path: PathBuf,
     /// `state/<name>/mount` — composefs mountpoint.
     pub mount_path: PathBuf,
@@ -90,7 +87,6 @@ impl Paths {
         let state_dir = self.state_dir.join(name);
         BoxPaths {
             manifest_path: dir.join("shellbox.toml"),
-            containerfile_path: dir.join("Containerfile"),
             metadata_path: state_dir.join("metadata.json"),
             cfs_path: state_dir.join("image.cfs"),
             rootfs_path: state_dir.join("rootfs"),

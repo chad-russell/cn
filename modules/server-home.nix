@@ -15,7 +15,7 @@ in
 
   # Only manage neovim — shell is handled by modules/server-shell.nix
   imports = [
-    ../thinkpad/nvim
+    ../hosts/thinkpad/nvim
   ];
 
   # The shared nvim config uses Neovim 0.12+ features (pumborder, vim.lsp.config, etc.)

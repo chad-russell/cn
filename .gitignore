@@ -13,5 +13,8 @@ secrets/*.env
 # Archive
 .archived
 result
-atomic/thinkpad/image/state/
+hosts/thinkpad/image/state/
 **/__pycache__
+
+# Images
+*.cfs

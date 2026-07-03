@@ -11,22 +11,17 @@ pub struct Cli {
 pub enum Command {
     Create(CreateArgs),
     Link(LinkArgs),
-    Build(NameArgs),
+    Prepare(NameArgs),
     List,
     Inspect(NameArgs),
     Mount(NameArgs),
     Unmount(NameArgs),
     Run(RunArgs),
     Shell(NameArgs),
-    Enter(NameArgs),
     Rm(RmArgs),
-    Rename(RenameArgs),
     Export(ExportArgs),
     Unexport(UnexportArgs),
     ListExports,
-    /// Migrate boxes from the legacy `config.json` layout to the vendored
-    /// `shellbox.toml` layout. Idempotent: boxes already migrated are skipped.
-    Migrate,
 }
 
 #[derive(Args, Debug)]
@@ -54,13 +49,10 @@ pub struct CreateArgs {
     #[arg(long)]
     pub name: Option<String>,
 
-    #[arg(long, conflicts_with = "file")]
+    /// OCI image reference the box is materialized from. Overrides an `image`
+    /// field brought in by `--from`.
+    #[arg(long)]
     pub image: Option<String>,
-
-    /// Path to a Containerfile to vendor in as the box source. With `--from`,
-    /// overrides any Containerfile brought in by the import.
-    #[arg(long, conflicts_with = "image")]
-    pub file: Option<String>,
 
     #[arg(long = "tool")]
     pub tools: Vec<String>,
@@ -79,7 +71,9 @@ pub struct CreateArgs {
 pub struct RunArgs {
     pub name: String,
 
-    #[arg(last = true, required = true)]
+    /// Command to run inside the box (after `--`). If omitted, opens an
+    /// interactive shell (`/bin/bash` if present, else `/bin/sh`).
+    #[arg(last = true)]
     pub cmd: Vec<String>,
 }
 
@@ -118,10 +112,4 @@ pub struct RmArgs {
     /// extra confirmation.
     #[arg(long)]
     pub force: bool,
-}
-
-#[derive(Args, Debug)]
-pub struct RenameArgs {
-    pub old_name: String,
-    pub new_name: String,
 }

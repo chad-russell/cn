@@ -59,7 +59,7 @@ Nix-managed current config:
 - `modules/nebula-hosts.nix` - `/etc/hosts` entries for overlay names.
 - `hosts/bee/configuration.nix` - `bee` client plus local lighthouse.
 - `hosts/bees/configuration.nix` - `bees` client (service endpoint `10.10.0.6`).
-- `thinkpad/configuration.nix` - laptop Nebula config (imports `modules/nebula-client.nix`).
+- `hosts/thinkpad/configuration.nix` - laptop Nebula config (imports `modules/nebula-client.nix`).
 
 Manual/templates:
 
