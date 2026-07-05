@@ -185,13 +185,7 @@
           {
             home-manager.useUserPackages = true;
             home-manager.useGlobalPkgs = true;
-            home-manager.sharedModules = [
-              nixvim.homeModules.nixvim
-            ];
             home-manager.users.${username} = import ./modules/server-home.nix;
-            home-manager.extraSpecialArgs = {
-              unstable = unstable-pkgs;
-            };
           }
         ];
       };
@@ -214,13 +208,7 @@
           {
             home-manager.useUserPackages = true;
             home-manager.useGlobalPkgs = true;
-            home-manager.sharedModules = [
-              nixvim.homeModules.nixvim
-            ];
             home-manager.users.${username} = import ./modules/server-home.nix;
-            home-manager.extraSpecialArgs = {
-              unstable = unstable-pkgs;
-            };
           }
         ];
       };
