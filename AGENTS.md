@@ -264,7 +264,6 @@ Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
 - `hub-services.caddy` — linkding, papra, ntfy, SearXNG, open-webui
 - `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
-- `buildspace.caddy` — Buildspace dev stack on `bee`
 
 #### Updating Caddy Routes
 
