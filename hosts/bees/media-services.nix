@@ -1,7 +1,7 @@
 # ── Media Services (bees) ──────────────────────────────────────────
 #
-# All services run as native NixOS systemd services.
-# Shared `media` group (GID 2000) for NFS access.
+# Jellyfin runs as a podman quadlet (portable); the *arr stack runs as
+# native NixOS systemd services. Shared `media` group (GID 2000) for NFS access.
 
 { config, lib, pkgs, ... }:
 
@@ -10,12 +10,24 @@
   users.groups.media = { gid = 2000; };
   users.users.crussell.extraGroups = [ "media" ];
 
-  # ── Jellyfin ────────────────────────────────────────────────────
-  services.jellyfin = {
-    enable = true;
-    openFirewall = true;
+  # ── Jellyfin (podman quadlet) ───────────────────────────────────
+  # Runs as uid 995 (carried over from the native NixOS module) so it reads
+  # the existing /var/lib/jellyfin data unchanged. The container binds the
+  # same paths the native service used and passes the same jellyfin flags,
+  # keeping the library DB and config valid. See hosts/bees/jellyfin.container.
+  environment.etc."containers/systemd/jellyfin.container" = {
+    source = ./jellyfin.container;
+    mode = "0644";
   };
-  users.users.jellyfin.extraGroups = [ "media" ];
+  users.groups.jellyfin = { gid = 994; };
+  users.users.jellyfin = {
+    uid = 995;
+    isSystemUser = true;
+    group = "jellyfin";
+    extraGroups = [ "media" ];
+    home = "/var/lib/jellyfin";
+    createHome = false;
+  };
 
   # ── Sonarr ──────────────────────────────────────────────────────
   services.sonarr = {

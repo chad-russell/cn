@@ -1,0 +1,23 @@
+[Unit]
+Description=Jellyfin Media Server
+After=network-online.target mnt-media.mount
+Wants=network-online.target
+
+[Container]
+Image=jellyfin/jellyfin:10.11.8
+ContainerName=jellyfin
+User=995:994
+GroupAdd=2000
+Volume=/var/lib/jellyfin:/var/lib/jellyfin
+Volume=/var/cache/jellyfin:/var/cache/jellyfin
+Volume=/mnt/media:/mnt/media:rslave
+PublishPort=8096:8096
+Environment=TZ=America/New_York
+Exec=--datadir /var/lib/jellyfin --configdir /var/lib/jellyfin/config --cachedir /var/cache/jellyfin --logdir /var/lib/jellyfin/log
+
+[Service]
+Restart=unless-stopped
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
