@@ -241,50 +241,36 @@
               echo "Usage: nix run .#deploy -- <host> [host...]"
               echo "  Example: nix run .#deploy -- bee bees"
               echo ""
-echo "Available hosts: think bee bees misc nas gateway"
+              echo "Run from the deploy origin (bees). Builds happen on this"
+              echo "machine; the target is switched over SSH (or locally if it"
+              echo "is this host)."
+              echo ""
+              echo "Available hosts: bee bees misc nas gateway"
               exit 1
             fi
 
             HOSTS="$@"
+            THIS_HOST="$(hostname)"
 
             for host in $HOSTS; do
               case "$host" in
-                think)
-                  TARGET="think"
-                  BUILD_HOST="''${THINK_BUILD_HOST:-}"
-                  if [ -n "$BUILD_HOST" ]; then
-                    echo ">>> Deploying to $host (local, building on $BUILD_HOST)..."
-                    sudo nixos-rebuild switch --flake .#$host --build-host "$BUILD_HOST"
-                  else
-                    echo ">>> Deploying to $host (local)..."
-                    sudo nixos-rebuild switch --flake .#$host
-                  fi
-                  ;;
-                misc)
-                  TARGET="crussell@192.168.20.42" # "crussell@10.10.0.11"
-                  ;;
-                nas)
-                  TARGET="crussell@10.10.0.3"
-                  ;;
-                bee)
-                  TARGET="crussell@10.10.0.12"
-                  ;;
-                bees)
-                  TARGET="crussell@10.10.0.6"
-                  ;;
-                gateway)
-                  TARGET="root@178.156.171.212"
-                  ;;
+                misc)    TARGET="crussell@192.168.20.42" ;;
+                nas)     TARGET="crussell@10.10.0.3" ;;
+                bee)     TARGET="crussell@10.10.0.12" ;;
+                bees)    TARGET="crussell@10.10.0.6" ;;
+                gateway) TARGET="root@178.156.171.212" ;;
                 *)
                   echo "Unknown host: $host"
                   exit 1
                   ;;
               esac
 
-              if [ "$host" != "think" ]; then
+              if [ "$host" = "$THIS_HOST" ]; then
+                echo ">>> Deploying to $host (local)..."
+                sudo nixos-rebuild switch --flake .#$host
+              else
                 echo ">>> Deploying to $host ($TARGET)..."
-                DEPLOY_ARGS="--flake .#$host --target-host $TARGET --build-host localhost --sudo"
-                nixos-rebuild switch $DEPLOY_ARGS
+                nixos-rebuild switch --flake .#$host --target-host "$TARGET" --build-host localhost --sudo
               fi
 
               echo ">>> $host done."

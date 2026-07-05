@@ -4,12 +4,12 @@ Root navigation and operating guide for agents working in this personal infrastr
 
 **Read this first.** The repository uses a unified Nix flake. Prefer the Nix configuration and live host state over older docs when facts disagree.
 
-Last validated via SSH: **2026-05-06**.
+Last validated via SSH: **2026-07-05**.
 
 ## Ground Rules for Agents
 
 1. **Source of truth:** `flake.nix`, `hosts/*/*.nix`, `modules/*.nix`, and live host state are authoritative.
-2. **Use Nix for host config changes** whenever possible. Deploy with `nix run .#deploy -- <host>`.
+2. **Use Nix for host config changes** whenever possible. Deploy with `nix run .#deploy -- <host>` run **from `bees`** (the deploy origin — see [Nix Operations](#nix-operations)).
 3. **Caddy route source lives in `hosts/bees/caddy/`** and is installed to `/etc/caddy` by the `hosts/bees/caddy.nix` module; deploy `bees`, then validate/reload Caddy.
 4. **Never commit plaintext secrets.** Existing plaintext secret-like files should be treated carefully; do not print or copy their contents into docs, logs, or chat unless explicitly necessary.
 5. **When unsure, verify live state over SSH** using the SSH notes below.
@@ -145,27 +145,36 @@ Home Assistant SSH: see `hosts/homeassistant/README.md` and helper scripts under
 
 ## Nix Operations
 
-Available flake hosts:
+**Deploy origin is `bees`.** The thinkpad no longer runs NixOS (it's a Fedora
+atomic/bootc host now), so all NixOS builds and deploys originate from `bees`
+itself — the most powerful machine and always on. Builds happen on `bees`; the
+resulting closure is pushed to the target over Nebula and switched. When the
+target *is* `bees`, the deploy script does a direct local switch (no SSH-to-self).
+
+Available NixOS hosts (deploy targets): `bee`, `bees`, `misc`, `nas`, `gateway`.
+
+> The flake still defines a `think` nixosConfiguration, but the thinkpad is now a
+> Fedora atomic host and that target is stale (references a deleted file). It's
+> rejected by `nix run .#deploy`; cleanup is deferred.
+
+Standard deploy (run from bees):
 
 ```bash
-nix flake show
-# NixOS configs: think, bee, bees, misc
+ssh -o IdentitiesOnly=yes crussell@10.10.0.6
+cd ~/Code/cn && git pull
+nix run .#deploy -- bees      # local switch on bees (no SSH-to-self)
+nix run .#deploy -- bee       # build on bees, push closure to bee
+nix run .#deploy -- bee bees  # multiple at once
+nix run .#deploy -- gateway   # build on bees, push closure to gateway
 ```
 
-Deploy active machines:
+Fallback if `bees` is down — pull the flake from GitHub and build on each target
+(secrets still decrypt on-target via agenix, so no key material is needed beyond
+what the target already holds):
 
 ```bash
-# Production server
-nix run .#deploy -- bees
-
-# Dev server + lighthouse
-nix run .#deploy -- bee
-
-# Both
-nix run .#deploy -- bee bees
-
-# Laptop, local rebuild
-nix run .#deploy -- think
+ssh -o IdentitiesOnly=yes crussell@<host-nebula-ip>
+sudo nixos-rebuild switch --flake github:chad-russell/cn#<host>
 ```
 
 Install/wipe a new host with nixos-anywhere:
