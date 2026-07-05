@@ -1,8 +1,7 @@
-use super::common::{is_mountpoint, remove_tree_force};
-use super::export::scan_exports;
+use super::common::remove_tree_force;
+use super::export::unexport_box;
 use super::ui::{colors_enabled, style_action, style_title};
 use crate::cli::RmArgs;
-use crate::metadata::BoxMetadata;
 use crate::paths::Paths;
 use anyhow::{Context, Result, bail};
 
@@ -15,22 +14,13 @@ pub fn cmd_rm(args: RmArgs) -> Result<()> {
 
     if !manifest_exists && !state_exists {
         let colors = colors_enabled();
-        println!("{} {}", style_action("removed", colors), style_title(&args.name, colors));
-        println!("  {:<12} {}", "status", "already absent");
-        return Ok(());
-    }
-
-    if is_mountpoint(&box_paths.mount_path) {
-        bail!(
-            "box '{}' is mounted at {} (unmount it first)",
-            args.name,
-            box_paths.mount_path.display()
+        println!(
+            "{} {}",
+            style_action("removed", colors),
+            style_title(&args.name, colors)
         );
-    }
-    if let Ok(meta) = BoxMetadata::load(&box_paths.metadata_path) {
-        if meta.mounted {
-            bail!("box '{}' is marked mounted; unmount it first", args.name);
-        }
+        println!("  {:<12} already absent", "status");
+        return Ok(());
     }
 
     // Derived artifacts always go.
@@ -63,7 +53,11 @@ pub fn cmd_rm(args: RmArgs) -> Result<()> {
         }
     }
 
-    println!("{} {}", style_action("removed", colors), style_title(&args.name, colors));
+    println!(
+        "{} {}",
+        style_action("removed", colors),
+        style_title(&args.name, colors)
+    );
     if state_exists {
         println!("  {:<12} {}", "state", box_paths.state_dir.display());
     }
@@ -71,19 +65,14 @@ pub fn cmd_rm(args: RmArgs) -> Result<()> {
         println!("  {:<12} {}", "manifest", box_paths.dir.display());
     }
     if !args.purge && manifest_exists {
-        println!("  {:<12} {}", "kept", format!("manifest at {}", box_paths.dir.display()));
+        println!("  {:<12} manifest at {}", "kept", box_paths.dir.display());
     }
 
-    // Note any dangling exports so the user can clean them up.
-    let owned = scan_exports(&paths)?
-        .into_iter()
-        .filter(|(_, r)| r.box_name == args.name)
-        .count();
-    if owned > 0 {
-        println!(
-            "  {:<12} {} export(s) still reference this box (use `shellbox unexport --all --box {}`)",
-            "note", owned, args.name
-        );
+    // Clean up any exports this box still owns (declarative symmetry with
+    // prepare's sync: deleting a box reclaims its tool wrappers).
+    let unexported = unexport_box(&paths, &args.name)?;
+    if !unexported.is_empty() {
+        println!("  {:<12} {}", "unexported", unexported.join(", "));
     }
     Ok(())
 }

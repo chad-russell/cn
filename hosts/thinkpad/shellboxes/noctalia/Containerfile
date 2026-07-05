@@ -1,0 +1,38 @@
+# shellbox noctalia — desktop shell (notifications, volume, brightness,
+# nightlight, panels, session lock), decoupled from the host image because it
+# ships as `noctalia-git` from a Hyprland COPR and updates very frequently.
+#
+# Unlike vicinae (a self-contained launcher), noctalia is a desktop *shell*: it
+# owns D-Bus names (org.freedesktop.Notifications), renders layer-shell panels
+# and backdrops, and drives hardware through logind. That makes the
+# integration surface wider — see shellbox.toml's [[binds]] and README.md.
+#
+# What's NOT here vs. the vicinae box:
+#   - No vendored config / no XDG redirect. Noctalia has no authored file
+#     config; it uses dconf/gsettings (over the session bus) and runtime
+#     defaults. We want it to read/write the host's ~/.config and dconf so it
+#     shares the user's theme/font and persists its own state. $HOME is bound
+#     through by shellbox, so that just works.
+#   - No host-launch wrapper. Noctalia doesn't spawn user apps; it controls
+#     system services. So no systemd-run shim is needed.
+#   - `systemd` is not explicitly installed. Noctalia talks to logind via
+#     D-Bus directly (libs pulled as deps), not via systemd-run shims, so the
+#     heavy systemd package isn't pulled in — keeps the rootfs lean.
+
+FROM registry.fedoraproject.org/fedora:latest
+
+# Create mount points for host /run binds. The stock Fedora image has no
+# /run/dbus, /run/udev, or /run/systemd, and shellbox [[binds]] require the
+# guest path to already exist in the (read-only) rootfs. AGENTS.md explicitly
+# sanctions this create-at-build-time pattern. /run is NOT tmpfs'd by shellbox
+# (only /tmp and /var are), so these dirs survive into the composefs image.
+RUN mkdir -p /run/dbus /run/udev /run/systemd
+
+RUN dnf -y copr enable lionheartp/Hyprland \
+    && dnf -y install \
+         noctalia-git \
+         mesa-dri-drivers \
+         mesa-vulkan-drivers \
+         vulkan-loader \
+         pipewire-libs \
+    && dnf clean all

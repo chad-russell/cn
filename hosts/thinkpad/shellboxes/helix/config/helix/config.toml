@@ -1,0 +1,9 @@
+# Helix TOML config. With the Steel plugin system enabled, this file is read
+# FIRST and then the Steel layer (helix.scm / init.scm in this directory) is
+# applied on top of it. Edit freely; see https://docs.helix-editor.com for the
+# full option reference.
+
+theme = "everforest_dark"
+
+[editor]
+line-number = "relative"

@@ -1,10 +1,10 @@
 # Custom Fedora Silverblue image for the ThinkPad — "bluefin-style".
 #
-# A thin layer over stock Silverblue. The active host-level changes are kept
-# intentionally minimal:
+# A thin layer over stock Silverblue. The active host-level changes:
 #   - drop `toolbox` (ships IN the base image) and add `distrobox`.
-# Everything desktop-session-specific now lives under ../desktoppak rather than
-# being installed natively on the host image.
+#   - install the compositors (niri + COSMIC) from COPR. (desktoppak, the old
+#     per-user bwrap payload layer, is being phased out; compositors now live
+#     natively in the host image.)
 #
 # This image uses the modern bootc-native build model, matching current
 # Bluefin/finpilot (projectbluefin/finpilot):
@@ -46,9 +46,24 @@ FROM quay.io/fedora-ostree-desktops/silverblue:${FEDORA_MAJOR_VERSION}
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install distrobox zsh just fzf
-                 
 
-# ---- 2. SELinux: disabled (personal-laptop host policy) -----------------
+# ---- 2. Compositors: niri + COSMIC (from COPR) -------------------------
+# desktoppak is being phased out; compositors now ship directly in the host
+# image. niri comes from the upstream maintainer's COPR (yalter/niri), which
+# tracks newer than Fedora's package; COSMIC from ryanabx/cosmic-epoch.
+# xwayland-satellite provides niri's X11 app support (niri has no native
+# XWayland). dnf5-plugins supplies the `dnf5 copr` subcommand used below; it
+# is installed in the same transaction, so the subcommand is available to the
+# very next `&&` in this RUN. The cache mounts keep COPR downloads fast across
+# rebuilds, matching step 1.
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    dnf5 -y install dnf5-plugins \
+    && dnf5 -y copr enable yalter/niri \
+    && dnf5 -y copr enable ryanabx/cosmic-epoch \
+    && dnf5 -y install niri xwayland-satellite cosmic-desktop
+
+# ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/
 # Arch where SELinux isn't part of the workflow. Fedora ships the `targeted`
 # policy enabled by default; its friction (label mismatches on relocated paths,
@@ -89,7 +104,7 @@ RUN set -e; \
 RUN sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config && \
     grep -q '^SELINUX=disabled' /etc/selinux/config
 
-# ---- 3. build identity (lets `bootc upgrade` detect a rebuild) ----------
+# ---- 4. build identity (lets `bootc upgrade` detect a rebuild) ----------
 # Each build injects a unique IMAGE_VERSION (git SHA + timestamp; see
 # build.sh) two ways:
 #   - as an OCI LABEL, which lives in the image *config* and therefore changes
@@ -109,7 +124,7 @@ RUN printf 'IMAGE_VERSION=%s\n' "${IMAGE_VERSION}" > /usr/lib/host-image-thinkpa
 LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
 
 
-# ---- 4. finalize: bootc-native validation -----------------------------
+# ---- 5. finalize: bootc-native validation -----------------------------
 # systemd as pid 1 is required for a bootc image. `bootc container lint` then
 # validates the image (catches /run leftovers, /opt issues, etc.) before you
 # ever switch to it — it replaces the old `ostree container commit`.

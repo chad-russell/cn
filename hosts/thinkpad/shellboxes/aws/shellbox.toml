@@ -1,16 +1,24 @@
 # shellbox aws — AWS CLI (v2)
 #
-# Standalone box wrapping the `aws` CLI. AWS config/credentials live in ~/.aws
-# (HOME-relative, bind-mounted into the box), so no [shell.env] redirection is
-# needed by default — add a [shell.env] block here if you want self-contained
-# AWS config/credentials (e.g. redirect AWS_CONFIG_FILE / AWS_SHARED_CREDENTIALS_FILE).
+# Standalone box wrapping the `aws` CLI. The non-secret AWS config (profiles,
+# regions, SSO role references) is vendored into this box at ./config and read
+# via AWS_CONFIG_FILE below — so profile definitions live next to the tool and
+# are version-controlled here. Secrets are NOT vendored: AWS_SHARED_CREDENTIALS_FILE
+# is left unset, so static credentials and the SSO token cache remain at their
+# default ~/.aws/ location (runtime, machine-local, short-lived for SSO).
 #
-# Build:    podman build -t localhost/shellbox-aws:latest shellboxes/aws
-# Prepare:  shellbox prepare aws
-# Export:   shellbox export aws --all
+# Prepare builds the Containerfile into the image below, materializes the box,
+# and syncs the `aws` export onto your PATH — all in one command:
+#
+#   shellbox prepare aws
 
 name = "aws"
 image = "localhost/shellbox-aws:latest"
 
 [shell]
 tools = ["aws"]
+
+[shell.env]
+# Read profile/region config from the vendored copy in this box. Credentials
+# (AWS_SHARED_CREDENTIALS_FILE) stay at the default ~/.aws/credentials.
+AWS_CONFIG_FILE = "/var/home/crussell/Code/cn/hosts/thinkpad/shellboxes/aws/config"

@@ -6,13 +6,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 pub(super) enum InspectStatus {
     Defined,
     Prepared,
-    Mounted,
 }
 
-pub(super) fn inspect_status(mounted_live: bool, built_live: bool) -> InspectStatus {
-    if mounted_live {
-        InspectStatus::Mounted
-    } else if built_live {
+pub(super) fn inspect_status(built_live: bool) -> InspectStatus {
+    if built_live {
         InspectStatus::Prepared
     } else {
         InspectStatus::Defined
@@ -26,11 +23,19 @@ pub(super) fn colors_enabled() -> bool {
 }
 
 pub(super) fn style_title(value: &str, colors: bool) -> String {
-    if colors { value.bold().to_string() } else { value.to_string() }
+    if colors {
+        value.bold().to_string()
+    } else {
+        value.to_string()
+    }
 }
 
 pub(super) fn style_label(value: &str, colors: bool) -> String {
-    if colors { value.blue().bold().to_string() } else { value.to_string() }
+    if colors {
+        value.blue().bold().to_string()
+    } else {
+        value.to_string()
+    }
 }
 
 pub(super) fn style_action(value: &str, colors: bool) -> String {
@@ -42,7 +47,11 @@ pub(super) fn style_action(value: &str, colors: bool) -> String {
 }
 
 pub(super) fn style_section(value: &str, colors: bool) -> String {
-    if colors { value.bright_black().bold().to_string() } else { value.to_string() }
+    if colors {
+        value.bright_black().bold().to_string()
+    } else {
+        value.to_string()
+    }
 }
 
 pub(super) fn style_status_badge(status: InspectStatus, colors: bool) -> String {
@@ -59,13 +68,6 @@ pub(super) fn style_status_badge(status: InspectStatus, colors: bool) -> String 
                 format!("{} {}", "●".blue().bold(), "prepared".blue().bold())
             } else {
                 "* prepared".to_string()
-            }
-        }
-        InspectStatus::Mounted => {
-            if colors {
-                format!("{} {}", "●".green().bold(), "mounted".green().bold())
-            } else {
-                "* mounted".to_string()
             }
         }
     }
@@ -98,8 +100,12 @@ pub(super) fn style_recorded_state(recorded: bool, live: bool, colors: bool) -> 
 }
 
 pub(super) fn format_last_built_at(raw: Option<&str>) -> String {
-    let Some(raw) = raw else { return "never".to_string() };
-    let Ok(secs) = raw.parse::<u64>() else { return raw.to_string() };
+    let Some(raw) = raw else {
+        return "never".to_string();
+    };
+    let Ok(secs) = raw.parse::<u64>() else {
+        return raw.to_string();
+    };
     let timestamp = UNIX_EPOCH + Duration::from_secs(secs);
     let absolute = humantime::format_rfc3339_seconds(timestamp).to_string();
     let relative = match SystemTime::now().duration_since(timestamp) {

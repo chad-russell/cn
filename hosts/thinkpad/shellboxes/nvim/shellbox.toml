@@ -19,13 +19,15 @@
 #        shellbox link ~/Code/cn/hosts/thinkpad/shellboxes/nvim
 #        # or, from inside this directory: shellbox link
 #
-#   3. Prepare, mount, and export as usual:
+#   3. Prepare (builds the Containerfile, materializes, and syncs the nvim
+#      export), then run. rootless FUSE auto-mounts on run, so no sudo needed:
 #
 #        shellbox prepare nvim
-#        sudo shellbox mount nvim
-#        shellbox export nvim nvim
 #        # add ~/.local/share/shellbox/exports/bin to PATH once, then:
 #        nvim ~/any/file
+#
+#      (Optional kernel fast path: `sudo shellbox mount nvim` — skips the
+#      per-run FUSE setup for heavy repeated use. Not required.)
 #
 # Why symlink instead of `create --from`? With a symlink, the box directory IS
 # this directory, so nvim reads its config from here and writes its runtime

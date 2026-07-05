@@ -4,11 +4,9 @@ Minimal bootc-based Fedora host image for this machine.
 
 ## Purpose
 
-This project is now intentionally small. Desktop/compositor payloads no longer
-live here; they live in `../desktoppak/`.
-
 `host-image/` is for host-level choices that should truly be part of the base
-OS image.
+OS image — including the compositors (`niri` and COSMIC), which ship directly
+here rather than in a separate payload layer.
 
 ## What it changes
 
@@ -16,25 +14,15 @@ Currently:
 
 - removes `toolbox`
 - installs `distrobox`
+- installs compositors from COPR:
+  - `niri` + `xwayland-satellite` (from `yalter/niri`)
+  - `cosmic-desktop` (from `ryanabx/cosmic-epoch`)
 - installs small host convenience packages:
   - `fastfetch`
   - `neovim`
   - `oh-my-posh` (prompt renderer; hooks the interactive shell in `~/.zshrc` — belongs on the host, not in a shellbox, because it runs on every prompt render and can't pay a per-invocation bwrap spawn)
 - disables SELinux for this personal-laptop setup
 
-
-## What does NOT live here anymore
-
-Not in the host image:
-
-- `niri`
-- `noctalia`
-- `vicinae`
-- custom desktop sessions
-- desktoppak runtime scripts
-- desktoppak payload images
-
-Those now live under `../desktoppak/`.
 
 ## Files
 
@@ -83,5 +71,3 @@ and stamp the booted system with:
   root containers storage.
 - `bootc switch` is for first adoption or changing image references.
 - `bootc upgrade` is the routine command after rebuilding the same tagged image.
-- The image stays intentionally minimal; desktop experimentation belongs in
-  desktoppak, not here.

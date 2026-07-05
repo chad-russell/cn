@@ -82,14 +82,18 @@ they stay version-controlled.
 
 Current boxes:
 
-- `default/` — generic CLI tools (`htop`, `rg`, `fd`)
+- `default/` — generic CLI tools (`htop`, `rg`, `fd`, `bat`, `eza`, `zoxide`, `wezterm`, `tokei`)
 - `nvim/` — self-contained neovim (XDG dirs redirected into the box)
 - `opencode/` — self-contained `sst/opencode` coding agent
-- `pi/` — self-contained `pi` coding agent TUI
+- `aws/` — AWS CLI v2; non-secret `config` vendored into the box, credentials
+  and SSO cache remain at default `~/.aws/` (runtime, machine-local)
 
 Each self-contained box keeps all of its config/data/state/cache inside the box
 directory (via absolute-literal XDG env redirection in `shellbox.toml`), so it
-never touches `~/.config`, `~/.local/share`, etc.
+never touches `~/.config`, `~/.local/share`, etc. The `aws` box follows a
+partial version of this pattern: only the (non-secret) AWS config is vendored,
+since credentials and SSO tokens are short-lived runtime state that should be
+re-obtained per machine rather than tracked in git.
 
 Typical workflow:
 
@@ -125,6 +129,35 @@ To add another host-native dotfile: drop it under `dotfiles/` at its
 `hosts/thinkpad/Justfile`, and re-run `cjust link`. Secrets stay on the
 existing rails (agenix/age, see the repo-wide `AGENTS.md`) — don't add them
 here.
+
+#### COSMIC desktop settings — `dotfiles/.config/cosmic/`
+
+The entire COSMIC settings tree is vendored here and symlinked as one
+directory (`dotfiles/.config/cosmic` → `~/.config/cosmic`). It covers the
+compositor (`com.system76.CosmicComp`), panels + dock, themes (dark/light),
+applets (time, audio, battery), terminal, files, app library/list, and
+shortcuts.
+
+`cosmic-config` persists each key as a **plain-text, RON-like file** under
+`<app>/v1/<key>`, which makes the tree:
+
+- **git-friendly** — every change is a readable diff.
+- **LLM-editable** — an agent can read a key, edit it, and the live setting
+  updates on cosmic's next config reload (or session restart).
+- **portable** — no `/home/` paths, UUIDs, or machine IDs; the wallpaper
+  points at a path shipped with COSMIC itself.
+
+Notes:
+
+- Settings for a **newly installed** COSMIC app land in the repo
+  automatically (they're written through the symlink). If an app starts
+  emitting runtime **state** rather than settings, add its subdir to a
+  `.gitignore` under `dotfiles/.config/cosmic/`.
+- On a fresh machine, `cjust link` backs up any pre-existing
+  `~/.config/cosmic` to `~/.config/cosmic.bak.<ts>` and symlinks the repo
+  tree in its place, so replication is one command.
+- COSMIC reads most keys on the fly; a few (compositor bindings, themes)
+  need a session restart to fully apply after an edit.
 
 ### `systemd/`
 Systemd units, mostly **user** services for now (`systemd/user/`), with room to

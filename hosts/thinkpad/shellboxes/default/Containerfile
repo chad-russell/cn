@@ -2,12 +2,21 @@
 #
 # Common build/runtime CLI tools. Runtime cwd, $HOME, and identity come from
 # bwrap (see shellbox docs); this image only provides the tools.
+#
+# `systemd` is installed so the box can reach the host user systemd manager
+# through the bound $XDG_RUNTIME_DIR socket. That's required for two things:
+#   - `[host] tools` (each host tool is a `systemd-run --user --pipe` wrapper),
+#   - wezterm's per-tab shell: `wezterm-host-shell` calls
+#     `systemd-run --user --pty` to spawn a login shell on the HOST, so the
+#     shell you type into sees host PATH/home/tools rather than the box rootfs.
+# wezterm is the one tool here that is a GUI app; the rest are CLI only.
 
 FROM fedora:latest
 
 RUN dnf copr enable -y wezfurlong/wezterm-nightly;
 
 RUN dnf install -y \
+      systemd \
       htop \
       ripgrep \
       fd-find \
@@ -17,3 +26,8 @@ RUN dnf install -y \
       wezterm \
       tokei \
     && dnf clean all
+
+# wezterm `default_prog`: spawn a host login shell via systemd-run --pty.
+# Source lives next to this Containerfile so it's version-controlled here.
+COPY wezterm-host-shell /usr/local/bin/wezterm-host-shell
+RUN chmod 0755 /usr/local/bin/wezterm-host-shell

@@ -1,8 +1,11 @@
+// Surf clippy's default lint set locally so regressions show up in normal
+// builds without blocking them. CI enforces `-D warnings`.
+#![warn(clippy::all)]
+
 mod cli;
 mod commands;
 mod config;
 mod fuse;
-mod host_exec;
 mod metadata;
 mod paths;
 mod util;
@@ -20,13 +23,9 @@ fn main() -> Result<()> {
         Command::Prepare(args) => commands::cmd_prepare(args)?,
         Command::List => commands::cmd_list()?,
         Command::Inspect(args) => commands::cmd_inspect(args)?,
-        Command::Mount(args) => commands::cmd_mount(args)?,
-        Command::Unmount(args) => commands::cmd_unmount(args)?,
         Command::Run(args) => commands::cmd_run(args)?,
         Command::Shell(args) => commands::cmd_shell(args)?,
         Command::Rm(args) => commands::cmd_rm(args)?,
-        Command::Export(args) => commands::cmd_export(args)?,
-        Command::Unexport(args) => commands::cmd_unexport(args)?,
         Command::ListExports => commands::cmd_list_exports()?,
     }
 

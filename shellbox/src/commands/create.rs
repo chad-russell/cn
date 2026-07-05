@@ -1,4 +1,4 @@
-use super::common::{is_mountpoint, normalize_tools, remove_tree_force};
+use super::common::{normalize_tools, remove_tree_force};
 use super::ui::{colors_enabled, style_action, style_title};
 use crate::cli::CreateArgs;
 use crate::config::{self, BoxManifest, ShellConfig};
@@ -53,9 +53,7 @@ pub fn cmd_create(args: CreateArgs) -> Result<()> {
         .image
         .clone()
         .or_else(|| import.manifest.as_ref().map(|m| m.image.clone()))
-        .context(
-            "image is required\nprovide --image or set 'image' in the manifest",
-        )?;
+        .context("image is required\nprovide --image or set 'image' in the manifest")?;
 
     // tools: CLI appends to manifest.
     let mut tools = import
@@ -77,9 +75,6 @@ pub fn cmd_create(args: CreateArgs) -> Result<()> {
         if !args.force {
             bail!("box '{}' already exists; use --force to overwrite", name);
         }
-        if is_mountpoint(&box_paths.mount_path) {
-            bail!("box '{}' is mounted; unmount it before overwriting", name);
-        }
         remove_tree_force(&box_paths.dir)?;
     }
     std::fs::create_dir_all(&box_paths.dir)
@@ -96,6 +91,7 @@ pub fn cmd_create(args: CreateArgs) -> Result<()> {
         image,
         shell: ShellConfig { tools, env },
         host: config::HostConfig::default(),
+        binds: Vec::new(),
     };
     manifest.save(&box_paths.manifest_path)?;
 
@@ -105,9 +101,13 @@ pub fn cmd_create(args: CreateArgs) -> Result<()> {
     BoxMetadata::default().save(&box_paths.metadata_path)?;
 
     let colors = colors_enabled();
-    println!("{} {}", style_action("created", colors), style_title(&name, colors));
+    println!(
+        "{} {}",
+        style_action("created", colors),
+        style_title(&name, colors)
+    );
     println!("  {:<12} {}", "manifest", box_paths.manifest_path.display());
-    println!("  {:<12} {}", "source", format!("image · {}", manifest.image));
+    println!("  {:<12} image · {}", "source", manifest.image);
     println!("  {:<12} {}", "state", box_paths.state_dir.display());
     if !manifest.shell.tools.is_empty() {
         println!("  {:<12} {}", "tools", manifest.shell.tools.join(", "));

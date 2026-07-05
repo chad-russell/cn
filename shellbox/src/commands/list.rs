@@ -1,4 +1,4 @@
-use super::common::{describe_source, is_mountpoint};
+use super::common::describe_source;
 use super::ui::{
     colors_enabled, inspect_status, style_recorded_state, style_status_badge, style_title,
 };
@@ -36,8 +36,7 @@ pub fn cmd_list() -> Result<()> {
         let meta = BoxMetadata::load(&box_paths.metadata_path).unwrap_or_default();
 
         let built_live = box_paths.cfs_path.exists();
-        let mounted_live = is_mountpoint(&box_paths.mount_path);
-        let status = inspect_status(mounted_live, built_live);
+        let status = inspect_status(built_live);
         let source = describe_source(&manifest, &box_paths);
 
         println!(
@@ -51,16 +50,15 @@ pub fn cmd_list() -> Result<()> {
             "prepared",
             style_recorded_state(meta.built, built_live, colors)
         );
-        println!(
-            "  {:<12} {}",
-            "mounted",
-            style_recorded_state(meta.mounted, mounted_live, colors)
-        );
         if !manifest.shell.tools.is_empty() {
             println!("  {:<12} {}", "tools", manifest.shell.tools.join(", "));
         }
         if !manifest.host.tools.is_empty() {
-            println!("  {:<12} {} (host)", "tools", manifest.host.tools.join(", "));
+            println!(
+                "  {:<12} {} (host)",
+                "tools",
+                manifest.host.tools.join(", ")
+            );
         }
         println!();
     }

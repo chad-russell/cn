@@ -1,13 +1,16 @@
-use super::common::{home_dir, is_mountpoint, normalize_tools};
+use super::common::{home_dir, normalize_tools};
 use super::wrappers::write_wrapper_script;
-use crate::config::BoxManifest;
+use crate::config::{Bind, BindMode, BoxManifest};
 use crate::paths::{BoxPaths, Paths};
 use crate::util::run_command_inherit;
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempfile::{Builder, TempDir};
+
+/// In-box absolute path the per-tool host wrapper dir is bind-mounted to.
+pub(super) const INBOX_HOSTBIN: &str = "/run/shellbox-host-bin";
 
 pub(super) fn run_box_command(
     box_paths: &BoxPaths,
@@ -18,21 +21,80 @@ pub(super) fn run_box_command(
     let env = manifest.shell_env();
     let host_tools = normalize_tools(manifest.host_tools())?;
 
-    if is_mountpoint(&box_paths.mount_path) {
-        let host_session = if host_tools.is_empty() {
-            None
-        } else {
-            Some(crate::host_exec::HostExecSession::start(&host_tools)?)
-        };
-        let result = run_in_box(&box_paths.mount_path, &env, host_session.as_ref(), cmd);
-        // Drop before returning so the accept loop joins and the socket is
-        // cleaned up (run then calls process::exit, which would otherwise
-        // kill it mid-teardown).
-        drop(host_session);
-        result
+    // If the box declares [host] tools, build a temp dir of systemd-run
+    // wrappers to bind-mount into the box. The temp dir outlives the bwrap
+    // invocation (dropped at the end of this function, after the box exits).
+    let host_wrappers = if host_tools.is_empty() {
+        None
     } else {
-        run_in_box_fuse(&box_paths.cfs_path, store, &env, &host_tools, cmd)
+        ensure_host_exec_available(&box_paths.rootfs_path)?;
+        Some(create_host_wrappers(&host_tools)?)
+    };
+
+    // Always rootless: the box runs through the FUSE runtime, which mounts the
+    // composefs image in a private user+mount namespace for the command's
+    // lifetime. No kernel mount is involved.
+    run_in_box_fuse(
+        &box_paths.cfs_path,
+        store,
+        &env,
+        host_wrappers.as_ref().map(TempDir::path),
+        &manifest.binds,
+        cmd,
+    )
+}
+
+/// Fail clearly when a box declares `[host]` tools but its image doesn't
+/// contain `systemd-run`. Container images don't ship it by default, so it's a
+/// build-time (Containerfile) requirement; the read-only rootfs can't acquire
+/// it at runtime.
+fn ensure_host_exec_available(rootfs: &Path) -> Result<()> {
+    const CANDIDATES: [&str; 3] = [
+        "usr/bin/systemd-run",
+        "usr/local/bin/systemd-run",
+        "bin/systemd-run",
+    ];
+    if CANDIDATES.iter().any(|c| rootfs.join(c).exists()) {
+        return Ok(());
     }
+    bail!(
+        "the box declares [host] tools, but `systemd-run` is not in its rootfs\n\
+         host-exec runs the tool on the host via your user systemd manager\n\
+         (`systemd-run --user`), reached through the bound $XDG_RUNTIME_DIR.\n\
+         install it in the box image (e.g. `dnf install systemd` / \
+         `apt install systemd`) and re-prepare"
+    );
+}
+
+/// Build a temp dir of one wrapper per host tool. Each wrapper execs
+/// `systemd-run --user --wait --pipe`, which asks the host's user systemd
+/// manager to run the tool on the host (host rootfs, host binaries) and stream
+/// stdio + the exit code back. The manager is reached over the bound
+/// `$XDG_RUNTIME_DIR` socket and authenticates by uid. Bind-mounted into the
+/// box at `INBOX_HOSTBIN` (prepended to PATH by `forwarded_path`).
+fn create_host_wrappers(host_tools: &[String]) -> Result<TempDir> {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = Builder::new()
+        .prefix("shellbox-hostbin-")
+        .tempdir()
+        .context("failed to create host-tool wrapper tempdir")?;
+    for tool in host_tools {
+        let target = dir.path().join(tool);
+        // Tool name is single-quoted defensively (validated to contain no
+        // whitespace/'/' by normalize_tools, but quote anyway). $PWD is
+        // host-valid: bwrap chdirs to cwd-or-$HOME, both under the bound $HOME.
+        let quoted = tool.replace('\'', "'\"'\"'");
+        let content = format!(
+            "#!/usr/bin/env bash\n\
+             exec systemd-run --user --wait --quiet --pipe --working-directory=\"$PWD\" -- '{quoted}' \"$@\"\n"
+        );
+        std::fs::write(&target, content)
+            .with_context(|| format!("failed to write {}", target.display()))?;
+        let mut perms = std::fs::metadata(&target)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&target, perms)?;
+    }
+    Ok(dir)
 }
 
 pub(super) fn create_shell_session(
@@ -75,50 +137,44 @@ pub(super) fn run_host_shell(
     run_command_inherit(&mut command)
 }
 
-fn run_in_box(
-    mount_path: &Path,
-    env_vars: &[(String, String)],
-    host: Option<&crate::host_exec::HostExecSession>,
-    cmd: &[String],
-) -> Result<std::process::ExitStatus> {
-    let mut command = bwrap_command(mount_path, env_vars, host, cmd)?;
-    run_command_inherit(&mut command)
-}
-
-/// Run a command inside a box using the fully rootless FUSE runtime (no mount
-/// required). `image` is the composefs `.cfs` file; `store` is the
-/// content-addressed object store. The bwrap invocation is identical to the
-/// kernel-mount path — only the root source differs (a private FUSE mount
-/// instead of a host-visible kernel composefs mount).
-///
-/// `host_tools` (rather than a started session) are passed in because the
-/// session must be started *after* the `unshare(CLONE_NEWUSER|CLONE_NEWNS)`
-/// inside `run_rootless` — starting it here would multithread the caller and
-/// make `CLONE_NEWNS` fail with `EINVAL`.
+/// Run a command inside a box using the fully rootless FUSE runtime (no kernel
+/// mount required). `image` is the composefs `.cfs` file; `store` is the
+/// content-addressed object store. `host_wrappers`, when present, is a temp dir
+/// of `systemd-run` wrappers (one per `[host]` tool) to bind-mount into the
+/// box ahead of PATH. `binds` are the declared `[[binds]]` extra mounts.
 fn run_in_box_fuse(
     image: &Path,
     store: &Path,
     env_vars: &[(String, String)],
-    host_tools: &[String],
+    host_wrappers: Option<&Path>,
+    binds: &[Bind],
     cmd: &[String],
 ) -> Result<std::process::ExitStatus> {
     let env_vars_owned: Vec<(String, String)> = env_vars.to_vec();
     let cmd_owned: Vec<String> = cmd.to_vec();
-    crate::fuse::run_rootless(image, store, host_tools, move |root, host| {
-        // Same builder as the kernel path; unwraps are safe: inputs were
-        // validated by the caller and only fail on HOME resolution.
-        bwrap_command(root, &env_vars_owned, host, &cmd_owned)
-            .expect("internal: bwrap_command failed inside FUSE runtime")
+    let host_owned: Option<PathBuf> = host_wrappers.map(Path::to_path_buf);
+    let binds_owned: Vec<Bind> = binds.to_vec();
+    crate::fuse::run_rootless(image, store, move |root| {
+        // unwrap is safe: inputs were validated by the caller and bwrap_command
+        // only fails on HOME resolution.
+        bwrap_command(
+            root,
+            &env_vars_owned,
+            host_owned.as_deref(),
+            &binds_owned,
+            &cmd_owned,
+        )
+        .expect("internal: bwrap_command failed inside FUSE runtime")
     })
 }
 
-/// Build the bwrap `Command` that runs `cmd` inside a box whose root is `root`.
-/// Shared by the kernel-mount path (`run_in_box`) and the rootless FUSE path
-/// (`run_in_box_fuse`), so the two are identical except for the root source.
+/// Build the bwrap `Command` that runs `cmd` inside a box whose root is `root`
+/// (the private FUSE mountpoint set up by `run_rootless`).
 fn bwrap_command(
     root: &Path,
     env_vars: &[(String, String)],
-    host: Option<&crate::host_exec::HostExecSession>,
+    host_wrappers: Option<&Path>,
+    binds: &[Bind],
     cmd: &[String],
 ) -> Result<std::process::Command> {
     let home = home_dir()?;
@@ -133,24 +189,45 @@ fn bwrap_command(
 
     // The host-tools shim dir is prepended to PATH so `[host]` tools resolve
     // ahead of everything else inside the box.
-    let host_bin_prefix = host.map(|_| crate::host_exec::INBOX_HOSTBIN);
+    let host_bin_prefix = host_wrappers.map(|_| INBOX_HOSTBIN);
 
     let mut command = Command::new("bwrap");
     command
-        .arg("--bind").arg(root).arg("/")
-        .arg("--dev-bind").arg("/dev").arg("/dev")
-        .arg("--proc").arg("/proc")
+        .arg("--bind")
+        .arg(root)
+        .arg("/")
+        .arg("--dev-bind")
+        .arg("/dev")
+        .arg("/dev")
+        .arg("--proc")
+        .arg("/proc")
         .arg("--share-net")
-        .arg("--ro-bind-try").arg("/etc/resolv.conf").arg("/etc/resolv.conf")
-        .arg("--ro-bind-try").arg("/etc/hosts").arg("/etc/hosts")
-        .arg("--tmpfs").arg("/tmp")
-        .arg("--tmpfs").arg("/var")
-        .arg("--dir").arg("/var/home")
-        .arg("--bind").arg(&home).arg(&home)
-        .arg("--chdir").arg(&chdir)
-        .arg("--setenv").arg("HOME").arg(&home)
-        .arg("--setenv").arg("USER").arg(&user)
-        .arg("--setenv").arg("LOGNAME").arg(&logname)
+        .arg("--ro-bind-try")
+        .arg("/etc/resolv.conf")
+        .arg("/etc/resolv.conf")
+        .arg("--ro-bind-try")
+        .arg("/etc/hosts")
+        .arg("/etc/hosts")
+        .arg("--tmpfs")
+        .arg("/tmp")
+        .arg("--tmpfs")
+        .arg("/var")
+        .arg("--dir")
+        .arg("/var/home")
+        .arg("--bind")
+        .arg(&home)
+        .arg(&home)
+        .arg("--chdir")
+        .arg(&chdir)
+        .arg("--setenv")
+        .arg("HOME")
+        .arg(&home)
+        .arg("--setenv")
+        .arg("USER")
+        .arg(&user)
+        .arg("--setenv")
+        .arg("LOGNAME")
+        .arg(&logname)
         // Forward the host PATH into the box, so that user-installed tools
         // under $HOME (e.g. `~/.cargo/bin`, `~/.npm-global/bin`, `~/.local/bin`)
         // are visible to box processes — including agents (pi/opencode) that
@@ -167,22 +244,49 @@ fn bwrap_command(
         // would shadow the box's own tools and recurse indefinitely. Only
         // genuine host tool directories are forwarded. The host-tools shim dir
         // (when present) is prepended separately and is safe to forward
-        // because those wrappers exec the host-exec helper, not `shellbox run`.
-        .arg("--setenv").arg("PATH").arg(forwarded_path(&home, root, host_bin_prefix)?);
+        // because those wrappers exec `systemd-run`, not `shellbox run`.
+        .arg("--setenv")
+        .arg("PATH")
+        .arg(forwarded_path(&home, root, host_bin_prefix)?);
 
-    if let Some(host) = host {
-        // Bind the helper binary and the per-tool wrapper dir into fixed
-        // in-box paths, and tell the helper which socket to talk to.
-        command
-            .arg("--ro-bind").arg(host.helper_path()).arg(crate::host_exec::INBOX_HELPER)
-            .arg("--bind").arg(host.hostbin_path()).arg(crate::host_exec::INBOX_HOSTBIN)
-            .arg("--setenv").arg(crate::host_exec::SOCK_ENV).arg(host.socket_path());
+    if let Some(wrapper_dir) = host_wrappers {
+        // Bind the systemd-run wrapper dir into the box, prepended to PATH.
+        command.arg("--bind").arg(wrapper_dir).arg(INBOX_HOSTBIN);
     }
 
     if let Ok(xrd) = std::env::var("XDG_RUNTIME_DIR") {
         command.arg("--bind-try").arg(&xrd).arg(&xrd);
     }
-    command.arg("--ro-bind-try").arg("/tmp/.X11-unix").arg("/tmp/.X11-unix");
+    command
+        .arg("--ro-bind-try")
+        .arg("/tmp/.X11-unix")
+        .arg("/tmp/.X11-unix");
+
+    // Layer declared `[[binds]]` after the fixed mounts so a guest may overlay
+    // the rootfs (e.g. host `/sys` for GPU/Vulkan enumeration, `/run/dbus` for
+    // the system bus). `optional = true` uses the `-try` variant to keep
+    // headless boxes working when a path is absent; non-optional binds fail
+    // loudly instead. The kernel-critical guests /, /dev, /proc are refused so
+    // a box can't shadow its own essential mounts.
+    for b in binds {
+        let guest = b.guest.to_string_lossy();
+        if matches!(guest.as_ref(), "/" | "/dev" | "/proc") {
+            bail!(
+                "bind guest '{}' would shadow a box-critical mount; \
+                 pick a different guest path",
+                guest
+            );
+        }
+        let flag = match (b.mode, b.optional) {
+            (BindMode::Ro, true) => "--ro-bind-try",
+            (BindMode::Ro, false) => "--ro-bind",
+            (BindMode::Rw, true) => "--bind-try",
+            (BindMode::Rw, false) => "--bind",
+            (BindMode::Dev, true) => "--dev-bind-try",
+            (BindMode::Dev, false) => "--dev-bind",
+        };
+        command.arg(flag).arg(&b.host).arg(&b.guest);
+    }
 
     // Apply declared box env vars (verbatim) after the defaults so they win.
     for (k, v) in env_vars {
@@ -218,9 +322,8 @@ fn prepend_path(prefix: &Path) -> Result<OsString> {
 /// Standard system dirs are always appended as a fallback. Host entries
 /// precede them so user-installed tools take precedence over same-named box
 /// binaries. Order is preserved and duplicates are removed.
-fn forwarded_path(home: &Path, mount_path: &Path, host_bin_prefix: Option<&str>) -> Result<OsString> {
-    const SYSTEM_FALLBACK: &str =
-        "/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin";
+fn forwarded_path(home: &Path, root: &Path, host_bin_prefix: Option<&str>) -> Result<OsString> {
+    const SYSTEM_FALLBACK: &str = "/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin";
 
     // Shellbox-managed subtrees that must never be forwarded (recursion risk).
     let skip_prefixes: [PathBuf; 2] = [
@@ -248,13 +351,11 @@ fn forwarded_path(home: &Path, mount_path: &Path, host_bin_prefix: Option<&str>)
                 continue; // dedup, first occurrence wins
             }
             let p = Path::new(cleaned);
-            let is_shellbox_internal = skip_prefixes
-                .iter()
-                .any(|prefix| p.starts_with(prefix));
+            let is_shellbox_internal = skip_prefixes.iter().any(|prefix| p.starts_with(prefix));
             if is_shellbox_internal {
                 continue;
             }
-            let reachable = p.starts_with(home) || mount_path.join(cleaned).exists();
+            let reachable = p.starts_with(home) || root.join(cleaned).exists();
             if reachable {
                 kept.push(cleaned.to_string());
             }

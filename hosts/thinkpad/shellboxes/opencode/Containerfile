@@ -12,6 +12,7 @@
 FROM fedora:latest
 
 RUN dnf install -y \
+      systemd \
       git ripgrep fd-find \
       jq \
       nodejs npm \

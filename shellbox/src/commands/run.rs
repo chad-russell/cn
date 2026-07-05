@@ -19,7 +19,7 @@ pub fn cmd_run(args: RunArgs) -> Result<()> {
     // If no command is given, open an interactive shell (`/bin/bash` if
     // present, else `/bin/sh`) — this covers the former `enter` command.
     let cmd: Vec<String> = if args.cmd.is_empty() {
-        vec![default_shell(&box_paths.mount_path)]
+        vec![default_shell(&box_paths.rootfs_path)]
     } else {
         args.cmd
     };
@@ -56,12 +56,15 @@ pub fn cmd_shell(args: NameArgs) -> Result<()> {
     std::process::exit(code);
 }
 
-fn ensure_runtime_ready(name: &str, box_paths: &crate::paths::BoxPaths, meta: &BoxMetadata) -> Result<()> {
+fn ensure_runtime_ready(
+    name: &str,
+    box_paths: &crate::paths::BoxPaths,
+    meta: &BoxMetadata,
+) -> Result<()> {
     if !meta.built || !box_paths.cfs_path.exists() {
         bail!("box '{}' is not prepared", name);
     }
-    // Note: a box does NOT need to be (kernel-)mounted to run. If it is mounted,
-    // `run`/`shell` use that fast path; otherwise they fall back to the
-    // fully rootless FUSE runtime. So we no longer require `mount` here.
+    // A box runs entirely rootless via the FUSE runtime; there is no separate
+    // mount step to require here.
     Ok(())
 }

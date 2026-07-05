@@ -29,8 +29,6 @@ pub struct BoxPaths {
     pub cfs_path: PathBuf,
     /// `state/<name>/rootfs` — exported rootfs (prepare input).
     pub rootfs_path: PathBuf,
-    /// `state/<name>/mount` — composefs mountpoint.
-    pub mount_path: PathBuf,
 }
 
 impl Paths {
@@ -50,8 +48,9 @@ impl Paths {
             .with_context(|| format!("failed to create {}", self.store_dir().display()))?;
         std::fs::create_dir_all(self.exports_bin_dir())
             .with_context(|| format!("failed to create {}", self.exports_bin_dir().display()))?;
-        std::fs::create_dir_all(self.exports_metadata_dir())
-            .with_context(|| format!("failed to create {}", self.exports_metadata_dir().display()))?;
+        std::fs::create_dir_all(self.exports_metadata_dir()).with_context(|| {
+            format!("failed to create {}", self.exports_metadata_dir().display())
+        })?;
         std::fs::create_dir_all(self.sessions_dir())
             .with_context(|| format!("failed to create {}", self.sessions_dir().display()))?;
         Ok(())
@@ -90,7 +89,6 @@ impl Paths {
             metadata_path: state_dir.join("metadata.json"),
             cfs_path: state_dir.join("image.cfs"),
             rootfs_path: state_dir.join("rootfs"),
-            mount_path: state_dir.join("mount"),
             state_dir,
             dir,
         }
@@ -98,10 +96,10 @@ impl Paths {
 }
 
 fn home_dir_for_shellbox() -> Result<PathBuf> {
-    if Uid::effective().is_root() {
-        if let Some(path) = sudo_user_home()? {
-            return Ok(path);
-        }
+    if Uid::effective().is_root()
+        && let Some(path) = sudo_user_home()?
+    {
+        return Ok(path);
     }
 
     std::env::var_os("HOME")

@@ -30,11 +30,11 @@
 #        shellbox link ~/Code/cn/hosts/thinkpad/shellboxes/opencode
 #        # or, from inside this directory: shellbox link
 #
-#   3. Prepare, export, and run. rootless FUSE auto-mounts on run, so no
+#   3. Prepare (builds the Containerfile, materializes, and syncs the
+#      opencode export), then run. rootless FUSE auto-mounts on run, so no
 #      sudo is needed:
 #
 #        shellbox prepare opencode
-#        shellbox export opencode opencode
 #        # add ~/.local/share/shellbox/exports/bin to PATH once, then:
 #        opencode
 #

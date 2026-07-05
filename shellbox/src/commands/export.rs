@@ -1,103 +1,65 @@
-use super::common::{normalize_tools, require_manifest};
-use super::ui::{colors_enabled, style_action, style_section, style_title};
+use super::ui::{colors_enabled, style_section, style_title};
 use super::wrappers::write_wrapper_script;
-use crate::cli::{ExportArgs, UnexportArgs};
-use crate::config::{self, BoxManifest};
+use crate::config;
 use crate::paths::Paths;
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct ExportRecord {
     pub(super) box_name: String,
-    pub(super) command: String,
 }
 
-pub fn cmd_export(args: ExportArgs) -> Result<()> {
-    config::validate_name(&args.name)?;
+/// Result of reconciling a box's exports against its declared tools.
+pub(super) struct ExportSyncReport {
+    /// Tools whose wrappers were written or updated this prepare.
+    pub(super) exported: Vec<String>,
+    /// Tools this box previously owned but no longer declares; removed.
+    pub(super) removed: Vec<String>,
+}
 
-    let paths = Paths::new()?;
-    paths.ensure_base_dirs()?;
-    let box_paths = paths.box_paths(&args.name);
-    if !box_paths.manifest_path.exists() {
-        bail!("box '{}' does not exist", args.name);
-    }
-    let manifest = require_manifest(&box_paths)?;
-
-    let commands = resolve_export_commands(&manifest, &args)?;
-    let env = manifest.shell_env();
-
+/// Reconcile a box's persistent exports with its declared `[shell].tools`.
+///
+/// This is the single write path for exports, run at the end of every
+/// successful `prepare`. The policy is **last-prepare-wins**: every declared
+/// tool is (re)written here regardless of who owned it before, and this box is
+/// recorded as the owner. Any tool this box currently owns but no longer
+/// declares is removed.
+pub(super) fn sync_box_exports(
+    paths: &Paths,
+    box_name: &str,
+    tools: &[String],
+    env_vars: &[(String, String)],
+) -> Result<ExportSyncReport> {
     let mut exported = Vec::new();
-    for cmd in &commands {
-        exported.push(export_one_command(&paths, &args.name, cmd, &env, args.force)?);
+    for tool in tools {
+        export_one_command(paths, box_name, tool, env_vars)?;
+        exported.push(tool.clone());
     }
 
-    let colors = colors_enabled();
-    if commands.len() == 1 {
-        println!("{} {}", style_action("exported", colors), style_title(&commands[0], colors));
-        println!("  {:<12} {}", "target", exported[0].display());
-        println!("  {:<12} {}", "box", args.name);
-    } else {
-        println!("{} {}", style_action("exported", colors), style_title(&args.name, colors));
-        println!("  {:<12} {}", "count", commands.len());
-        println!("  {:<12} {}", "bin", paths.exports_bin_dir().display());
-        println!("  {:<12} {}", "tools", commands.join(", "));
+    let mut removed = Vec::new();
+    for (tool, record) in scan_exports(paths)? {
+        if record.box_name == box_name && !tools.iter().any(|t| t == &tool) {
+            remove_export(paths, &tool)?;
+            removed.push(tool);
+        }
     }
-    Ok(())
+
+    Ok(ExportSyncReport { exported, removed })
 }
 
-pub fn cmd_unexport(args: UnexportArgs) -> Result<()> {
-    let paths = Paths::new()?;
-    paths.ensure_base_dirs()?;
-
-    match (args.tool.as_deref(), args.all) {
-        (Some(tool), false) => {
-            let removed = remove_export(&paths, tool)?;
-            let colors = colors_enabled();
-            match removed {
-                Some(owner) => {
-                    println!("{} {}", style_action("unexported", colors), style_title(tool, colors));
-                    println!("  {:<12} {}", "box", owner);
-                }
-                None => {
-                    println!("{} {}", style_action("unexported", colors), style_title(tool, colors));
-                    println!("  {:<12} {}", "status", "no metadata (removed wrapper if present)");
-                }
-            }
+/// Remove every export owned by `box_name`. Returns the tool names removed.
+/// Used by `rm` so deleting a box cleans up its exports (declarative symmetry).
+pub(super) fn unexport_box(paths: &Paths, box_name: &str) -> Result<Vec<String>> {
+    let mut removed = Vec::new();
+    for (tool, record) in scan_exports(paths)? {
+        if record.box_name == box_name {
+            remove_export(paths, &tool)?;
+            removed.push(tool);
         }
-        (None, true) => {
-            let records = scan_exports(&paths)?;
-            let selected: Vec<(String, ExportRecord)> = match &args.box_name {
-                Some(name) => records.into_iter().filter(|(_, r)| &r.box_name == name).collect(),
-                None => records,
-            };
-
-            if selected.is_empty() {
-                let colors = colors_enabled();
-                let scope = args
-                    .box_name
-                    .map(|n| format!("owned by box '{}'", n))
-                    .unwrap_or_else(|| "to remove".to_string());
-                println!("{} no exports {}", style_action("unexported", colors), scope);
-                return Ok(());
-            }
-
-            let mut count = 0;
-            for (tool, _) in &selected {
-                remove_export(&paths, tool)?;
-                count += 1;
-            }
-
-            let colors = colors_enabled();
-            println!("{} {}", style_action("unexported", colors), style_title("all", colors));
-            println!("  {:<12} {}", "count", count);
-            println!("  {:<12} {}", "bin", paths.exports_bin_dir().display());
-        }
-        (Some(_), true) => bail!("cannot combine a tool name with --all"),
-        (None, false) => bail!("specify a tool name or --all"),
     }
-    Ok(())
+    Ok(removed)
 }
 
 pub fn cmd_list_exports() -> Result<()> {
@@ -126,56 +88,23 @@ pub fn cmd_list_exports() -> Result<()> {
     Ok(())
 }
 
-fn resolve_export_commands(manifest: &BoxManifest, args: &ExportArgs) -> Result<Vec<String>> {
-    let commands = match (&args.cmd, args.all) {
-        (Some(cmd), false) => vec![cmd.clone()],
-        (None, true) => {
-            if manifest.shell.tools.is_empty() {
-                bail!(
-                    "box has no shell tools configured\nadd tools to the manifest before exporting"
-                );
-            }
-            manifest.shell.tools.clone()
-        }
-        _ => bail!("exactly one of <cmd> or --all is required"),
-    };
-    normalize_tools(commands)
-}
-
 fn export_one_command(
     paths: &Paths,
     box_name: &str,
     cmd: &str,
     env_vars: &[(String, String)],
-    force: bool,
 ) -> Result<PathBuf> {
     config::validate_tool_name(cmd)?;
 
     let target = paths.exports_bin_dir().join(cmd);
     let meta_path = paths.exports_metadata_dir().join(format!("{cmd}.json"));
 
-    if meta_path.exists() {
-        let existing = load_export_record(&meta_path)?;
-        if existing.box_name != box_name && !force {
-            bail!(
-                "command '{}' is already exported by box '{}'\nre-run with --force to replace it",
-                cmd,
-                existing.box_name
-            );
-        }
-    } else if target.exists() && !force {
-        bail!(
-            "export target already exists: {}\nre-run with --force to replace it",
-            target.display()
-        );
-    }
-
+    // last-prepare-wins: always overwrite, regardless of prior ownership.
     write_wrapper_script(&target, box_name, cmd, env_vars)?;
     save_export_record(
         &meta_path,
         &ExportRecord {
             box_name: box_name.to_string(),
-            command: cmd.to_string(),
         },
     )?;
 
@@ -227,23 +156,18 @@ pub(super) fn scan_exports(paths: &Paths) -> Result<Vec<(String, ExportRecord)>>
     Ok(out)
 }
 
-fn remove_export(paths: &Paths, tool: &str) -> Result<Option<String>> {
+fn remove_export(paths: &Paths, tool: &str) -> Result<()> {
     let target = paths.exports_bin_dir().join(tool);
     let meta_path = paths.exports_metadata_dir().join(format!("{tool}.json"));
 
-    let owner = if meta_path.exists() {
-        let record = load_export_record(&meta_path)?;
+    if meta_path.exists() {
         std::fs::remove_file(&meta_path)
             .with_context(|| format!("failed to remove {}", meta_path.display()))?;
-        Some(record.box_name)
-    } else {
-        None
-    };
-
+    }
     if target.exists() {
         std::fs::remove_file(&target)
             .with_context(|| format!("failed to remove {}", target.display()))?;
     }
 
-    Ok(owner)
+    Ok(())
 }

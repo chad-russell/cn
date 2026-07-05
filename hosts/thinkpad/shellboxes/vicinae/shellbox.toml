@@ -1,0 +1,63 @@
+# shellbox vicinae — application launcher, decoupled from the host image.
+#
+# Niri runs on the host (slow-moving COPR, rebuilt rarely). Vicinae updates
+# multiple times per week, so it lives here and updates with a `prepare`,
+# independent of any host rebuild.
+#
+# Runtime shape:
+#   - `vicinae server --replace` is started once at session boot (see README)
+#     and holds the box mounted for the whole session.
+#   - `vicinae toggle` is invoked per keypress through the exported wrapper;
+#     each call mounts the box fresh (rootless FUSE), talks to the server over
+#     an IPC socket under $XDG_RUNTIME_DIR (bound through by default), exits,
+#     and tears down. Keep this image lean so per-toggle FUSE setup stays fast.
+#   - Host apps launch via `vicinae-launch` (vendored here, set as vicinae's
+#     `launchPrefix`), which escapes to the host user systemd manager.
+
+name = "vicinae"
+image = "localhost/shellbox-vicinae:latest"
+
+[shell]
+# The single exported tool. The wrapper runs `shellbox run vicinae -- vicinae
+# "$@"`, so both `vicinae server` (session boot) and `vicinae toggle`
+# (keypress) go through it — niri's keybinds call `vicinae` exactly as before.
+tools = ["vicinae"]
+
+[shell.env]
+# Vendored config. Settings live at config/vicinae/settings.json next to this
+# manifest; redirecting XDG_CONFIG_HOME makes them authoritative without
+# writing to ~/.config. Mirrors the opencode box's XDG redirect. Absolute
+# literal (shellbox has no path expansion) — update if this directory moves.
+XDG_CONFIG_HOME = "/var/home/crussell/Code/cn/hosts/thinkpad/shellboxes/vicinae/config"
+
+# Host .desktop files, icons, and fonts. The box rootfs is a stock Fedora
+# image with none of the host's installed apps; without these binds vicinae
+# would list nothing and render no icons. All optional so the box still
+# constructs (headless/missing-path tolerant) per shellbox convention.
+
+[[binds]]
+host = "/usr/share/applications"
+guest = "/usr/share/applications"
+mode = "ro"
+optional = true
+
+[[binds]]
+host = "/usr/share/icons"
+guest = "/usr/share/icons"
+mode = "ro"
+optional = true
+
+[[binds]]
+host = "/usr/share/fonts"
+guest = "/usr/share/fonts"
+mode = "ro"
+optional = true
+
+# Mesa/Vulkan render-node enumeration for GTK4 GPU rendering. Same bind the
+# `default` (wezterm) box uses; /dev (the DRI nodes themselves) is already
+# bound by shellbox's fixed binds.
+[[binds]]
+host = "/sys"
+guest = "/sys"
+mode = "ro"
+optional = true

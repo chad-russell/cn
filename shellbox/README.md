@@ -34,7 +34,8 @@ A **box** is a named dev environment with:
 - composefs artifacts: an exported rootfs and a composefs image (`.cfs`)
 - a **shell manifest**: the tools to surface from the box
 
-Boxes are **immutable**. To change one, edit its manifest and re-prepare.
+Boxes are **immutable**. To change one, edit its manifest (and/or its
+Containerfile) and re-prepare.
 
 ### Single source of truth
 
@@ -55,24 +56,21 @@ The box directory may be a **symlink** (e.g. into a dotfiles repo); see
 
 ### Lifecycle
 
-A box has three states:
+A box has two states:
 
 1. **defined** — manifest exists, nothing prepared yet
-2. **prepared** — composefs artifacts exist, can be used (run/shell mount it rootlessly on demand)
-3. **mounted** — (optional) kernel composefs mount exists; run/shell use it as a fast path
+2. **prepared** — composefs artifacts exist, can be used
 
 Transitions are explicit and predictable:
 
 ```
 create  -> defined
 prepare -> prepared
-mount   -> mounted
-unmount -> prepared
 rm      -> removed
 ```
 
-`run` and `shell` do **not** auto-prepare. They do auto-mount
-(rootlessly, via FUSE) if the box is not already kernel-mounted.
+`run` and `shell` do **not** auto-prepare. They mount the composefs image
+rootlessly (via FUSE) on demand, for the duration of each command.
 
 ### Two workflows
 
@@ -81,29 +79,24 @@ shellbox supports two clearly distinct workflows:
 **Devshell workflow** — host-shell first, tools surfaced into your shell:
 
 - `shell` — open a nested shell with box tools added to `PATH`
-- `export` — persistently install a box tool wrapper
+- persistent **exports** — wrappers for declared tools, synced automatically by
+  `prepare` into a directory on your `PATH`
 
 **Runtime workflow** — box rootfs first, for debugging/strict execution:
 
 - `run` — run one command inside the box runtime, or open an interactive shell
   when no command is given
 
-`run` is the runtime primitive; `shell` and `export` are thin tool
+`run` is the runtime primitive; `shell` and the export wrappers are thin tool
 surfacing features built on top of `run`.
 
 ### Privilege model
 
-**Nothing requires `sudo` for normal use.** `run` and `shell`
-mount the composefs image via a fully rootless FUSE runtime (a private user +
-mount namespace, with a background FUSE server thread) when the box is not
-already mounted. No persistent host mount is created; the FUSE mount lives only
-for the duration of the command.
-
-`mount` and `unmount` (which create a persistent, host-visible **kernel**
-composefs mount) still require `sudo` and are now **optional** — useful for
-heavy, repeated use where you want the kernel driver's speed and a shared
-mount across invocations. When a box is kernel-mounted, `run`/`shell`
-automatically use that fast path instead of FUSE.
+**Nothing requires `sudo`.** `run` and `shell` mount the composefs image via a
+fully rootless FUSE runtime (a private user + mount namespace, with a
+background FUSE server thread) for the duration of each command. No persistent
+host mount is created, and nothing runs as root. shellbox is rootless
+end-to-end.
 
 ---
 
@@ -149,7 +142,35 @@ tools = ["podman"]                 # host tools (see "Host tools" below)
 [shell.env]
 # Plain string values — no token expansion.
 FOO = "bar"
+
+# Extra bind mounts, layered after shellbox's fixed binds (see below).
+[[binds]]
+host = "/sys"
+guest = "/sys"
+mode = "ro"          # ro (default) | rw | dev
+optional = true      # use the -try variant; skip silently if absent
 ```
+
+### Building the image from a Containerfile
+
+If a `Containerfile` (or `Dockerfile`) sits next to `shellbox.toml` in the box
+directory, `prepare` builds it into the manifest's `image` reference before
+materializing the rootfs:
+
+```bash
+shellbox prepare <name>     # builds the Containerfile (if present), then materializes
+```
+
+This lets a box be fully self-contained: the manifest declares the tools/env,
+the Containerfile declares how the image is built, and a single `prepare` makes
+both active. The box directory is the build context, so companion files next to
+the manifest are visible to the build (you can `COPY` them).
+
+The `image` field is still **required** — the Containerfile is built and tagged
+*into* that ref. Podman's layer cache makes an unchanged Containerfile a
+near-instant no-op, so re-running `prepare` to pick up a manifest edit doesn't
+needlessly rebuild the image. Vendoring works as usual: `create --from <dir>`
+copies a Containerfile along with the manifest, and `link` symlinks it.
 
 ### Precedence
 
@@ -162,7 +183,7 @@ CLI flags override or append on top of an imported manifest:
 ### Environment variables
 
 You can declare env vars to set whenever the box is used (`run`, `shell`,
-or via `export`). Values are **plain strings** — there is no token
+or via persistent exports). Values are **plain strings** — there is no token
 expansion. If you want to redirect a tool's state somewhere self-contained,
 point the env var at an absolute path you choose:
 
@@ -194,25 +215,58 @@ Then, inside the box:
 shellbox run demo -- podman ps     # works, even though podman is not in the box
 ```
 
-How it works (no daemon, no extra host packages beyond systemd):
+How it works — **no daemon, no parent-side bridge, no second binary**:
 
-- `run` starts a private, session-scoped Unix socket **in the parent
-  `shellbox` process**, then bind a tiny static helper (`shellbox-host-exec`,
-  installed alongside `shellbox`) and a one-line wrapper per host tool into the
-  bwrap at `/run/shellbox-host-bin` (prepended to `PATH`).
-- The wrapper execs the helper, which streams the command over the socket; the
-  parent runs it on the host via `systemd-run --user --wait --pipe` and streams
-  stdio and the exit code back.
+- `run` writes a one-line wrapper per declared host tool into a temp dir and
+  binds it into the box at `/run/shellbox-host-bin` (prepended to `PATH`).
+- Each wrapper execs `systemd-run --user --wait --pipe --working-directory="$PWD"
+  -- <tool> "$@"`. Your user systemd manager (reached through the bound
+  `$XDG_RUNTIME_DIR` socket, authenticated by uid) runs the tool **on the host**
+  — host rootfs, host binaries — and streams stdio and the exit code back.
 
-The socket and any in-flight host commands **live and die with the box
-session** — nothing outlives `run`. Requirements: a running
-`systemd --user` manager for your user (always present on a desktop login; on
-SSH/headless, `loginctl enable-linger <user>`). `[host]` tools are a no-op in
-`shell`/`export` modes, where the real host tool is already on `PATH`.
+This is the same `systemd-run --user` model the project has always used, just
+invoked directly from inside the box instead of through a parent bridge.
+Requirements:
 
-For cross-distro portability, build `shellbox-host-exec` statically (e.g.
-`cargo build --release -p shellbox-host-exec --target x86_64-unknown-linux-musl`)
-so it links no host glibc.
+- The box image must contain `systemd-run` (container images don't ship it by
+  default — add it in your Containerfile, e.g. `dnf install systemd` /
+  `apt install systemd`). shellbox checks for it at `run` time and errors
+  clearly if missing.
+- A running `systemd --user` manager for your user (always present on a desktop
+  login; on SSH/headless, `loginctl enable-linger <user>`).
+
+`[host]` tools are a no-op in `shell` mode and via persistent exports, where the
+real host tool is already on `PATH`.
+
+### Extra bind mounts (`[[binds]]`)
+
+A box can declare extra bind mounts to layer onto its runtime, applied **after**
+shellbox's fixed binds (so a guest may overlay the rootfs). They use bwrap's
+`-try` variants when `optional = true`, so an absent host path is skipped
+silently — the same headless-safe contract as `$XDG_RUNTIME_DIR` and
+`/tmp/.X11-unix`.
+
+```toml
+[[binds]]
+host = "/sys"            # GPU/Vulkan render-node enumeration
+guest = "/sys"
+mode = "ro"
+optional = true
+```
+
+`mode` is `ro` (default), `rw`, or `dev` (device nodes). Guests `/`, `/dev`, and
+`/proc` are refused — they would shadow box-critical mounts. This is how a GUI
+box (e.g. a terminal emulator) opts into the few display paths shellbox doesn't
+already forward; shellbox already binds `$XDG_RUNTIME_DIR` (Wayland socket +
+session D-Bus), `/tmp/.X11-unix` (X11), and `/dev` (DRI/GPU) by default.
+
+**Caveat: the guest path must already exist in the (read-only) box rootfs.**
+bwrap can't create it on the fly because the composefs root is read-only and the
+guest's parent must be a writable layer. `/sys` works because every Linux
+rootfs has it; a path like `/run/dbus` won't (Fedora's `/run` is read-only and
+empty), so bind such paths only if the image creates them at build time. For
+D-Bus specifically, prefer the session bus, which is already reachable at
+`$XDG_RUNTIME_DIR/bus`.
 
 ---
 
@@ -226,7 +280,7 @@ Define a box by writing its manifest into `boxes/`.
 shellbox create --name <name> --image <ref> [--tool <name>]... [--from <path>] [--force]
 ```
 
-`--force` overwrites an existing box (refuses if mounted).
+`--force` overwrites an existing box.
 
 ### `link`
 
@@ -240,17 +294,25 @@ shellbox link [<source>] [--name <name>] [--force]
 
 `<source>` defaults to the current directory; the name defaults to the source
 dir basename. The source is canonicalized to an absolute path before linking,
-so relative paths won't dangle. `--force` overwrites an existing box (refuses
-if mounted).
+so relative paths won't dangle. `--force` overwrites an existing box.
 
 ### `prepare`
 
-Materialize composefs artifacts from the box's image. Requires podman and
+Materialize a box: build its image (if it ships a Containerfile), export the
+rootfs, bake identity, and produce the composefs image. Then sync the box's
+persistent tool exports so every declared `[shell].tools` wrapper is on your
+`PATH` (and any tools it no longer declares are removed). Requires podman and
 `mkcomposefs`.
 
 ```bash
 shellbox prepare <name>
 ```
+
+This is the single command to run after editing a box — its manifest or its
+Containerfile. Exports follow a **last-prepare-wins** policy: if two boxes
+declare the same tool, whichever was prepared most recently owns the export.
+Removing that tool from the winner and re-preparing unexports it; re-prepare
+the other box to reclaim it.
 
 ### `list`
 
@@ -266,17 +328,6 @@ Show a box's source, shell tools, state, paths, and last-prepared time.
 
 ```bash
 shellbox inspect <name>
-```
-
-### `mount` / `unmount`
-
-**Optional.** Create or remove a persistent, host-visible **kernel** composefs
-mount. Require `sudo`. When present, `run`/`shell` use this kernel
-mount as a fast path; otherwise they fall back to the rootless FUSE runtime.
-
-```bash
-sudo shellbox mount <name>
-sudo shellbox unmount <name>
 ```
 
 ### `run`
@@ -313,54 +364,14 @@ shellbox rm <name> --purge         # also remove the manifest directory
 shellbox rm <name> --purge --force # required to purge a symlinked box
 ```
 
-Refuses if mounted. `--purge` on a symlinked box requires `--force` (the symlink
-is removed; the target is left untouched). Note any exports that still
-reference the box so you can clean them up.
-
-### `export`
-
-Persistently install a host-side wrapper for a box tool. The wrapper invokes
-`shellbox run <name> -- <tool> "$@"`.
-
-```bash
-shellbox export <name> <tool>
-shellbox export <name> --all        # export every declared shell tool
-shellbox export <name> <tool> --force
-```
-
-Exports live in a shellbox-owned directory so cleanup is easy:
-
-```
-~/.local/share/shellbox/exports/
-  bin/        <- add this to your PATH
-  metadata/   <- ownership records
-```
-
-Add it once to your shell rc:
-
-```bash
-export PATH="$HOME/.local/share/shellbox/exports/bin:$PATH"
-```
-
-Collision policy: exporting a name owned by another box fails unless `--force`
-is given.
-
-### `unexport`
-
-Remove exported tool wrappers.
-
-```bash
-shellbox unexport <tool>                  # remove one
-shellbox unexport --all                    # remove every export
-shellbox unexport --all --box <name>       # remove all owned by a box
-```
-
-Removing a nonexistent export is idempotent (succeeds and reports nothing to
-remove).
+`--purge` on a symlinked box requires `--force` (the symlink is removed; the
+target is left untouched). Any exports owned by the box are removed
+automatically.
 
 ### `list-exports`
 
-List all exported tools and the box that owns each.
+List all exported tools and the box that owns each. Exports themselves are
+synced by `prepare` (and cleaned up by `rm`); this command is read-only.
 
 ```bash
 shellbox list-exports
@@ -375,21 +386,36 @@ shellbox list-exports
 ```bash
 shellbox create --name fedora-rg --image localhost/local/fedora-rg:latest --tool rg
 shellbox prepare fedora-rg
-# optional: sudo shellbox mount fedora-rg   (kernel fast path; skip to use rootless FUSE)
 
 shellbox run fedora-rg -- rg --version
 shellbox run fedora-rg                 # interactive shell inside box runtime
 shellbox shell fedora-rg               # nested host shell with rg on PATH
-
-# sudo shellbox unmount fedora-rg   (only if you mounted above)
 ```
 
-### Export a tool for use across shells
+### Export tools for use across shells
 
 ```bash
-shellbox export fedora-rg --all
+shellbox prepare fedora-rg          # builds image, materializes, and syncs exports
 export PATH="$HOME/.local/share/shellbox/exports/bin:$PATH"
 rg --version
+```
+
+Add the `PATH` entry to your shell rc once; afterwards, editing the manifest or
+Containerfile and re-running `prepare` keeps the exports in sync.
+
+### Building from a Containerfile
+
+```bash
+# boxes/mybox/Containerfile
+FROM registry.fedoraproject.org/fedora:44
+RUN dnf -y install ripgrep fd-find && dnf clean all
+
+# boxes/mybox/shellbox.toml
+#   image = "localhost/mybox:latest"
+#   [shell]
+#   tools = ["rg", "fd"]
+shellbox create --name mybox --from ./boxes/mybox
+shellbox prepare mybox              # builds the Containerfile into the image, then materializes
 ```
 
 ---
@@ -436,10 +462,9 @@ symlink.
 
 ~/.local/state/shellbox/
   <name>/                   # all per-box derived state
-    metadata.json           # prepare/mount cache (not authoritative)
+    metadata.json           # prepare hint (not authoritative)
     image.cfs               # composefs image
     rootfs/                 # exported rootfs (prepare input)
-    mount/                  # composefs mountpoint
   sessions/                 # ephemeral devshell wrapper dirs
 ```
 

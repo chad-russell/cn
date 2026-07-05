@@ -1,4 +1,4 @@
-use super::common::{is_mountpoint, remove_tree_force};
+use super::common::remove_tree_force;
 use super::ui::{colors_enabled, style_action, style_title};
 use crate::cli::LinkArgs;
 use crate::config;
@@ -28,15 +28,20 @@ pub fn cmd_link(args: LinkArgs) -> Result<()> {
     // Canonicalize to an absolute path. This is the whole reason `link`
     // exists over a manual `ln -s`: a relative source would dangle once it's
     // interpreted relative to `boxes/`, so we resolve it here.
-    let canonical = source.canonicalize().with_context(|| {
-        format!("failed to canonicalize source path {}", source.display())
-    })?;
+    let canonical = source
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize source path {}", source.display()))?;
 
     // name: CLI > source dir basename.
     let name = args
         .name
         .clone()
-        .or_else(|| canonical.file_name().and_then(|n| n.to_str()).map(String::from))
+        .or_else(|| {
+            canonical
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(String::from)
+        })
         .context("box name is required\nprovide --name or run from inside the source directory")?;
     config::validate_name(&name)?;
 
@@ -45,13 +50,7 @@ pub fn cmd_link(args: LinkArgs) -> Result<()> {
     // Handle an existing entry under boxes/<name>.
     if box_paths.dir.exists() {
         if !args.force {
-            bail!(
-                "box '{}' already exists; use --force to replace it",
-                name
-            );
-        }
-        if is_mountpoint(&box_paths.mount_path) {
-            bail!("box '{}' is mounted; unmount it before replacing", name);
+            bail!("box '{}' already exists; use --force to replace it", name);
         }
         remove_tree_force(&box_paths.dir)?;
     }
@@ -71,7 +70,11 @@ pub fn cmd_link(args: LinkArgs) -> Result<()> {
     BoxMetadata::default().save(&box_paths.metadata_path)?;
 
     let colors = colors_enabled();
-    println!("{} {}", style_action("linked", colors), style_title(&name, colors));
+    println!(
+        "{} {}",
+        style_action("linked", colors),
+        style_title(&name, colors)
+    );
     println!("  {:<12} {}", "source", canonical.display());
     println!("  {:<12} {}", "box", box_paths.dir.display());
     println!("  {:<12} {}", "state", box_paths.state_dir.display());

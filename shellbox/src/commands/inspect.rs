@@ -1,7 +1,7 @@
-use super::common::{describe_source, is_mountpoint, require_manifest};
+use super::common::{describe_source, require_manifest};
 use super::ui::{
-    colors_enabled, inspect_status, style_bool, style_label, style_recorded_state, style_section,
-    style_status_badge, style_title, format_last_built_at,
+    colors_enabled, format_last_built_at, inspect_status, style_bool, style_label,
+    style_recorded_state, style_section, style_status_badge, style_title,
 };
 use crate::cli::NameArgs;
 use crate::metadata::BoxMetadata;
@@ -18,17 +18,20 @@ pub fn cmd_inspect(args: NameArgs) -> Result<()> {
 
     let manifest = require_manifest(&box_paths)?;
     let meta = BoxMetadata::load(&box_paths.metadata_path).unwrap_or_default();
-    let mounted_live = is_mountpoint(&box_paths.mount_path);
     let built_live = box_paths.cfs_path.exists();
     let colors = colors_enabled();
-    let status = inspect_status(mounted_live, built_live);
+    let status = inspect_status(built_live);
 
     println!(
         "{} {}",
         style_title(&args.name, colors),
         style_status_badge(status, colors)
     );
-    println!("{} {}", style_label("source", colors), describe_source(&manifest, &box_paths));
+    println!(
+        "{} {}",
+        style_label("source", colors),
+        describe_source(&manifest, &box_paths)
+    );
     println!("{} image", style_label("type", colors));
     println!();
 
@@ -51,30 +54,20 @@ pub fn cmd_inspect(args: NameArgs) -> Result<()> {
     if manifest.host.tools.is_empty() {
         println!("  {:<12} none", "tools");
     } else {
+        println!("  {:<12} {}", "tools", manifest.host.tools.join(", "),);
         println!(
-            "  {:<12} {}",
-            "tools",
-            manifest.host.tools.join(", "),
+            "  {:<12}   (run only; forwarded via systemd-run --user)",
+            "note"
         );
-        println!("  {:<12} {} (run only; forwarded via systemd-run --user)", "note", " ");
     }
     println!();
 
     println!("{}", style_section("state", colors));
-    println!(
-        "  {:<12} {}",
-        "defined",
-        style_bool(true, colors)
-    );
+    println!("  {:<12} {}", "defined", style_bool(true, colors));
     println!(
         "  {:<12} {}",
         "prepared",
         style_recorded_state(meta.built, built_live, colors)
-    );
-    println!(
-        "  {:<12} {}",
-        "mounted",
-        style_recorded_state(meta.mounted, mounted_live, colors)
     );
     println!();
 
@@ -84,7 +77,6 @@ pub fn cmd_inspect(args: NameArgs) -> Result<()> {
     println!("  {:<12} {}", "metadata", box_paths.metadata_path.display());
     println!("  {:<12} {}", "image", box_paths.cfs_path.display());
     println!("  {:<12} {}", "rootfs", box_paths.rootfs_path.display());
-    println!("  {:<12} {}", "mount", box_paths.mount_path.display());
     println!();
 
     println!(

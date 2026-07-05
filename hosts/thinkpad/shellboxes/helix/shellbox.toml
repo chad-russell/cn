@@ -1,0 +1,69 @@
+# shellbox helix — a self-contained, bleeding-edge Helix with Steel plugins
+#
+# Helix's Steel plugin system is not in upstream releases; this box builds the
+# mattwparas/helix `steel-event-system` fork from source (see Containerfile).
+#
+# Config, data, state, and cache all live inside THIS directory, so helix is
+# fully self-contained and never touches ~/.config, ~/.local/share, etc. $HOME
+# is left alone, so ~, git config, ssh, and your prompt all behave normally —
+# only helix's storage is redirected.
+#
+# Steel specifics: with the steel feature on, Helix reads its normal TOML
+# config first, then layers Steel on top using the files in config/helix/:
+#
+#   config/helix/config.toml   # usual Helix config (read first)
+#   config/helix/helix.scm     # stateless module: `provide`d fns become :cmds
+#   config/helix/init.scm      # startup script; has access to *helix.cx*
+#   config/helix/cogs/         # drop steel plugins here, `(require "cogs/...")`
+#
+# HELIX_RUNTIME points at the image's bundled, read-only runtime
+# (/opt/helix/runtime) so queries/themes/grammars ship with the box. To override
+# any runtime file, drop it under config/helix/runtime/ (Helix searches the
+# user config dir too).
+#
+# Because env values are plain strings (no {manifest_dir} expansion), the XDG
+# paths below are absolute literals. They point at subdirectories of this very
+# directory, which means THIS DIRECTORY must live at the path spelled out
+# below. If you relocate it, update the five paths to match.
+#
+# Recommended workflow (link, then prepare):
+#
+#   1. Keep this directory somewhere stable and permanent (e.g. this repo).
+#      The path must match the XDG_* paths below.
+#   2. Link it into shellbox's boxes dir so shellbox can find it:
+#
+#        shellbox link ~/Code/cn/hosts/thinkpad/shellboxes/helix
+#        # or, from inside this directory: shellbox link
+#
+#   3. Prepare (builds the Containerfile, materializes, and syncs the hx
+#      export). The from-source build is slow (Rust + steel + grammars); go
+#      grab a coffee. Then run. rootless FUSE auto-mounts on run, so no sudo:
+#
+#        shellbox prepare helix
+#        # add ~/.local/share/shellbox/exports/bin to PATH once, then:
+#        hx ~/any/file
+#
+#      (Optional kernel fast path: `sudo shellbox mount helix` — skips the
+#      per-run FUSE setup for heavy repeated use. Not required.)
+#
+# Why link instead of `create --from`? With a link, the box directory IS this
+# directory, so helix reads its config from here and writes its runtime state
+# back here. A copy would split the vendored box from your real config, and
+# `rm --purge` would only ever touch the link — your helix state in this
+# directory is never endangered.
+
+name = "helix"
+image = "localhost/shellbox-helix:latest"
+
+[shell]
+tools = ["hx", "forge", "steel-language-server", "steel"]
+
+[shell.env]
+# Redirect helix's XDG storage into subdirs of this box. Adjust the prefix if
+# you relocate this directory. (The dirs are created on demand.)
+XDG_CONFIG_HOME = "/var/home/crussell/Code/cn/hosts/thinkpad/shellboxes/helix/config"
+XDG_DATA_HOME   = "/var/home/crussell/Code/cn/hosts/thinkpad/shellboxes/helix/data"
+XDG_STATE_HOME  = "/var/home/crussell/Code/cn/hosts/thinkpad/shellboxes/helix/state"
+XDG_CACHE_HOME  = "/var/home/crussell/Code/cn/hosts/thinkpad/shellboxes/helix/cache"
+# Bundled, read-only runtime (queries/themes/grammars) from the image.
+HELIX_RUNTIME    = "/opt/helix/runtime"

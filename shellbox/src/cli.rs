@@ -1,7 +1,11 @@
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(name = "shellbox", version, about = "composefs-backed devshell utility")]
+#[command(
+    name = "shellbox",
+    version,
+    about = "composefs-backed devshell utility"
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
@@ -14,13 +18,9 @@ pub enum Command {
     Prepare(NameArgs),
     List,
     Inspect(NameArgs),
-    Mount(NameArgs),
-    Unmount(NameArgs),
     Run(RunArgs),
     Shell(NameArgs),
     Rm(RmArgs),
-    Export(ExportArgs),
-    Unexport(UnexportArgs),
     ListExports,
 }
 
@@ -75,29 +75,6 @@ pub struct RunArgs {
     /// interactive shell (`/bin/bash` if present, else `/bin/sh`).
     #[arg(last = true)]
     pub cmd: Vec<String>,
-}
-
-#[derive(Args, Debug)]
-pub struct ExportArgs {
-    pub name: String,
-    pub cmd: Option<String>,
-
-    #[arg(long)]
-    pub all: bool,
-
-    #[arg(long)]
-    pub force: bool,
-}
-
-#[derive(Args, Debug)]
-pub struct UnexportArgs {
-    pub tool: Option<String>,
-
-    #[arg(long)]
-    pub all: bool,
-
-    #[arg(long = "box")]
-    pub box_name: Option<String>,
 }
 
 #[derive(Args, Debug)]

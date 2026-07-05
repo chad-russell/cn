@@ -1,0 +1,81 @@
+# shellbox noctalia — desktop shell, decoupled from the host image.
+#
+# Niri runs on the host; noctalia lives here because it ships as `noctalia-git`
+# (a fast-moving git build) and would otherwise force host rebuilds on every
+# upstream change.
+#
+# Runtime shape (same lifecycle model as the vicinae box):
+#   - `noctalia` (no args) is started once at session boot (see README) and
+#     holds the box mounted for the whole session. It renders the panels/
+#     backdrop and owns its D-Bus names from inside the box.
+#   - `noctalia msg <…>` is the per-keypress client (volume, brightness,
+#     nightlight, lock, panels, notifications). Each call mounts the box
+#     fresh (rootless FUSE), talks to the daemon over an IPC socket under
+#     $XDG_RUNTIME_DIR, exits, and tears down. Keep this image lean so
+#     per-call FUSE setup stays fast — especially for held/repeated media keys.
+#
+# Free from shellbox defaults (no [[binds]] needed):
+#   - Wayland layer-shell surfaces (panels, backdrop, lock) — $XDG_RUNTIME_DIR
+#   - Session D-Bus (Notifications ownership, dconf, portal) — $XDG_RUNTIME_DIR/bus
+#   - PipeWire audio client — $XDG_RUNTIME_DIR/pipewire-0
+#
+# The [[binds]] below cover the rest: system bus for logind, device/seat
+# events, and GPU/backlight enumeration.
+
+name = "noctalia"
+image = "localhost/shellbox-noctalia:latest"
+
+[shell]
+# Single exported tool. The wrapper runs `shellbox run noctalia -- noctalia
+# "$@"`, so both the daemon (`noctalia`, session boot) and the IPC client
+# (`noctalia msg …`, keybinds) go through it — niri's keybinds call `noctalia`
+# exactly as before.
+tools = ["noctalia"]
+
+# No [shell.env] / no XDG redirect: noctalia has no authored file config, and
+# we want it to share the host's ~/.config and dconf (theme, font, persisted
+# state). $HOME is bound through by default, so ~ works unmodified.
+
+# --- host /run binds (logind + seat/device events) ----------------------
+# Each guest path is created at build time by the Containerfile; the binds
+# overlay the live host dirs. All optional so the box still constructs on a
+# headless/CI host where these are absent.
+
+[[binds]]
+# System D-Bus socket (/run/dbus/system_bus_socket). logind
+# (org.freedesktop.login1) lives here — needed for session lock, brightness
+# (SetBrightness), and inhibit. The one bind noctalia genuinely can't work
+# without if it uses logind for session control.
+host = "/run/dbus"
+guest = "/run/dbus"
+mode = "ro"
+optional = true
+
+[[binds]]
+# udev — input/device/seat events (hotplug, lid, etc.).
+host = "/run/udev"
+guest = "/run/udev"
+mode = "ro"
+optional = true
+
+[[binds]]
+# systemd runtime state — logind seat/session info read over the system bus
+# may reference files here.
+host = "/run/systemd"
+guest = "/run/systemd"
+mode = "ro"
+optional = true
+
+# --- GPU + backlight ----------------------------------------------------
+
+[[binds]]
+# Mesa/Vulkan render-node enumeration for GTK4 GPU rendering (same bind the
+# vicinae and `default` boxes use; /dev DRI nodes are already bound by
+# shellbox). Also covers /sys/class/backlight/<dev>/brightness if noctalia
+# writes brightness directly — verify which path it uses. ro for now; if
+# noctalia writes /sys directly, either prefer the logind D-Bus path or flip
+# this single bind to "rw" (and ensure the user is in the `video` group).
+host = "/sys"
+guest = "/sys"
+mode = "ro"
+optional = true

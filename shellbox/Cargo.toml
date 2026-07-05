@@ -5,15 +5,6 @@ edition = "2024"
 description = "composefs-backed devshell utility"
 license = "MIT OR Apache-2.0"
 
-# The crate at the repository root is both the `shellbox` package and the
-# workspace root. `shellbox-host-exec` is a near-zero-dependency companion
-# binary that runs *inside* a box and bridges to the host-exec socket server
-# in the parent `shellbox` process. It is intentionally a separate crate so it
-# can be built statically (no dynamic glibc tie to the host) and shipped
-# independently to distro packagers.
-[workspace]
-members = ["host-exec-helper"]
-
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }

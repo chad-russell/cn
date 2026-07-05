@@ -1,0 +1,68 @@
+# shellbox helix — bleeding-edge Helix with the Steel plugin system
+#
+# Helix's Steel integration (PR helix-editor/helix#8675) is NOT in upstream
+# master; it lives in mattwparas/helix on the `steel-event-system` branch. This
+# image builds that fork from source with `--features steel,git`.
+#
+# We use the fork's own documented installer, `cargo xtask steel`, which also
+# builds the `forge` package manager, the steel language server, and the steel
+# repl, and pre-compiles the tree-sitter grammars into /opt/helix/runtime.
+#
+# This is a slow image build (Rust + steel + ~100 tree-sitter grammars) but it
+# is one-time. Rebuilding re-clones the branch tip, so you get the latest
+# bleeding-edge steel every `shellbox prepare`.
+#
+# Runtime cwd, $HOME, and identity come from bwrap (see shellbox docs); this
+# image only provides the editor and its toolchain.
+
+# ─── builder ──────────────────────────────────────────────────────────────
+FROM fedora:latest AS builder
+
+# Helix MSRV is 1.90; use rustup so the build isn't coupled to Fedora's rust
+# package. gcc/g++/clang compile tree-sitter grammars; git fetches grammars and
+# the steel git dependencies.
+#
+# perl + perl-FindBin: steel-forge's dep tree enables `vendored` on openssl-sys,
+# so openssl-sys builds OpenSSL from source via openssl-src. OpenSSL's Configure
+# is perl and `use`s FindBin; Fedora ships FindBin as a separate subpackage that
+# is NOT always dragged in by the weak perl deps, so install it explicitly.
+RUN dnf install -y \
+      gcc gcc-c++ clang make cmake \
+      git curl wget unzip tar \
+      perl perl-FindBin \
+    && dnf clean all
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --profile minimal --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Bleeding edge: track the steel-event-system branch tip at build time.
+RUN git clone --depth 1 --branch steel-event-system \
+      https://github.com/mattwparas/helix.git /opt/helix
+
+WORKDIR /opt/helix
+# Builds + installs into /root/.cargo/bin:
+#   hx (helix-term, --features steel,git), forge, steel-language-server,
+#   steel-interpreter, cargo-steel-lib
+# and writes tree-sitter grammars to /opt/helix/runtime/grammars.
+RUN cargo xtask steel
+
+# ─── final ────────────────────────────────────────────────────────────────
+FROM fedora:latest
+
+RUN dnf install -y \
+      git ripgrep fd-find \
+      libstdc++ \
+    && dnf clean all
+
+COPY --from=builder /root/.cargo/bin/hx                    /usr/local/bin/hx
+COPY --from=builder /root/.cargo/bin/forge                /usr/local/bin/forge
+COPY --from=builder /root/.cargo/bin/steel-language-server /usr/local/bin/steel-language-server
+# The `steel-interpreter` crate builds a binary named `steel` (the repl/CLI).
+COPY --from=builder /root/.cargo/bin/steel                 /usr/local/bin/steel
+# Queries, themes, and the pre-built tree-sitter grammar .so files.
+COPY --from=builder /opt/helix/runtime                    /opt/helix/runtime
+
+ENV HELIX_RUNTIME=/opt/helix/runtime
+
+CMD ["hx"]

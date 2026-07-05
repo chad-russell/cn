@@ -8,13 +8,15 @@ use std::process::Command;
 
 pub(super) fn inject_runtime_identity(rootfs: &Path) -> Result<()> {
     let etc = rootfs.join("etc");
-    std::fs::create_dir_all(&etc)
-        .with_context(|| format!("failed to create {}", etc.display()))?;
+    std::fs::create_dir_all(&etc).with_context(|| format!("failed to create {}", etc.display()))?;
 
     let uid = Uid::current().as_raw();
     let fallback_gid = Gid::current().as_raw();
     let user = User::from_uid(Uid::current())?;
-    let primary_gid = user.as_ref().map(|u| u.gid.as_raw()).unwrap_or(fallback_gid);
+    let primary_gid = user
+        .as_ref()
+        .map(|u| u.gid.as_raw())
+        .unwrap_or(fallback_gid);
     let username = user
         .as_ref()
         .map(|u| u.name.clone())
@@ -33,7 +35,14 @@ pub(super) fn inject_runtime_identity(rootfs: &Path) -> Result<()> {
         group_names.push((*gid, name));
     }
 
-    merge_passwd(&etc.join("passwd"), uid, primary_gid, &username, &home, &shell)?;
+    merge_passwd(
+        &etc.join("passwd"),
+        uid,
+        primary_gid,
+        &username,
+        &home,
+        &shell,
+    )?;
     merge_group(&etc.join("group"), &username, &group_names)?;
     ensure_nsswitch_files(&etc.join("nsswitch.conf"))?;
     Ok(())
@@ -41,8 +50,7 @@ pub(super) fn inject_runtime_identity(rootfs: &Path) -> Result<()> {
 
 pub(super) fn inject_name_resolution(rootfs: &Path) -> Result<()> {
     let etc = rootfs.join("etc");
-    std::fs::create_dir_all(&etc)
-        .with_context(|| format!("failed to create {}", etc.display()))?;
+    std::fs::create_dir_all(&etc).with_context(|| format!("failed to create {}", etc.display()))?;
     copy_host_file(Path::new("/etc/resolv.conf"), &etc.join("resolv.conf"))?;
     copy_host_file(Path::new("/etc/hosts"), &etc.join("hosts"))?;
     Ok(())
@@ -51,38 +59,25 @@ pub(super) fn inject_name_resolution(rootfs: &Path) -> Result<()> {
 pub(super) fn inject_desktop_mount_points(rootfs: &Path) -> Result<()> {
     let uid = nix::unistd::Uid::current().as_raw();
     let dir = rootfs.join("run").join("user").join(uid.to_string());
-    std::fs::create_dir_all(&dir)
-        .with_context(|| format!("failed to create {}", dir.display()))?;
+    std::fs::create_dir_all(&dir).with_context(|| format!("failed to create {}", dir.display()))?;
     Ok(())
 }
 
-/// Pre-create the in-box bind targets for `[host]` tools. bwrap binds *over*
+/// Pre-create the in-box bind target for `[host]` tools. bwrap binds *over*
 /// existing paths, and the composefs root is read-only at runtime, so the
-/// placeholders must be baked in at prepare time (same pattern as the desktop
-/// mount points and name-resolution files above). No-op when no host tools are
-/// declared, so non-host boxes keep a clean rootfs.
+/// placeholder directory must be baked in at prepare time (same pattern as the
+/// desktop mount points and name-resolution files above). No-op when no host
+/// tools are declared, so non-host boxes keep a clean rootfs.
 pub(super) fn inject_host_exec_mount_points(rootfs: &Path, manifest: &BoxManifest) -> Result<()> {
     if manifest.host.tools.is_empty() {
         return Ok(());
     }
-    // INBOX_* constants are absolute in-box paths ("/run/..."); relativize
-    // them against the rootfs being assembled.
-    let helper_rel = crate::host_exec::INBOX_HELPER.trim_start_matches('/');
-    let bin_rel = crate::host_exec::INBOX_HOSTBIN.trim_start_matches('/');
-
-    // Directory: bind target for the per-tool wrapper dir.
+    // INBOX_HOSTBIN is an absolute in-box path ("/run/..."); relativize it
+    // against the rootfs being assembled.
+    let bin_rel = super::runtime::INBOX_HOSTBIN.trim_start_matches('/');
     let bin_dir = rootfs.join(bin_rel);
     std::fs::create_dir_all(&bin_dir)
         .with_context(|| format!("failed to create {}", bin_dir.display()))?;
-    // Regular file: bind target for the static helper binary. Its parent
-    // (/run) already exists, but create it defensively in case INBOX_HELPER
-    // ever moves deeper.
-    let helper_file = rootfs.join(helper_rel);
-    if let Some(parent) = helper_file.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(&helper_file, [])
-        .with_context(|| format!("failed to create {}", helper_file.display()))?;
     Ok(())
 }
 
@@ -119,7 +114,14 @@ fn merge_passwd(
         })
         .map(str::to_string)
         .collect();
-    lines.push(format!("{}:x:{}:{}::{}:{}", username, uid, gid, home.display(), shell));
+    lines.push(format!(
+        "{}:x:{}:{}::{}:{}",
+        username,
+        uid,
+        gid,
+        home.display(),
+        shell
+    ));
     write_lines(path, &lines)?;
     Ok(())
 }
@@ -139,7 +141,7 @@ fn merge_group(path: &Path, username: &str, groups: &[(u32, String)]) -> Result<
         {
             let members = row.get_mut(3).unwrap();
             let mut list: Vec<&str> = members.split(',').filter(|s| !s.is_empty()).collect();
-            if !list.iter().any(|m| *m == username) {
+            if !list.contains(&username) {
                 list.push(username);
             }
             *members = list.join(",");
@@ -160,8 +162,12 @@ fn merge_group(path: &Path, username: &str, groups: &[(u32, String)]) -> Result<
 
 fn ensure_nsswitch_files(path: &Path) -> Result<()> {
     let existing = std::fs::read_to_string(path).unwrap_or_default();
-    let passwd_ok = existing.lines().any(|line| line.starts_with("passwd:") && line.contains("files"));
-    let group_ok = existing.lines().any(|line| line.starts_with("group:") && line.contains("files"));
+    let passwd_ok = existing
+        .lines()
+        .any(|line| line.starts_with("passwd:") && line.contains("files"));
+    let group_ok = existing
+        .lines()
+        .any(|line| line.starts_with("group:") && line.contains("files"));
     if passwd_ok && group_ok {
         return Ok(());
     }
@@ -170,7 +176,10 @@ fn ensure_nsswitch_files(path: &Path) -> Result<()> {
         .find(|line| line.starts_with("hosts:"))
         .unwrap_or("hosts: files dns myhostname")
         .to_string();
-    let content = format!("passwd: files\ngroup: files\nshadow: files\n{}\n", hosts_line);
+    let content = format!(
+        "passwd: files\ngroup: files\nshadow: files\n{}\n",
+        hosts_line
+    );
     std::fs::write(path, content).with_context(|| format!("failed to write {}", path.display()))?;
     Ok(())
 }

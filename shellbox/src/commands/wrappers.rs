@@ -23,7 +23,8 @@ pub(super) fn write_wrapper_script(
         shell_quote(cmd),
     ));
 
-    std::fs::write(target, lines).with_context(|| format!("failed to write {}", target.display()))?;
+    std::fs::write(target, lines)
+        .with_context(|| format!("failed to write {}", target.display()))?;
     let mut perms = std::fs::metadata(target)?.permissions();
     perms.set_mode(0o755);
     std::fs::set_permissions(target, perms)?;

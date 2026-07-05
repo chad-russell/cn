@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# wezterm `default_prog` — launch a login shell on the HOST from inside the box.
+#
+# wezterm itself runs inside the shellbox bwrap; each tab/pane should be a real
+# host shell (host PATH, host home, host tools). We escape the sandbox via the
+# host user systemd manager, reached over the bound $XDG_RUNTIME_DIR socket
+# (uid-authenticated — same uid, no userns remapping in the bwrap).
+#
+# `--pty` (not --pipe) is essential: it allocates a controlling tty for the
+# unit so readline, job control, and SIGWINCH-driven resize all flow through
+# wezterm's pty. `--pipe` would give the shell pipes instead of a tty.
+#
+# Display env is forwarded explicitly via --setenv so programs launched from the
+# shell can still reach Wayland/X/D-Bus (the user manager env is usually
+# imported by the session, but not always — forward to be safe). Only non-empty
+# vars are forwarded, so an unset var can't clobber a good inherited value.
+set -euo pipefail
+
+args=(--user --wait --quiet --pty --working-directory="$PWD")
+for v in WAYLAND_DISPLAY XDG_RUNTIME_DIR DISPLAY DBUS_SESSION_BUS_ADDRESS \
+         XDG_SESSION_TYPE XDG_CURRENT_DESKTOP; do
+  if [ -n "${!v:-}" ]; then
+    args+=("--setenv=$v=${!v}")
+  fi
+done
+# $SHELL is inherited from the host env through bwrap and resolves on the host
+# (e.g. /usr/bin/zsh on the thinkpad Silverblue image).
+args+=(-- "${SHELL:-/usr/bin/zsh}" -l)
+
+exec systemd-run "${args[@]}"
