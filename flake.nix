@@ -1,19 +1,6 @@
 {
   description = "Unified NixOS configurations for homelab infrastructure";
 
-  nixConfig = {
-    extra-substituters = [
-      "https://numtide.cachix.org"
-      "https://vicinae.cachix.org"
-      "https://noctalia.cachix.org"
-    ];
-    extra-trusted-public-keys = [
-      "numtide.cachix.org-1:2ps1kLBUWjxIneOy1Ik6cQjb41X0iXVXeHigGmycPPE="
-      "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc="
-      "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
-    ];
-  };
-
   inputs = {
     # ── Nixpkgs ────────────────────────────────────────────────────
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
