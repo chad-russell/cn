@@ -201,22 +201,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-bambu": {
-      "locked": {
-        "lastModified": 1779891160,
-        "narHash": "sha256-WnWcLUaJh1iW6kMTgjurXWDQ8HetivsM8VZAd//mcV4=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "3dc39290654c7c595c9f3fa70c3b998ca2bd61b0",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "3dc39290654c7c595c9f3fa70c3b998ca2bd61b0",
-        "type": "github"
-      }
-    },
     "nixpkgs-unstable": {
       "locked": {
         "lastModified": 1746033937,
@@ -336,7 +320,6 @@
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs",
         "nixpkgs-2605": "nixpkgs-2605",
-        "nixpkgs-bambu": "nixpkgs-bambu",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
         "noctalia-shell": "noctalia-shell",
