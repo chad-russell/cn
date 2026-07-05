@@ -270,7 +270,7 @@
                 sudo nixos-rebuild switch --flake .#$host
               else
                 echo ">>> Deploying to $host ($TARGET)..."
-                nixos-rebuild switch --flake .#$host --target-host "$TARGET" --build-host localhost --sudo
+                nixos-rebuild switch --flake .#$host --target-host "$TARGET" --sudo
               fi
 
               echo ">>> $host done."
