@@ -267,17 +267,24 @@ Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
 #### Updating Caddy Routes
 
-Edit repo source files, deploy `bees` to update `/etc/caddy`, then validate and reload:
+Edit repo source files, deploy `bees` to update `/etc/caddy`, then **restart the
+Caddy container** for changes to take effect. A bare `caddy reload` inside the
+container is NOT enough: the Caddyfile and routes are NixOS `etc` symlinks, and
+the podman container bind-mounts them at start — so a deploy repoints the
+symlink on the host, but the running container keeps the old store path until
+the container is recreated.
 
 ```bash
 # from repo root
 nix run .#deploy -- bees
 
-ssh -o IdentitiesOnly=yes crussell@192.168.20.41 '
-  sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile &&
-  sudo podman exec systemd-caddy caddy reload --config /etc/caddy/Caddyfile
+ssh -o IdentitiesOnly=yes crussell@10.10.0.6 '
+  sudo systemctl restart caddy.service &&
+  sudo podman exec systemd-caddy caddy validate --config /etc/caddy/Caddyfile
 '
 ```
+
+The container is named `systemd-caddy` and managed by the `caddy.service` Quadlet.
 
 Caddy's Route53 DNS challenge credentials are managed via agenix (`secrets/aws-env.age`), decrypted at runtime to `/run/agenix/aws-env`. **Bees uses this only for the internal `*.internal.crussell.io` wildcard cert**; the gateway's public ingress uses HTTP-01 and needs no credentials.
 
