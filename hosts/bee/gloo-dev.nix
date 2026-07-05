@@ -1,7 +1,7 @@
 # ── Gloo Dev Support on bee ────────────────────────────────────────
 #
-# Minimal module: installs podman compose override files and the
-# pi agent skill for the Gloo devcontainer workflow.
+# Minimal module: installs podman compose override files for the
+# Gloo devcontainer workflow.
 #
 # Each Gloo repo (polymer, gpl, hummingbird) has its own .devcontainer/.
 # You run them directly with podman compose — no wrappers, no systemd
@@ -23,7 +23,7 @@ let
 in
 {
   options.services.gloo-dev = {
-    enable = lib.mkEnableOption "Gloo dev support (override files + skill)";
+    enable = lib.mkEnableOption "Gloo dev support (override files)";
 
     user = lib.mkOption {
       type = lib.types.str;
@@ -46,14 +46,6 @@ in
         [ "polymer" "hb" "gpl" ]
       )}
       chown -R ${user}:users /home/${user}/.config/gloo
-    '';
-
-    # ── Pi agent skill ────────────────────────────────────────────
-    system.activationScripts.gloo-dev-skill = lib.stringAfter [ "users" ] ''
-      SKILL_DIR="/home/${user}/.pi/agent/skills/gloo-dev"
-      mkdir -p "$SKILL_DIR"
-      cp ${./gloo/SKILL.md} "$SKILL_DIR/SKILL.md"
-      chown -R ${user}:users "$SKILL_DIR"
     '';
   };
 }
