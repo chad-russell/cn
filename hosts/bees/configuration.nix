@@ -85,14 +85,14 @@
   fileSystems."/mnt/media" = {
     device = "192.168.20.31:/pool/media";
     fsType = "nfs";
-    options = [ "_netdev" "rw" "hard" "intr" ];
+    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
   };
 
   # ── NFS: Photos from NAS ────────────────────────────────────────
   fileSystems."/mnt/photos" = {
     device = "192.168.20.31:/pool/photos";
     fsType = "nfs";
-    options = [ "_netdev" "rw" "hard" "intr" ];
+    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
   };
 
   # ── NFS: Backups from NAS ───────────────────────────────────────
