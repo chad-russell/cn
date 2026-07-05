@@ -23,8 +23,10 @@ for v in WAYLAND_DISPLAY XDG_RUNTIME_DIR DISPLAY DBUS_SESSION_BUS_ADDRESS \
     args+=("--setenv=$v=${!v}")
   fi
 done
-# $SHELL is inherited from the host env through bwrap and resolves on the host
-# (e.g. /usr/bin/zsh on the thinkpad Silverblue image).
-args+=(-- "${SHELL:-/usr/bin/zsh}" -l)
+# Hardcode the host login shell. Don't trust $SHELL from the bwrap env: wezterm
+# sets it from the BOX's /etc/passwd, which shellbox bakes with /bin/bash at
+# prepare time (identity.rs default_shell), shadowing the zsh fallback below.
+# /usr/bin/zsh is the host login shell on this Silverblue image.
+args+=(-- /usr/bin/zsh -l)
 
 exec systemd-run "${args[@]}"

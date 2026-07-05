@@ -49,7 +49,7 @@ user_units := "opencode-web"
 # LLM-editable. Symlinked as a single directory: one entry, single source of
 # truth, and settings for newly installed cosmic apps land in the repo
 # automatically. Stateful subdirs can be gitignored later if noise appears.
-dotfiles := ".config/oh-my-posh.json .config/environment.d/10-shellbox.conf .config/niri/config.kdl .config/cosmic .zshrc .zshenv"
+dotfiles := ".config/oh-my-posh.json .config/environment.d/10-shellbox.conf .config/niri/config.kdl .config/cosmic .local/share/applications/wezterm.desktop .zshrc .zshenv"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # setup

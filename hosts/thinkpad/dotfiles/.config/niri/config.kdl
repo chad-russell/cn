@@ -196,8 +196,8 @@ binds {
     Mod+Alt+N { spawn "noctalia" "msg" "nightlight-toggle"; }
     Mod+E     { spawn "noctalia" "msg" "panel-toggle" "session"; }
 
-    // Applications (host binaries — direct spawn, no desktoppak-spawn)
-    Mod+T { spawn "ptyxis"; }
+    // Applications (host binaries + shellbox exports — direct spawn, no desktoppak-spawn)
+    Mod+T { spawn "wezterm"; }
     Mod+B { spawn "flatpak" "run" "app.zen_browser.zen"; }
     Mod+F { spawn "nautilus" "--new-window"; }
     // Mod+R { spawn "voxtype" "record" "toggle"; }
