@@ -13,7 +13,6 @@
     ../../modules/pi-agent.nix
     ../../modules/opencode.nix
     ./caddy-dev.nix
-    ./gloo-dev.nix
     ./buildspace.nix
     ./backup.nix
     ./tailscale.nix
@@ -98,39 +97,6 @@
   # ── Firewall: disabled (router handles it) ───────────────────────
   networking.firewall.enable = false;
 
-  # ┌──────────────────────────────────────────────────────────────────┐
-  # │ TEMPORARY: Docker daemon for project work.                       │
-  # │                                                                  │
-  # │ TO REMOVE later, delete everything between the ┌┐/└┘ boxes,    │
-  # │ then:  nix run .#deploy -- bee                                   │
-  # │ and on bee:  sudo systemctl stop docker containerd               │
-  # │              sudo rm -rf /var/lib/docker   # if no longer needed │
-  # │                                                                  │
-  # │ SIDE EFFECTS of this change:                                     │
-  # │  - dockerCompat disabled (mkForce false); revert to use Podman   │
-  # │    wrapper again. gloo-dev/buildspace set it independently.       │
-  # │  - crussell added to "docker" group (needs re-login to take      │
-  # │    effect; or: newgrp docker)                                     │
-  # │  - DOCKER_HOST in any devshell flake.nix that points to Podman   │
-  # │    may need updating for Docker-based projects (e.g. DDEV).      │
-  # └──────────────────────────────────────────────────────────────────┘
-  virtualisation.docker.enable = true;
-  # Disable dockerCompat — conflicts with real Docker. Gloo and Buildspace
-  # explicitly use `podman` or set DOCKER_HOST to the Podman socket, so they
-  # don't need the `docker` → `podman` wrapper.
-  virtualisation.podman.dockerCompat = lib.mkForce false;
-  # Append "docker" group to existing groups ("wheel" from base-server.nix).
-  # Uses mkAfter to avoid conflicting with the base-server definition.
-  users.users.crussell.extraGroups = lib.mkAfter [ "docker" ];
-  # ┌──────────────────────────────────────────────────────────────────┐
-  # │ END TEMPORARY DOCKER                                             │
-  # │                                                                  │
-  # │ NOTE: When removing, also revert dockerCompat back to true in    │
-  # │ gloo-dev.nix and buildspace.nix (they set it individually, but  │
-  # │ mkForce false here overrides both). Or just remove this line and │
-  # │ the modules will set dockerCompat = true again automatically.    │
-  # └──────────────────────────────────────────────────────────────────┘
-
   # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
   programs.nix-ld.enable = true;
 
@@ -151,10 +117,8 @@
   # (Firewall disabled — no per-service port openings needed)
 
   # ── Dev stacks ──────────────────────────────────────────────────
-  # Gloo repos run in their own devcontainers via plain podman compose.
-  # gloo-dev installs override files + skill; buildspace provides
-  # podman/docker-compose/user-linger.
-  services.gloo-dev.enable = true;
+  # Buildspace dev stack (podman + user-linger). Gloo dev now runs on
+  # the thinkpad via quadlets — see gloo/.
   services.buildspace.enable = true;
 
   # ── State version ───────────────────────────────────────────────

@@ -1,6 +1,0 @@
-# Fix rootless podman UID mapping for GPL devcontainer.
-# The app container bind-mounts ../ as /workspace and needs keep-id
-# so the node user can write to host-owned files.
-services:
-  app:
-    userns_mode: "keep-id"

@@ -22,10 +22,10 @@ Last validated via SSH: **2026-07-05**.
 ├── flake.lock
 ├── AGENTS.md                  # This guide
 ├── hosts/
-│   ├── bee/                   # Beelink mini PC: dev stack (Gloo) + Nebula lighthouse
+│   ├── bee/                   # Beelink mini PC: Nebula lighthouse + Buildspace dev
 │   │   ├── configuration.nix
 │   │   ├── buildspace.nix
-│   │   └── gloo/ buildspace/
+│   │   └── caddy-dev.nix
 │   ├── bees/                  # Production server: all shared + media + ingress services
 │   │   ├── configuration.nix
 │   │   ├── caddy.nix + caddy/ (Caddyfile, routes)
@@ -81,9 +81,9 @@ Last validated via SSH: **2026-07-05**.
    │ 2 TB NVMe, dual 10GbE   │   │ 1 TB NVMe, 1 GbE         │
    │                          │   │                          │
    │ ALL PRODUCTION SERVICES: │   │ SERVICES:                │
-   │  Caddy (*.internal TLS)  │   │  Nebula lighthouse       │
-   │  ntfy, SearXNG, datenight│   │  Gloo dev stack          │
-   │  linkding, papra         │   │  Buildspace (disabled)   │
+    │  Caddy (*.internal TLS)  │   │  Nebula lighthouse       │
+    │  ntfy, SearXNG, datenight│   │  Buildspace (podman)     │
+    │  linkding, papra         │   │  Caddy dev (*.dev TLS)   │
    │  open-webui              │   │                          │
    │  Jellyfin, Sonarr,       │   │                          │
    │  Radarr, Prowlarr,       │   │                          │
@@ -109,7 +109,7 @@ Laptop: think / NixOS 25.11, configured under `hosts/thinkpad/`.
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, SearXNG, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
-| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Gloo stack, Nebula lighthouse.                                                                                                                                                         |
+| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse, Buildspace (podman). Caddy dev reverse proxy.                                                                                                                       |
 | `think`         | varies            | `10.10.0.10`                          | NixOS 25.11 | `hosts/thinkpad/`                    | Laptop with home-manager, niri, Noctalia, Podman, dev tools.       |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 25.11 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
@@ -264,7 +264,6 @@ Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
 - `hub-services.caddy` — linkding, papra, ntfy, SearXNG, open-webui
 - `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
-- `gloo.caddy` — Gloo dev stack on `bee`
 - `buildspace.caddy` — Buildspace dev stack on `bee`
 
 #### Updating Caddy Routes
@@ -288,32 +287,21 @@ Caddy's Route53 DNS challenge credentials are managed via agenix (`secrets/aws-e
 Source files:
 
 - `hosts/bee/configuration.nix`
-- `hosts/bee/gloo/` — override files, skill
-- `hosts/bee/buildspace.nix` — podman, docker-compose, user linger
+- `hosts/bee/buildspace.nix` — Buildspace dev stack (podman + user-linger)
+- `hosts/bee/caddy-dev.nix` — dev reverse proxy for `*.dev.crussell.io` (internal CA)
 
 Running services:
 
 - `nebula@homelab.service` — `10.10.0.12`
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
-- Gloo devcontainers (plain `podman compose` in each repo's `.devcontainer/`)
+- Buildspace dev stack (podman rootless, user systemd units)
+- Caddy dev reverse proxy (`*.dev.crussell.io` → localhost dev ports)
 
-Gloo development uses **repo devcontainers** directly — each Gloo repo has its own `.devcontainer/docker-compose.yml`. No wrappers, no glooctl. Run `podman compose` with override files for port publishing and rootless podman UID mapping.
+> Gloo dev no longer runs on bee — it moved to the thinkpad and runs via
+> podman quadlets. See `gloo/` (`gloo/README.md`) for the current workflow.
 
-Products: `polymer`, `gpl`, `hummingbird`, `storyhub`. Hummingbird and storyhub share the same devcontainer.
-
-Operate Gloo over SSH:
-
-```bash
-ssh -o IdentitiesOnly=yes crussell@10.10.0.12
-cd ~/Gloo/360-polymer/.devcontainer
-podman compose -f docker-compose.yml -f ~/.config/gloo/overrides/polymer.yml up -d --build
-podman compose exec -d app pnpm dev
-podman compose logs -f app
-```
-
-See `hosts/bee/gloo/SKILL.md` for full documentation.
-
-Deploy uses `crussell@192.168.20.105 --sudo` per `flake.nix`.
+bee is podman-only (no Docker daemon). Deploy with `nix run .#deploy -- bee`
+from the deploy origin (`bees`).
 
 ### gateway — Hetzner Cloud VPS (public ingress)
 
