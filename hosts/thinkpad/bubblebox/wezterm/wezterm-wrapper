@@ -1,0 +1,28 @@
+#!/bin/sh
+# wezterm wrapper — defaults bare `wezterm` and `wezterm start` to spawning a
+# host shell (bubblebox-host-shell) instead of a sandboxed one. Without this,
+# the shell inside the terminal would be stuck in bubblebox's mount namespace:
+# no /usr/bin/zsh, no shellbox tools (they need /dev/fuse), no host PATH.
+#
+# Other subcommands (--version, ls-fonts, show-keys, start --explicit-cmd, ...)
+# pass through unchanged to the real binary at /usr/bin/wezterm-real.
+#
+# To override the default host shell, pass the command explicitly:
+#   wezterm start -- /bin/bash
+#   wezterm start -- /usr/bin/zsh -l
+#
+# --always-new-process: don't try to delegate to any existing wezterm GUI
+# instance (e.g. a host-installed nightly with different version + spawn
+# semantics). Without this, our PROG would be ignored and the daemon would
+# spawn its own /etc/passwd-resolved shell — which inside the sandbox is
+# /usr/bin/zsh (not present), causing the "falling back to /bin/sh" warning.
+REAL=/usr/bin/wezterm-real
+HOST_SHELL=/usr/local/bin/bubblebox-host-shell
+
+if [ "$#" -eq 0 ]; then
+    exec "$REAL" start --always-new-process -- "$HOST_SHELL"
+elif [ "$1" = "start" ] && [ "$#" -eq 1 ]; then
+    exec "$REAL" start --always-new-process -- "$HOST_SHELL"
+else
+    exec "$REAL" "$@"
+fi

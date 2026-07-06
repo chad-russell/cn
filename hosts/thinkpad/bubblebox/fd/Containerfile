@@ -1,0 +1,19 @@
+# fd (fd-find) — simple, fast alternative to find, installed via cargo from a
+# rust:bookworm build stage. Same shape as bat/dust/eza/rg.
+# Note: the crate is `fd-find` but the binary it installs is `fd`.
+FROM rust:bookworm AS build
+RUN cargo install fd-find --root /out
+# Gather fd's runtime shared libraries that distroless cc-debian12 doesn't
+# ship. glibc/libgcc/libstdc++ are skipped because distroless already has them.
+RUN mkdir -p /libs \
+ && ldd /out/bin/fd | awk '/=> \// {print $3}' | sort -u \
+ | grep -vE 'libc\.so|libm\.so|libdl\.so|libpthread\.so|librt\.so|libgcc_s\.so|libresolv\.so|libBrokenLocale|ld-linux|libstdc\+\+\.so' \
+ | while read lib; do cp -L "$lib" /libs/; done
+# Pre-create FHS mountpoints that distroless lacks, so bwrap can bind host dirs.
+RUN mkdir -p /dirs/mnt /dirs/media /dirs/opt /dirs/srv \
+ && touch /dirs/mnt/.keep /dirs/media/.keep /dirs/opt/.keep /dirs/srv/.keep
+
+FROM gcr.io/distroless/cc-debian12
+COPY --from=build /out/bin/fd /usr/bin/fd
+COPY --from=build /libs/ /usr/lib/x86_64-linux-gnu/
+COPY --from=build /dirs/ /

@@ -1,0 +1,29 @@
+# yazi — built from upstream's prebuilt STATIC (musl) binaries.
+#
+# Build-source rationale: upstream publishes statically-linked musl builds, so
+# we can use FROM scratch with no libc and no build toolchain. Preferred over
+# cargo (yazi needs its custom `yazi-build` tool, not a plain crate install)
+# and over COPR (would couple the image to Fedora).
+#
+# Caveats of the minimal scratch image: yazi normally orchestrates helper tools
+# (file, ffmpeg, fd, rg, 7zip, poppler, ...). None are present here, so preview
+# and search features are limited. Add them later if you want a fuller box.
+FROM debian:bookworm-slim AS build
+ARG YAZI_VERSION=26.5.6
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl unzip \
+ && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL -o /tmp/yazi.zip \
+      "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-x86_64-unknown-linux-musl.zip" \
+ && unzip -q /tmp/yazi.zip -d /tmp \
+ && mkdir -p /rootfs/usr/bin \
+ && cp /tmp/yazi-x86_64-unknown-linux-musl/yazi /rootfs/usr/bin/yazi \
+ && cp /tmp/yazi-x86_64-unknown-linux-musl/ya   /rootfs/usr/bin/ya \
+ && chmod +x /rootfs/usr/bin/yazi /rootfs/usr/bin/ya \
+ # Empty mountpoints so bubblewrap can bind host dirs into the scratch root.
+ && mkdir -p /rootfs/tmp /rootfs/home /rootfs/root /rootfs/var /rootfs/etc \
+           /rootfs/run /rootfs/mnt /rootfs/media /rootfs/opt /rootfs/srv \
+           /rootfs/dev /rootfs/proc
+
+FROM scratch
+COPY --from=build /rootfs/ /

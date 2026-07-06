@@ -1,0 +1,25 @@
+# Per-tool bubblewrap profile, sourced by bubblebox-run.
+#
+# Goal: run nvim with a VENDORED config (baked into the image) and ISOLATED
+# state, so it never reads or writes the host's real ~/.config/nvim or
+# ~/.local/share/nvim. You still edit host files normally (/home is writable);
+# only nvim's *own* state is redirected into a bubblebox-owned directory.
+
+WRITABLE_HOME=1   # you edit host files, so /home must be writable
+
+# Persistent, bubblebox-owned dir for nvim data/state/cache (plugins, treesitter
+# parsers, shada, sessions). Lives under the bubblebox data dir, NOT your real
+# $HOME, so nothing leaks out.
+NVIM_STATE="$BUBBLEBOX_DATA_DIR/nvim"
+mkdir -p "$NVIM_STATE"
+
+BWRAP_EXTRA+=(
+  --setenv XDG_CONFIG_HOME /usr/share/bubblebox  # vendored config (read-only, in image)
+  --setenv XDG_DATA_HOME   /persist/data           # lazy.nvim plugins, treesitter parsers
+  --setenv XDG_STATE_HOME  /persist/state          # sessions (persistence.nvim)
+  --setenv XDG_CACHE_HOME  /persist/cache          # transient caches
+  --bind "$NVIM_STATE" /persist                    # make /persist persistent + writable + isolated
+  # Deterministic PATH: only the image's toolchain (gcc/ld/make/rg/fd/git) is
+  # reachable, so e.g. treesitter's `cc` is unambiguously the image's gcc.
+  --setenv PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+)

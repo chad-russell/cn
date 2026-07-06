@@ -1,0 +1,17 @@
+# Per-tool bubblewrap profile, sourced by bubblebox-run.
+#
+# Goal: run aws with a VENDORED, non-secret config (profiles, regions, SSO
+# role references) baked into the image, while credentials (~/.aws/credentials,
+# ~/.aws/sso/cache) stay at their default host location — runtime,
+# machine-local, short-lived (especially SSO tokens).
+#
+# Contrast with nvim: nvim redirects ALL of its state (config + data + cache)
+# into bubblebox-owned dirs. aws does the opposite for credentials: they stay
+# in your real $HOME because they're secret, machine-local, and short-lived
+# (SSO tokens rotate). Only the non-secret config is vendored.
+
+WRITABLE_HOME=1   # aws reads & writes ~/.aws/{credentials,sso/cache} for creds/tokens
+
+BWRAP_EXTRA+=(
+  --setenv AWS_CONFIG_FILE /usr/share/bubblebox/aws/config
+)

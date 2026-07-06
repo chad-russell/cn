@@ -1,0 +1,7 @@
+[profile biblica-dev]
+sso_start_url = https://d-9067fef8b4.awsapps.com/start
+sso_region = us-east-1
+sso_account_id = 602267944315
+sso_role_name = OpenBible-Readonly-Access
+region = us-east-1
+output = json

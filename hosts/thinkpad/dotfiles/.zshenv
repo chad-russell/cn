@@ -6,6 +6,12 @@ typeset -U path  # dedupe PATH
 path=(
   $HOME/.local/bin
   $HOME/.cargo/bin
+  # shellbox exports — still here during the bubblebox migration transition
+  # because opencode hasn't moved to the host yet (waiting on host-image
+  # rebuild for nodejs/npm). Remove this line in Phase B, after:
+  #   1. `cjust opencode-install` has run successfully, AND
+  #   2. `~/.local/bin/opencode` exists and `opencode auth login` works.
+  # Until then, this entry keeps the shellbox opencode wrapper reachable.
   $HOME/.local/share/shellbox/exports/bin
   $path
 )

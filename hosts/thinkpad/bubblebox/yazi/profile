@@ -1,0 +1,5 @@
+# Per-tool bubblewrap profile, sourced by bubblebox-run.
+# yazi is an interactive file manager: it writes config/state to $HOME and
+# opens its DDS socket under $XDG_RUNTIME_DIR (/run/user/$UID).
+WRITABLE_HOME=1
+WRITABLE_RUN=1

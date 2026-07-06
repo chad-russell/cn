@@ -18,9 +18,15 @@ Currently:
   - `niri` + `xwayland-satellite` (from `yalter/niri`)
   - `cosmic-desktop` (from `ryanabx/cosmic-epoch`)
 - installs small host convenience packages:
-  - `fastfetch`
-  - `neovim`
-  - `oh-my-posh` (prompt renderer; hooks the interactive shell in `~/.zshrc` — belongs on the host, not in a shellbox, because it runs on every prompt render and can't pay a per-invocation bwrap spawn)
+  - `just` + `fzf` — back the `cjust` task menu (see `hosts/thinkpad/Justfile`);
+    host-native because `cjust` must work before any sandbox is set up
+  - `nodejs` + `npm` — used by `cjust opencode-install` to install the
+    `opencode-ai` package globally (prefix `~/.local`). opencode stays on the
+    host because it's the AI coding agent and needs full host control when
+    something breaks, not subject to sandbox rules
+  - `oh-my-posh` — prompt renderer; hooks the interactive shell in `~/.zshrc`.
+    Host-native because it runs on every prompt render and can't pay a
+    per-invocation sandbox spawn
 - disables SELinux for this personal-laptop setup
 
 

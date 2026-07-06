@@ -1,0 +1,20 @@
+# Per-tool bubblewrap profile, sourced by bubblebox-run.
+#
+# zoxide keeps a frequency database of visited directories. Persist it under
+# the bubblebox data dir (NOT the host's ~/.local/share/zoxide) so the host
+# stays clean and the database survives across runs. Same /persist pattern
+# as tools/nvim/profile.
+#
+# Usage note: bubblebox-run wraps the *binary*, not a shell function, so the
+# seamless `z foo` integration (`zoxide init bash`) doesn't apply directly.
+# Wrap it from your shell if you want that — e.g. in ~/.bashrc:
+#   z()  { cd "$(bubblebox-run zoxide query -- "$@")" || return; }
+#   za() { bubblebox-run zoxide add "$@"; }
+
+ZO_STATE="$BUBBLEBOX_DATA_DIR/zoxide"
+mkdir -p "$ZO_STATE"
+
+BWRAP_EXTRA+=(
+  --setenv _ZO_DATA_DIR /persist          # zoxide reads/writes its db here
+  --bind "$ZO_STATE" /persist             # make /persist persistent + writable + isolated
+)

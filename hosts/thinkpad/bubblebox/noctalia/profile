@@ -1,0 +1,38 @@
+# Per-tool bubblewrap profile, sourced by bubblebox-run.
+#
+# noctalia is a desktop shell with a wide system-integration surface. Beyond
+# the standard bubblebox binds it needs:
+#   - writable $XDG_RUNTIME_DIR (/run/user/$UID) for its IPC socket, the
+#     session bus, PipeWire, and Wayland — all reached through /run, which
+#     bubblebox-run binds (made writable via WRITABLE_RUN=1)
+#   - GPU access (/dev/dri) for GTK4 rendering
+#   - read-only /sys for backlight/GPU enumeration (writes should go through
+#     logind over the system bus; flip to rw only if needed)
+#
+# What's NOT needed here (already covered by bubblebox-run):
+#   - /run/dbus, /run/udev, /run/systemd — subdirs of /run, bound wholesale
+#   - session D-Bus socket — at /run/user/$UID/bus, part of /run
+#   - PipeWire socket — at /run/user/$UID/pipewire-0, part of /run
+
+WRITABLE_HOME=1   # noctalia persists its state in ~/.config (dconf/gsettings)
+WRITABLE_RUN=1    # IPC socket + Wayland + session bus live under /run/user/$UID
+
+# GPU render node access. bubblebox-run's `--dev /dev` gives a fresh devtmpfs
+# with no /dev/dri, so we create the dir and bind the host's in.
+if [ -d /dev/dri ]; then
+  BWRAP_EXTRA+=(
+    --dir /dev/dri
+    --bind /dev/dri /dev/dri
+  )
+fi
+
+# /sys for backlight/GPU enumeration. Read-only — brightness writes should go
+# through logind (org.freedesktop.login1) over the system bus, which is
+# reachable via /run/dbus/system_bus_socket (part of the /run bind).
+# --rbind because sysfs has submounts (e.g. /sys/class, /sys/devices) that
+# don't come along with a plain --ro-bind on some kernels.
+if [ -d /sys ]; then
+  BWRAP_EXTRA+=(
+    --ro-bind-try /sys /sys
+  )
+fi

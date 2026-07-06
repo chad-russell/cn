@@ -1,0 +1,38 @@
+# vicinae — application launcher, from the quadratech188/vicinae COPR.
+#
+# Runtime model (mirrors the shellbox vicinae box):
+#   - vicinae runs inside the sandbox; the apps it lists live on the HOST.
+#   - `bubblebox-run vicinae server --replace` starts the daemon at session
+#     boot; `bubblebox-run vicinae toggle` is the per-keypress client. They
+#     share an IPC socket under $XDG_RUNTIME_DIR (writable via WRITABLE_RUN=1
+#     in the profile).
+#   - Host apps launch via vicinae-launch (vendored here, set as vicinae's
+#     `launchPrefix` in the vendored settings.json), which escapes to the host
+#     user systemd manager via `systemd-run --user`. Same host-escape pattern
+#     as bin/bubblebox-host-shell, but without the pty/same-dir machinery
+#     because app launches are fire-and-forget, not interactive shells.
+#
+# `systemd` is installed explicitly for systemd-run (the host-escape primitive).
+#
+# Vendored config at config/vicinae/settings.json — the profile redirects
+# XDG_CONFIG_HOME=/usr/share/bubblebox so vicinae reads it instead of touching
+# the host's ~/.config/vicinae. Edit the file, rebuild, to change settings.
+FROM fedora:latest
+RUN dnf -y install dnf-plugins-core \
+ && dnf -y copr enable quadratech188/vicinae \
+ && dnf -y install \
+      systemd \
+      vicinae \
+ && dnf clean all
+
+# Host-app launcher shim — escapes to the user systemd manager on the host
+# via the $XDG_RUNTIME_DIR socket bubblebox-run binds.
+COPY vicinae-launch /usr/local/bin/vicinae-launch
+
+# Vendored config. profile sets XDG_CONFIG_HOME=/usr/share/bubblebox so vicinae
+# reads /usr/share/bubblebox/vicinae/settings.json. Source layout is
+# config/vicinae/settings.json (mirrors XDG's $XDG_CONFIG_HOME/vicinae/), so
+# copy the inner vicinae/ dir's contents to the dest vicinae/ dir.
+COPY config/vicinae/ /usr/share/bubblebox/vicinae/
+
+RUN chmod 0755 /usr/local/bin/vicinae-launch

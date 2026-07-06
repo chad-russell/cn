@@ -1,0 +1,51 @@
+# wezterm — GUI terminal emulator, from upstream's prebuilt Fedora rpm.
+#
+# Why prebuilt rpm (not cargo install): wezterm is a large Rust+GUI project;
+# `cargo install wezterm` would pull in hundreds of crates and compile for
+# 30+ minutes. The upstream rpm is pre-built, fast to install, and resolves
+# its many shared-lib deps (wayland, X11, openssl, fontconfig, ...) via dnf
+# against the image's glibc. Pinned to a specific release tag for
+# reproducibility — bump WEZTERM_RPM (and the release URL) to update.
+#
+# Why Fedora base: the rpm is built against Fedora, and dnf resolves its deps
+# cleanly against the matching glibc/mesa/etc. versions. A distroless or
+# scratch image would force manual lib copying for ~50 shared deps.
+#
+# Host-shell escape: wezterm is a GUI terminal — the shells it spawns should
+# run on the HOST, not inside this sandbox, otherwise they can't see
+# /usr/bin/zsh, the user's shellbox tools (which need /dev/fuse), or any other
+# host-only binary. We achieve this with two pieces:
+#   1. /usr/local/bin/bubblebox-host-shell — runs `systemd-run --user --pty`
+#      to spawn $SHELL in the user's systemd scope (outside the sandbox).
+#   2. /usr/bin/wezterm (wrapper) — defaults bare `wezterm` / `wezterm start`
+#      to spawn host-shell; passes other subcommands through to wezterm-real.
+# systemd-run is in the Fedora base image already, and the user's systemd is
+# reachable via /run/user/$UID/bus (bound by bubblebox-run via --bind /run).
+#
+# No vendored wezterm.lua by default: wezterm reads ~/.config/wezterm/wezterm.lua
+# from your $HOME (made writable via WRITABLE_HOME=1 in the profile). To bake a
+# config into the image, COPY it into /usr/share/bubblebox/wezterm/ and set
+# WEZTERM_CONFIG_FILE in the profile.
+FROM fedora:latest
+ARG WEZTERM_RPM=wezterm-20240203_110809_5046fc22-1.fedora39.x86_64.rpm
+# curl first because GitHub release downloads redirect through a signed-URL
+# cross-domain hop that dnf's librepo mishaps on with a spurious 404; curl
+# follows the chain cleanly. Then dnf installs the local file.
+RUN curl -fsSL -o /tmp/wezterm.rpm \
+      "https://github.com/wezterm/wezterm/releases/download/20240203-110809-5046fc22/${WEZTERM_RPM}" \
+ && dnf install -y /tmp/wezterm.rpm systemd \
+ && rm -f /tmp/wezterm.rpm \
+ && dnf clean all
+
+# Rename the real binary so the wrapper at /usr/bin/wezterm can dispatch.
+RUN mv /usr/bin/wezterm /usr/bin/wezterm-real
+
+# bubblebox-host-shell: shared helper (from $BUBBLEBOX_DIR/bin/) that spawns a
+# shell on the host via systemd-run --user. The wrapper below defaults bare
+# `wezterm` to use this so the spawned shell isn't trapped in the sandbox.
+COPY bin/bubblebox-host-shell /usr/local/bin/bubblebox-host-shell
+
+# Wrapper: dispatches "start" with no explicit prog to host-shell; passes
+# everything else through to the real binary.
+COPY wezterm-wrapper /usr/bin/wezterm
+RUN chmod +x /usr/local/bin/bubblebox-host-shell /usr/bin/wezterm

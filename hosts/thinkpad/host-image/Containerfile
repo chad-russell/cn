@@ -43,9 +43,14 @@ FROM quay.io/fedora-ostree-desktops/silverblue:${FEDORA_MAJOR_VERSION}
 # oh-my-posh they can't live in a shellbox — `cjust` must run before any box
 # is set up. (`just` was previously borrowed from the `default` box, which
 # made the menu depend on the thing it bootstraps; `fzf` backs `just --choose`.)
+# `nodejs` + `npm` are host-native so `cjust opencode-install` can do a global
+# `npm install -g opencode-ai` (with prefix=~/.local, see Justfile). opencode
+# stays on the host rather than in bubblebox because it's the AI coding agent —
+# when something breaks, it needs full host control to help diagnose and fix,
+# not be subject to sandbox restrictions.
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
-    dnf5 -y install distrobox zsh just fzf
+    dnf5 -y install distrobox zsh just fzf nodejs npm
 
 # ---- 2. Compositors: niri + COSMIC (from COPR) -------------------------
 # desktoppak is being phased out; compositors now ship directly in the host

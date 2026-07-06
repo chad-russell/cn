@@ -1,0 +1,19 @@
+# aws — AWS CLI v2 from Fedora, with the non-secret config vendored in.
+#
+# Mirrors the shellbox aws box: profile definitions (SSO start URL, account
+# IDs, role names, regions) live next to the tool and are baked into the
+# image, read via AWS_CONFIG_FILE in tools/aws/profile. Secrets (static
+# credentials, SSO token cache) stay at the default ~/.aws/ — runtime,
+# machine-local, short-lived (especially SSO tokens), never baked in.
+#
+# Plain `dnf install` (no --setopt=install_weak_deps=False). `less` is listed
+# explicitly because awscli v2 pipes output through $AWS_PAGER (default `less`)
+# and would error without it; it doesn't come in as a weak dep on Fedora.
+FROM fedora:latest
+RUN dnf install -y awscli less \
+ && dnf clean all
+
+# Vendored, non-secret config. tools/aws/profile sets AWS_CONFIG_FILE here so
+# aws reads this instead of ~/.aws/config — the profile definitions live next
+# to the tool and are version-controlled here, not in your runtime $HOME.
+COPY config/ /usr/share/bubblebox/aws/

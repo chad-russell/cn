@@ -1,0 +1,36 @@
+# Per-tool bubblewrap profile, sourced by bubblebox-run.
+#
+# wezterm is a GUI terminal emulator, so unlike the CLI tools it needs the
+# host's graphics/display/runtime surface accessible inside the sandbox:
+#   - writable /run/user/$UID (XDG_RUNTIME_DIR) for its IPC sockets
+#   - GPU access (/dev/dri) for OpenGL rendering
+#   - the user's Wayland/X11 env vars (inherited; bubblebox-run doesn't strip env)
+# Fonts come from the host too: the rpm pulls in fontconfig, and host fonts
+# are reached via the standard /usr/share/fonts path (the host's /usr isn't
+# shadowed because the image is /, but host font dirs can be added here if
+# the bundled ones aren't enough).
+#
+# Config: wezterm looks for ~/.config/wezterm/wezterm.lua by default. With
+# WRITABLE_HOME=1 the file you edit on the host is read live. To bake a config
+# into the image, COPY it into /usr/share/bubblebox/wezterm/ in the Containerfile
+# and add `--setenv WEZTERM_CONFIG_FILE /usr/share/bubblebox/wezterm/wezterm.lua`.
+
+WRITABLE_HOME=1
+WRITABLE_RUN=1
+
+BWRAP_EXTRA+=(
+  # WezTerm writes its "blob lease" file under $TMPDIR (defaults to /var/tmp,
+  # which is read-only in the sandbox because /var is bound ro). /tmp is the
+  # one writable scratch dir bubblebox-run always provides.
+  --setenv TMPDIR /tmp
+)
+
+# GPU render node access. bubblebox-run's `--dev /dev` gives a fresh devtmpfs
+# with no /dev/dri, so we create the dir and bind the host's in. Exposes
+# card + render nodes; needed for OpenGL/Vulkan.
+if [ -d /dev/dri ]; then
+  BWRAP_EXTRA+=(
+    --dir /dev/dri
+    --bind /dev/dri /dev/dri
+  )
+fi

@@ -8,10 +8,9 @@ host.
 ```text
 .
 ├── host-image/     # minimal bootc host image
-├── desktoppak/     # desktop/compositor packaging + runtime prototype
 ├── nebula/         # Nebula VPN container/service
 ├── wycliffe-vpn/   # on-demand GlobalProtect wrapper
-├── shellboxes/     # vendored shellbox box definitions (replaces cdev)
+├── bubblebox/      # vendored per-tool configs for bubblebox sandboxes
 ├── dotfiles/       # the rare host-native user dotfiles (linked by cjust)
 └── systemd/        # user/systemd units (mostly user services for now)
 ```
@@ -21,31 +20,31 @@ host.
 Keep the host small and explicit.
 
 - host OS changes belong in `host-image/`
-- desktop sessions belong in `desktoppak/`
-- apps and dev tools should prefer shellboxes, Flatpaks, or other isolated
-  models over being layered onto the host
+- apps and dev tools should prefer bubblebox sandboxes, Flatpaks, or other
+  isolated models over being layered onto the host
 - persistent mutable state should live in obvious, named locations
 - the rare dotfile that must live host-native (e.g. oh-my-posh, which runs on
-  every prompt render and so can't live in a shellbox) is tracked under
-  `dotfiles/` and symlinked into `$HOME` by `cjust link`
+  every prompt render and so can't pay a per-invocation sandbox spawn) is
+  tracked under `dotfiles/` and symlinked into `$HOME` by `cjust link`
 
 ## Task runner: `cjust`
 
 `cjust` is the single entry point for setting up and maintaining this machine.
 It's a thin wrapper (defined in `dotfiles/.zshrc`) around the task runner
 `just`, pointing at `hosts/thinkpad/Justfile`. `just` and `fzf` are baked into
-the host image so it works before any shellbox is set up.
+the host image so it works before any sandbox is set up.
 
 ```bash
 cjust              # fuzzy recipe chooser (just --choose)
-cjust setup        # full first-run: dotfiles + units + shellboxes + boot mounts
+cjust setup        # full first-run: dotfiles + units + bubblebox + opencode
 cjust link         # (re)symlink host-native dotfiles into $HOME
 cjust units        # (re)symlink systemd user units + enable lingering
-cjust status       # show host-image / bootc / shellbox state
+cjust bubblebox    # build FUSE server + all tool images + export wrappers
+cjust status       # show host-image / bootc / bubblebox / opencode state
 cjust -l           # list all recipes
 ```
 
-Adding a new box, boot-mount, user unit, or dotfile is a one-line edit to a
+Adding a new bubblebox tool, user unit, or dotfile is a one-line edit to a
 data table at the top of the Justfile.
 
 ## Current architecture
@@ -53,15 +52,8 @@ data table at the top of the Justfile.
 ### `host-image/`
 A minimal bootc-managed host image. It is intentionally small: host-level
 choices that truly belong in the base OS (convenience packages, disabling
-SELinux, removing `toolbox`, adding `distrobox`). It also bakes the
-`shellbox-mount@.service` template so shellboxes can be auto-mounted at boot.
-See `host-image/README.md`.
-
-### `desktoppak/`
-A separate project for self-contained desktop/compositor session payloads (CLI,
-generic bwrap runtime, manifest docs/schema, Niri payload). Desktop
-experimentation happens here, not by installing compositors on the host. See
-`desktoppak/README.md`.
+SELinux, removing `toolbox`, adding `distrobox`, the compositors, and
+`nodejs`/`npm` so `cjust opencode-install` works). See `host-image/README.md`.
 
 ### `nebula/`
 Rootful Podman/Quadlet-based Nebula VPN setup.
@@ -70,50 +62,63 @@ Rootful Podman/Quadlet-based Nebula VPN setup.
 On-demand Wycliffe GlobalProtect container workflow. See
 `wycliffe-vpn/README.md`.
 
-### `shellboxes/`
-Vendored definitions for **shellbox** dev environments. **This replaces the
-old `cdev/` bespoke dev container.**
+### `bubblebox/`
+Vendored per-tool configs for **bubblebox** sandboxes. Each subdir holds a
+`Containerfile` and (optionally) a `profile` of bubblewrap overrides for that
+tool. bubblebox source lives in a separate repo at `~/Code/bubblebox` (the
+`bubblebox-{init,build,mount,run,export}` scripts plus the FUSE server); this
+directory holds only the per-tool definitions, version-controlled alongside
+the rest of the host config.
 
-`shellbox` itself lives in a separate repo (`~/Code/cn/shellbox/`). It is a
-lightweight devshell/container utility: each **box** is a named OCI-image-backed
-environment whose manifest (`shellbox.toml`) is the single source of truth.
-Boxes are symlinked (via `shellbox link`) into shellbox's boxes dir from here so
-they stay version-controlled.
+bubblebox auto-mounts each tool on first invocation (rootless FUSE), so there's
+no separate prepare/mount step — `cjust bubblebox` builds the images and
+generates wrapper scripts at `~/.local/bin/<tool>`, then `nvim` / `aws` /
+`wezterm` / etc. work transparently.
 
-Current boxes:
+Current tools:
 
-- `default/` — generic CLI tools (`htop`, `rg`, `fd`, `bat`, `eza`, `zoxide`, `wezterm`, `tokei`)
-- `nvim/` — self-contained neovim (XDG dirs redirected into the box)
-- `opencode/` — self-contained `sst/opencode` coding agent
-- `aws/` — AWS CLI v2; non-secret `config` vendored into the box, credentials
+- `aws/` — AWS CLI v2; non-secret `config` vendored into the image, credentials
   and SSO cache remain at default `~/.aws/` (runtime, machine-local)
+- `bat/`, `dust/`, `eza/`, `rg/`, `fd/`, `tokei/`, `htop/` — CLI tools,
+  Rust ones built via `cargo install` against a distroless runtime
+- `nvim/` — self-contained neovim (vendored config + isolated state via
+  `/persist` bind from `$BUBBLEBOX_DATA_DIR/nvim`)
+- `wezterm/` — GUI terminal; spawns the host shell via `systemd-run --user`
+  so the shell inside the terminal has full host access (PATH, `/dev/fuse`,
+  host tools, etc.)
+- `noctalia/`, `vicinae/` — desktop shell + launcher; same daemon+client model
+  as their predecessors, with GPU + `/sys` + D-Bus access via the profile
+- `yazi/`, `zoxide/` — file manager and `cd` replacement
 
-Each self-contained box keeps all of its config/data/state/cache inside the box
-directory (via absolute-literal XDG env redirection in `shellbox.toml`), so it
-never touches `~/.config`, `~/.local/share`, etc. The `aws` box follows a
-partial version of this pattern: only the (non-secret) AWS config is vendored,
-since credentials and SSO tokens are short-lived runtime state that should be
-re-obtained per machine rather than tracked in git.
+`opencode` is intentionally NOT a bubblebox tool — it's the AI coding agent and
+needs full host control, so it's installed directly via `cjust opencode-install`
+(see below).
 
 Typical workflow:
 
 ```bash
-shellbox link ~/Code/cn/hosts/thinkpad/shellboxes/nvim
-shellbox build nvim
-sudo shellbox mount nvim
-shellbox export nvim nvim     # add ~/.local/share/shellbox/exports/bin to PATH once
-nvim ~/any/file
+cjust bubblebox                # build + export all tools (idempotent)
+nvim ~/any/file                # wrapper at ~/.local/bin/nvim -> bubblebox-run
+bubblebox-mount wezterm        # pre-warm a tool's FUSE mount (optional)
+bubblebox-unmount wezterm      # tear down (rarely needed; auto-tears on reboot)
 ```
 
-See the `shellbox` README (`~/Code/cn/shellbox/README.md`) for the full tool.
+To add a new bubblebox tool: drop a `<name>/` subdir with a `Containerfile`
+(and optionally a `profile`) under `bubblebox/`, add the name to the
+`bubblebox_tools` list at the top of the Justfile, and re-run `cjust bubblebox`.
 
 ### `dotfiles/`
 Host-native user dotfiles — the small exception to "everything lives in a
-shellbox." Almost every tool's config rides along with its shellbox (e.g.
-`shellboxes/nvim/config/`), because the binary runs from the box. A few tools
-are inherently host-resident — currently just **oh-my-posh** (it renders the
-prompt on every command, so it can't pay a per-invocation bwrap spawn) — and
-their config lives here instead.
+sandbox." Almost every tool's config rides along with its bubblebox image
+(e.g. `bubblebox/nvim/config/`), because the binary runs from the sandbox. A
+few things are inherently host-resident:
+
+- **oh-my-posh** — renders the prompt on every command, can't pay a
+  per-invocation sandbox spawn
+- **opencode** config (`opencode.json`) — the agent runs on the host directly
+  (see `cjust opencode-install`), so its config lives with the rest of the
+  host dotfiles; auth stays at the default `~/.local/share/opencode/auth.json`
+  (machine-local, gitignored by virtue of being outside this tree)
 
 This directory mirrors `$HOME`-relative layout. Files are delivered by
 symlink, not copied, so edits land in the repo live and the checkout is the
@@ -160,13 +165,12 @@ Notes:
   need a session restart to fully apply after an edit.
 
 ### `systemd/`
-Systemd units, mostly **user** services for now (`systemd/user/`), with room to
-add system units later. The current unit, `opencode-web.service`, runs the
-opencode web frontend as a user service by calling into the `opencode` shellbox
-via `shellbox run`. The composefs mount it depends on is brought up at boot by
-the `shellbox-mount@opencode.service` template baked into the host image. To
-install every unit (symlink into `~/.config/systemd/user/`, daemon-reload, and
-enable lingering):
+Systemd units, mostly **user** services for now (`systemd/user/`). The current
+unit, `opencode-web.service`, runs the opencode web frontend as a user service.
+opencode is host-installed (via `cjust opencode-install`), so the unit just
+calls `opencode web --port 4096` directly — no sandbox or composefs mount
+dependency. To install every unit (symlink into `~/.config/systemd/user/`,
+daemon-reload, and enable lingering):
 
 ```bash
 cjust units
@@ -186,15 +190,16 @@ Examples:
 
 - `~/Code` for deliberate work
 - `~/.var/app/` for Flatpak state
-- shellbox storage: `~/.local/share/shellbox/` (boxes, store, exports) and
-  `~/.local/state/shellbox/` (per-box derived state)
-- `~/.local/share/desktoppak/` for desktoppak installs/config/state
+- bubblebox storage: `~/.local/share/bubblebox/` (descriptors, content store,
+  per-tool persistent state like nvim's plugins/parsers) and
+  `/run/user/$UID/bubblebox/` (FUSE mountpoints, ephemeral per-session)
+- `~/.local/share/opencode/` for opencode runtime state (auth, db, logs)
 
 ## Notes
 
-- `host-image/` and `desktoppak/` are intentionally separate concerns.
-- There is no native host fallback desktop session in the host image.
-- Desktop experimentation should happen through desktoppak payloads rather than
-  by installing compositors/companions directly on the host.
-- Dev tools live in shellboxes, not on the host image. The old `cdev/` bespoke
-  container is gone.
+- `host-image/` is intentionally lean; the compositors (niri + COSMIC) ship in
+  it, plus the small set of host-resident tools (just, fzf, oh-my-posh,
+  nodejs/npm for opencode).
+- Dev tools live in bubblebox sandboxes, not on the host image.
+- opencode is the one exception: it's installed on the host because it's the
+  AI coding agent and needs full host control when something breaks.

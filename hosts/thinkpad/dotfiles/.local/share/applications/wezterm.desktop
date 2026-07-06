@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=WezTerm
-Comment=WezTerm terminal (shellbox `default`)
-Exec=/var/home/crussell/.local/share/shellbox/exports/bin/wezterm
+Comment=WezTerm terminal (bubblebox-wrapped; spawns host shell)
+Exec=/var/home/crussell/.local/bin/wezterm
 Icon=utilities-terminal
 Categories=System;TerminalEmulator;
 Keywords=terminal;shell;

@@ -2,11 +2,11 @@
 // by `cjust link`; see hosts/thinkpad/Justfile).
 //
 // Session integration notes:
-//   - `vicinae` and `noctalia` resolve via shellbox export wrappers. Niri's
-//     `spawn` does PATH lookup but does NOT source .zshenv, so the exports dir
-//     must be on the *graphical session* PATH — that's what
-//     .config/environment.d/10-shellbox.conf is for. Without it these spawns
-//     silently fail to find the binaries.
+//   - `vicinae` and `noctalia` resolve via bubblebox wrappers at
+//     ~/.local/bin/<tool>. Niri's `spawn` does PATH lookup but does NOT source
+//     .zshenv, so that dir must be on the *graphical session* PATH — that's
+//     what .config/environment.d/10-shellbox.conf is for. Without it these
+//     spawns silently fail to find the binaries.
 //   - `xwayland-satellite`, `ptyxis`, `nautilus`, `flatpak` are host packages
 //     (/usr/bin), always on PATH.
 //   - vicinae/noctalia start their daemons via `spawn-at-startup`; the `… msg`
@@ -196,7 +196,7 @@ binds {
     Mod+Alt+N { spawn "noctalia" "msg" "nightlight-toggle"; }
     Mod+E     { spawn "noctalia" "msg" "panel-toggle" "session"; }
 
-    // Applications (host binaries + shellbox exports — direct spawn, no desktoppak-spawn)
+    // Applications (host binaries + bubblebox wrappers — direct spawn)
     Mod+T { spawn "wezterm"; }
     Mod+B { spawn "flatpak" "run" "app.zen_browser.zen"; }
     Mod+F { spawn "nautilus" "--new-window"; }
