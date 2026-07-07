@@ -1,7 +1,7 @@
 # Per-tool bubblewrap profile, sourced by bubblebox-run.
 #
 # vicinae runs inside the sandbox; the apps it lists are host binaries. The
-# vendored vicinae-launch (set as launchPrefix in the vendored settings.json)
+# vendored vicinae-launch (launchPrefix in dotfiles/.config/vicinae/settings.json)
 # bridges the two by calling `systemd-run --user`, escaping to the host user
 # systemd manager through the $XDG_RUNTIME_DIR socket bubblebox-run binds.
 #
@@ -11,13 +11,6 @@
 
 WRITABLE_HOME=1   # vicinae persists its state in ~/.config
 WRITABLE_RUN=1    # IPC socket + Wayland + session bus live under /run/user/$UID
-
-BWRAP_EXTRA+=(
-  # Vendored config (settings.json with launchPrefix=vicinae-launch). Redirects
-  # XDG_CONFIG_HOME so vicinae reads /usr/share/bubblebox/vicinae/ instead of
-  # touching the host's ~/.config/vicinae.
-  --setenv XDG_CONFIG_HOME /usr/share/bubblebox
-)
 
 # GPU render node access. bubblebox-run's `--dev /dev` gives a fresh devtmpfs
 # with no /dev/dri, so we create the dir and bind the host's in.

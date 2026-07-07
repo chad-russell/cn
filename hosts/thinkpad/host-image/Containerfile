@@ -66,7 +66,8 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     dnf5 -y install dnf5-plugins \
     && dnf5 -y copr enable yalter/niri \
     && dnf5 -y copr enable ryanabx/cosmic-epoch \
-    && dnf5 -y install niri xwayland-satellite cosmic-desktop
+    && dnf5 -y copr enable peterwu/rendezvous \
+    && dnf5 -y install niri xwayland-satellite cosmic-desktop bibata-cursor-themes
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/
@@ -108,6 +109,28 @@ RUN set -e; \
 
 RUN sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config && \
     grep -q '^SELINUX=disabled' /etc/selinux/config
+
+# ---- 3.5. kernel args (bootc static kargs) -----------------------------
+# bootc applies *.toml files under /usr/lib/bootc/kargs.d/ to every deployment
+# staged from this image — on BOTH `bootc install` and routine `bootc upgrade`
+# — by diffing the booted image's kargs.d against the new image's and patching
+# the new deployment's cmdline accordingly. Removing a file from a future
+# image retracts its karg on the next upgrade. This is the image-bakeable,
+# declarative equivalent of `rpm-ostree kargs --append-if-missing`, and it
+# survives reinstalls. (Schema: a required `kargs` array of strings plus an
+# optional `match-architectures` array; confirmed against bootc_kargs.rs in
+# bootc 1.15.2.)
+#
+# usbcore.autosuspend=-1: disables USB runtime autosuspend globally. The Dell
+# P3225QE over USB-C/DisplayPort on this Lunar Lake (xe) ThinkPad was flapping
+# the DP-1 connector at a steady ~3s cadence — the classic signature of the
+# USB-C DP tunnel cycling in/out of runtime suspend, which drops HPD and forces
+# a link retrain each wake. Keeping the tunnel awake fixes the external-monitor
+# black-screen cycling at full 4K@60, so the 1440p workaround in
+# dotfiles/.config/monitors.xml + niri config can be reverted once this is live.
+RUN mkdir -p /usr/lib/bootc/kargs.d && \
+    printf 'kargs = ["usbcore.autosuspend=-1"]\nmatch-architectures = ["x86_64"]\n' \
+    > /usr/lib/bootc/kargs.d/10-usb-autosuspend.toml
 
 # ---- 4. build identity (lets `bootc upgrade` detect a rebuild) ----------
 # Each build injects a unique IMAGE_VERSION (git SHA + timestamp; see

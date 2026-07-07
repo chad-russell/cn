@@ -28,6 +28,12 @@ Currently:
     Host-native because it runs on every prompt render and can't pay a
     per-invocation sandbox spawn
 - disables SELinux for this personal-laptop setup
+- bakes a bootc static karg (`usbcore.autosuspend=-1`) into the image via
+  `/usr/lib/bootc/kargs.d/10-usb-autosuspend.toml`. This is the real fix for
+  the Dell P3225QE external monitor flapping DP-1 every ~3s over USB-C on this
+  Lunar Lake (xe) host — the USB-C/DP tunnel was cycling in/out of runtime
+  suspend. Applied to every deployment staged from this image (`bootc install`
+  and `bootc upgrade`); removing the file retracts the karg on the next upgrade.
 
 
 ## Files

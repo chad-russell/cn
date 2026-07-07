@@ -80,13 +80,19 @@ fn create_host_wrappers(host_tools: &[String]) -> Result<TempDir> {
         .context("failed to create host-tool wrapper tempdir")?;
     for tool in host_tools {
         let target = dir.path().join(tool);
-        // Tool name is single-quoted defensively (validated to contain no
-        // whitespace/'/' by normalize_tools, but quote anyway). $PWD is
-        // host-valid: bwrap chdirs to cwd-or-$HOME, both under the bound $HOME.
+        // The tool name lives inside a `/bin/sh -c` script so systemd-run's
+        // submit-time binary validation sees `/bin/sh` (present in every box)
+        // rather than the tool itself — the tool only needs to exist on the
+        // HOST (where the service actually runs), not in the box rootfs.
+        // Without this wrap, boxes that don't install the host tool (e.g. an
+        // `opencode` box using host `podman`) hit "Failed to find executable"
+        // at submit time. `quoted` is single-quote-escaped defensively
+        // (normalize_tools rejects whitespace/'/' anyway). `$PWD` is host-valid:
+        // bwrap chdirs to cwd-or-$HOME, both under the bound $HOME.
         let quoted = tool.replace('\'', "'\"'\"'");
         let content = format!(
             "#!/usr/bin/env bash\n\
-             exec systemd-run --user --wait --quiet --pipe --working-directory=\"$PWD\" -- '{quoted}' \"$@\"\n"
+             exec systemd-run --user --wait --quiet --pipe --working-directory=\"$PWD\" -- /bin/sh -c 'exec {quoted} \"$@\"' _ \"$@\"\n"
         );
         std::fs::write(&target, content)
             .with_context(|| format!("failed to write {}", target.display()))?;

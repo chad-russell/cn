@@ -1,5 +1,0 @@
-# Machine-local nvim state — not version controlled.
-# These dirs are created/managed by nvim at runtime via XDG redirection.
-/data/
-/state/
-/cache/

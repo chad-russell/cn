@@ -37,12 +37,12 @@ output "eDP-1" {
     position x=0 y=0
 }
 
-// Work monitor: Dell 32" 4K, centered above laptop
-// Logical size: 3840/1.25=3072 × 2160/1.25=1728
+// Work monitor: Dell 32", forced to 1440p to avoid DP-over-USB-C flapping
+// seen at the monitor's 4K modes on this laptop.
 output "Dell Inc. DELL P3225QE 616K784" {
-    mode "3840x2160@59.997"
-    scale 1.25
-    position x=-576 y=-1728
+    mode "2560x1440@59.951"
+    scale 1.0
+    position x=320 y=-1440
 }
 
 // Home monitors: two 4K displays, right one (DP-5) centered above laptop

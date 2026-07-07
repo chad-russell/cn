@@ -41,13 +41,11 @@ user_units := "opencode-web"
 # dotfiles/.zshenv): dotfiles/ mirrors $HOME-relative layout, so src and dst
 # paths are identical.
 #
-# `.config/cosmic` is the whole COSMIC desktop settings tree (compositor,
-# panels, dock, themes, applets, terminal, etc.). cosmic-config stores each
-# key as a plain-text RON-like file, so the tree is git-friendly and
-# LLM-editable. Symlinked as a single directory: one entry, single source of
-# truth, and settings for newly installed cosmic apps land in the repo
-# automatically. Stateful subdirs can be gitignored later if noise appears.
-dotfiles := ".config/oh-my-posh.json .config/environment.d/10-shellbox.conf .config/niri/config.kdl .config/cosmic .config/opencode .local/share/applications/wezterm.desktop .zshrc .zshenv"
+# COSMIC desktop settings are NOT symlinked (COSMIC has issues with
+# symlink-backed config). Instead, use `cjust cosmic-backup` and
+# `cjust cosmic-restore` to copy settings between the repo and
+# ~/.config/cosmic.
+dotfiles := ".config/oh-my-posh.json .config/environment.d/10-shellbox.conf .config/niri/config.kdl .config/wezterm .config/vicinae/settings.json .config/opencode .local/share/applications/wezterm.desktop .zshrc .zshenv"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # setup
@@ -136,6 +134,114 @@ setup: link units bubblebox opencode-install
     @echo "    If host-image deps changed (just/fzf/nodejs/npm), rebuild & reboot:"
     @echo "      cjust image-build && cjust image-upgrade && systemctl reboot"
 
+# GNOME tweak to allow for mod + <right-click> to resize, like how it works in niri or Cosmic
+[group('setup')]
+gnome-right-click-resize:
+    #!/usr/bin/env bash
+    gsettings set org.gnome.desktop.wm.preferences resize-with-right-button "true"
+
+# Install the Papirus icon theme (latest GitHub release) into the per-user
+# icons dir and make it the active icon theme for GNOME and Niri/GTK apps.
+# Idempotent: re-running pulls the newest release and re-applies the settings.
+#
+# Kept out of the host image on purpose — icons are easy to iterate on per-user
+# and don't deserve an image rebuild + reboot cycle. (Niri has no icon-theme
+# knob in config.kdl — it's a cursor compositor, not a theming layer. GTK apps
+# under Niri read ~/.config/gtk-{3,4}.0/settings.ini for icon-theme-name; GNOME
+# reads org.gnome.desktop.interface via dconf. Both are set here so the theme
+# sticks in either session.)
+[group('setup')]
+icons:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    icons_dir="${HOME}/.local/share/icons"
+    repo="PapirusDevelopmentTeam/papirus-icon-theme"
+    mkdir -p "${icons_dir}"
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "${tmp}"' EXIT
+    # Papirus publishes no prebuilt tarballs on its releases — only source. The
+    # repo's Papirus/ dir is already rendered icons + index.theme, so pull the
+    # source archive for the latest tag and copy just that dir into place.
+    # (jq avoided on purpose — keep it host-agnostic for Silverblue.)
+    latest_tag=$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
+      | grep -m1 '"tag_name"' \
+      | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+    [ -n "${latest_tag}" ] || { echo "ERROR: could not resolve latest Papirus tag" >&2; exit 1; }
+    echo "==> downloading Papirus ${latest_tag} (source archive)..."
+    curl -fsSL "https://github.com/${repo}/archive/refs/tags/${latest_tag}.tar.gz" -o "${tmp}/papirus.tar.gz"
+    tar -xzf "${tmp}/papirus.tar.gz" -C "${tmp}"
+    src="$(find "${tmp}" -maxdepth 1 -mindepth 1 -type d | head -1)"
+    [ -f "${src}/Papirus/index.theme" ] || { echo "ERROR: ${src}/Papirus/index.theme missing" >&2; exit 1; }
+    rm -rf "${icons_dir}/Papirus"
+    mv "${src}/Papirus" "${icons_dir}/Papirus"
+    echo "  installed -> ${icons_dir}/Papirus (${latest_tag})"
+    # GNOME (and GTK apps that read dconf via gsd / xdg-desktop-portal-gnome):
+    gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
+    echo "  set gsettings org.gnome.desktop.interface icon-theme=Papirus"
+    # Niri / GTK3 / GTK4 without a GNOME settings daemon: settings.ini is what
+    # GTK actually consults for icon-theme-name in those sessions.
+    for v in gtk-3.0 gtk-4.0; do
+      ini="${HOME}/.config/${v}/settings.ini"
+      mkdir -p "$(dirname "${ini}")"
+      touch "${ini}"
+      if grep -q '^gtk-icon-theme-name=' "${ini}"; then
+        sed -i 's|^gtk-icon-theme-name=.*|gtk-icon-theme-name=Papirus|' "${ini}"
+      else
+        grep -q '^\[Settings\]' "${ini}" || printf '[Settings]\n' >> "${ini}"
+        printf 'gtk-icon-theme-name=Papirus\n' >> "${ini}"
+      fi
+      echo "  set ${v}/settings.ini gtk-icon-theme-name=Papirus"
+    done
+    echo "==> Papirus is now the active icon theme (GNOME + Niri/GTK)."
+
+# ═══════════════════════════════════════════════════════════════════════════
+# cosmic — backup / restore settings (NOT symlinked; cosmic dislikes
+# symlinks for its config tree). Files live at ~/.config/cosmic/ normally;
+# backup copies into dotfiles/.config/cosmic/ for git tracking, restore
+# copies back.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Copy settings from ~/.config/cosmic to dotfiles/.config/cosmic.
+# Run this when you've tweaked something in the COSMIC settings UI and want
+# to save the result to the repo.
+[group('cosmic')]
+cosmic-backup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    src="${HOME}/.config/cosmic"
+    dst="{{ justfile_directory() }}/dotfiles/.config/cosmic"
+    if [ ! -d "${src}" ]; then
+      echo "ERROR: ${src} does not exist — nothing to back up." >&2
+      exit 1
+    fi
+    rm -rf "${dst}"
+    cp -r "${src}" "${dst}"
+    echo "cosmic settings backed up to ${dst}"
+
+# Copy settings from dotfiles/.config/cosmic to ~/.config/cosmic.
+# Run this on a fresh install or to restore a known-good config.
+# If ~/.config/cosmic is currently a symlink (from the old setup), it is
+# removed first so COSMIC sees real files.
+[group('cosmic')]
+cosmic-restore:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    src="{{ justfile_directory() }}/dotfiles/.config/cosmic"
+    dst="${HOME}/.config/cosmic"
+    if [ ! -d "${src}" ]; then
+      echo "ERROR: no saved cosmic settings at ${src}" >&2
+      exit 1
+    fi
+    # If dst is a symlink (old symlink-based setup), remove it so COSMIC
+    # sees real files.
+    if [ -L "${dst}" ]; then
+      echo "  REMOVE symlink ${dst} (old setup)"
+      rm "${dst}"
+    fi
+    rm -rf "${dst}"
+    cp -r "${src}" "${dst}"
+    echo "cosmic settings restored to ${dst}"
+
 # ═══════════════════════════════════════════════════════════════════════════
 # bubblebox tools
 # ═══════════════════════════════════════════════════════════════════════════
@@ -151,26 +257,38 @@ setup: link units bubblebox opencode-install
 bubblebox-init:
     {{ bubblebox_dir }}/bubblebox-init
 
-# Build each tool's image + composefs descriptor. The context path is passed
-# explicitly because tool configs live in this repo (bubblebox/<tool>/), not
-# in the bubblebox source repo at ~/Code/bubblebox.
+# Build each tool's image + composefs descriptor. With no args, builds all
+# tools from `bubblebox_tools`; with args, builds only the named tools, e.g.
+# `cjust bubblebox-build wezterm`.
+#
+# The context path is passed explicitly because tool configs live in this repo
+# (bubblebox/<tool>/), not in the bubblebox source repo at ~/Code/bubblebox.
 [group('bubblebox')]
-bubblebox-build:
+bubblebox-build *tools:
     #!/usr/bin/env bash
     set -euo pipefail
-    for t in {{ bubblebox_tools }}; do
+    tools="{{ tools }}"
+    if [ -z "${tools}" ]; then
+      tools="{{ bubblebox_tools }}"
+    fi
+    for t in $tools; do
       echo "==> bubblebox-build ${t}"
       {{ bubblebox_dir }}/bubblebox-build "$t" \
         "{{ justfile_directory() }}/bubblebox/$t"
     done
 
-# Generate one wrapper per tool at ~/.local/bin/<tool>. Idempotent — overwrites
-# with the current bubblebox-run path.
+# Generate one wrapper per tool at ~/.local/bin/<tool>. With no args, exports
+# all tools; with args, exports only the named tools.
+# Idempotent — overwrites with the current bubblebox-run path.
 [group('bubblebox')]
-bubblebox-export:
+bubblebox-export *tools:
     #!/usr/bin/env bash
     set -euo pipefail
-    for t in {{ bubblebox_tools }}; do
+    tools="{{ tools }}"
+    if [ -z "${tools}" ]; then
+      tools="{{ bubblebox_tools }}"
+    fi
+    for t in $tools; do
       {{ bubblebox_dir }}/bubblebox-export "$t"
     done
     echo

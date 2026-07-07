@@ -5,10 +5,14 @@
 #   - writable /run/user/$UID (XDG_RUNTIME_DIR) for its IPC sockets
 #   - GPU access (/dev/dri) for OpenGL rendering
 #   - the user's Wayland/X11 env vars (inherited; bubblebox-run doesn't strip env)
-# Fonts come from the host too: the rpm pulls in fontconfig, and host fonts
-# are reached via the standard /usr/share/fonts path (the host's /usr isn't
-# shadowed because the image is /, but host font dirs can be added here if
-# the bundled ones aren't enough).
+# Host fonts. The sandbox rootfs is a stock Fedora image with a minimal font
+# set; without this bind, fontconfig inside the sandbox can't see host-installed
+# fonts (Nerd Fonts, Noto Color Emoji, CJK, ...) and wezterm falls back to its
+# built-in fonts or Noto Sans. The host's /etc (bound wholesale by
+# bubblebox-run) already carries the fontconfig config that points at
+# /usr/share/fonts, so binding the font files is all that's needed. Same bind
+# vicinae uses. --ro-bind (not -try) so a missing font dir is a loud error,
+# not a silently broken terminal.
 #
 # Config: wezterm looks for ~/.config/wezterm/wezterm.lua by default. With
 # WRITABLE_HOME=1 the file you edit on the host is read live. To bake a config
@@ -23,14 +27,35 @@ BWRAP_EXTRA+=(
   # which is read-only in the sandbox because /var is bound ro). /tmp is the
   # one writable scratch dir bubblebox-run always provides.
   --setenv TMPDIR /tmp
+  # A fresh devtmpfs (`bwrap --dev /dev`) plus a later /dev/dri bind still
+  # leaves render nodes unusable here: Mesa sees /dev/dri/renderD128 but open()
+  # gets EPERM. Replacing /dev wholesale with the host's /dev avoids that while
+  # keeping the wider device exposure scoped to wezterm rather than all tools.
+  --dev-bind /dev /dev
 )
 
-# GPU render node access. bubblebox-run's `--dev /dev` gives a fresh devtmpfs
-# with no /dev/dri, so we create the dir and bind the host's in. Exposes
-# card + render nodes; needed for OpenGL/Vulkan.
-if [ -d /dev/dri ]; then
+# /sys for Mesa render-node enumeration. Without this, EGL inside the sandbox
+# can't identify the DRM device and wezterm stalls during GPU init on niri.
+if [ -d /sys ]; then
   BWRAP_EXTRA+=(
-    --dir /dev/dri
-    --bind /dev/dri /dev/dri
+    --ro-bind-try /sys /sys
   )
+fi
+
+# Host fonts (see comment at top of file).
+if [ -d /usr/share/fonts ]; then
+  BWRAP_EXTRA+=(
+    --ro-bind /usr/share/fonts /usr/share/fonts
+  )
+fi
+
+# Seed fontconfig's user cache on first run. The bind-mounted /usr/share/fonts
+# has a different stat than the host's original directory, so fontconfig
+# rejects the host's system cache (/var/cache/fontconfig, read-only in the
+# sandbox) and needs its own user-level cache at ~/.cache/fontconfig (writable
+# via WRITABLE_HOME). Once seeded, fontconfig self-maintains it across runs.
+# fc-cache -f is only slow on the very first run; the check makes subsequent
+# launches instant.
+if [ ! -d "$HOME/.cache/fontconfig" ] || [ -z "$(ls -A "$HOME/.cache/fontconfig" 2>/dev/null)" ]; then
+  fc-cache -f >/dev/null 2>&1
 fi

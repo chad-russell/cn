@@ -1,5 +1,0 @@
-# Machine-local helix state — not version controlled.
-# These dirs are created/managed by helix at runtime via XDG redirection.
-/data/
-/state/
-/cache/

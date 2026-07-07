@@ -1,11 +1,20 @@
-# wezterm — GUI terminal emulator, from upstream's prebuilt Fedora rpm.
+# wezterm — GUI terminal emulator, from upstream's COPR nightly Fedora rpm.
+#
+# Why COPR nightly (not the last stable release 20240203): the stable release's
+# native Wayland path never maps a window under niri inside the bubblebox
+# sandbox — it gets through Wayland setup and EGL init, but no surface is ever
+# presented. XWayland works, so for a while the wezterm.lua set
+# `enable_wayland = false` as a fallback. Newer nightly builds map cleanly on
+# native Wayland in the same sandbox, so we track nightlies and keep native
+# Wayland as the default. Pinned (not `latest`) so a build is reproducible and
+# an upstream regression can't silently break the terminal — bump
+# WEZTERM_VERSION after testing that a newer nightly is okay.
 #
 # Why prebuilt rpm (not cargo install): wezterm is a large Rust+GUI project;
 # `cargo install wezterm` would pull in hundreds of crates and compile for
 # 30+ minutes. The upstream rpm is pre-built, fast to install, and resolves
 # its many shared-lib deps (wayland, X11, openssl, fontconfig, ...) via dnf
-# against the image's glibc. Pinned to a specific release tag for
-# reproducibility — bump WEZTERM_RPM (and the release URL) to update.
+# against the image's glibc.
 #
 # Why Fedora base: the rpm is built against Fedora, and dnf resolves its deps
 # cleanly against the matching glibc/mesa/etc. versions. A distroless or
@@ -27,14 +36,17 @@
 # config into the image, COPY it into /usr/share/bubblebox/wezterm/ and set
 # WEZTERM_CONFIG_FILE in the profile.
 FROM fedora:latest
-ARG WEZTERM_RPM=wezterm-20240203_110809_5046fc22-1.fedora39.x86_64.rpm
-# curl first because GitHub release downloads redirect through a signed-URL
-# cross-domain hop that dnf's librepo mishaps on with a spurious 404; curl
-# follows the chain cleanly. Then dnf installs the local file.
-RUN curl -fsSL -o /tmp/wezterm.rpm \
-      "https://github.com/wezterm/wezterm/releases/download/20240203-110809-5046fc22/${WEZTERM_RPM}" \
- && dnf install -y /tmp/wezterm.rpm systemd \
- && rm -f /tmp/wezterm.rpm \
+
+# Pinned wezterm nightly (format: YYYYMMDD_HHMMSS_<githash>). The metapackage
+# `wezterm-<version>` pulls the matching wezterm-gui / wezterm-common /
+# wezterm-mux-server of the same EVR from the COPR repo, so pinning the
+# metapackage is enough. Bump after testing a newer build works on niri.
+ARG WEZTERM_VERSION=20260705_075440_5cc2d1ef
+RUN dnf -y install dnf-plugins-core \
+ && dnf -y copr enable wezfurlong/wezterm-nightly \
+ && dnf install -y \
+      wezterm-${WEZTERM_VERSION} \
+      systemd zsh mesa-dri-drivers mesa-vulkan-drivers vulkan-loader \
  && dnf clean all
 
 # Rename the real binary so the wrapper at /usr/bin/wezterm can dispatch.
