@@ -1,0 +1,24 @@
+# Converted from ../noctalia/profile.
+# noctalia is a desktop shell with a wide system-integration surface: writable
+# /run/user/$UID (IPC socket, session bus, PipeWire, Wayland) + GPU (/dev/dri)
+# + read-only /sys for backlight/GPU enumeration. Brightness writes go through
+# logind over the system bus (reachable via /run/dbus), so /sys stays read-only.
+#
+# /dev/dri: bwrap's `--dev /dev` gives a fresh devtmpfs with no /dev/dri, so we
+# pre-create it (sandbox.dirs) then bind the host's in (conditional via bind_try).
+primary = "noctalia"
+
+[sandbox]
+writable_home = true
+writable_run = true
+dirs = ["/dev/dri"]
+
+[[sandbox.bind_try]]
+src = "/dev/dri"
+dst = "/dev/dri"
+mode = "rw"
+
+[[sandbox.bind_try]]
+src = "/sys"
+dst = "/sys"
+mode = "ro"

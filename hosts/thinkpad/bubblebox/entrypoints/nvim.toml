@@ -1,0 +1,24 @@
+# Converted from ../nvim/profile.
+# nvim with a VENDORED config (baked into the image at /usr/share/bubblebox) and
+# ISOLATED state under /persist (bound to $BUBBLEBOX_DATA_DIR/nvim, NOT the host
+# ~/.local/share/nvim). /home is writable so you can edit host files normally.
+primary = "nvim"
+
+[sandbox]
+writable_home = true
+
+[[sandbox.bind]]
+src = "$BUBBLEBOX_DATA_DIR/nvim"
+dst = "/persist"
+mode = "rw"
+
+[sandbox.env]
+XDG_CONFIG_HOME = "/usr/share/bubblebox"
+XDG_DATA_HOME   = "/persist/data"
+XDG_STATE_HOME  = "/persist/state"
+XDG_CACHE_HOME  = "/persist/cache"
+# Deterministic PATH: only the image's toolchain is reachable.
+PATH            = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[hook]
+pre_run = 'mkdir -p "$BUBBLEBOX_DATA_DIR/nvim"'

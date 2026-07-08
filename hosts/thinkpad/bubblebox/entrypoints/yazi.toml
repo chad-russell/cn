@@ -1,0 +1,9 @@
+# Converted from ../yazi/profile.
+# yazi is an interactive file manager: writes config/state to $HOME and opens
+# its DDS socket under $XDG_RUNTIME_DIR (/run/user/$UID). No extra binds beyond
+# the standard writable home + run.
+primary = "yazi"
+
+[sandbox]
+writable_home = true
+writable_run = true

@@ -1,0 +1,37 @@
+# Converted from ../vicinae/profile.
+# vicinae runs inside the sandbox; the apps it lists are host binaries, launched
+# via the vendored vicinae-launch (which escapes to the host user systemd manager
+# through $XDG_RUNTIME_DIR). Needs writable /run/user/$UID (IPC socket, Wayland,
+# session bus) + GPU + read-only /sys + host .desktop/icons/fonts so the launcher
+# can list host apps and render icons.
+primary = "vicinae"
+
+[sandbox]
+writable_home = true
+writable_run = true
+dirs = ["/dev/dri"]
+
+[[sandbox.bind_try]]
+src = "/dev/dri"
+dst = "/dev/dri"
+mode = "rw"
+
+[[sandbox.bind_try]]
+src = "/sys"
+dst = "/sys"
+mode = "ro"
+
+[[sandbox.bind_try]]
+src = "/usr/share/applications"
+dst = "/usr/share/applications"
+mode = "ro"
+
+[[sandbox.bind_try]]
+src = "/usr/share/icons"
+dst = "/usr/share/icons"
+mode = "ro"
+
+[[sandbox.bind_try]]
+src = "/usr/share/fonts"
+dst = "/usr/share/fonts"
+mode = "ro"

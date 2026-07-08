@@ -123,13 +123,54 @@ units:
     fi
     echo "Done. Enable a unit with: systemctl --user enable --now <unit>"
 
-# Full first-run setup: dotfiles + units + all bubblebox tools + opencode.
+# Symlink bubblebox entrypoint TOMLs (bubblebox/entrypoints/*.toml) into the
+# bubblebox store ($BUBBLEBOX_DATA_DIR/entrypoints/), where `bubblebox run` reads
+# them. Symlinks (not copies) so repo edits take effect immediately. Idempotent;
+# prunes stale symlinks pointing at names no longer in the repo.
+#
+# Tools with no special sandbox needs (rg, fd, bat, dust, eza, htop, tokei) need
+# NO toml here — `bubblebox run <name>` synthesizes a default entrypoint when the
+# toml is absent. Only tools with binds/env/hooks ship a toml.
+[group('setup')]
+link-entrypoints:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    src_dir="{{ justfile_directory() }}/bubblebox/entrypoints"
+    data_dir="${BUBBLEBOX_DATA_DIR:-$HOME/.local/share/bubblebox}"
+    dst_dir="${data_dir}/entrypoints"
+    ts="$(date -u +%Y%m%d-%H%M%S)"
+    mkdir -p "${dst_dir}"
+    # Prune stale symlinks pointing into src_dir at names no longer in the repo.
+    for d in "${dst_dir}"/*.toml; do
+      [ -L "${d}" ] || continue
+      tgt="$(readlink -f "${d}" 2>/dev/null || true)"
+      case "${tgt}" in
+        "${src_dir}"/*) [ -e "${tgt}" ] || { rm -f "${d}"; echo "  PRUNE $(basename "${d}") (stale)"; } ;;
+      esac
+    done
+    # Symlink each repo entrypoint into the store.
+    for src in "${src_dir}"/*.toml; do
+      [ -e "${src}" ] || continue
+      name="$(basename "${src}")"
+      dst="${dst_dir}/${name}"
+      if [ -L "${dst}" ] && [ "$(readlink -f "${dst}")" = "$(readlink -f "${src}")" ]; then
+        echo "  OK    ${name} (already linked)"; continue
+      fi
+      if [ -e "${dst}" ] && [ ! -L "${dst}" ]; then
+        mv "${dst}" "${dst}.bak.${ts}"; echo "  BACKUP ${name}"
+      fi
+      ln -s "${src}" "${dst}"
+      echo "  LINK  ${name}"
+    done
+    echo "Done. bubblebox run reads entrypoints from ${dst_dir}"
+
+# Full first-run setup: dotfiles + units + entrypoints + all bubblebox tools + opencode.
 # Run this on a fresh install (after the host image is booted). Idempotent.
 # Note: `opencode-install` requires nodejs/npm on the host (added to the
 # host image in mid-2026). If you're on an older image, that step fails
 # harmlessly — complete the host-image rebuild + reboot, then re-run setup.
 [group('setup')]
-setup: link units bubblebox opencode-install
+setup: link units link-entrypoints bubblebox opencode-install
     @echo "==> Setup complete."
     @echo "    If host-image deps changed (just/fzf/nodejs/npm), rebuild & reboot:"
     @echo "      cjust image-build && cjust image-upgrade && systemctl reboot"
