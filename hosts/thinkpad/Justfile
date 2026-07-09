@@ -23,14 +23,19 @@
 # bubblebox tools. Each is a subdir of bubblebox/<tool>/ containing a
 # Containerfile and (optionally) a profile. bubblebox source lives at
 # ~/Code/bubblebox (separate repo); this list points cjust at the per-tool
-# configs. Order doesn't matter for bubblebox (no link/export dep chain like
-# the deprecated shellbox had). Add `helix` here if/when it's ported.
+# configs. Order doesn't matter for bubblebox. Add `helix` here if/when it's
+# ported.
 bubblebox_tools := "aws bat dust eza fd htop noctalia nvim rg tokei vicinae wezterm yazi zoxide"
 
-# bubblebox source dir. bubblebox-* commands and the shared bin/ live here.
+# bubblebox source dir. The Rust CLI binary + fuse-mount + shared bin/ live here.
 # Hardcoded to $HOME/Code/bubblebox (deliberate — this Justfile is thinkpad-
 # specific, and the layout matches the rest of the cn repo).
 bubblebox_dir := env_var_or_default("HOME", "/tmp") + "/Code/bubblebox"
+# The Rust CLI binary (the single entry point; bash scripts are retired).
+# Build it with `cargo build --release` in cli/ (use the dev toolbox for the
+# toolchain). Re-run `cjust bubblebox-export` after rebuilding to refresh the
+# ~/.local/bin wrappers' baked-in path.
+bubblebox_bin := bubblebox_dir + "/cli/target/release/bubblebox"
 
 # systemd user units (filenames in systemd/user/, WITHOUT the .service suffix)
 # to symlink into ~/.config/systemd/user/.
@@ -123,54 +128,29 @@ units:
     fi
     echo "Done. Enable a unit with: systemctl --user enable --now <unit>"
 
-# Symlink bubblebox entrypoint TOMLs (bubblebox/entrypoints/*.toml) into the
-# bubblebox store ($BUBBLEBOX_DATA_DIR/entrypoints/), where `bubblebox run` reads
-# them. Symlinks (not copies) so repo edits take effect immediately. Idempotent;
-# prunes stale symlinks pointing at names no longer in the repo.
-#
-# Tools with no special sandbox needs (rg, fd, bat, dust, eza, htop, tokei) need
-# NO toml here — `bubblebox run <name>` synthesizes a default entrypoint when the
-# toml is absent. Only tools with binds/env/hooks ship a toml.
+# One-time (per host): register this repo's bubblebox/ tree as a package SOURCE
+# so `bubblebox build`/`run` resolve Containerfiles + default entrypoints from
+# it directly. Replaces the old `link-entrypoints` symlink dance — entrypoints
+# are now read straight from the source (no symlinks into the store). Idempotent.
 [group('setup')]
-link-entrypoints:
+bubblebox-source-add:
     #!/usr/bin/env bash
     set -euo pipefail
-    src_dir="{{ justfile_directory() }}/bubblebox/entrypoints"
-    data_dir="${BUBBLEBOX_DATA_DIR:-$HOME/.local/share/bubblebox}"
-    dst_dir="${data_dir}/entrypoints"
-    ts="$(date -u +%Y%m%d-%H%M%S)"
-    mkdir -p "${dst_dir}"
-    # Prune stale symlinks pointing into src_dir at names no longer in the repo.
-    for d in "${dst_dir}"/*.toml; do
-      [ -L "${d}" ] || continue
-      tgt="$(readlink -f "${d}" 2>/dev/null || true)"
-      case "${tgt}" in
-        "${src_dir}"/*) [ -e "${tgt}" ] || { rm -f "${d}"; echo "  PRUNE $(basename "${d}") (stale)"; } ;;
-      esac
-    done
-    # Symlink each repo entrypoint into the store.
-    for src in "${src_dir}"/*.toml; do
-      [ -e "${src}" ] || continue
-      name="$(basename "${src}")"
-      dst="${dst_dir}/${name}"
-      if [ -L "${dst}" ] && [ "$(readlink -f "${dst}")" = "$(readlink -f "${src}")" ]; then
-        echo "  OK    ${name} (already linked)"; continue
-      fi
-      if [ -e "${dst}" ] && [ ! -L "${dst}" ]; then
-        mv "${dst}" "${dst}.bak.${ts}"; echo "  BACKUP ${name}"
-      fi
-      ln -s "${src}" "${dst}"
-      echo "  LINK  ${name}"
-    done
-    echo "Done. bubblebox run reads entrypoints from ${dst_dir}"
+    src="{{ justfile_directory() }}/bubblebox"
+    if {{ bubblebox_bin }} source list | grep -qw personal; then
+      echo "==> source 'personal' already registered -> ${src}"
+    else
+      {{ bubblebox_bin }} source add personal "${src}"
+    fi
 
-# Full first-run setup: dotfiles + units + entrypoints + all bubblebox tools + opencode.
-# Run this on a fresh install (after the host image is booted). Idempotent.
+# Full first-run setup: dotfiles + units + bubblebox source + all bubblebox
+# tools + opencode. Run this on a fresh install (after the host image is
+# booted). Idempotent.
 # Note: `opencode-install` requires nodejs/npm on the host (added to the
 # host image in mid-2026). If you're on an older image, that step fails
 # harmlessly — complete the host-image rebuild + reboot, then re-run setup.
 [group('setup')]
-setup: link units link-entrypoints bubblebox opencode-install
+setup: link units bubblebox-source-add bubblebox opencode-install
     @echo "==> Setup complete."
     @echo "    If host-image deps changed (just/fzf/nodejs/npm), rebuild & reboot:"
     @echo "      cjust image-build && cjust image-upgrade && systemctl reboot"
@@ -287,23 +267,22 @@ cosmic-restore:
 # bubblebox tools
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# bubblebox auto-mounts each tool on first run (rootless FUSE) — there's no
-# equivalent of shellbox's link/export/prepare/mount-boot four-step. The
-# recipes below are: init (build FUSE server, one-time), build (per-tool
-# image + composefs descriptor), export (per-tool wrapper at ~/.local/bin/).
+# bubblebox auto-mounts each tool on first run (rootless FUSE). The recipes
+# below are: init (build FUSE server, one-time), build (per-tool image +
+# composefs descriptor), export (per-tool wrapper at ~/.local/bin/).
 
 # Build the FUSE server binary in a container (no host rust toolchain needed).
 # Idempotent — cargo build is incremental.
 [group('bubblebox')]
 bubblebox-init:
-    {{ bubblebox_dir }}/bubblebox-init
+    {{ bubblebox_bin }} init
 
 # Build each tool's image + composefs descriptor. With no args, builds all
 # tools from `bubblebox_tools`; with args, builds only the named tools, e.g.
 # `cjust bubblebox-build wezterm`.
 #
-# The context path is passed explicitly because tool configs live in this repo
-# (bubblebox/<tool>/), not in the bubblebox source repo at ~/Code/bubblebox.
+# Tool source dirs resolve from the registered bubblebox SOURCE (see
+# `bubblebox-source-add`); build also records install provenance.
 [group('bubblebox')]
 bubblebox-build *tools:
     #!/usr/bin/env bash
@@ -314,13 +293,12 @@ bubblebox-build *tools:
     fi
     for t in $tools; do
       echo "==> bubblebox-build ${t}"
-      {{ bubblebox_dir }}/bubblebox-build "$t" \
-        "{{ justfile_directory() }}/bubblebox/$t"
+      {{ bubblebox_bin }} build "$t"
     done
 
 # Generate one wrapper per tool at ~/.local/bin/<tool>. With no args, exports
 # all tools; with args, exports only the named tools.
-# Idempotent — overwrites with the current bubblebox-run path.
+# Idempotent — overwrites with the current binary path.
 [group('bubblebox')]
 bubblebox-export *tools:
     #!/usr/bin/env bash
@@ -330,16 +308,16 @@ bubblebox-export *tools:
       tools="{{ bubblebox_tools }}"
     fi
     for t in $tools; do
-      {{ bubblebox_dir }}/bubblebox-export "$t"
+      {{ bubblebox_bin }} export "$t"
     done
     echo
     echo "Wrappers at ~/.local/bin/ (already on PATH via dotfiles/.zshenv)."
 
-# Init + build + export in one shot. The thing to run on a fresh install or
-# after pulling changes that touch tool configs.
+# Init + source-add + build + export in one shot. The thing to run on a fresh
+# install or after pulling changes that touch tool configs.
 [group('bubblebox')]
-bubblebox: bubblebox-init bubblebox-build bubblebox-export
-    @echo "==> bubblebox: FUSE server built, all tools built + exported."
+bubblebox: bubblebox-init bubblebox-source-add bubblebox-build bubblebox-export
+    @echo "==> bubblebox: FUSE server built, source registered, all tools built + exported."
 
 # ═══════════════════════════════════════════════════════════════════════════
 # opencode (host install)
