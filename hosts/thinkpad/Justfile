@@ -32,14 +32,14 @@ bubblebox_tools := "aws bat dust eza fd htop noctalia nvim rg tokei vicinae wezt
 # specific, and the layout matches the rest of the cn repo).
 bubblebox_dir := env_var_or_default("HOME", "/tmp") + "/Code/bubblebox"
 # The Rust CLI binary (the single entry point; bash scripts are retired).
-# Build it with `cargo build --release` in cli/ (use the dev toolbox for the
-# toolchain). Re-run `cjust bubblebox-export` after rebuilding to refresh the
-# ~/.local/bin wrappers' baked-in path.
-bubblebox_bin := bubblebox_dir + "/cli/target/release/bubblebox"
+# Build it with `cargo build --release` at the workspace root (use the dev
+# toolbox for the toolchain). Re-run `cjust bubblebox-export` after rebuilding
+# to refresh the ~/.local/bin wrappers' baked-in path.
+bubblebox_bin := bubblebox_dir + "/target/release/bubblebox"
 
 # systemd user units (filenames in systemd/user/, WITHOUT the .service suffix)
 # to symlink into ~/.config/systemd/user/.
-user_units := "opencode-web"
+user_units := "opencode-web vicinae"
 
 # Host-native dotfiles: relative paths under dotfiles/ that mirror $HOME.
 # Each is symlinked dotfiles/<path> → $HOME/<path>. Convention (see
@@ -50,7 +50,7 @@ user_units := "opencode-web"
 # symlink-backed config). Instead, use `cjust cosmic-backup` and
 # `cjust cosmic-restore` to copy settings between the repo and
 # ~/.config/cosmic.
-dotfiles := ".config/oh-my-posh.json .config/environment.d/10-shellbox.conf .config/niri/config.kdl .config/wezterm .config/vicinae/settings.json .config/opencode .local/share/applications/wezterm.desktop .zshrc .zshenv"
+dotfiles := ".config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/wezterm .config/vicinae/settings.json .config/opencode .local/share/applications/wezterm.desktop .zshrc .zshenv"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # setup
@@ -161,9 +161,15 @@ gnome-right-click-resize:
     #!/usr/bin/env bash
     gsettings set org.gnome.desktop.wm.preferences resize-with-right-button "true"
 
-# Install the Papirus icon theme (latest GitHub release) into the per-user
-# icons dir and make it the active icon theme for GNOME and Niri/GTK apps.
-# Idempotent: re-running pulls the newest release and re-applies the settings.
+# Install the Papirus icon theme into the per-user icons dir and make it the
+# active icon theme for GNOME and Niri/GTK apps. Idempotent — re-running
+# rebuilds from current HEAD and re-applies the settings.
+#
+# Method: build in a throwaway podman container from git HEAD, then copy only
+# the final icon dirs out to ~/.local/share/icons. Containerizing keeps all
+# build cruft (git clone, dnf, make) off the host — only the rendered icons
+# land on disk. We build from git HEAD because the GitHub *release* tag lags
+# ~a year behind master, and active icon updates only land on master.
 #
 # Kept out of the host image on purpose — icons are easy to iterate on per-user
 # and don't deserve an image rebuild + reboot cycle. (Niri has no icon-theme
@@ -176,26 +182,30 @@ icons:
     #!/usr/bin/env bash
     set -euo pipefail
     icons_dir="${HOME}/.local/share/icons"
-    repo="PapirusDevelopmentTeam/papirus-icon-theme"
+    image="docker.io/library/fedora:44"
     mkdir -p "${icons_dir}"
-    tmp="$(mktemp -d)"
-    trap 'rm -rf "${tmp}"' EXIT
-    # Papirus publishes no prebuilt tarballs on its releases — only source. The
-    # repo's Papirus/ dir is already rendered icons + index.theme, so pull the
-    # source archive for the latest tag and copy just that dir into place.
-    # (jq avoided on purpose — keep it host-agnostic for Silverblue.)
-    latest_tag=$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
-      | grep -m1 '"tag_name"' \
-      | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
-    [ -n "${latest_tag}" ] || { echo "ERROR: could not resolve latest Papirus tag" >&2; exit 1; }
-    echo "==> downloading Papirus ${latest_tag} (source archive)..."
-    curl -fsSL "https://github.com/${repo}/archive/refs/tags/${latest_tag}.tar.gz" -o "${tmp}/papirus.tar.gz"
-    tar -xzf "${tmp}/papirus.tar.gz" -C "${tmp}"
-    src="$(find "${tmp}" -maxdepth 1 -mindepth 1 -type d | head -1)"
+    stage="$(mktemp -d)"
+    trap 'rm -rf "${stage}"' EXIT
+    # Build in a throwaway podman container so the host never sees git/dnf/make
+    # artifacts — only the final icon dirs are copied out. `make install` for
+    # Papirus is literally a `cp -R` of the pre-rendered Papirus{,-Dark,-Light}
+    # dirs into the staging prefix; HEAD tracks active updates that the stale
+    # release tag misses.
+    echo "==> building Papirus from git HEAD in a podman container..."
+    podman run --rm -v "${stage}:/out:Z" "${image}" bash -c '
+      set -euo pipefail
+      dnf install -y git make >/dev/null 2>&1
+      git clone --depth 1 --quiet https://github.com/PapirusDevelopmentTeam/papirus-icon-theme.git /work/p
+      make -C /work/p -s install DESTDIR=/out PREFIX=/usr
+      echo "  HEAD $(git -C /work/p rev-parse --short HEAD) ($(git -C /work/p log -1 --format=%cd --date=short))"
+    '
+    src="${stage}/usr/share/icons"
     [ -f "${src}/Papirus/index.theme" ] || { echo "ERROR: ${src}/Papirus/index.theme missing" >&2; exit 1; }
-    rm -rf "${icons_dir}/Papirus"
-    mv "${src}/Papirus" "${icons_dir}/Papirus"
-    echo "  installed -> ${icons_dir}/Papirus (${latest_tag})"
+    for v in Papirus Papirus-Dark Papirus-Light; do
+      rm -rf "${icons_dir}/${v}"
+      cp -r "${src}/${v}" "${icons_dir}/${v}"
+    done
+    echo "  installed -> ${icons_dir}/{Papirus,Papirus-Dark,Papirus-Light}"
     # GNOME (and GTK apps that read dconf via gsd / xdg-desktop-portal-gnome):
     gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
     echo "  set gsettings org.gnome.desktop.interface icon-theme=Papirus"
