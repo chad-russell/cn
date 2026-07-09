@@ -40,7 +40,7 @@ FROM quay.io/fedora-ostree-desktops/silverblue:${FEDORA_MAJOR_VERSION}
 #
 # `just` and `fzf` are host-native on purpose: they back the `cjust` task menu
 # (hosts/thinkpad/Justfile + the cjust function in dotfiles/.zshrc). Like
-# oh-my-posh they can't live in a shellbox — `cjust` must run before any box
+# oh-my-posh they can't live in a bubblebox — `cjust` must run before any box
 # is set up. (`just` was previously borrowed from the `default` box, which
 # made the menu depend on the thing it bootstraps; `fzf` backs `just --choose`.)
 # `nodejs` + `npm` are host-native so `cjust opencode-install` can do a global

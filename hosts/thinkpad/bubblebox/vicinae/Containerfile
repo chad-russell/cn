@@ -1,6 +1,6 @@
 # vicinae — application launcher, from the quadratech188/vicinae COPR.
 #
-# Runtime model (mirrors the shellbox vicinae box):
+# Runtime model:
 #   - vicinae runs inside the sandbox; the apps it lists live on the HOST.
 #   - `bubblebox-run vicinae server --replace` starts the daemon at session
 #     boot; `bubblebox-run vicinae toggle` is the per-keypress client. They

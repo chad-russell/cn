@@ -2,7 +2,7 @@
 # wezterm wrapper — defaults bare `wezterm` and `wezterm start` to spawning a
 # host shell (bubblebox-host-shell) instead of a sandboxed one. Without this,
 # the shell inside the terminal would be stuck in bubblebox's mount namespace:
-# no /usr/bin/zsh, no shellbox tools (they need /dev/fuse), no host PATH.
+# no /usr/bin/zsh, no bubblebox tools (they need /dev/fuse), no host PATH.
 #
 # Other subcommands (--version, ls-fonts, show-keys, start --explicit-cmd, ...)
 # pass through unchanged to the real binary at /usr/bin/wezterm-real.

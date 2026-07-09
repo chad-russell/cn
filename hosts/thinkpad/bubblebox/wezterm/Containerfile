@@ -22,7 +22,7 @@
 #
 # Host-shell escape: wezterm is a GUI terminal — the shells it spawns should
 # run on the HOST, not inside this sandbox, otherwise they can't see
-# /usr/bin/zsh, the user's shellbox tools (which need /dev/fuse), or any other
+# /usr/bin/zsh, the user's bubblebox tools (which need /dev/fuse), or any other
 # host-only binary. We achieve this with two pieces:
 #   1. /usr/local/bin/bubblebox-host-shell — runs `systemd-run --user --pty`
 #      to spawn $SHELL in the user's systemd scope (outside the sandbox).
