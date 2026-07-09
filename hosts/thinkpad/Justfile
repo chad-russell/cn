@@ -25,7 +25,7 @@
 # ~/Code/bubblebox (separate repo); this list points cjust at the per-tool
 # configs. Order doesn't matter for bubblebox. Add `helix` here if/when it's
 # ported.
-bubblebox_tools := "aws bat dust eza fd htop noctalia nvim rg tokei vicinae wezterm yazi zoxide"
+bubblebox_tools := "aws bat dust eza fd gh htop noctalia nvim rg tokei vicinae wezterm yazi zoxide"
 
 # bubblebox source dir. The Rust CLI binary + fuse-mount + shared bin/ live here.
 # Hardcoded to $HOME/Code/bubblebox (deliberate — this Justfile is thinkpad-
