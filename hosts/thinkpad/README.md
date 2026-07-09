@@ -165,17 +165,26 @@ Notes:
   need a session restart to fully apply after an edit.
 
 ### `systemd/`
-Systemd units, mostly **user** services for now (`systemd/user/`). The current
-unit, `opencode-web.service`, runs the opencode web frontend as a user service.
-opencode is host-installed (via `cjust opencode-install`), so the unit just
-calls `opencode web --port 4096` directly — no sandbox or composefs mount
-dependency. To install every unit (symlink into `~/.config/systemd/user/`,
-daemon-reload, and enable lingering):
+Systemd units, mostly **user** services for now (`systemd/user/`). Current units:
+
+- `opencode-web.service` — runs the opencode web frontend. opencode is
+  host-installed (via `cjust opencode-install`), so the unit just calls
+  `opencode web --port 4096` directly — no sandbox or composefs mount
+  dependency.
+- `vicinae.service` — starts the bubblebox-wrapped vicinae launcher daemon
+  (`vicinae server --replace`), bound to `graphical-session.target` so it
+  auto-starts under any compositor (niri, COSMIC, ...) — replacing niri's
+  `spawn-at-startup`. The `Mod+Space { spawn "vicinae" "toggle"; }` client
+  keybind in niri is unaffected (it's an IPC client, not the daemon).
+
+To install every unit (symlink into `~/.config/systemd/user/`, daemon-reload,
+and enable lingering):
 
 ```bash
 cjust units
-# then enable the specific unit:
+# then enable the specific unit(s):
 systemctl --user enable --now opencode-web
+systemctl --user enable --now vicinae
 ```
 
 Adding a unit: drop `<name>.service` in `systemd/user/`, add the name (without

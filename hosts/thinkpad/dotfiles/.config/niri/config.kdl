@@ -5,13 +5,15 @@
 //   - `vicinae` and `noctalia` resolve via bubblebox wrappers at
 //     ~/.local/bin/<tool>. Niri's `spawn` does PATH lookup but does NOT source
 //     .zshenv, so that dir must be on the *graphical session* PATH — that's
-//     what .config/environment.d/10-shellbox.conf is for. Without it these
+//     what .config/environment.d/10-bubblebox.conf is for. Without it these
 //     spawns silently fail to find the binaries.
 //   - `xwayland-satellite`, `ptyxis`, `nautilus`, `flatpak` are host packages
 //     (/usr/bin), always on PATH.
-//   - vicinae/noctalia start their daemons via `spawn-at-startup`; the `… msg`
-//     and `toggle` calls are IPC clients that reach those daemons over a socket
-//     under $XDG_RUNTIME_DIR.
+//   - noctalia starts its daemon via `spawn-at-startup`; vicinae is now started
+//     as a systemd user service (vicinae.service, bound to
+//     graphical-session.target) so it launches under any compositor. The
+//     `… msg` and `toggle` calls are IPC clients that reach those daemons over a
+//     socket under $XDG_RUNTIME_DIR.
 
 input {
     keyboard {
@@ -67,7 +69,6 @@ layout {
 
 spawn-at-startup "xwayland-satellite"
 spawn-at-startup "noctalia"
-spawn-at-startup "vicinae" "server" "--replace"
 
 prefer-no-csd
 

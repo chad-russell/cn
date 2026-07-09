@@ -1,0 +1,18 @@
+[Unit]
+Description=vicinae launcher daemon
+# bubblebox-wrapped daemon; IPC socket under $XDG_RUNTIME_DIR. Bound to
+# graphical-session.target so it starts under any compositor (niri, COSMIC, ...),
+# replacing niri's spawn-at-startup. Enable with:
+#   systemctl --user enable --now vicinae.service
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/vicinae server --replace
+Restart=on-failure
+RestartSec=5
+WorkingDirectory=%h
+
+[Install]
+WantedBy=graphical-session.target
