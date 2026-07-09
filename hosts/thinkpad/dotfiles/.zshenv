@@ -26,3 +26,4 @@ export XCURSOR_SIZE=24
 
 # Suppress GTK/Qt noise for CLI tools
 export GIO_EXTRA_MODULES=
+. "$HOME/.cargo/env"
