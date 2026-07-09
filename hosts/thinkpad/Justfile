@@ -128,29 +128,15 @@ units:
     fi
     echo "Done. Enable a unit with: systemctl --user enable --now <unit>"
 
-# One-time (per host): register this repo's bubblebox/ tree as a package SOURCE
-# so `bubblebox build`/`run` resolve Containerfiles + default entrypoints from
-# it directly. Replaces the old `link-entrypoints` symlink dance — entrypoints
-# are now read straight from the source (no symlinks into the store). Idempotent.
-[group('setup')]
-bubblebox-source-add:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    src="{{ justfile_directory() }}/bubblebox"
-    if {{ bubblebox_bin }} source list | grep -qw personal; then
-      echo "==> source 'personal' already registered -> ${src}"
-    else
-      {{ bubblebox_bin }} source add personal "${src}"
-    fi
-
-# Full first-run setup: dotfiles + units + bubblebox source + all bubblebox
-# tools + opencode. Run this on a fresh install (after the host image is
-# booted). Idempotent.
+# Full first-run setup: dotfiles + units + all bubblebox tools + opencode. Run
+# this on a fresh install (after the host image is booted). Idempotent. The
+# bubblebox SOURCE is declared in bubblebox/profile.toml (profile-authoritative)
+# — no separate `source add` step.
 # Note: `opencode-install` requires nodejs/npm on the host (added to the
 # host image in mid-2026). If you're on an older image, that step fails
 # harmlessly — complete the host-image rebuild + reboot, then re-run setup.
 [group('setup')]
-setup: link units bubblebox-source-add bubblebox opencode-install
+setup: link units bubblebox opencode-install
     @echo "==> Setup complete."
     @echo "    If host-image deps changed (just/fzf/nodejs/npm), rebuild & reboot:"
     @echo "      cjust image-build && cjust image-upgrade && systemctl reboot"
@@ -291,8 +277,8 @@ bubblebox-init:
 # tools from `bubblebox_tools`; with args, builds only the named tools, e.g.
 # `cjust bubblebox-build wezterm`.
 #
-# Tool source dirs resolve from the registered bubblebox SOURCE (see
-# `bubblebox-source-add`); build also records install provenance.
+# Tool source dirs resolve from the registered bubblebox SOURCE (declared in
+# bubblebox/profile.toml — profile-authoritative, so no `source add` needed).
 [group('bubblebox')]
 bubblebox-build *tools:
     #!/usr/bin/env bash
@@ -350,11 +336,12 @@ bubblebox-gc *args:
       {{ bubblebox_bin }} gc
     fi
 
-# Init + source-add + build + export in one shot. The thing to run on a fresh
-# install or after pulling changes that touch tool configs.
+# Init + build + apply in one shot. The thing to run on a fresh install or
+# after pulling changes that touch tool configs. (Source registration + wrapper
+# export are both handled by `apply` via the declarative profile.)
 [group('bubblebox')]
-bubblebox: bubblebox-init bubblebox-source-add bubblebox-build bubblebox-export
-    @echo "==> bubblebox: FUSE server built, source registered, all tools built + exported."
+bubblebox: bubblebox-init bubblebox-build bubblebox-apply
+    @echo "==> bubblebox: FUSE server built, tools built, profile applied."
 
 # ═══════════════════════════════════════════════════════════════════════════
 # opencode (host install)
