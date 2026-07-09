@@ -1,0 +1,55 @@
+# Declarative bubblebox profile — the desired package set (flake.nix analog).
+# Realized by `bubblebox apply` into ~/.config/bubblebox/profile.lock (the
+# pinned realization) + a content-addressed generation. See DESIGN-gc.md.
+#
+# Entries are FLOATING by default (re-resolved by `apply --refresh`, or taken
+# from the lock / a local descriptor otherwise). Pin one with `digest = "..."`
+# to force an exact version. Only ROOTS go here — compose deps (e.g. nvim's
+# rg/fd) are pulled automatically via each entrypoint's compose list.
+#
+# Kept in sync with `bubblebox_tools` in hosts/thinkpad/Justfile.
+
+[[package]]
+name = "aws"
+
+[[package]]
+name = "bat"
+
+[[package]]
+name = "dust"
+
+[[package]]
+name = "eza"
+
+[[package]]
+name = "fd"
+
+[[package]]
+name = "gh"
+
+[[package]]
+name = "htop"
+
+[[package]]
+name = "noctalia"
+
+[[package]]
+name = "nvim"
+
+[[package]]
+name = "rg"
+
+[[package]]
+name = "tokei"
+
+[[package]]
+name = "vicinae"
+
+[[package]]
+name = "wezterm"
+
+[[package]]
+name = "yazi"
+
+[[package]]
+name = "zoxide"

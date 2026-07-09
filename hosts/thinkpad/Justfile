@@ -323,6 +323,33 @@ bubblebox-export *tools:
     echo
     echo "Wrappers at ~/.local/bin/ (already on PATH via dotfiles/.zshenv)."
 
+# Realize the declarative profile (bubblebox/profile.toml): sync it to
+# ~/.config/bubblebox/, then `bubblebox apply` — resolve inputs (local
+# descriptors for built tools, or `bubblebox apply --refresh` against a cache),
+# write/refresh profile.lock + a generation, self-migrate descriptors to the
+# Phase-1 digest-addressed layout, materialize bindings, and sync ~/.local/bin
+# wrappers. The declarative counterpart to bubblebox-build + bubblebox-export:
+# build (or pull) populates the store; apply declares what's active.
+[group('bubblebox')]
+bubblebox-apply:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    install -Dm644 "{{ justfile_directory() }}/bubblebox/profile.toml" "$HOME/.config/bubblebox/profile.toml"
+    {{ bubblebox_bin }} apply
+
+# Reclaim store bytes no generation/binding/mount references. Dry-run by
+# default (reclaims nothing until you prune old generations —
+# `{{ bubblebox_bin }} generations --older-than 30d`). Pass `apply` to sweep.
+[group('bubblebox')]
+bubblebox-gc *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{ args }}" = "apply" ]; then
+      {{ bubblebox_bin }} gc --apply
+    else
+      {{ bubblebox_bin }} gc
+    fi
+
 # Init + source-add + build + export in one shot. The thing to run on a fresh
 # install or after pulling changes that touch tool configs.
 [group('bubblebox')]
