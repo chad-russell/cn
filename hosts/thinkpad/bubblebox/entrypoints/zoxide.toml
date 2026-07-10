@@ -14,9 +14,7 @@ primary = "zoxide"
 src = "$BUBBLEBOX_DATA_DIR/zoxide"
 dst = "/persist"
 mode = "rw"
+create = true
 
 [sandbox.env]
 _ZO_DATA_DIR = "/persist"
-
-[hook]
-pre_run = 'mkdir -p "$BUBBLEBOX_DATA_DIR/zoxide"'

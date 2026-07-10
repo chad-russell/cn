@@ -2,7 +2,11 @@
 # wezterm is a GUI terminal, so it needs the host's display/runtime/GPU surface:
 #   - writable /run/user/$UID (XDG_RUNTIME_DIR) for its IPC sockets
 #   - GPU access (/dev/dri) for OpenGL rendering
-#   - host fonts (the stock image fontconfig set is minimal)
+#   - host fonts (the stock image fontconfig set is minimal). Relying on the
+#     host's /usr/share/fonts is the less-hermetic, disk-saving choice; to make
+#     wezterm fully hermetic, `dnf install` a font set in the Containerfile
+#     (or compose a dedicated `fonts` package) and drop the bind below — the
+#     content-addressed store de-dups identical font bytes either way.
 # TMPDIR is redirected to /tmp because wezterm writes its "blob lease" under
 # $TMPDIR (defaults to /var/tmp, read-only in the sandbox).
 primary = "wezterm"
@@ -30,13 +34,3 @@ mode = "ro"
 src = "/usr/share/fonts"
 dst = "/usr/share/fonts"
 mode = "ro"
-
-[hook]
-# Seed fontconfig's user cache on first run. The bind-mounted /usr/share/fonts
-# has a different stat than the host's original, so fontconfig rejects the host
-# system cache and needs its own user-level cache at ~/.cache/fontconfig.
-pre_run = '''
-if [ ! -d "$HOME/.cache/fontconfig" ] || [ -z "$(ls -A "$HOME/.cache/fontconfig" 2>/dev/null)" ]; then
-  fc-cache -f >/dev/null 2>&1
-fi
-'''

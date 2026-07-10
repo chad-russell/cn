@@ -16,6 +16,7 @@ writable_home = true
 src = "$BUBBLEBOX_DATA_DIR/nvim"
 dst = "/persist"
 mode = "rw"
+create = true
 
 [sandbox.env]
 XDG_CONFIG_HOME = "/usr/share/bubblebox"
@@ -24,6 +25,3 @@ XDG_STATE_HOME  = "/persist/state"
 XDG_CACHE_HOME  = "/persist/cache"
 # Deterministic PATH: only the image's toolchain is reachable.
 PATH            = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-
-[hook]
-pre_run = 'mkdir -p "$BUBBLEBOX_DATA_DIR/nvim"'
