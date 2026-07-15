@@ -1,0 +1,29 @@
+[Unit]
+Description=Jellyseerr (request manager)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/fallenbagel/jellyseerr:2.7.3
+ContainerName=jellyseerr
+# Official Jellyseerr image has no PUID/PGID entrypoint, so run as the native
+# jellyseerr uid:media (994:2000) directly, keeping /var/lib/jellyseerr
+# ownership consistent. The NixOS module stored data under /var/lib/jellyseerr/config
+# and set CONFIG_DIRECTORY there; the image respects CONFIG_DIRECTORY. HOME=/config
+# so node/pnpm only ever write to the bind (owned 994:2000).
+User=994:2000
+Environment=CONFIG_DIRECTORY=/config
+Environment=HOME=/config
+Environment=TZ=America/New_York
+Volume=/var/lib/jellyseerr/config:/config
+# Host networking is REQUIRED: settings.json points Jellyfin at 127.0.0.1:8096
+# (and reaches Sonarr/Radarr over localhost). No /mnt/media mount — Jellyseerr
+# talks to APIs only. No PublishPort with host net.
+Network=host
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

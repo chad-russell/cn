@@ -78,22 +78,21 @@
     createHome = false;
   };
 
-  # ── Jellyseerr ──────────────────────────────────────────────────
-  services.jellyseerr = {
-    enable = true;
-    openFirewall = true;
-    port = 5055;
-  };
-  systemd.services.jellyseerr.serviceConfig = {
-    DynamicUser = lib.mkForce false;
-    User = "jellyseerr";
-    Group = "media";
-    StateDirectory = "jellyseerr";
+  # ── Jellyseerr (podman quadlet) ─────────────────────────────────
+  # Runs as uid 994 (native jellyseerr uid) — the official image has no
+  # PUID/PGID entrypoint, so User= is set directly in the .container. Data lives
+  # under /var/lib/jellyseerr/config (the NixOS module's CONFIG_DIRECTORY).
+  # See hosts/bees/jellyseerr.container.
+  environment.etc."containers/systemd/jellyseerr.container" = {
+    source = ./jellyseerr.container;
+    mode = "0644";
   };
   users.users.jellyseerr = {
+    uid = 994;
     isSystemUser = true;
     group = "media";
     home = "/var/lib/jellyseerr";
+    createHome = false;
   };
 
   # ── qBittorrent ─────────────────────────────────────────────────
