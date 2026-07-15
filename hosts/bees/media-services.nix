@@ -95,30 +95,21 @@
     createHome = false;
   };
 
-  # ── qBittorrent ─────────────────────────────────────────────────
-  services.qbittorrent = {
-    enable = true;
-    openFirewall = true;
-    group = "media";
-    webuiPort = 8080;
-    torrentingPort = 51413;
-    serverConfig = {
-      LegalNotice.Accepted = true;
-      BitTorrent.Session = {
-        DefaultSavePath = "/mnt/media/Downloads";
-        TempPath = "/mnt/media/Downloads/incomplete";
-      };
-      Preferences = {
-        General.Locale = "en";
-        WebUI.Username = "admin";
-        Downloads = {
-          SavePath = "/mnt/media/Downloads";
-          TempPath = "/mnt/media/Downloads/incomplete";
-        };
-      };
-    };
-    extraArgs = [ "--confirm-legal-notice" ];
+  # ── qBittorrent (podman quadlet) ────────────────────────────────
+  # Runs as uid 992 via the linuxserver image's PUID/PGID (PGID = media, 2000).
+  # Downloads go to /mnt/media/Downloads. The native --profile data dir
+  # (/var/lib/qBittorrent) was consolidated into linuxserver's flat layout;
+  # webui is 8080, torrenting port 51413 (Session\Port in qBittorrent.conf).
+  # See hosts/bees/qbittorrent.container.
+  environment.etc."containers/systemd/qbittorrent.container" = {
+    source = ./qbittorrent.container;
+    mode = "0644";
   };
-
-  # Open UDP for BitTorrent uTP/DHT — the NixOS module only opens TCP.
+  users.users.qbittorrent = {
+    uid = 992;
+    isSystemUser = true;
+    group = "media";
+    home = "/var/lib/qBittorrent";
+    createHome = false;
+  };
 }

@@ -1,0 +1,30 @@
+[Unit]
+Description=qBittorrent (client)
+After=network-online.target mnt-media.mount
+Wants=network-online.target
+
+[Container]
+Image=lscr.io/linuxserver/qbittorrent:version-5.1.4-r3
+ContainerName=qbittorrent
+# linuxserver convention: app runs as PUID:PGID. PUID is the qbittorrent uid
+# (992, carried over from the native NixOS module); PGID is the media group
+# (2000) so downloads land in /mnt/media/Downloads with the right ownership.
+# Data root is /var/lib/qBittorrent (the native --profile dir); the active
+# config + torrents were consolidated into the linuxserver flat layout
+# (/config/qBittorrent/qBittorrent.conf + /config/qBittorrent/BT_backup).
+Environment=PUID=992
+Environment=PGID=2000
+Environment=TZ=America/New_York
+Volume=/var/lib/qBittorrent:/config
+Volume=/mnt/media:/mnt/media:rslave
+# Host networking: webui (8080) + BitTorrent torrenting port (51413, set via
+# Session\Port in qBittorrent.conf) bind directly on the host. Also keeps the
+# *arr stack's localhost links to qBittorrent working. No PublishPort.
+Network=host
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
