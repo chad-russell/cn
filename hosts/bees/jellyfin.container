@@ -16,7 +16,10 @@ Environment=TZ=America/New_York
 Exec=--datadir /var/lib/jellyfin --configdir /var/lib/jellyfin/config --cachedir /var/cache/jellyfin --logdir /var/lib/jellyfin/log
 
 [Service]
-Restart=unless-stopped
+# systemd has no "unless-stopped" (that is a Docker value and gets ignored,
+# leaving the service with no auto-restart). "always" is the systemd
+# equivalent: it restarts on crash/exit but not after an explicit stop.
+Restart=always
 RestartSec=5
 
 [Install]
