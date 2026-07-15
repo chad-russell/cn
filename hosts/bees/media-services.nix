@@ -45,11 +45,20 @@
     createHome = false;
   };
 
-  # ── Radarr ──────────────────────────────────────────────────────
-  services.radarr = {
-    enable = true;
-    openFirewall = true;
+  # ── Radarr (podman quadlet) ─────────────────────────────────────
+  # Runs as uid 275 via the linuxserver image's PUID/PGID (PGID = media, 2000),
+  # so it reads the existing /var/lib/radarr/.config/Radarr data unchanged.
+  # See hosts/bees/radarr.container.
+  environment.etc."containers/systemd/radarr.container" = {
+    source = ./radarr.container;
+    mode = "0644";
+  };
+  users.users.radarr = {
+    uid = 275;
+    isSystemUser = true;
     group = "media";
+    home = "/var/lib/radarr";
+    createHome = false;
   };
 
   # ── Prowlarr ────────────────────────────────────────────────────

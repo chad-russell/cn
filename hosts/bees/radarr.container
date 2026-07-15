@@ -1,0 +1,29 @@
+[Unit]
+Description=Radarr (Movie PVR)
+After=network-online.target mnt-media.mount
+Wants=network-online.target
+
+[Container]
+Image=lscr.io/linuxserver/radarr:version-6.1.1.10360
+ContainerName=radarr
+# linuxserver convention: the app runs as PUID:PGID. PUID is the radarr uid
+# (275, carried over from the native NixOS module); PGID is the media group
+# (2000) so it reads the existing /var/lib/radarr data and NFS /mnt/media tree
+# unchanged. The native module stored app data at /var/lib/radarr/.config/Radarr,
+# which maps to the image's expected /config.
+Environment=PUID=275
+Environment=PGID=2000
+Environment=TZ=America/New_York
+Volume=/var/lib/radarr/.config/Radarr:/config
+Volume=/mnt/media:/mnt/media:rslave
+# Host networking: the *arr stack is tightly coupled (Radarr<->qBittorrent,
+# Prowlarr indexer sync, etc. over localhost APIs). Host net keeps the
+# native->container migration transparent; no PublishPort.
+Network=host
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
