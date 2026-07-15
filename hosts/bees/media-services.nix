@@ -29,11 +29,20 @@
     createHome = false;
   };
 
-  # ── Sonarr ──────────────────────────────────────────────────────
-  services.sonarr = {
-    enable = true;
-    openFirewall = true;
+  # ── Sonarr (podman quadlet) ─────────────────────────────────────
+  # Runs as uid 274 via the linuxserver image's PUID/PGID (PGID = media, 2000),
+  # so it reads the existing /var/lib/sonarr/.config/NzbDrone data unchanged.
+  # See hosts/bees/sonarr.container.
+  environment.etc."containers/systemd/sonarr.container" = {
+    source = ./sonarr.container;
+    mode = "0644";
+  };
+  users.users.sonarr = {
+    uid = 274;
+    isSystemUser = true;
     group = "media";
+    home = "/var/lib/sonarr";
+    createHome = false;
   };
 
   # ── Radarr ──────────────────────────────────────────────────────

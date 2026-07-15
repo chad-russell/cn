@@ -1,0 +1,29 @@
+[Unit]
+Description=Sonarr (PVR)
+After=network-online.target mnt-media.mount
+Wants=network-online.target
+
+[Container]
+Image=lscr.io/linuxserver/sonarr:version-4.0.17.2952
+ContainerName=sonarr
+# linuxserver convention: the app runs as PUID:PGID. PUID is the sonarr uid
+# (274, carried over from the native NixOS module); PGID is the media group
+# (2000) so it reads the existing /var/lib/sonarr data and NFS /mnt/media tree
+# unchanged. The native module stored app data at /var/lib/sonarr/.config/NzbDrone,
+# which maps to the image's expected /config.
+Environment=PUID=274
+Environment=PGID=2000
+Environment=TZ=America/New_York
+Volume=/var/lib/sonarr/.config/NzbDrone:/config
+Volume=/mnt/media:/mnt/media:rslave
+# Host networking: the *arr stack is tightly coupled (Sonarr<->qBittorrent,
+# Prowlarr indexer sync, etc. over localhost APIs). Host net keeps the
+# native->container migration transparent; no PublishPort.
+Network=host
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
