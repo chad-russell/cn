@@ -338,7 +338,7 @@ async function main() {
     `# Mode: ${mode} | Period: last ${hours}h | Generated: ${new Date().toISOString()}`,
     "",
     "## Machine Overview",
-    "- bees (10.10.0.6): Production — Caddy, Jellyfin, Immich, ntfy, SearXNG, linkding, papra, open-webui, media services",
+    "- bees (10.10.0.6): Production — Caddy, Jellyfin, Immich, ntfy, linkding, papra, open-webui, media services",
     "- bee (10.10.0.12): Dev — Gloo stack, Nebula lighthouse",
     "- think (10.10.0.10): Laptop — may be offline",
     "- nas (10.10.0.3): TrueNAS — NFS storage",

@@ -26,9 +26,7 @@
       "/var/lib/jellyseerr"
       "/var/lib/ntfy-sh"
       "/var/lib/datenight"
-      "/var/lib/searxng"
       "/var/lib/redis-immich"
-      "/var/lib/redis-searx"
 
       # Container volumes (Caddy certs, etc.)
       "/var/lib/containers/storage/volumes"

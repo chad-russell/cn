@@ -18,7 +18,6 @@
     ./media-services.nix
     ./immich.nix
     ./ntfy.nix
-    ./searxng.nix
     ./datenight.nix
     ./caddy.nix
     ./hub-services.nix

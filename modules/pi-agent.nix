@@ -34,14 +34,11 @@ in
     # tmpfiles so pi auto-discovers them.
     environment.etc = {
       "pi-extensions/ask/index.ts".source = ./pi-extensions/ask/index.ts;
-      "pi-extensions/searxng-search/index.ts".source = ./pi-extensions/searxng-search/index.ts;
     };
 
     systemd.tmpfiles.rules = [
       "d /home/crussell/.pi/agent/extensions/ask 0755 crussell users -"
       "L+ /home/crussell/.pi/agent/extensions/ask/index.ts - - - /etc/pi-extensions/ask/index.ts"
-      "d /home/crussell/.pi/agent/extensions/searxng-search 0755 crussell users -"
-      "L+ /home/crussell/.pi/agent/extensions/searxng-search/index.ts - - - /etc/pi-extensions/searxng-search/index.ts"
     ];
 
     # ── Secret ─────────────────────────────────────────────────────
