@@ -1,0 +1,27 @@
+[Unit]
+Description=Prowlarr (Indexer Manager)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=lscr.io/linuxserver/prowlarr:version-2.3.5.5327
+ContainerName=prowlarr
+# linuxserver convention: the app runs as PUID:PGID. PUID is the prowlarr uid
+# (993, carried over from the native NixOS module); PGID is the media group
+# (2000). The native module stored app data directly in /var/lib/prowlarr
+# (not under .config/), which maps to the image's expected /config.
+Environment=PUID=993
+Environment=PGID=2000
+Environment=TZ=America/New_York
+Volume=/var/lib/prowlarr:/config
+# No /mnt/media mount: Prowlarr is an indexer manager and doesn't touch media
+# files. Host networking keeps localhost links (future Sonarr/Radarr app sync)
+# working transparently; no PublishPort.
+Network=host
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

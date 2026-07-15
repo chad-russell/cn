@@ -61,21 +61,21 @@
     createHome = false;
   };
 
-  # ── Prowlarr ────────────────────────────────────────────────────
-  services.prowlarr = {
-    enable = true;
-    openFirewall = true;
-  };
-  systemd.services.prowlarr.serviceConfig = {
-    DynamicUser = lib.mkForce false;
-    User = "prowlarr";
-    Group = "media";
-    StateDirectory = "prowlarr";
+  # ── Prowlarr (podman quadlet) ───────────────────────────────────
+  # Runs as uid 993 via the linuxserver image's PUID/PGID (PGID = media, 2000),
+  # so it reads the existing /var/lib/prowlarr data unchanged. No /mnt/media
+  # mount — Prowlarr is an indexer manager, not a media service.
+  # See hosts/bees/prowlarr.container.
+  environment.etc."containers/systemd/prowlarr.container" = {
+    source = ./prowlarr.container;
+    mode = "0644";
   };
   users.users.prowlarr = {
+    uid = 993;
     isSystemUser = true;
     group = "media";
     home = "/var/lib/prowlarr";
+    createHome = false;
   };
 
   # ── Jellyseerr ──────────────────────────────────────────────────
