@@ -1,0 +1,9 @@
+# Restic + a clean entrypoint, for the think backup Quadlets.
+#
+# The official restic image sets ENTRYPOINT ["/usr/bin/restic"], which prepends
+# `restic` to anything in Exec= and makes it impossible to chain commands via
+# `sh -c "restic backup ... && restic forget ..."`. Clearing the entrypoint lets
+# the Quadlet Exec= run an arbitrary shell command directly. restic stays on
+# PATH (/usr/bin/restic).
+FROM docker.io/restic/restic:latest
+ENTRYPOINT []

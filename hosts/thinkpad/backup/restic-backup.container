@@ -1,0 +1,49 @@
+# Restic backup (S3 offsite) for think — rootful Quadlet, mirroring nebula/.
+#
+# Generated service: restic-backup.service  (one-shot; triggered by the daily
+# timer, NOT enabled at boot). Backs up /var/home/crussell to S3, then
+# forgets+prunes to retention. Failure -> restic-ntfy-failure@ (host curl).
+#
+# S3-only by design: the laptop roams, and NFS-to-NAS is fragile off the home
+# network. S3 is reachable over any internet connection, and matches the policy
+# that everything important lives offsite. The NAS hosts (bees/bee) keep the
+# local-copy tier; think does not.
+#
+# Creds are seeded into /etc/restic-backup by seed.sh (decrypted from the repo's
+# age-encrypted secrets). The image clears restic's default entrypoint so Exec=
+# can run a shell that chains backup + forget.
+
+[Unit]
+Description=Restic backup (S3 offsite) for think
+Wants=network-online.target
+After=network-online.target
+# Avoid racing the weekly check over the shared repo lock.
+After=restic-check.service
+# Notify on failure (template expands %i = this unit's name).
+OnFailure=restic-ntfy-failure@restic-backup.service
+
+[Container]
+Image=localhost/restic-backup:think
+ContainerName=restic-backup
+# Fixed hostname so restic tags every snapshot host=think. Without this the
+# container's hostname is a random ID per run, so forget/retention (which group
+# by host) would keep one-per-run and never prune.
+HostName=think
+# Read-only view of the user home (the data to back up). /home is a symlink to
+# /var/home on atomic Fedora; bind the real path so the mount is stable.
+Volume=/var/home/crussell:/data:ro
+# Decrypted creds + excludes (seeded by seed.sh). Read-only.
+Volume=/etc/restic-backup:/secrets:ro
+# Persistent restic cache (big perf win on incrementals; survives reboots).
+Volume=restic-backup-cache:/root/.cache/restic
+# AWS creds (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).
+EnvironmentFile=/etc/restic-backup/s3.env
+Environment=RESTIC_REPOSITORY=s3:https://s3.us-east-2.amazonaws.com/crussell-restic-backups/think
+Environment=RESTIC_PASSWORD_FILE=/secrets/password
+# Backup, then forget+prune. Failures propagate via && (non-zero exit fires
+# OnFailure). /usr/bin/restic is on PATH in the base image.
+Exec=sh -c "restic backup --one-file-system --exclude-file=/secrets/excludes /data && restic forget --prune --keep-daily 30 --keep-monthly 12"
+PodmanArgs=--rm
+
+[Service]
+Type=oneshot

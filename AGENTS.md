@@ -30,7 +30,7 @@ Last validated via SSH: **2026-07-05**.
 │   │   ├── media-services.nix
 │   │   ├── immich.nix
 │   │   ├── ntfy.nix, datenight.nix
-│   │   ├── services.nix, linkding.container, papra.container, open-webui.container
+│   │   ├── services.nix, linkding.container, papra.container
 │   │   └── disk-config.nix
 │   ├── homeassistant/         # HAOS operational docs + helper scripts + Nebula add-on
 │   │   ├── addons/nebula/     # Local HAOS add-on: Nebula VPN client
@@ -80,7 +80,6 @@ Last validated via SSH: **2026-07-05**.
    │   Caddy (*.internal TLS) │   │  Nebula lighthouse       │
    │    ntfy, datenight       │   │  Caddy dev (*.dev TLS)   │
    │   linkding, papra        │   │                          │
-   │  open-webui              │   │                          │
    │  Jellyfin, Sonarr,       │   │                          │
    │  Radarr, Prowlarr,       │   │                          │
    │  qBittorrent, Jellyseerr │   │                          │
@@ -103,7 +102,7 @@ Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
+| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
 | `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse. Caddy dev reverse proxy.                                                                                                                       |
 | `think`         | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Not a NixOS deploy target. |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 25.11 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
@@ -197,7 +196,7 @@ Source files:
 - `hosts/bees/media-services.nix` — Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr
 - `hosts/bees/immich.nix` — Immich server + ML
 - `hosts/bees/ntfy.nix`, `datenight.nix`
-- `hosts/bees/services.nix` + `*.container` — linkding, papra, open-webui
+- `hosts/bees/services.nix` + `*.container` — linkding, papra
 
 Live systemd services:
 
@@ -207,7 +206,6 @@ Live systemd services:
 - `datenight.service` — port `7890`
 - `linkding.service` — publishes `30080 -> 9090`
 - `papra.service` — publishes `30083 -> 1221`
-- `open-webui.service` — publishes `30088 -> 8080`
 - `jellyfin.service` — `8096`
 - `sonarr.service` — `8989`
 - `radarr.service` — `7878`
@@ -230,7 +228,7 @@ Useful checks:
 
 ```bash
 ssh -o IdentitiesOnly=yes crussell@192.168.20.41
-systemctl status caddy ntfy-sh datenight linkding papra open-webui jellyfin sonarr radarr prowlarr jellyseerr qbittorrent immich-server
+systemctl status caddy ntfy-sh datenight linkding papra jellyfin sonarr radarr prowlarr jellyseerr qbittorrent immich-server
 podman ps
 journalctl -u caddy -f
 ```
@@ -251,7 +249,7 @@ clients reach bees directly over the overlay, bypassing the gateway.
 
 Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
-- `services.caddy` — linkding, papra, ntfy, open-webui
+- `services.caddy` — linkding, papra, ntfy
 - `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
 - `beszel.caddy` — Beszel hub (`beszel.internal.crussell.io` → `127.0.0.1:8091`, incl. WebSocket)
 
@@ -451,7 +449,7 @@ Rules:
 
 ### System Podman Quadlet on bees
 
-Existing examples: `linkding.container`, `papra.container`, `open-webui.container`, `caddy/caddy.container`.
+Existing examples: `linkding.container`, `papra.container`, `caddy/caddy.container`.
 
 1. Add a `.container` file under `hosts/bees/` or `hosts/bees/caddy/`.
 2. Add an `environment.etc."containers/systemd/<name>.container"` entry in a Nix module.

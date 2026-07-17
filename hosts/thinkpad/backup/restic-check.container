@@ -1,0 +1,28 @@
+# Restic weekly integrity check (S3) for think — rootful Quadlet.
+#
+# Generated service: restic-check.service (one-shot; triggered by the weekly
+# timer). Reads a random 5% of packs each run, so over ~20 weeks the whole repo
+# is verified. Cheap on S3 GET costs; catches corruption before you need it.
+
+[Unit]
+Description=Restic weekly integrity check (S3) for think
+Wants=network-online.target
+After=network-online.target
+After=restic-backup.service
+# Notify on failure (template expands %i = this unit's name).
+OnFailure=restic-ntfy-failure@restic-check.service
+
+[Container]
+Image=localhost/restic-backup:think
+ContainerName=restic-check
+HostName=think
+Volume=/etc/restic-backup:/secrets:ro
+Volume=restic-backup-cache:/root/.cache/restic
+EnvironmentFile=/etc/restic-backup/s3.env
+Environment=RESTIC_REPOSITORY=s3:https://s3.us-east-2.amazonaws.com/crussell-restic-backups/think
+Environment=RESTIC_PASSWORD_FILE=/secrets/password
+Exec=/usr/bin/restic check --read-data-subset=5%
+PodmanArgs=--rm
+
+[Service]
+Type=oneshot

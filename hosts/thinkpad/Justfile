@@ -406,6 +406,13 @@ image-upgrade:
 nebula:
     {{ justfile_directory() }}/nebula/setup.sh
 
+# Build image + seed creds + init S3 repo + install the restic backup Quadlets
+# and timers (daily backup + weekly check). S3-only; see backup/README.md.
+# Idempotent — re-run after editing backup/excludes or pulling changes.
+[group('system')]
+backup:
+    {{ justfile_directory() }}/backup/setup.sh
+
 # Show the current state of this machine: host-image version, bootc deployment,
 # bubblebox mounts + wrappers, opencode install, and linked user units.
 # Read-only.

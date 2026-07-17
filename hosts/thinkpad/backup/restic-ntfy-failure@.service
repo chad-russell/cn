@@ -1,0 +1,13 @@
+# ntfy failure notifier for the think restic jobs (host system unit template).
+#
+# Mirrors the NixOS restic-ntfy-failure@ template on bees/bee. Triggered via
+# OnFailure=restic-ntfy-failure@<unit-name>.service from the .container units.
+# Uses HOST curl (atomic Fedora ships it at /usr/bin/curl); the container stays
+# minimal. `|| true` so a notification failure never cascades.
+
+[Unit]
+Description=Send ntfy notification on restic failure (%i)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'curl -sS -H "Title: Restic FAILED on think" -H "Tags: rotating_light" -H "Priority: high" -d "%i failed on think - check: sudo journalctl -u %i" https://ntfy.internal.crussell.io/homelab-backups || true'

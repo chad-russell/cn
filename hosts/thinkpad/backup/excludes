@@ -1,0 +1,54 @@
+# Restic exclude patterns for think.
+#
+# Two reliable forms (learned the hard way):
+#   1. BARE BASENAME (no slash) — matched against the last path component of
+#      every node, anywhere in the tree. A matching directory skips its whole
+#      subtree. This is the robust catchall for build artifacts & caches.
+#      (The **/ form has quirks with dotted / deep paths and is avoided.)
+#   2. /data/<path> — literal home-relative path, root-anchored. Use this for
+#      location-specific dirs where a bare basename would be too broad.
+#      (/data is the bind target in restic-backup.container; change together.)
+
+# ── Build artifacts & language caches (basename catchall) ──
+node_modules
+.pnpm-store
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.tox
+target
+.gradle
+.stack-work
+_build
+.elixir-ls
+.next
+.turbo
+.parcel-cache
+
+# ── Generic caches (basename catchall) ──
+.npm
+.cache
+
+# ── Home-specific large dirs (anchored to /data — basename too broad here) ──
+/data/.local/share/containers
+/data/.local/share/pnpm
+/data/.local/share/icons
+/data/.local/share/bubblebox/storage
+/data/.local/share/bubblebox/content
+/data/.local/share/Trash
+/data/.var
+/data/Downloads
+
+# ── Logs, temps, VM / disk images (basename glob) ──
+*.tmp
+*.log
+*.swp
+*~
+*.qcow2
+*.vdi
+*.vmdk
+*.iso
+*.img

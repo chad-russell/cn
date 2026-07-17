@@ -4,7 +4,7 @@
 # uses to declare what to back up.  Creates two restic repos per host:
 #
 #   1. NAS  →  /mnt/backups/<hostname>        (local copy)
-#   2. S3   →  s3:crussell-hub-restic-backup-39bj28x7/<hostname>
+#   2. S3   →  s3:crussell-restic-backups/<hostname>   (us-east-2)
 #
 # Both run daily via systemd timers.  On failure, a notification is
 # pushed to ntfy.
@@ -78,6 +78,39 @@ let
 
         backupCleanupCommand = ''
           echo "Finished ${name} backup for ${hostname} at $(date)"
+        '';
+      };
+    };
+
+  # ── Weekly integrity check job ─────────────────────────────────
+  # restic strongly recommends periodic `check` to detect repo/index
+  # corruption before you need to restore.  --read-data-subset=5% reads
+  # a random 5% of packs each run (≈20 weeks to cycle the whole repo on
+  # a weekly timer), keeping S3 GET costs negligible.
+  makeCheckJob =
+    { name, repo, passwordFile, environmentFile ? null, requires ? [ ] }:
+    let
+      jobName = "homelab-${name}";
+    in
+    {
+      "restic-checks-${jobName}" = {
+        description = "Restic weekly integrity check (${name})";
+        path = [ resticPkg ];
+        serviceConfig = {
+          Type = "oneshot";
+        } // (lib.optionalAttrs (environmentFile != null) {
+          EnvironmentFile = environmentFile;
+        });
+        environment = {
+          RESTIC_REPOSITORY = repo;
+          RESTIC_PASSWORD_FILE = passwordFile;
+        };
+        inherit requires;
+        after = requires;
+        onFailure = [ "restic-ntfy-failure@${name}-check.service" ];
+        script = ''
+          echo "Starting restic check (${name}) on ${hostname} at $(date)"
+          ${resticPkg}/bin/restic check --read-data-subset=5%
         '';
       };
     };
@@ -178,6 +211,10 @@ in
     systemd.services =
       let
         nasRequires = [ "mnt-backups.automount" ];
+        nasRepo = "${cfg.nasMountPoint}/${hostname}";
+        s3Repo = "s3:https://s3.${cfg.s3Region}.amazonaws.com/${cfg.s3Bucket}/${hostname}";
+        resticPwd = config.age.secrets.restic-password.path;
+        s3Creds = config.age.secrets.restic-s3-credentials.path;
       in
       {
         "restic-backups-homelab-nas" = {
@@ -197,6 +234,40 @@ in
           '';
           scriptArgs = "%i";
         };
+      }
+      // (makeCheckJob {
+        name = "nas";
+        repo = nasRepo;
+        passwordFile = resticPwd;
+        requires = nasRequires;
+      })
+      // (makeCheckJob {
+        name = "s3";
+        repo = s3Repo;
+        passwordFile = resticPwd;
+        environmentFile = s3Creds;
+      });
+
+    # ── Weekly check timers ───────────────────────────────────────
+    systemd.timers = {
+      "restic-checks-homelab-nas" = {
+        description = "Weekly restic integrity check (NAS)";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "weekly";
+          Persistent = true;
+          RandomizedDelaySec = "2h";
+        };
       };
+      "restic-checks-homelab-s3" = {
+        description = "Weekly restic integrity check (S3)";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "weekly";
+          Persistent = true;
+          RandomizedDelaySec = "2h";
+        };
+      };
+    };
   };
 }

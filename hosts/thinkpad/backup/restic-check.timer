@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly restic integrity check timer for think
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=2h
+Unit=restic-check.service
+
+[Install]
+WantedBy=timers.target

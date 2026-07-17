@@ -14,8 +14,3 @@ handle @papra {
 handle @ntfy {
     reverse_proxy 127.0.0.1:8090
 }
-
-@openwebui host openwebui.internal.crussell.io
-handle @openwebui {
-    reverse_proxy 127.0.0.1:30088
-}

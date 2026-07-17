@@ -9,6 +9,7 @@ host.
 .
 ├── host-image/     # minimal bootc host image
 ├── nebula/         # Nebula VPN container/service
+├── backup/         # restic S3 backup Quadlet + timers (daily backup, weekly check)
 ├── wycliffe-vpn/   # on-demand GlobalProtect wrapper
 ├── bubblebox/      # vendored per-tool configs for bubblebox sandboxes
 ├── dotfiles/       # the rare host-native user dotfiles (linked by cjust)
