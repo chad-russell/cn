@@ -2,8 +2,9 @@
 #
 # Beszel is a lightweight server-monitoring tool (single Go binary +
 # SQLite). The hub runs on bees and serves the web UI + the PocketBase
-# REST API on 127.0.0.1:8090, fronted by the internal Caddy route
-# `beszel.internal.crussell.io`.
+# REST API on 127.0.0.1:8091, fronted by the internal Caddy route
+# `beszel.internal.crussell.io`. (Port 8091, not Beszel's default 8090,
+# because ntfy-sh already listens on 8090 on this host.)
 #
 # Agents on the monitored hosts (bees, bee, nas, gateway) connect OUT to
 # this hub over the Nebula overlay via WebSocket using a universal token,
@@ -34,7 +35,7 @@
     environment.APP_URL = "https://beszel.internal.crussell.io";
 
     serviceConfig = {
-      ExecStart = "${pkgs.beszel}/bin/beszel-hub serve --http 127.0.0.1:8090 --dir /var/lib/beszel";
+      ExecStart = "${pkgs.beszel}/bin/beszel-hub serve --http 127.0.0.1:8091 --dir /var/lib/beszel";
       User = "beszel";
       Group = "beszel";
       StateDirectory = "beszel";

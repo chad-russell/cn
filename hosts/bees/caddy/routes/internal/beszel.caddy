@@ -1,4 +1,5 @@
-# Beszel monitoring hub (bees — localhost)
+# Beszel monitoring hub (bees — localhost). Hub listens on 8091, not its
+# default 8090, because ntfy-sh already uses 8090 on this host.
 #
 # WebSocket proxying is handled automatically by Caddy's reverse_proxy;
 # the read_timeout matches Beszel's reverse-proxy docs so long-lived
@@ -9,7 +10,7 @@ handle @beszel {
     request_body {
         max_size 10MB
     }
-    reverse_proxy 127.0.0.1:8090 {
+    reverse_proxy 127.0.0.1:8091 {
         transport http {
             read_timeout 360s
         }
