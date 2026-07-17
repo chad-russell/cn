@@ -218,6 +218,7 @@ Live systemd services:
 - `immich-machine-learning.service`
 - `postgresql.service` — Immich DB
 - `redis-immich.service`
+- `beszel.service` — Beszel monitoring hub, `127.0.0.1:8091` (8091 not its default 8090, which ntfy uses)
 
 Storage:
 
@@ -252,6 +253,7 @@ Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
 - `services.caddy` — linkding, papra, ntfy, open-webui
 - `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
+- `beszel.caddy` — Beszel hub (`beszel.internal.crussell.io` → `127.0.0.1:8091`, incl. WebSocket)
 
 #### Updating Caddy Routes
 
@@ -275,6 +277,24 @@ ssh -o IdentitiesOnly=yes crussell@10.10.0.6 '
 The container is named `systemd-caddy` and managed by the `caddy.service` Quadlet.
 
 Caddy's Route53 DNS challenge credentials are managed via agenix (`secrets/aws-env.age`), decrypted at runtime to `/run/agenix/aws-env`. **Bees uses this only for the internal `*.internal.crussell.io` wildcard cert**; the gateway's public ingress uses HTTP-01 and needs no credentials.
+
+#### Beszel (resource monitoring)
+
+[Beszel](https://beszel.dev) provides historical + current CPU/memory/disk/network stats across hosts, with a web dashboard and a PocketBase REST API. No Prometheus/Grafana — just a single Go hub binary + SQLite and tiny agent binaries, all from the one nixpkgs `beszel` package.
+
+- **Hub:** native `beszel.service` on bees, `127.0.0.1:8091`, fronted by `beszel.internal.crussell.io` (Caddy route `hosts/bees/caddy/routes/internal/beszel.caddy`). Config: `hosts/bees/beszel.nix`. PocketBase data in `/var/lib/beszel`. REST API at `https://beszel.internal.crussell.io/api/...` (auth required).
+- **Agents:** `modules/beszel-agent.nix` is imported by `bees`, `bee`, `nas`, `gateway`. Each agent connects OUT to the hub over the Nebula overlay via WebSocket (`DISABLE_SSH=true` — **no inbound port on any host**), authenticating with a universal token. Runs as its own `beszel-agent` user.
+- **Secret:** `secrets/beszel-agent-env.age` holds `KEY=<hub public key>` + `TOKEN=<universal token>` (one env file shared by all agents), created in the hub UI under Settings → Tokens. Owned by `beszel-agent` so the non-root service can read it.
+- The NAS agent additionally reports `/pool` (`extraFilesystems`).
+
+```bash
+ssh -o IdentitiesOnly=yes crussell@10.10.0.6
+systemctl status beszel beszel-agent        # hub + local agent
+journalctl -u beszel-agent | grep WebSocket # confirm connection
+# agents on other hosts: ssh crussell@10.10.0.12 / .3 ; root@178.156.171.212
+```
+
+To rotate the token: create a new one in the hub UI, re-encrypt `secrets/beszel-agent-env.age` (see Secrets), and redeploy all hosts.
 
 ### bee — Dev server + Nebula lighthouse
 
@@ -400,8 +420,16 @@ age -d -i ~/.ssh/id_ed25519 nebula/pki/bees.key.age > /tmp/bees.key
 
 Agenix and age are both used:
 
-- `secrets/*.age` — server secrets (aws-env, openrouter-api-key, restic passwords, S3 credentials).
+- `secrets/*.age` — server secrets (aws-env, openrouter-api-key, restic passwords, S3 credentials, beszel-agent-env).
 - `nebula/pki/*.key.age` — Nebula private keys encrypted to the SSH ed25519 public key.
+
+All secrets are encrypted to a single age public key (`crussell` in `secrets/secrets.nix`), so every host that consumes a secret must have the matching private identity at `/home/crussell/.config/age/key.txt` (set as `age.identityPaths` in `modules/base-server.nix`). `bees` and `bee` have always had it; **`nas` and `gateway` first needed a secret for the Beszel agent and so require the identity placed manually** (like Nebula certs) — copy it from `bees` after any `nixos-anywhere` reinstall:
+
+```bash
+ssh -o IdentitiesOnly=yes crussell@10.10.0.6 'cat ~/.config/age/key.txt' \
+  | ssh -o IdentitiesOnly=yes <user>@<nas|gateway> \
+    'mkdir -p ~/.config/age && cat > ~/.config/age/key.txt && chmod 600 ~/.config/age/key.txt'
+```
 
 Gloo env files (`.env` / `.env.local`) are gitignored and backed by 1Password — NOT managed by Nix or agenix.
 
