@@ -65,7 +65,6 @@ Manual/templates:
 
 - `nebula/configs/gateway.yaml` - Hetzner lighthouse/relay template.
 - `nebula/configs/bee.yaml` - manual template for `bee`.
-- `nebula/configs/thinkpad.yaml` - legacy laptop template; `think` now runs Nebula in a container (`hosts/thinkpad/nebula/`).
 - `nebula/configs/nas.yaml` - NAS template (legacy, now Nix-managed).
 - `nebula/configs/ai.yaml` - legacy `bees`/AI host template.
 - `nebula/configs/bee-lighthouse.yaml` - manual local lighthouse template.

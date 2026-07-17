@@ -1,5 +1,4 @@
 # Nebula config for the ThinkPad laptop (roaming client).
-# Adapted from nebula/configs/thinkpad.yaml in the repo root.
 #
 # Paths are inside the container: the rootful `nebula-config` podman volume
 # is mounted at /etc/nebula by the Quadlet, so these resolve there.
