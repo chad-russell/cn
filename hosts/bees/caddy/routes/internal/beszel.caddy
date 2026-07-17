@@ -1,0 +1,17 @@
+# Beszel monitoring hub (bees — localhost)
+#
+# WebSocket proxying is handled automatically by Caddy's reverse_proxy;
+# the read_timeout matches Beszel's reverse-proxy docs so long-lived
+# agent WebSocket connections aren't cut off.
+
+@beszel host beszel.internal.crussell.io
+handle @beszel {
+    request_body {
+        max_size 10MB
+    }
+    reverse_proxy 127.0.0.1:8090 {
+        transport http {
+            read_timeout 360s
+        }
+    }
+}

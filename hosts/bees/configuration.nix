@@ -21,6 +21,7 @@
     ./caddy.nix
     ./services.nix
     ./backup.nix
+    ./beszel.nix
   ];
 
   networking.hostName = "bees";

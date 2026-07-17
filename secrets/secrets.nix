@@ -16,4 +16,9 @@ in
 
   # ── Gloo AI proxy credentials ─────────────────────────────────
   "gloo-credentials.age".publicKeys = [ crussell ];
+
+  # ── Beszel monitoring ──────────────────────────────────────────
+  # Env file (KEY=<hub public key>, TOKEN=<universal token>) shared by
+  # every beszel-agent. Created after first booting the hub.
+  "beszel-agent-env.age".publicKeys = [ crussell ];
 }
