@@ -36,14 +36,14 @@ Last validated via SSH: **2026-07-05**.
 │   │   ├── addons/nebula/     # Local HAOS add-on: Nebula VPN client
 │   │   ├── scripts/           # Deploy, SSH, supervisor helpers
 │   │   └── README.md
-│   └── thinkpad/              # `think` laptop NixOS + home-manager config
+│   └── thinkpad/              # `think` laptop: custom Bluefin image + bubblebox/dotfiles tooling
 ├── modules/
 │   ├── base-server.nix        # Shared server baseline: user, SSH, networkd, packages, GC, NFS client
 │   ├── server-shell.nix       # Shared zsh/CLI setup for servers
-│   ├── nebula-client.nix      # Shared Nebula client defaults (used by servers + think)
+│   ├── nebula-client.nix      # Shared Nebula client defaults (used by servers)
 │   ├── nebula-hosts.nix       # /etc/hosts entries for Nebula overlay names
 │   ├── fzf-history-widget.zsh # Shared fzf Ctrl+R widget for zsh
-│   └── hub-disk-config.nix    # Beelink/bee btrfs disk layout
+│   └── bee-disk-config.nix     # Beelink/bee btrfs disk layout
 ├── nebula/
 │   ├── configs/               # Nebula config templates
 │   ├── pki/                   # Nebula CA/certs and age-encrypted private keys
@@ -96,7 +96,7 @@ Last validated via SSH: **2026-07-05**.
     └─────────────────┘
 
 Also on LAN: homeassistant / HAOS at 192.168.20.51, Nebula 10.10.0.51.
-Laptop: think / NixOS 25.11, configured under `hosts/thinkpad/`.
+Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 ```
 
 ## Machine Registry
@@ -105,7 +105,7 @@ Laptop: think / NixOS 25.11, configured under `hosts/thinkpad/`.
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
 | `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse. Caddy dev reverse proxy.                                                                                                                       |
-| `think`         | varies            | `10.10.0.10`                          | NixOS 25.11 | `hosts/thinkpad/`                    | Laptop with home-manager, niri, Noctalia, Podman, dev tools.       |
+| `think`         | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Not a NixOS deploy target. |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 25.11 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
 | `gateway`       | `178.156.171.212` | `10.10.0.2`                           | NixOS 25.11 | `hosts/gateway/`                     | Hetzner Cloud VPS: **Caddy public TLS ingress** for `*.crussell.io` (HTTP-01, reverse-proxies to backends over Nebula). Nebula lighthouse/relay.                                                   |
@@ -140,17 +140,13 @@ Home Assistant SSH: see `hosts/homeassistant/README.md` and helper scripts under
 
 ## Nix Operations
 
-**Deploy origin is `bees`.** The thinkpad no longer runs NixOS (it's a Fedora
-atomic/bootc host now), so all NixOS builds and deploys originate from `bees`
+**Deploy origin is `bees`.** The thinkpad no longer runs NixOS (it's a custom
+Bluefin / Fedora atomic image now), so all NixOS builds and deploys originate from `bees`
 itself — the most powerful machine and always on. Builds happen on `bees`; the
 resulting closure is pushed to the target over Nebula and switched. When the
 target *is* `bees`, the deploy script does a direct local switch (no SSH-to-self).
 
 Available NixOS hosts (deploy targets): `bee`, `bees`, `nas`, `gateway`.
-
-> The flake still defines a `think` nixosConfiguration, but the thinkpad is now a
-> Fedora atomic host and that target is stale (references a deleted file). It's
-> rejected by `nix run .#deploy`; cleanup is deferred.
 
 Standard deploy (run from bees):
 
@@ -355,7 +351,7 @@ Use `ssh -o IdentitiesOnly=yes root@178.156.171.212` to verify.
 
 Nix-managed server defaults live in:
 
-- `modules/nebula-client.nix` — shared client defaults for all NixOS hosts (servers + thinkpad)
+- `modules/nebula-client.nix` — shared client defaults for all NixOS server hosts
 - `modules/nebula-hosts.nix` — `/etc/hosts` entries for overlay names
 - per-host overrides in `hosts/*/configuration.nix`
 
@@ -405,7 +401,6 @@ age -d -i ~/.ssh/id_ed25519 nebula/pki/bees.key.age > /tmp/bees.key
 Agenix and age are both used:
 
 - `secrets/*.age` — server secrets (aws-env, openrouter-api-key, restic passwords, S3 credentials).
-- `hosts/thinkpad/secrets/*.age` — home-manager/laptop secrets.
 - `nebula/pki/*.key.age` — Nebula private keys encrypted to the SSH ed25519 public key.
 
 Gloo env files (`.env` / `.env.local`) are gitignored and backed by 1Password — NOT managed by Nix or agenix.

@@ -5,7 +5,6 @@
     # ── Nixpkgs ────────────────────────────────────────────────────
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-2605.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     # ── Home Manager ───────────────────────────────────────────────
     home-manager = {
@@ -24,23 +23,6 @@
       inputs.home-manager.follows = "home-manager";
     };
 
-    # ── Thinkpad-specific ──────────────────────────────────────────
-    nixos-hardware.url = "github:NixOS/nixos-hardware";
-    noctalia-shell = {
-      url = "github:noctalia-dev/noctalia-shell/v5";
-    };
-    vicinae.url = "github:vicinaehq/vicinae";
-    nixvim = {
-      url = "github:nix-community/nixvim/nixos-25.11";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    zen-browser = {
-      url = "github:0xc000022070/zen-browser-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.home-manager.follows = "home-manager";
-    };
-
-
   };
 
   outputs =
@@ -48,15 +30,9 @@
       self,
       nixpkgs,
       nixpkgs-unstable,
-      nixpkgs-2605,
       home-manager,
       disko,
       agenix,
-      nixos-hardware,
-      noctalia-shell,
-      vicinae,
-      nixvim,
-      zen-browser,
       ...
     }:
     let
@@ -68,9 +44,6 @@
           config.allowUnfree = true;
         };
       };
-
-      # Same unstable instance for home-manager extraSpecialArgs
-      unstable-pkgs = specialArgs.unstable;
 
       # ── Helper to build a NixOS configuration ────────────────────
       mkHost =
@@ -113,56 +86,6 @@
     in
     {
       # ── NixOS Configurations ─────────────────────────────────────
-
-      # Thinkpad — has its own directory structure (home-manager, pkgs, etc.)
-      nixosConfigurations.think = nixpkgs-2605.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = specialArgs // { inherit username; unstable = unstable-pkgs; };
-        modules = [
-          {
-            nixpkgs.config.allowUnfree = true;
-            nixpkgs.overlays = [
-              (final: prev: {
-                slk = final.callPackage ./hosts/thinkpad/pkgs/slk/package.nix { };
-                globalprotect-openconnect = final.callPackage ./hosts/thinkpad/pkgs/globalprotect-openconnect/default.nix { };
-              })
-            ];
-          }
-          ./hosts/thinkpad/hardware-configuration.nix
-          ./hosts/thinkpad/configuration.nix
-          ./hosts/thinkpad/backup.nix
-
-          ./modules/nebula-hosts.nix
-          ./modules/nebula-client.nix
-          ./modules/opencode.nix
-          nixos-hardware.nixosModules.lenovo-thinkpad-t14-intel-gen6
-          { _module.args.username = username; }
-
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useUserPackages = true;
-            home-manager.useGlobalPkgs = true;
-            home-manager.sharedModules = [
-              vicinae.homeManagerModules.default
-
-              nixvim.homeModules.nixvim
-              agenix.homeManagerModules.default
-              zen-browser.homeModules.twilight
-            ];
-            home-manager.users.${username} = import ./hosts/thinkpad/home.nix;
-            home-manager.extraSpecialArgs = {
-              inherit noctalia-shell vicinae agenix;
-              unstable = unstable-pkgs;
-            };
-          }
-          disko.nixosModules.disko
-          agenix.nixosModules.default
-          {
-            nix.registry.cn.flake = self;
-            nix.settings.experimental-features = [ "nix-command" "flakes" ];
-          }
-        ];
-      };
 
       # bee — Beelink mini PC (general-purpose server)
       nixosConfigurations.bee = mkHost {

@@ -8,7 +8,7 @@
 {
   imports = [
     ../../modules/base-server.nix
-    ../../modules/hub-disk-config.nix
+    ../../modules/bee-disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
     ./backup.nix

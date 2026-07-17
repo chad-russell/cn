@@ -115,7 +115,7 @@
   # ── Firewall: disabled (router handles it) ───────────────────────
   networking.firewall.enable = false;
 
-  # ── Podman (for Caddy + hub service containers) ─────────────────
+  # ── Podman (for Caddy + service containers) ─────────────────
   virtualisation.podman = {
     enable = true;
     dockerCompat = true;

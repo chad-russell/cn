@@ -68,7 +68,7 @@ Manual/templates:
 - `nebula/configs/thinkpad.yaml` - manual laptop template; Nix config is preferred for `think`.
 - `nebula/configs/nas.yaml` - NAS template (legacy, now Nix-managed).
 - `nebula/configs/ai.yaml` - legacy `bees`/AI host template.
-- `nebula/configs/hub-lighthouse.yaml` - manual local lighthouse template.
+- `nebula/configs/bee-lighthouse.yaml` - manual local lighthouse template.
 - `nebula/configs/phone.yaml.age` - encrypted phone config with embedded key.
 - `nebula/pki/` - CA, certs, and encrypted private keys.
 - `nebula/scripts/nebula` and `nebula/scripts/nebula-cert` - local Nebula helper binaries.

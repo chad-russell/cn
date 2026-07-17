@@ -84,7 +84,7 @@
   # ── Agenix: decrypt secrets at boot ────────────────────────────────
   # The identity lives under the user's $HOME, so any host that mounts /home
   # as a SEPARATE filesystem MUST mark it `neededForBoot = true` (already done
-  # in hosts/{bees,nas}/disk-config.nix and modules/hub-disk-config.nix).
+  # in hosts/{bees,nas}/disk-config.nix and modules/bee-disk-config.nix).
   # Otherwise /home mounts after activation and every age secret silently
   # fails to decrypt on reboot — which took down Caddy (and thus all public
   # routes incl. homeassistant.crussell.io) on bees after the 2026-06-13 power

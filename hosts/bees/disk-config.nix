@@ -4,7 +4,7 @@
 # RAM: 128 GB (shared with integrated Radeon 8060S GPU; ~32 GB visible to OS)
 # No secondary disk. Dual 10GbE Intel E610 NICs.
 #
-# Layout (modeled after modules/hub-disk-config.nix but larger):
+# Layout (modeled after modules/bee-disk-config.nix but larger):
 #   /dev/nvme0n1:
 #     p1: 1G    EFI
 #     p2: 16G   swap (supplemental to zram; large for potential hibernation)
