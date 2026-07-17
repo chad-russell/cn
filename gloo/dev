@@ -9,7 +9,6 @@
 #   dev polymer up        # db + minio + workspace(pnpm dev)  [hit play]
 #   dev polymer down      # stop everything
 #   dev polymer logs      # tail the dev server (workspace)
-#   dev polymer pi        # launch pi from the repo root (host/toolbox)
 #   dev polymer infra     # db + minio only (no app)
 #   dev polymer setup     # one-shot: pnpm install && db:push && db:seed
 #   dev polymer migrate   # one-shot: pnpm db:push
@@ -60,22 +59,12 @@ case "$cmd" in
   up)       c up -d $all ;;
   down)     c down ;;
   logs)     c logs -f "$app_name" ;;
-  pi)
-    repo_dir="$(cd "$dir/.." && pwd)"
-    if [ -f /run/.toolboxenv ] || [ -f /.toolboxenv ]; then
-      cd "$repo_dir" && exec pi
-    fi
-    if command -v toolbox >/dev/null 2>&1; then
-      exec toolbox run --container dev bash -lc "cd $(printf '%q' "$repo_dir") && exec pi"
-    fi
-    cd "$repo_dir" && exec pi
-    ;;
   infra)    c up -d $infra ;;
   setup)    oneshot 'pnpm install && pnpm db:push && pnpm db:seed' ;;
   migrate)  oneshot 'pnpm db:push' ;;
   seed)     oneshot 'pnpm db:seed' ;;
   *)
     echo "unknown command: $cmd" >&2
-    echo "commands: up down logs pi infra setup migrate seed" >&2
+    echo "commands: up down logs infra setup migrate seed" >&2
     exit 1 ;;
 esac

@@ -1,42 +1,26 @@
 # Gloo dev workflow (local, thinkpad)
 
 Run Gloo projects locally on the thinkpad in **podman-compose dev stacks**,
-with **pi running in a per-project `agent` container** that can edit the repo
-and drive the sibling containers (db, minio, app).
+using the repo-supplied devcontainers plus a small personal override.
 
 This is the personal, thinkpad-local counterpart to the bee dev setup. It
 favors **local containers** over SSHing to bee, while reusing the same
-repo-supplied devcontainers the whole team uses.
+devcontainers the whole team uses.
 
 ## Architecture
 
 ```
 ~/Gloo/360-polymer/                 cloned repo (code + gitignored .env.local)
-~/Code/cn/gloo/                     THIS — orchestration + agent context (tracked)
+~/Code/cn/gloo/                     THIS — orchestration (tracked)
 ├── overrides/
-│   └── polymer.yml                 port publish + agent service (personal)
+│   └── polymer.yml                 personal port publish + dev-server command
+├── dev                             project/command dispatcher
 └── README.md
 ```
 
-Two ideas make this clean:
-
-1. **`.env.local` lives in the repo, gitignored** (confirmed in polymer's
-   `.gitignore`). So when pi edits env, it edits it where the app reads it —
-   no sidecar-repo split-brain.
-2. **pi runs in an `agent` container** (Option A), a peer of the app/db/minio
-   containers on the compose network. It mounts the repo (`/workspace`) and the
-   host's **rootless podman socket**, so it can `podman exec` into the app
-   container to run commands and `podman logs` to read logs — autonomously.
-
-## First-time setup
-
-```bash
-# 1. rebuild the dev-shell image so the agent container has `podman`
-#    (this adds the podman client to the image pi/the agent uses)
-cd ~/Code/cn/hosts/thinkpad/toolbox && ./build.sh
-#    then recreate the dev toolbox if you want podman there too:
-#    ./create.sh
-```
+`.env.local` lives in the repo, gitignored (confirmed in polymer's
+`.gitignore`), so it's read exactly where the app reads it — no sidecar-repo
+split-brain.
 
 ## Daily workflow
 
@@ -44,14 +28,11 @@ cd ~/Code/cn/hosts/thinkpad/toolbox && ./build.sh
 # first time (fresh clone): install deps + set up the DB
 ~/Code/cn/gloo/dev polymer setup
 
-# bring the stack up — db, minio, workspace(running pnpm dev), agent
+# bring the stack up — db, minio, app(running pnpm dev)
 ~/Code/cn/gloo/dev polymer up
 
 # the dev server is already running as the app container's PID 1.
 # reach it at http://localhost:3000 (polymer) and :3001 (admin360)
-
-# launch pi inside the agent
-~/Code/cn/gloo/dev polymer pi
 
 # tail dev output / tear down
 ~/Code/cn/gloo/dev polymer logs
@@ -74,7 +55,7 @@ translate cleanly.
 
 - **bee stays the reference** for `.env.local` and as a remote dev option; this
   setup runs locally.
-- **The override is personal** (`userns_mode`, the `agent` service) — never
-  commit it to a product repo; it breaks Docker Desktop on macOS.
-- **Other projects** (hb, gpl): same pattern — add an `agent` service to their
-  override once polymer is proven.
+- **The override is personal** (`userns_mode`, published ports) — never commit
+  it to a product repo; `userns_mode` breaks Docker Desktop on macOS.
+- **Other projects** (hb, gpl): same pattern — add an override + a case block in
+  `dev` once polymer is proven.
