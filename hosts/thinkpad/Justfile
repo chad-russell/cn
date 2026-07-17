@@ -25,7 +25,7 @@
 # ~/Code/bubblebox (separate repo); this list points cjust at the per-tool
 # configs. Order doesn't matter for bubblebox. Add `helix` here if/when it's
 # ported.
-bubblebox_tools := "aws bat dust eza fd gh htop noctalia nvim rg tokei vicinae wezterm yazi zoxide"
+bubblebox_tools := "aws bat dust eza fd gh htop noctalia nvim rg tokei vicinae ghostty wezterm yazi zoxide"
 
 # bubblebox source dir. The Rust CLI binary + fuse-mount + shared bin/ live here.
 # Hardcoded to $HOME/Code/bubblebox (deliberate — this Justfile is thinkpad-
@@ -50,7 +50,7 @@ user_units := "opencode-web vicinae"
 # symlink-backed config). Instead, use `cjust cosmic-backup` and
 # `cjust cosmic-restore` to copy settings between the repo and
 # ~/.config/cosmic.
-dotfiles := ".config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/wezterm .config/vicinae/settings.json .config/opencode .local/share/applications/wezterm.desktop .zshrc .zshenv"
+dotfiles := ".config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/wezterm .config/ghostty .config/vicinae/settings.json .config/opencode .local/share/applications/wezterm.desktop .local/share/applications/ghostty.desktop .zshrc .zshenv"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # setup

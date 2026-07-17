@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Ghostty
+Comment=Ghostty terminal (bubblebox-wrapped; spawns host shell)
+Exec=/var/home/crussell/.local/bin/ghostty
+Icon=utilities-terminal
+Categories=System;TerminalEmulator;
+Keywords=terminal;shell;
+Terminal=false
+StartupWMClass=com.mitchellh.ghostty

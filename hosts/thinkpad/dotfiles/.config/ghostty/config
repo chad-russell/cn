@@ -1,0 +1,79 @@
+# ghostty config for the bubblebox ghostty sandbox.
+#
+# ghostty itself runs inside the sandbox; each surface's shell runs on the HOST
+# via `bubblebox-host-shell` (systemd-run --user --pty). Edits here take effect
+# on the next launch — the file is read live from $HOME (writable via the
+# entrypoint), it is NOT baked into the image.
+
+# Per-surface shell lives on the host, not in the box. ghostty execs this
+# helper, which asks the user's systemd manager (reachable through the bound
+# /run/user/$UID/bus) to start $SHELL outside the sandbox.
+command = /usr/local/bin/bubblebox-host-shell
+
+# The ghostty rpm ships no terminfo and the host has no `xterm-ghostty` entry,
+# so a host-shell ncurses app (less, vim, …) would print "unknown terminal" with
+# ghostty's default TERM. xterm-256color is universal. True color is unaffected:
+# ghostty still exports COLORTERM=truecolor, which editors detect for 24-bit.
+# (To use ghostty's real terminfo instead, seed `xterm-ghostty` into the host's
+# ~/.terminfo and drop this line.)
+term = xterm-256color
+
+# Coherent palette matching wezterm's `Ayu Mirage`. Ghostty ships this theme
+# under /usr/share/ghostty/themes/. Alternatives: Catppuccin Mocha, Dracula,
+# Tokyo Night, Gruvbox Dark.
+theme = Spacegray Eighties Dull
+
+# Drop the GTK/libadwaita client-side titlebar; niri handles rounded corners,
+# resize (Mod+right-click), and window controls. Edge-to-edge like wezterm's
+# `window_decorations = "NONE"`.
+gtk-titlebar = false
+
+# Don't prompt when closing a surface (mirrors wezterm's NeverPrompt).
+confirm-close-surface = false
+
+# Slight transparency + inner padding so it reads like the wezterm setup.
+background-opacity = 0.96
+window-padding-x = 6
+window-padding-y = 4
+
+# Quality-of-life.
+mouse-hide-while-typing = true
+
+# ghostty can self-update; the sandbox image is read-only (composefs), so any
+# in-place update would either fail or land in an ephemeral layer. Keep version
+# control in the pinned Containerfile (bump GHOSTTY_VERSION + rebuild).
+auto-update = off
+
+# ── Splits & panes (tmux-style, vim directions h j k l) ───────────────────
+# `ctrl+b>x` is a two-key CHORD (like tmux): hold ctrl, press b, release, then
+# press the next key within the timeout. Caveat: making ctrl+b a prefix means
+# raw ctrl+b no longer reaches the shell/readline/vim (tmux's same tradeoff).
+
+# Split the active surface in the given direction.
+keybind = ctrl+b>l=new_split:right
+keybind = ctrl+b>h=new_split:left
+keybind = ctrl+b>j=new_split:down
+keybind = ctrl+b>k=new_split:up
+
+# Move focus between splits (ctrl+shift + vim direction).
+keybind = alt+h=goto_split:left
+keybind = alt+j=goto_split:down
+keybind = alt+k=goto_split:up
+keybind = alt+l=goto_split:right
+
+# Move focus between splits (ctrl+shift + vim direction).
+keybind = alt+shift+h=previous_tab
+keybind = alt+shift+l=next_tab
+
+# Toggle the active split zoomed (maximized within its tab).
+keybind = ctrl+y=toggle_split_zoom
+
+# Close the active split; closing the last split in a tab closes the tab (no
+# prompt, via confirm-close-surface = false above). CAVEAT: this shadows the
+# shell's ctrl+w (backward-kill-word) — ghostty intercepts it before the shell.
+# If you'd rather keep ctrl+w for the shell, comment this out; close via
+# ctrl+shift+w (ghostty's default close_tab) instead.
+keybind = ctrl+w=close_surface
+
+# Toggle animated tab overview
+keybind = ctrl+shift+o=toggle_tab_overview

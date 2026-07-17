@@ -68,8 +68,6 @@ alias v='nvim'
 alias hist='history 1'
 # Gloo SSH tunnel to bee (start manually; matches old config)
 alias wycliffe-tunnel='ssh -L 33000:127.0.0.1:33000 -L 33001:127.0.0.1:33001 crussell@10.10.0.12'
-# homelab report (old hl= alias)
-alias hl='ssh -o IdentitiesOnly=yes crussell@10.10.0.6 "bun /etc/homelab-monitor/collect.ts report"'
 
 # ---- Functions ---------------------------------------------------------
 mkcd() { mkdir -p "$1" && cd "$1"; }

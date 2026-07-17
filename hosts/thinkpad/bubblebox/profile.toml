@@ -13,7 +13,7 @@
 packages = [
   "aws", "bat", "dust", "eza", "fd", "gh", "htop",
   "noctalia", "nvim", "rg", "tokei", "vicinae",
-  "wezterm", "yazi", "zoxide",
+  "ghostty", "wezterm", "yazi", "zoxide",
 ]
 
 # Registries: when present, apply is PROFILE-AUTHORITATIVE — it resolves using

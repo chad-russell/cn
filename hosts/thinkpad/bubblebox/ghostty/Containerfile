@@ -1,0 +1,59 @@
+# ghostty — GTK4/libadwaita GPU terminal emulator, from the
+# agriffis/ghostty-nightly COPR.
+#
+# Why a COPR (and why agriffis/ghostty-nightly specifically): ghostty is NOT in
+# Fedora proper, and the canonical pgdev/ghostty COPR has been removed. Of the
+# ~20 community COPRs that carry F44 x86_64 builds, agriffis/ghostty-nightly
+# tracks git tip and is pinnable by nightly count + git hash — the closest
+# analog to the wezterm-nightly approach used elsewhere in this tree. Pinned
+# (not `latest`) so a build is reproducible and an upstream regression can't
+# silently break the terminal — bump GHOSTTY_VERSION after testing that a newer
+# nightly renders correctly under niri inside the bubblebox sandbox.
+#
+# Why prebuilt rpm (not `zig build`): ghostty is a large Zig+GTK4 project;
+# building from source needs the Zig toolchain + the full GTK4 -devel set and
+# compiles for many minutes. The COPR rpm is prebuilt and dnf resolves its
+# (many) shared-lib deps (gtk4, libadwaita, wayland, fontconfig, ...) against
+# the image's glibc.
+#
+# Why Fedora base: the rpm is built against Fedora, and dnf resolves its deps
+# cleanly against the matching glibc/mesa/etc. versions.
+#
+# Host-shell escape (same trick as wezterm): ghostty is a GUI terminal — the
+# shells it spawns must run on the HOST, not inside this sandbox, otherwise they
+# can't see /usr/bin/zsh, the user's bubblebox tools (which need /dev/fuse), or
+# any other host-only binary. ghostty's `command` config key (set in the live
+# ~/.config/ghostty/config, readable via WRITABLE_HOME) points at
+# /usr/local/bin/bubblebox-host-shell, which runs `systemd-run --user --pty` to
+# spawn $SHELL in the user's systemd scope — outside the sandbox. systemd-run is
+# NOT pulled in by the ghostty rpm, so `systemd` is installed explicitly below.
+#
+# No app-level wrapper (unlike wezterm): bare `ghostty` already opens a window,
+# and ghostty defaults to `gtk-single-instance = false`, so every launch is a
+# fresh process (the property wezterm achieved with `--always-new-process`).
+# Combined with `command` being sourced from config rather than CLI, there is
+# no dispatch to shim — the entrypoint binary is just ghostty itself.
+#
+# No vendored config by default: ghostty reads ~/.config/ghostty/config from
+# your $HOME (made writable via the entrypoint). To bake a config into the
+# image, COPY it into /usr/share/bubblebox/ghostty/ and launch ghostty with
+# `--config=/usr/share/bubblebox/ghostty/config`.
+FROM fedora:latest
+
+# Pinned ghostty nightly from agriffis/ghostty-nightly. Format:
+# <base>^<nightly-count>.<githash>-<release>.fc<fedora>. Bump after testing a
+# newer build renders correctly under niri in the bubblebox sandbox.
+ARG GHOSTTY_VERSION=1.3.1^328.f5664cd7b-1.fc44
+RUN dnf -y install dnf-plugins-core \
+ && dnf -y copr enable agriffis/ghostty-nightly \
+ && dnf install -y \
+      ghostty-${GHOSTTY_VERSION} \
+      systemd mesa-dri-drivers mesa-vulkan-drivers vulkan-loader \
+ && dnf clean all
+
+# bubblebox-host-shell: shared helper (from $BUBBLEBOX_DIR/bin/) that spawns a
+# shell on the host via systemd-run --user. ghostty's `command` config points
+# here so each surface runs the real host zsh (with bubblebox tools, /dev/fuse,
+# host PATH) instead of being trapped in the sandbox.
+COPY bin/bubblebox-host-shell /usr/local/bin/bubblebox-host-shell
+RUN chmod +x /usr/local/bin/bubblebox-host-shell
