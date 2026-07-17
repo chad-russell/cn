@@ -17,6 +17,11 @@
 { config, lib, pkgs, ... }:
 
 {
+  # Monitor bees itself with a local agent. The hub and agent share the
+  # same `beszel` user/group.
+  imports = [ ../../modules/beszel-agent.nix ];
+  services.beszel-agent.enable = true;
+
   users.users.beszel = {
     isSystemUser = true;
     group = "beszel";

@@ -15,6 +15,7 @@
     ./disk-config.nix
     ./caddy.nix
     ../../modules/base-server.nix
+    ../../modules/beszel-agent.nix
     # NOTE: Do NOT import nebula-client.nix — this host IS a lighthouse.
     # Nebula is configured manually below with lighthouse/relay overrides.
   ];
@@ -116,6 +117,11 @@
   # (that was nginx-only and nothing scraped it).
   networking.firewall.allowedTCPPorts = [ 22 80 443 ];
   networking.firewall.allowedUDPPorts = [ 4242 ];
+
+  # ── Beszel monitoring agent ────────────────────────────────────
+  # Connects out to the hub on bees over Nebula (beszel.internal.crussell.io
+  # resolves to 10.10.0.6); no inbound port required.
+  services.beszel-agent.enable = true;
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";

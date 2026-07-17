@@ -11,6 +11,7 @@
     ../../modules/bee-disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
+    ../../modules/beszel-agent.nix
     ./backup.nix
     ./tailscale.nix
   ];
@@ -107,6 +108,9 @@
   services.opencode.enable = true;
   services.opencode.web.enable = true;
   services.opencode.web.hostname = "0.0.0.0";
+
+  # ── Beszel monitoring agent ────────────────────────────────────
+  services.beszel-agent.enable = true;
 
   # (Firewall disabled — no per-service port openings needed)
 

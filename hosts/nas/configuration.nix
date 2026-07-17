@@ -36,6 +36,7 @@
     ./samba.nix
     ./btrfs-maintenance.nix
     ../../modules/nebula-client.nix
+    ../../modules/beszel-agent.nix
   ];
 
   networking.hostName = "nas";
@@ -89,6 +90,11 @@
   # Certs must be deployed to /etc/nebula/{ca.crt,host.crt,host.key}
   # before enabling. Reuse the existing TrueNAS certs from nebula/pki/.
   services.nebula.networks.homelab.enable = true;  # certs deployed from nebula/pki/
+
+  # ── Beszel monitoring agent ────────────────────────────────────
+  # Report the btrfs RAID1 storage pool in addition to the root fs.
+  services.beszel-agent.enable = true;
+  services.beszel-agent.extraFilesystems = [ "/pool" ];
 
   # ── Pool directory structure ─────────────────────────────────────
   # Ensure subdirectories exist in each btrfs subvolume.
