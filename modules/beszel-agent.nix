@@ -51,16 +51,21 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    users.users.beszel = {
+    users.users.beszel-agent = {
       isSystemUser = true;
-      group = "beszel";
+      group = "beszel-agent";
       home = "/var/lib/beszel-agent";
       createHome = false;
     };
-    users.groups.beszel = { };
+    users.groups.beszel-agent = { };
 
-    # Hub public KEY + universal TOKEN — shared by every agent.
-    age.secrets.beszel-agent-env.file = ../secrets/beszel-agent-env.age;
+    # Hub public KEY + universal TOKEN — shared by every agent. Owned by
+    # the beszel-agent user so the (non-root) service can read it.
+    age.secrets.beszel-agent-env = {
+      file = ../secrets/beszel-agent-env.age;
+      owner = "beszel-agent";
+      group = "beszel-agent";
+    };
 
     systemd.services.beszel-agent = {
       description = "Beszel monitoring agent";
@@ -81,8 +86,8 @@ in
         ExecStart = "${pkgs.beszel}/bin/beszel-agent";
         # /run/agenix/beszel-agent-env provides KEY= and TOKEN=
         EnvironmentFile = config.age.secrets.beszel-agent-env.path;
-        User = "beszel";
-        Group = "beszel";
+        User = "beszel-agent";
+        Group = "beszel-agent";
         StateDirectory = "beszel-agent";
         Restart = "on-failure";
         RestartSec = 5;
