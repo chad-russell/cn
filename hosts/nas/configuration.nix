@@ -78,6 +78,12 @@
     networkConfig.DHCP = "yes";
   };
 
+  # enp2s0 is usually unplugged (no carrier) but defaults to
+  # RequiredForOnline, which made systemd-networkd-wait-online block for its
+  # full 120s timeout on every boot/switch and report the deploy as failed.
+  # --any returns success as soon as the primary enp3s0 is routable.
+  systemd.network.wait-online.anyInterface = true;
+
   # ── Nebula ──────────────────────────────────────────────────────
   # Keep the same Nebula IP as TrueNAS (10.10.0.3) for drop-in replacement.
   # Certs must be deployed to /etc/nebula/{ca.crt,host.crt,host.key}
