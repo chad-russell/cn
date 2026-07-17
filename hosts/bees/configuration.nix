@@ -12,7 +12,6 @@
     ../../modules/base-server.nix
     ./disk-config.nix
     ../../modules/nebula-client.nix
-    ../../modules/pi-agent.nix
     ../../modules/opencode.nix
     ../../modules/gloo-proxy.nix
     ./media-services.nix
@@ -20,9 +19,7 @@
     ./ntfy.nix
     ./datenight.nix
     ./caddy.nix
-    ./hub-services.nix
-    ./prometheus.nix
-    ./homelab-monitor.nix
+    ./services.nix
     ./backup.nix
   ];
 
@@ -103,9 +100,6 @@
 
   # ── Nebula ──────────────────────────────────────────────────────
   services.nebula.networks.homelab.enable = true;
-
-  # ── pi coding agent ──────────────────────────────────────────
-  services.pi-agent.enable = true;
 
   # ── opencode AI coding agent ────────────────────────────────────
   services.opencode.enable = true;

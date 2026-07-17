@@ -105,7 +105,6 @@
   # ── Extra packages ───────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     rsync
-    zellij
     tree
     pigz            # parallel gzip for faster transfers
     pv              # pipe viewer for progress

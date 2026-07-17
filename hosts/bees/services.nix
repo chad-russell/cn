@@ -17,7 +17,7 @@
     mode = "0644";
   };
 
-  system.activationScripts.hub-services-dirs = lib.stringAfter [ "users" ] ''
+  system.activationScripts.services-dirs = lib.stringAfter [ "users" ] ''
     mkdir -p /srv/linkding/data
     mkdir -p /srv/papra/data
     mkdir -p /srv/open-webui/data

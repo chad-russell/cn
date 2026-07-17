@@ -10,10 +10,7 @@
     ../../modules/base-server.nix
     ../../modules/hub-disk-config.nix
     ../../modules/nebula-client.nix
-    ../../modules/pi-agent.nix
     ../../modules/opencode.nix
-    ./caddy-dev.nix
-    ./buildspace.nix
     ./backup.nix
     ./tailscale.nix
   ];
@@ -106,20 +103,12 @@
     pkgs.github-cli
   ];
 
-  # ── pi coding agent ──────────────────────────────────────────
-  services.pi-agent.enable = true;
-
   # ── opencode AI coding agent ────────────────────────────────────
   services.opencode.enable = true;
   services.opencode.web.enable = true;
   services.opencode.web.hostname = "0.0.0.0";
 
   # (Firewall disabled — no per-service port openings needed)
-
-  # ── Dev stacks ──────────────────────────────────────────────────
-  # Buildspace dev stack (podman + user-linger). Gloo dev now runs on
-  # the thinkpad via quadlets — see gloo/.
-  services.buildspace.enable = true;
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";

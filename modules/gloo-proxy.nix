@@ -31,8 +31,6 @@ in
       type = lib.types.str;
       description = "User to run the service as";
     };
-
-
   };
 
   config = lib.mkIf cfg.enable {
@@ -63,14 +61,5 @@ in
         MemoryDenyWriteExecute = false; # Bun JIT needs this
       };
     };
-
-    # ── Pi extension (auto-discovery) ────────────────────────────────
-    # Installs the gloo-proxy pi extension so pi auto-discovers Gloo models.
-    environment.etc."pi-extensions/gloo-proxy/index.ts".source = ./gloo-proxy-pi-extension.ts;
-
-    systemd.tmpfiles.rules = [
-      "d /home/${cfg.user}/.pi/agent/extensions/gloo-proxy 0755 ${cfg.user} users -"
-      "L+ /home/${cfg.user}/.pi/agent/extensions/gloo-proxy/index.ts - - - /etc/pi-extensions/gloo-proxy/index.ts"
-    ];
   };
 }

@@ -22,18 +22,15 @@ Last validated via SSH: **2026-07-05**.
 ├── flake.lock
 ├── AGENTS.md                  # This guide
 ├── hosts/
-│   ├── bee/                   # Beelink mini PC: Nebula lighthouse + Buildspace dev
+│   ├── bee/                   # Beelink mini PC: Nebula lighthouse
 │   │   ├── configuration.nix
-│   │   ├── buildspace.nix
-│   │   └── caddy-dev.nix
 │   ├── bees/                  # Production server: all shared + media + ingress services
 │   │   ├── configuration.nix
 │   │   ├── caddy.nix + caddy/ (Caddyfile, routes)
 │   │   ├── media-services.nix
 │   │   ├── immich.nix
 │   │   ├── ntfy.nix, datenight.nix
-│   │   ├── hub-services.nix, linkding.container, papra.container, open-webui.container
-│   │   ├── prometheus.nix, homelab-monitor.nix
+│   │   ├── services.nix, linkding.container, papra.container, open-webui.container
 │   │   └── disk-config.nix
 │   ├── homeassistant/         # HAOS operational docs + helper scripts + Nebula add-on
 │   │   ├── addons/nebula/     # Local HAOS add-on: Nebula VPN client
@@ -61,13 +58,13 @@ Last validated via SSH: **2026-07-05**.
                               Internet
                                   │
                                   ▼
-                ┌──────────────────────────────────┐
-                │ gateway / Hetzner VPS             │
-                │ 178.156.171.212 / NixOS 25.11     │
-                │ Caddy: *.crussell.io TLS ingress  │
-                │   (HTTP-01) → backends over Nebula│
-                │ Nebula lighthouse+relay 10.10.0.2 │
-                └───────────────┬──────────────────┘
+                ┌────────────────────────────────────┐
+                │ gateway / Hetzner VPS              │
+                │ 178.156.171.212 / NixOS 25.11      │
+                │ Caddy: *.crussell.io TLS ingress   │
+                │   (HTTP-01) → backends over Nebula │
+                │ Nebula lighthouse+relay 10.10.0.2  │
+                └───────────────┬────────────────────┘
                                 │ Nebula to 10.10.0.6 / 10.10.0.51
                 ┌───────────────┴──────────────────┐
                 ▼                                  ▼
@@ -77,24 +74,23 @@ Last validated via SSH: **2026-07-05**.
    │ Nebula 10.10.0.6         │   │ Nebula 10.10.0.12        │
    │                          │   │ Nebula LH 10.10.0.1      │
    │ AMD Ryzen AI MAX+ 395    │   │ AMD Ryzen 7 7840HS       │
-   │ 16C/32T, ~62 GB RAM     │   │ 8C/16T, 27 GB RAM        │
-   │ 2 TB NVMe, dual 10GbE   │   │ 1 TB NVMe, 1 GbE         │
+   │ 16C/32T, ~62 GB RAM      │   │ 8C/16T, 27 GB RAM        │
+   │ 2 TB NVMe, dual 10GbE    │   │ 1 TB NVMe, 1 GbE         │
    │                          │   │                          │
    │ ALL PRODUCTION SERVICES: │   │ SERVICES:                │
-    │  Caddy (*.internal TLS)  │   │  Nebula lighthouse       │
-     │  ntfy, datenight         │   │  Buildspace (podman)     │
-    │  linkding, papra         │   │  Caddy dev (*.dev TLS)   │
+   │   Caddy (*.internal TLS) │   │  Nebula lighthouse       │
+   │    ntfy, datenight       │   │  Caddy dev (*.dev TLS)   │
+   │   linkding, papra        │   │                          │
    │  open-webui              │   │                          │
    │  Jellyfin, Sonarr,       │   │                          │
    │  Radarr, Prowlarr,       │   │                          │
    │  qBittorrent, Jellyseerr │   │                          │
    │  Immich (server + ML)    │   │                          │
-   │  Prometheus, monitoring  │   │                          │
    └──────────┬───────────────┘   └──────────┬───────────────┘
-              │ NFS (10GbE)                   │ NFS
-              ▼                                ▼
+              │ NFS (10GbE)                  │ NFS
+              ▼                              ▼
     ┌─────────────────┐            ┌─────────────────┐
-    │ nas / NixOS      │            │ nas / NixOS     │
+    │ nas / NixOS     │            │ nas / NixOS     │
     │ 192.168.20.31   │            │ 192.168.20.31   │
     │ NFS: media,     │            │ NFS: backups    │
     │ photos, backups │            └─────────────────┘
@@ -109,7 +105,7 @@ Laptop: think / NixOS 25.11, configured under `hosts/thinkpad/`.
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, open-webui, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
-| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse, Buildspace (podman). Caddy dev reverse proxy.                                                                                                                       |
+| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse. Caddy dev reverse proxy.                                                                                                                       |
 | `think`         | varies            | `10.10.0.10`                          | NixOS 25.11 | `hosts/thinkpad/`                    | Laptop with home-manager, niri, Noctalia, Podman, dev tools.       |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 25.11 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
@@ -206,9 +202,7 @@ Source files:
 - `hosts/bees/media-services.nix` — Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr
 - `hosts/bees/immich.nix` — Immich server + ML
 - `hosts/bees/ntfy.nix`, `datenight.nix`
-- `hosts/bees/hub-services.nix` + `*.container` — linkding, papra, open-webui
-- `hosts/bees/prometheus.nix` — Prometheus monitoring
-- `hosts/bees/homelab-monitor.nix` — AI-powered infrastructure monitoring
+- `hosts/bees/services.nix` + `*.container` — linkding, papra, open-webui
 
 Live systemd services:
 
@@ -261,7 +255,7 @@ clients reach bees directly over the overlay, bypassing the gateway.
 
 Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
-- `hub-services.caddy` — linkding, papra, ntfy, open-webui
+- `services.caddy` — linkding, papra, ntfy, open-webui
 - `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
 
 #### Updating Caddy Routes
@@ -292,14 +286,11 @@ Caddy's Route53 DNS challenge credentials are managed via agenix (`secrets/aws-e
 Source files:
 
 - `hosts/bee/configuration.nix`
-- `hosts/bee/buildspace.nix` — Buildspace dev stack (podman + user-linger)
-- `hosts/bee/caddy-dev.nix` — dev reverse proxy for `*.dev.crussell.io` (internal CA)
 
 Running services:
 
 - `nebula@homelab.service` — `10.10.0.12`
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
-- Buildspace dev stack (podman rootless, user systemd units)
 - Caddy dev reverse proxy (`*.dev.crussell.io` → localhost dev ports)
 
 > Gloo dev no longer runs on bee — it moved to the thinkpad and runs via

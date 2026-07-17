@@ -25,7 +25,6 @@
 #   - NFS server (exports to bees, bee)
 #   - Monthly btrfs scrub + quarterly balance
 #   - Nebula VPN client (10.10.0.3)
-#   - Prometheus node exporter
 
 { config, lib, pkgs, ... }:
 
@@ -101,7 +100,6 @@
     smartmontools       # SMART disk health monitoring
     hdparm              # disk power management
     rsync
-    zellij
     tree
     pciutils
     usbutils

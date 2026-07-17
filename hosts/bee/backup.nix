@@ -1,6 +1,6 @@
 # ── bee: Backup Configuration ──────────────────────────────────────
 #
-# Backs up the Gloo dev stack and buildspace data.
+# Backs up the Gloo dev stack data.
 
 { config, lib, pkgs, ... }:
 
@@ -16,7 +16,6 @@
 
     paths = [
       "/home/crussell/Gloo"
-      "/home/crussell/buildspace"
     ];
 
     exclude = [
