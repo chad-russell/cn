@@ -22,7 +22,7 @@ Overlay CIDR: `10.10.0.0/24`
 | `10.10.0.5` | `bees` legacy/AI identity in PKI |
 | `10.10.0.6` | `bees` production server (Caddy/public ingress) |
 | `10.10.0.10` | `think` laptop |
-| `10.10.0.11` | `phone` / `misc` |
+| `10.10.0.11` | `phone` |
 | `10.10.0.12` | `bee` Beelink mini PC |
 | `10.10.0.51` | `homeassistant` HAOS (via local add-on) |
 

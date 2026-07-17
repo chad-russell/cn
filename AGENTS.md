@@ -36,7 +36,6 @@ Last validated via SSH: **2026-07-05**.
 │   │   ├── addons/nebula/     # Local HAOS add-on: Nebula VPN client
 │   │   ├── scripts/           # Deploy, SSH, supervisor helpers
 │   │   └── README.md
-│   ├── misc/                  # HP Z820 workstation (temporary backup target)
 │   └── thinkpad/              # `think` laptop NixOS + home-manager config
 ├── modules/
 │   ├── base-server.nix        # Shared server baseline: user, SSH, networkd, packages, GC, NFS client
@@ -147,7 +146,7 @@ itself — the most powerful machine and always on. Builds happen on `bees`; the
 resulting closure is pushed to the target over Nebula and switched. When the
 target *is* `bees`, the deploy script does a direct local switch (no SSH-to-self).
 
-Available NixOS hosts (deploy targets): `bee`, `bees`, `misc`, `nas`, `gateway`.
+Available NixOS hosts (deploy targets): `bee`, `bees`, `nas`, `gateway`.
 
 > The flake still defines a `think` nixosConfiguration, but the thinkpad is now a
 > Fedora atomic host and that target is stale (references a deleted file). It's
@@ -368,7 +367,7 @@ Current overlay host entries from `modules/nebula-hosts.nix`:
 | `10.10.0.2`  | `nebula-hetzner` — Hetzner lighthouse/relay |
 | `10.10.0.3`  | `nas`                                       |
 | `10.10.0.6`  | `bees` — production server                  |
-| `10.10.0.11` | `misc`                                      |
+| `10.10.0.11` | `phone`                                     |
 | `10.10.0.12` | `bee` — dev server                          |
 | `10.10.0.10` | `think` — laptop                            |
 

@@ -177,11 +177,6 @@
         ];
       };
 
-      # misc — HP Z820 workstation (temporary backup target, future hypervisor)
-      nixosConfigurations.misc = mkHost {
-        hostname = "misc";
-      };
-
       # nas — UGREEN DXP4800 Pro (network-attached storage, btrfs RAID1)
       nixosConfigurations.nas = mkHost {
         hostname = "nas";
@@ -220,7 +215,7 @@
               echo "machine; the target is switched over SSH (or locally if it"
               echo "is this host)."
               echo ""
-              echo "Available hosts: bee bees misc nas gateway"
+              echo "Available hosts: bee bees nas gateway"
               exit 1
             fi
 
@@ -229,7 +224,6 @@
 
             for host in $HOSTS; do
               case "$host" in
-                misc)    TARGET="crussell@192.168.20.42" ;;
                 nas)     TARGET="crussell@10.10.0.3" ;;
                 bee)     TARGET="crussell@10.10.0.12" ;;
                 bees)    TARGET="crussell@10.10.0.6" ;;
@@ -279,7 +273,6 @@
             case "$HOST" in
               bee) IP="''${IP:-192.168.20.105}" ;;
               bees) IP="''${IP:-192.168.20.41}" ;;
-misc) IP="''${IP:-192.168.20.42}" ;;
               nas) IP="''${IP:-192.168.20.31}" ;;
               gateway) IP="''${IP:-178.156.171.212}" ;;
               *)
