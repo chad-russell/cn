@@ -3,11 +3,11 @@
 A **standalone podman-quadlet** version of the gpl dev environment, running
 side-by-side with the repo's own `docker-compose.yml` / `.devcontainer` compose
 files. The compose files are **not touched at all**; this lives entirely under
-`~/Code/cn/gloo/quadlets/gpl/` and uses its own container / network / volume /
+`~/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/` and uses its own container / network / volume /
 image names so the two never collide.
 
-> Path note: you may see this as `/work/Code/cn/gloo/quadlets/gpl/`; on the host
-> the real tree is under the home dir, i.e. `~/Code/cn/gloo/quadlets/gpl/`
+> Path note: you may see this as `/work/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/`; on the host
+> the real tree is under the home dir, i.e. `~/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/`
 > (Silverblue → `/var/home/crussell/...`). The unit files use the real path.
 
 ## What it runs
@@ -44,7 +44,7 @@ lives outside the repo.
 ## Install (once, and after any edit to a unit file)
 
 ```bash
-~/Code/cn/gloo/quadlets/gpl/install.sh
+~/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/install.sh
 ```
 
 This symlinks the unit files into `~/.config/containers/systemd/` and runs
@@ -70,10 +70,10 @@ journalctl --user -u gpl-dev-app -f
 There's also a tiny optional wrapper `qd` (sister to the polymer `qd`):
 
 ```bash
-~/Code/cn/gloo/quadlets/gpl/qd gpl up
-~/Code/cn/gloo/quadlets/gpl/qd gpl down
-~/Code/cn/gloo/quadlets/gpl/qd gpl status   # status of app + db + minio
-~/Code/cn/gloo/quadlets/gpl/qd gpl logs
+~/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/qd gpl up
+~/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/qd gpl down
+~/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/qd gpl status   # status of app + db + minio
+~/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/qd gpl logs
 ```
 
 Then browse to **http://localhost:3006** (gpl).
@@ -120,7 +120,7 @@ systemctl --user restart gpl-dev-app
 Edit a file here, then:
 
 ```bash
-~/Code/cn/gloo/quadlets/gpl/install.sh   # re-symlinks + daemon-reload
+~/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/install.sh   # re-symlinks + daemon-reload
 systemctl --user restart gpl-dev-app
 ```
 

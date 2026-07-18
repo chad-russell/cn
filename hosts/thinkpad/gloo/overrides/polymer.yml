@@ -4,8 +4,8 @@
 # on macOS).
 #
 # Use the wrapper instead of raw compose:
-#   ~/Code/cn/gloo/dev polymer up      # bring up the whole stack
-#   ~/Code/cn/gloo/dev polymer down
+#   ~/Code/cn/hosts/thinkpad/gloo/dev polymer up      # bring up the whole stack
+#   ~/Code/cn/hosts/thinkpad/gloo/dev polymer down
 #
 # What this changes vs the repo's compose:
 #   1. app: command = pnpm dev (Model A — the dev server runs as PID 1, so

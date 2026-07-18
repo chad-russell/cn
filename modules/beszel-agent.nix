@@ -8,10 +8,8 @@
 # Usage in a host config:
 #
 #   imports = [ ../../modules/beszel-agent.nix ];
-#   services.beszel-agent = {
-#     enable = true;
-#     extraFilesystems = [ "/pool" ];   # optional: report extra disks
-#   };
+#   # enable defaults to true; optionally report extra disks:
+#   services.beszel-agent.extraFilesystems = [ "/pool" ];
 #
 # The hub's public KEY + the universal TOKEN live in
 # secrets/beszel-agent-env.age (declared below, shared by all hosts).
@@ -50,8 +48,12 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    users.users.beszel-agent = {
+  config = lib.mkMerge [
+    # Every host that imports this module gets the agent by default.
+    { services.beszel-agent.enable = lib.mkDefault true; }
+
+    (lib.mkIf cfg.enable {
+      users.users.beszel-agent = {
       isSystemUser = true;
       group = "beszel-agent";
       home = "/var/lib/beszel-agent";
@@ -107,5 +109,6 @@ in
         KeyringMode = "private";
       };
     };
-  };
+    })
+  ];
 }

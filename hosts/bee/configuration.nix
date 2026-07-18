@@ -8,7 +8,7 @@
 {
   imports = [
     ../../modules/base-server.nix
-    ../../modules/bee-disk-config.nix
+    ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
     ../../modules/beszel-agent.nix
@@ -28,7 +28,6 @@
 
   # ── Hardware ─────────────────────────────────────────────────────
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-  hardware.enableRedistributableFirmware = true;
   zramSwap.enable = true;
 
   # ── Networking ───────────────────────────────────────────────────
@@ -48,7 +47,7 @@
   };
 
   # ── Nebula ──────────────────────────────────────────────────────
-  services.nebula.networks.homelab.enable = true;
+  # (homelab client defaults + enable live in modules/nebula-client.nix)
 
   # ── Nebula: Local lighthouse (10.10.0.1) ───────────────────────
   #
@@ -105,12 +104,10 @@
   ];
 
   # ── opencode AI coding agent ────────────────────────────────────
-  services.opencode.enable = true;
-  services.opencode.web.enable = true;
-  services.opencode.web.hostname = "0.0.0.0";
+  # (enable + web defaults live in modules/opencode.nix)
 
   # ── Beszel monitoring agent ────────────────────────────────────
-  services.beszel-agent.enable = true;
+  # (enabled by default in modules/beszel-agent.nix)
 
   # (Firewall disabled — no per-service port openings needed)
 

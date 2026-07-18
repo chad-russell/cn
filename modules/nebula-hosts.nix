@@ -1,20 +1,17 @@
 # ── Nebula Host Entries ────────────────────────────────────────────
 #
-# Adds /etc/hosts entries for all Nebula overlay IPs.
-# Imported by base-server.nix so every connected machine can
-# resolve nebula hostnames. Also import on roaming clients (thinkpad, etc.).
+# /etc/hosts entries for all Nebula overlay IPs, generated from
+# lib/host-meta.nix (the single source of truth). Imported by
+# base-server.nix so every connected machine can resolve nebula
+# hostnames. Also import on roaming clients (thinkpad, etc.).
 
-{ config, lib, ... }:
+{ lib, ... }:
 
+let
+  hostMeta = import ../lib/host-meta.nix;
+in
 {
-  networking.extraHosts = ''
-    10.10.0.1   nebula-lh
-    10.10.0.2   nebula-hetzner
-    10.10.0.3   nas
-    10.10.0.6   bees
-    10.10.0.11  phone
-    10.10.0.12  bee
-    10.10.0.10  think
-    10.10.0.51  homeassistant
-  '';
+  networking.extraHosts = lib.concatLines (
+    lib.mapAttrsToList (name: h: "${h.nebula}\t${h.hostsName or name}") hostMeta
+  );
 }

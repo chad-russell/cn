@@ -70,6 +70,10 @@
   boot.loader.systemd-boot.configurationLimit = 15;
   boot.loader.grub.configurationLimit = 15;
 
+  # ── Firmware (shared by all hosts; bees/gateway mkForce for
+  #    enableAllFirmware/microcode interactions) ─────────────────────
+  hardware.enableRedistributableFirmware = true;
+
   nix.gc = {
     automatic = true;
     dates = "weekly";
@@ -84,7 +88,7 @@
   # ── Agenix: decrypt secrets at boot ────────────────────────────────
   # The identity lives under the user's $HOME, so any host that mounts /home
   # as a SEPARATE filesystem MUST mark it `neededForBoot = true` (already done
-  # in hosts/{bees,nas}/disk-config.nix and modules/bee-disk-config.nix).
+  # in hosts/{bees,nas,bee}/disk-config.nix).
   # Otherwise /home mounts after activation and every age secret silently
   # fails to decrypt on reboot — which took down Caddy (and thus all public
   # routes incl. homeassistant.crussell.io) on bees after the 2026-06-13 power

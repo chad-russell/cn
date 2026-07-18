@@ -13,7 +13,7 @@
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
-    ../../modules/gloo-proxy.nix
+    ./gloo-proxy.nix
     ./media-services.nix
     ./immich.nix
     ./ntfy.nix
@@ -100,18 +100,13 @@
   };
 
   # ── Nebula ──────────────────────────────────────────────────────
-  services.nebula.networks.homelab.enable = true;
+  # (homelab client defaults + enable live in modules/nebula-client.nix)
 
   # ── opencode AI coding agent ────────────────────────────────────
-  services.opencode.enable = true;
-  services.opencode.web.enable = true;
-  services.opencode.web.hostname = "0.0.0.0";
+  # (enable + web defaults live in modules/opencode.nix)
 
   # ── Gloo AI Proxy ──────────────────────────────────────────────────
-  services.gloo-proxy = {
-    enable = true;
-    user = "crussell";
-  };
+  services.gloo-proxy.enable = true;
 
   # ── Firewall: disabled (router handles it) ───────────────────────
   networking.firewall.enable = false;

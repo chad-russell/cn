@@ -1,4 +1,4 @@
-# ── Hub Disk Layout ────────────────────────────────────────────────
+# ── bee Disk Layout ────────────────────────────────────────────────
 #
 # Hardware: Crucial P3 Plus 1TB NVMe (CT1000P3PSSD8)
 # RAM: 32GB (+ zram)

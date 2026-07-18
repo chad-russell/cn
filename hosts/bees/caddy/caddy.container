@@ -13,7 +13,7 @@ Volume=caddy_config:/config
 EnvironmentFile=/run/agenix/aws-env
 
 [Service]
-Restart=unless-stopped
+Restart=always
 RestartSec=5
 
 [Install]

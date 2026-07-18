@@ -37,7 +37,7 @@ PublishPort=3001:3001
 Volume=/var/home/crussell/Gloo/360-polymer:/workspace
 
 # Startup script lives outside the product repo; relabel (:z) + mount read-only.
-Volume=/var/home/crussell/Code/cn/gloo/quadlets/polymer/dev-server.sh:/usr/local/bin/dev-server.sh:z,ro
+Volume=/var/home/crussell/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/dev-server.sh:/usr/local/bin/dev-server.sh:z,ro
 
 # Repo gitignored env (WorkOS, etc.) plus forced local DB URLs onto the quadlet
 # postgres (resolved via the polymer_db network alias).

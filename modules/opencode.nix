@@ -1,15 +1,16 @@
 # ── OpenCode AI Coding Agent ──────────────────────────────────────────
 #
-# Installs the opencode CLI (TUI + web) and optionally provides a
-# system-level systemd service for the web interface.
+# Installs the opencode CLI (TUI + web) and a system-level systemd service
+# for the web interface. Imported by bee + bees.
 #
-# Usage (in a host configuration.nix):
-#   services.opencode.enable = true;
-#   services.opencode.web.enable = true;   # optional web service
+# Importing this module defaults opencode (and its web service) ON; set
+# `services.opencode.enable = false;` to opt out on a host.
 #
 # CLI:  just type `opencode` in a terminal
-# Web:  systemctl start opencode-web
-#       then open http://localhost:4096
+# Web:  http://<host>:4096  (auto-started at boot)
+#
+# OPENROUTER_API_KEY is supplied to the web service via the agenix secret
+# secrets/openrouter-api-key.age (env file).
 
 { config, lib, pkgs, unstable, ... }:
 
@@ -23,7 +24,7 @@ in
     web = {
       enable = lib.mkOption {
         type = lib.types.bool;
-        default = false;
+        default = true;
         description = "Enable a system-level systemd service for `opencode web`";
       };
 
@@ -35,7 +36,7 @@ in
 
       hostname = lib.mkOption {
         type = lib.types.str;
-        default = "localhost";
+        default = "0.0.0.0";
         description = "Hostname / bind address for the web interface";
       };
 
@@ -47,30 +48,41 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    # ── Package ────────────────────────────────────────────────────
-    environment.systemPackages = [
-      unstable.opencode
-    ];
+  config = lib.mkMerge [
+    # Default opencode + web ON for every host that imports this module.
+    {
+      services.opencode.enable = lib.mkDefault true;
+    }
 
-    # ── Web interface systemd service ──────────────────────────────
-    # Not auto-started — use `systemctl start opencode-web` when needed.
-    systemd.services.opencode-web = lib.mkIf cfg.web.enable {
-      description = "OpenCode Web Interface";
-      after = [ "network.target" ];
-      wantedBy = [ "multi-user.target" ];
+    (lib.mkIf cfg.enable {
+      # OPENROUTER_API_KEY for opencode's OpenRouter provider (env file).
+      age.secrets.openrouter-api-key.file = ../secrets/openrouter-api-key.age;
 
-      serviceConfig = {
-        Type = "simple";
-        User = "crussell";
-        Group = "users";
-        WorkingDirectory = cfg.web.directory;
-        ExecStart = "${unstable.opencode}/bin/opencode web --port ${toString cfg.web.port} --hostname ${cfg.web.hostname}";
-        Restart = "always";
-        RestartSec = "5";
-        StartLimitIntervalSec = "60";
-        StartLimitBurst = "5";
+      # ── Package ────────────────────────────────────────────────────
+      environment.systemPackages = [
+        unstable.opencode
+      ];
+
+      # ── Web interface systemd service ──────────────────────────────
+      systemd.services.opencode-web = lib.mkIf cfg.web.enable {
+        description = "OpenCode Web Interface";
+        after = [ "network.target" ];
+        wantedBy = [ "multi-user.target" ];
+
+        serviceConfig = {
+          Type = "simple";
+          User = "crussell";
+          Group = "users";
+          WorkingDirectory = cfg.web.directory;
+          ExecStart = "${unstable.opencode}/bin/opencode web --port ${toString cfg.web.port} --hostname ${cfg.web.hostname}";
+          # Provides OPENROUTER_API_KEY.
+          EnvironmentFile = config.age.secrets.openrouter-api-key.path;
+          Restart = "always";
+          RestartSec = "5";
+          StartLimitIntervalSec = "60";
+          StartLimitBurst = "5";
+        };
       };
-    };
-  };
+    })
+  ];
 }

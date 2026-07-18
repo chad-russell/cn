@@ -60,7 +60,6 @@
 
   # ── Hardware ─────────────────────────────────────────────────────
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-  hardware.enableRedistributableFirmware = true;
   zramSwap.enable = true;
 
   # ── Networking ───────────────────────────────────────────────────
@@ -89,11 +88,11 @@
   # Keep the same Nebula IP as TrueNAS (10.10.0.3) for drop-in replacement.
   # Certs must be deployed to /etc/nebula/{ca.crt,host.crt,host.key}
   # before enabling. Reuse the existing TrueNAS certs from nebula/pki/.
-  services.nebula.networks.homelab.enable = true;  # certs deployed from nebula/pki/
+  # (enable + client defaults live in modules/nebula-client.nix)
 
   # ── Beszel monitoring agent ────────────────────────────────────
   # Report the btrfs RAID1 storage pool in addition to the root fs.
-  services.beszel-agent.enable = true;
+  # (enabled by default in modules/beszel-agent.nix)
   services.beszel-agent.extraFilesystems = [ "/pool" ];
 
   # ── Pool directory structure ─────────────────────────────────────

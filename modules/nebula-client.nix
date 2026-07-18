@@ -5,20 +5,23 @@
 #
 # Usage in host config:
 #   imports = [ ./modules/nebula-client.nix ];
-#   services.nebula.networks.homelab.enable = true;
 #   # Then place certs at /etc/nebula/{ca.crt,host.crt,host.key}
 #
 # Certs are NOT managed by this module — deploy them separately
 # (via agenix or manual copy) before enabling.
 #
-# This module sets connection defaults unconditionally.
-# They're inert when enable = false (the default).
+# This module enables the homelab network and sets its connection
+# defaults. Don't import it on lighthouse hosts (gateway configures
+# Nebula manually); a host can opt out with
+# `services.nebula.networks.homelab.enable = lib.mkForce false;`.
 
 { config, lib, pkgs, ... }:
 
 {
   config = {
     services.nebula.networks.homelab = {
+      enable = lib.mkDefault true;
+
       ca = "/etc/nebula/ca.crt";
       cert = "/etc/nebula/host.crt";
       key = "/etc/nebula/host.key";

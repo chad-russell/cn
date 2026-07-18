@@ -10,7 +10,7 @@
 #   apps/polymer   -> :3000   (webpack; --turbo is disabled — it panics on polymer)
 #   apps/admin360  -> :3001   (turbo)
 #
-# This file lives OUTSIDE the product repo (under ~/Code/cn/gloo/quadlets/polymer)
+# This file lives OUTSIDE the product repo (under ~/Code/cn/hosts/thinkpad/gloo/quadlets/polymer)
 # and is bind-mounted read-only into the container at /usr/local/bin/dev-server.sh,
 # so nothing is vendored into the polymer checkout.
 set -u

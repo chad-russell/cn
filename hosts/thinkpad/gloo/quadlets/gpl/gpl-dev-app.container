@@ -39,7 +39,7 @@ PublishPort=3006:3006
 Volume=/var/home/crussell/Gloo/360-gpl:/workspace
 
 # Startup script lives outside the product repo; relabel (:z) + mount read-only.
-Volume=/var/home/crussell/Code/cn/gloo/quadlets/gpl/dev-server.sh:/usr/local/bin/dev-server.sh:z,ro
+Volume=/var/home/crussell/Code/cn/hosts/thinkpad/gloo/quadlets/gpl/dev-server.sh:/usr/local/bin/dev-server.sh:z,ro
 
 # Infra wiring: postgres + S3 (MinIO) on the quadlet network. These match the
 # repo's .devcontainer/docker-compose.yml `app` environment, resolved via the

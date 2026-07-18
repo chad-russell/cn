@@ -3,11 +3,11 @@
 A **standalone podman-quadlet** version of the polymer dev environment, running
 side-by-side with the existing `podman compose` setup under
 `~/Gloo/360-polymer/.devcontainer`. The existing compose files are **not touched
-at all**; this lives entirely under `~/Code/cn/gloo/quadlets/polymer/` and uses
+at all**; this lives entirely under `~/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/` and uses
 its own container / network / volume / image names so the two never collide.
 
-> Path note: you referred to this as `/work/Code/cn/gloo/quadlets/polymer/`;
-> the real tree is under the home dir, so it's `~/Code/cn/gloo/quadlets/polymer/`
+> Path note: you referred to this as `/work/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/`;
+> the real tree is under the home dir, so it's `~/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/`
 > (no `/work` mount exists). Move it if you meant a different root.
 
 ## What it runs
@@ -33,7 +33,7 @@ already expects.
 ## Install (once, and after any edit to a unit file)
 
 ```bash
-~/Code/cn/gloo/quadlets/polymer/install.sh
+~/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/install.sh
 ```
 
 This symlinks the unit files into `~/.config/containers/systemd/` and runs
@@ -59,10 +59,10 @@ journalctl --user -u polymer-dev-app -f
 There's also a tiny optional wrapper `qd` (sister to the `dev` script):
 
 ```bash
-~/Code/cn/gloo/quadlets/polymer/qd polymer up
-~/Code/cn/gloo/quadlets/polymer/qd polymer down
-~/Code/cn/gloo/quadlets/polymer/qd polymer status   # status of app + db + minio
-~/Code/cn/gloo/quadlets/polymer/qd polymer logs
+~/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/qd polymer up
+~/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/qd polymer down
+~/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/qd polymer status   # status of app + db + minio
+~/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/qd polymer logs
 ```
 
 Then browse to **http://localhost:3000** (polymer) and **http://localhost:3001** (admin360).
@@ -107,7 +107,7 @@ systemctl --user restart polymer-dev-app
 Edit a file here, then:
 
 ```bash
-~/Code/cn/gloo/quadlets/polymer/install.sh   # re-symlinks + daemon-reload
+~/Code/cn/hosts/thinkpad/gloo/quadlets/polymer/install.sh   # re-symlinks + daemon-reload
 systemctl --user restart polymer-dev-app
 ```
 
@@ -125,7 +125,7 @@ one:
 
 ```bash
 # compose (existing):
-~/Code/cn/gloo/dev polymer up        # ...then down before using the quadlet one
+~/Code/cn/hosts/thinkpad/gloo/dev polymer up        # ...then down before using the quadlet one
 
 # quadlet (this):
 systemctl --user start polymer-dev-app

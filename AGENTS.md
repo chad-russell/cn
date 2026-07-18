@@ -24,9 +24,11 @@ Last validated via SSH: **2026-07-05**.
 ├── hosts/
 │   ├── bee/                   # Beelink mini PC: Nebula lighthouse
 │   │   ├── configuration.nix
+│   │   └── disk-config.nix
 │   ├── bees/                  # Production server: all shared + media + ingress services
 │   │   ├── configuration.nix
 │   │   ├── caddy.nix + caddy/ (Caddyfile, routes)
+│   │   ├── gloo-proxy.nix + gloo-proxy/ (Gloo AI proxy: module + package)
 │   │   ├── media-services.nix
 │   │   ├── immich.nix
 │   │   ├── ntfy.nix, datenight.nix
@@ -36,14 +38,17 @@ Last validated via SSH: **2026-07-05**.
 │   │   ├── addons/nebula/     # Local HAOS add-on: Nebula VPN client
 │   │   ├── scripts/           # Deploy, SSH, supervisor helpers
 │   │   └── README.md
-│   └── thinkpad/              # `think` laptop: custom Bluefin image + bubblebox/dotfiles tooling
+│   └── thinkpad/              # `think` laptop: custom Bluefin image + bubblebox/dotfiles/gloo dev tooling
+├── lib/
+│   └── host-meta.nix          # Single source of truth: host → IPs + deploy metadata
 ├── modules/
 │   ├── base-server.nix        # Shared server baseline: user, SSH, networkd, packages, GC, NFS client
 │   ├── server-shell.nix       # Shared zsh/CLI setup for servers
 │   ├── nebula-client.nix      # Shared Nebula client defaults (used by servers)
-│   ├── nebula-hosts.nix       # /etc/hosts entries for Nebula overlay names
-│   ├── fzf-history-widget.zsh # Shared fzf Ctrl+R widget for zsh
-│   └── bee-disk-config.nix     # Beelink/bee btrfs disk layout
+│   ├── nebula-hosts.nix       # /etc/hosts entries for Nebula overlay names (generated from lib/host-meta.nix)
+│   ├── opencode.nix           # opencode CLI + web service (default-on for importers)
+│   ├── beszel-agent.nix       # Beszel agent (default-on for importers)
+│   └── fzf-history-widget.zsh # Shared fzf Ctrl+R widget for zsh
 ├── nebula/
 │   ├── configs/               # Nebula config templates
 │   ├── pki/                   # Nebula CA/certs and age-encrypted private keys
@@ -78,7 +83,7 @@ Last validated via SSH: **2026-07-05**.
    │                          │   │                          │
    │ ALL PRODUCTION SERVICES: │   │ SERVICES:                │
    │   Caddy (*.internal TLS) │   │  Nebula lighthouse       │
-   │    ntfy, datenight       │   │  Caddy dev (*.dev TLS)   │
+   │    ntfy, datenight       │   │                          │
    │   linkding, papra        │   │                          │
    │  Jellyfin, Sonarr,       │   │                          │
    │  Radarr, Prowlarr,       │   │                          │
@@ -103,7 +108,7 @@ Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
-| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse. Caddy dev reverse proxy.                                                                                                                       |
+| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay).                                                                                                          |
 | `think`         | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Not a NixOS deploy target. |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 25.11 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
@@ -304,10 +309,10 @@ Running services:
 
 - `nebula@homelab.service` — `10.10.0.12`
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
-- Caddy dev reverse proxy (`*.dev.crussell.io` → localhost dev ports)
 
 > Gloo dev no longer runs on bee — it moved to the thinkpad and runs via
-> podman quadlets. See `gloo/` (`gloo/README.md`) for the current workflow.
+> podman quadlets. See `hosts/thinkpad/gloo/` (`hosts/thinkpad/gloo/README.md`)
+> for the current workflow.
 
 bee is podman-only (no Docker daemon). Deploy with `nix run .#deploy -- bee`
 from the deploy origin (`bees`).

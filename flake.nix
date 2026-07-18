@@ -36,9 +36,28 @@
       ...
     }:
     let
+      lib = nixpkgs.lib;
+      username = "crussell";
+
+      # ── Host metadata (single source of truth) ───────────────────
+      hostMeta = import ./lib/host-meta.nix;
+      deployable = lib.filterAttrs (_: h: h ? deployUser) hostMeta;
+
+      # Bash case bodies, generated from hostMeta so the deploy/install
+      # scripts never drift from lib/host-meta.nix.
+      deployCase = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (n: h: "          ${n}) TARGET=\"${h.deployUser}@${h.nebula}\" ;;") deployable
+      );
+      installIpCase = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (n: h: "          ${n}) IP=\"\${IP:-${h.lan}}\" ;;") deployable
+      );
+      installUserCase = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (n: h: "          ${n}) SSH_USER=\"${h.installUser}\" ;;") deployable
+      );
+      availableHosts = lib.concatStringsSep " " (lib.attrNames deployable);
+
       # ── Shared args passed to all NixOS hosts ────────────────────
       specialArgs = {
-        inherit disko agenix;
         unstable = import nixpkgs-unstable {
           system = "x86_64-linux";
           config.allowUnfree = true;
@@ -46,6 +65,8 @@
       };
 
       # ── Helper to build a NixOS configuration ────────────────────
+      # Every host gets home-manager (consistent shell/dotfiles for
+      # `crussell`); pass extraModules for host-specific extras.
       mkHost =
         {
           hostname,
@@ -56,72 +77,34 @@
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = specialArgs // extraSpecialArgs;
-          modules =
-            [
-              ./hosts/${hostname}/configuration.nix
-              disko.nixosModules.disko
-              agenix.nixosModules.default
-              {
-                nixpkgs.config.allowUnfree = true;
-                # Shared overlay for custom packages
-                nixpkgs.overlays = [
-                  (final: prev: {
-                    gloo-proxy = final.callPackage ./pkgs/gloo-proxy/package.nix { };
-                  })
-                ];
-              }
-              {
-                # Make this flake self-referential for deployments
-                nix.registry.cn.flake = self;
-                nix.settings.experimental-features = [
-                  "nix-command"
-                  "flakes"
-                ];
-              }
-            ]
-            ++ extraModules;
+          modules = [
+            ./hosts/${hostname}/configuration.nix
+            disko.nixosModules.disko
+            agenix.nixosModules.default
+            home-manager.nixosModules.home-manager
+            {
+              nixpkgs.config.allowUnfree = true;
+              home-manager.useUserPackages = true;
+              home-manager.useGlobalPkgs = true;
+              home-manager.users.${username} = import ./modules/server-home.nix;
+            }
+            {
+              # Make this flake self-referential for deployments
+              nix.registry.cn.flake = self;
+              nix.settings.experimental-features = [
+                "nix-command"
+                "flakes"
+              ];
+            }
+          ] ++ extraModules;
         };
-
-      username = "crussell";
     in
     {
       # ── NixOS Configurations ─────────────────────────────────────
-
-      # bee — Beelink mini PC (general-purpose server)
-      nixosConfigurations.bee = mkHost {
-        hostname = "bee";
-        extraModules = [
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useUserPackages = true;
-            home-manager.useGlobalPkgs = true;
-            home-manager.users.${username} = import ./modules/server-home.nix;
-          }
-        ];
-      };
-
-      # nas — UGREEN DXP4800 Pro (network-attached storage, btrfs RAID1)
-      nixosConfigurations.nas = mkHost {
-        hostname = "nas";
-      };
-
-      # bees — AMD Ryzen AI MAX+ 395 production server
-      nixosConfigurations.bees = mkHost {
-        hostname = "bees";
-        extraModules = [
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useUserPackages = true;
-            home-manager.useGlobalPkgs = true;
-            home-manager.users.${username} = import ./modules/server-home.nix;
-          }
-        ];
-      };
-
-      # gateway — Hetzner Cloud reverse proxy + Nebula lighthouse/relay
-      nixosConfigurations.gateway = mkHost {
-        hostname = "gateway";
-      };
+      nixosConfigurations.bee = mkHost { hostname = "bee"; };
+      nixosConfigurations.bees = mkHost { hostname = "bees"; };
+      nixosConfigurations.nas = mkHost { hostname = "nas"; };
+      nixosConfigurations.gateway = mkHost { hostname = "gateway"; };
 
       # ── Deploy script (nix run .#deploy) ─────────────────────────
       apps.x86_64-linux.deploy = {
@@ -138,7 +121,7 @@
               echo "machine; the target is switched over SSH (or locally if it"
               echo "is this host)."
               echo ""
-              echo "Available hosts: bee bees nas gateway"
+              echo "Available hosts: ${availableHosts}"
               exit 1
             fi
 
@@ -147,12 +130,9 @@
 
             for host in $HOSTS; do
               case "$host" in
-                nas)     TARGET="crussell@10.10.0.3" ;;
-                bee)     TARGET="crussell@10.10.0.12" ;;
-                bees)    TARGET="crussell@10.10.0.6" ;;
-                gateway) TARGET="root@178.156.171.212" ;;
+            ${deployCase}
                 *)
-                  echo "Unknown host: $host"
+                  echo "Unknown host: $host" >&2
                   exit 1
                   ;;
               esac
@@ -194,12 +174,9 @@
             IP="''${2:-}"
 
             case "$HOST" in
-              bee) IP="''${IP:-192.168.20.105}" ;;
-              bees) IP="''${IP:-192.168.20.41}" ;;
-              nas) IP="''${IP:-192.168.20.31}" ;;
-              gateway) IP="''${IP:-178.156.171.212}" ;;
+            ${installIpCase}
               *)
-                echo "Unknown host: $HOST"
+                echo "Unknown host: $HOST" >&2
                 exit 1
                 ;;
             esac
@@ -209,10 +186,8 @@
             read -p "Continue? [y/N] " confirm
             [ "$confirm" = "y" ] || exit 1
 
-# bee/bees connect as crussell; all others connect as root
             case "$HOST" in
-              bee|bees)  SSH_USER="crussell" ;;
-              *)         SSH_USER="root" ;;
+            ${installUserCase}
             esac
 
             nix run github:nix-community/nixos-anywhere -- --flake .#$HOST $SSH_USER@$IP

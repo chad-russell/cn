@@ -18,9 +18,9 @@
 
 {
   # Monitor bees itself with a local agent (runs as its own `beszel-agent`
-  # user, separate from the hub's `beszel` user).
+  # user, separate from the hub's `beszel` user). Enabled by default by the
+  # imported module.
   imports = [ ../../modules/beszel-agent.nix ];
-  services.beszel-agent.enable = true;
 
   users.users.beszel = {
     isSystemUser = true;

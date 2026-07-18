@@ -1,8 +1,10 @@
 /**
  * Gloo AI → OpenAI-compatible proxy server
  *
- * Authenticates via the standard OpenAI Authorization header:
- *   Authorization: Bearer <client_id>:<client_secret>
+ * Authentication (in priority order):
+ *   1. Per-request Authorization header:  Bearer <client_id>:<client_secret>
+ *   2. Ambient env vars:  GLOO_AI_CLIENT_ID + GLOO_AI_CLIENT_SECRET
+ *      (supplied by the systemd unit's EnvironmentFile)
  *
  * Endpoints:
  *   GET  /v1/models             → list available Gloo models
@@ -18,25 +20,35 @@ const PORT = parseInt(process.env.PORT || "4637");
 // Credential parsing
 // ---------------------------------------------------------------------------
 function parseCredentials(req: Request): { clientId: string; clientSecret: string } | null {
+  // 1) Per-request Authorization header (overrides ambient env defaults).
   const auth = req.headers.get("Authorization");
-  if (!auth) return null;
+  if (auth) {
+    const match = auth.match(/^Bearer\s+(.+)$/i);
+    if (match) {
+      const token = match[1];
+      const colonIdx = token.indexOf(":");
+      if (colonIdx !== -1) {
+        return {
+          clientId: token.slice(0, colonIdx),
+          clientSecret: token.slice(colonIdx + 1),
+        };
+      }
+    }
+  }
 
-  const match = auth.match(/^Bearer\s+(.+)$/i);
-  if (!match) return null;
+  // 2) Ambient env vars (set by the systemd unit's EnvironmentFile).
+  const envId = process.env.GLOO_AI_CLIENT_ID;
+  const envSecret = process.env.GLOO_AI_CLIENT_SECRET;
+  if (envId && envSecret) {
+    return { clientId: envId, clientSecret: envSecret };
+  }
 
-  const token = match[1];
-  const colonIdx = token.indexOf(":");
-  if (colonIdx === -1) return null;
-
-  return {
-    clientId: token.slice(0, colonIdx),
-    clientSecret: token.slice(colonIdx + 1),
-  };
+  return null;
 }
 
 function unauthorized(): Response {
   return Response.json(
-    { error: { message: "Invalid or missing Authorization header. Use: Bearer <client_id>:<client_secret>", type: "authentication_error" } },
+    { error: { message: "Missing credentials. Send Authorization: Bearer <client_id>:<client_secret>, or set GLOO_AI_CLIENT_ID + GLOO_AI_CLIENT_SECRET on the server.", type: "authentication_error" } },
     { status: 401, headers: corsHeaders() },
   );
 }

@@ -33,7 +33,7 @@ fi
 case "$proj" in
   polymer)
     dir="$HOME/Gloo/360-polymer/.devcontainer"
-    ov="$HOME/Code/cn/gloo/overrides/polymer.yml"
+    ov="$HOME/Code/cn/hosts/thinkpad/gloo/overrides/polymer.yml"
     app_svc="app"                                  # compose service key
     app_name="app"                                  # compose service key for logs
     infra="polymer_db polymer_minio"

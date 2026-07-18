@@ -13,7 +13,7 @@ PublishPort=30083:1221
 Volume=/srv/papra/data:/app/app-data
 
 [Service]
-Restart=unless-stopped
+Restart=always
 RestartSec=5
 
 [Install]

@@ -11,7 +11,7 @@ devcontainers the whole team uses.
 
 ```
 ~/Gloo/360-polymer/                 cloned repo (code + gitignored .env.local)
-~/Code/cn/gloo/                     THIS — orchestration (tracked)
+~/Code/cn/hosts/thinkpad/gloo/                     THIS — orchestration (tracked)
 ├── overrides/
 │   └── polymer.yml                 personal port publish + dev-server command
 ├── dev                             project/command dispatcher
@@ -26,17 +26,17 @@ split-brain.
 
 ```bash
 # first time (fresh clone): install deps + set up the DB
-~/Code/cn/gloo/dev polymer setup
+~/Code/cn/hosts/thinkpad/gloo/dev polymer setup
 
 # bring the stack up — db, minio, app(running pnpm dev)
-~/Code/cn/gloo/dev polymer up
+~/Code/cn/hosts/thinkpad/gloo/dev polymer up
 
 # the dev server is already running as the app container's PID 1.
 # reach it at http://localhost:3000 (polymer) and :3001 (admin360)
 
 # tail dev output / tear down
-~/Code/cn/gloo/dev polymer logs
-~/Code/cn/gloo/dev polymer down
+~/Code/cn/hosts/thinkpad/gloo/dev polymer logs
+~/Code/cn/hosts/thinkpad/gloo/dev polymer down
 ```
 
 Other commands: `infra` (db+minio only), `migrate`, `seed`. Run `dev polymer`

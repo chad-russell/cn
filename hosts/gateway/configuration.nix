@@ -31,7 +31,7 @@
   ];
 
   # ── Hardware ─────────────────────────────────────────────────────
-  hardware.enableRedistributableFirmware = true;
+  # (enableRedistributableFirmware hoisted into modules/base-server.nix)
 
   # ── Networking ───────────────────────────────────────────────────
   # Hetzner Cloud: DHCP provides the public IPv4 address.
@@ -121,7 +121,7 @@
   # ── Beszel monitoring agent ────────────────────────────────────
   # Connects out to the hub on bees over Nebula (beszel.internal.crussell.io
   # resolves to 10.10.0.6); no inbound port required.
-  services.beszel-agent.enable = true;
+  # (enabled by default in modules/beszel-agent.nix)
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";

@@ -8,7 +8,7 @@
 # and blocks until it exits — at which point the container stops so you can read
 # the logs and restart it manually (systemctl --user restart gpl-dev-app).
 #
-# This file lives OUTSIDE the product repo (under ~/Code/cn/gloo/quadlets/gpl)
+# This file lives OUTSIDE the product repo (under ~/Code/cn/hosts/thinkpad/gloo/quadlets/gpl)
 # and is bind-mounted read-only into the container at /usr/local/bin/dev-server.sh,
 # so nothing is vendored into the gpl checkout.
 set -u
