@@ -10,12 +10,14 @@
 {
   imports = [
     ../../modules/base-server.nix
+    ../../modules/freshness-checks.nix
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
     ./gloo-proxy.nix
     ./media-services.nix
     ./immich.nix
+    ./immich-backup.nix
     ./ntfy.nix
     ./datenight.nix
     ./caddy.nix
