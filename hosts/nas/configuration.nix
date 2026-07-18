@@ -31,6 +31,7 @@
 {
   imports = [
     ../../modules/base-server.nix
+    ../../modules/freshness-checks.nix
     ./disk-config.nix
     ./nfs-exports.nix
     ./samba.nix
@@ -129,6 +130,38 @@
   # ── SSH hardening (NAS holds all the data) ──────────────────────
   services.openssh.settings = {
     PasswordAuthentication = lib.mkForce false;  # Key-only
+  };
+
+  # ── Monitoring ──────────────────────────────────────────────────
+  homelab.freshnessChecks = {
+    # SMART health of the 4× HDD pool + the NVMe root. smartd still does the
+    # background attribute monitoring/logging; this is the alerting layer.
+    nas-disks = {
+      description = "nas disk SMART health";
+      extraPath = [ pkgs.smartmontools ];
+      checkCommand = ''
+        fail=""
+        for d in /dev/sd[a-z] /dev/nvme[0-9]n[0-9]; do
+          [ -b "$d" ] || continue
+          out="$(smartctl -H "$d" 2>/dev/null)"
+          if echo "$out" | grep -qi "overall-health"; then
+            echo "$out" | grep -qi "PASSED" || fail="$fail $d"
+          fi
+        done
+        [ -z "$fail" ] || { echo "SMART not PASSED:$fail"; exit 1; }
+        echo "all SMART disks PASSED"
+      '';
+    };
+    # The pool holds everything; alert before it fills.
+    nas-pool-space = {
+      description = "nas /pool free space";
+      checkCommand = ''
+        p=$(df -P /pool 2>/dev/null | awk 'NR==2{print $5+0}')
+        [ -n "$p" ] || { echo "df /pool failed"; exit 1; }
+        echo "/pool ''${p}% full"
+        [ "$p" -lt 90 ]
+      '';
+    };
   };
 
   # ── State version ───────────────────────────────────────────────

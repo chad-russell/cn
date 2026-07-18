@@ -119,6 +119,27 @@
     dockerCompat = true;
   };
 
+  # ── Monitoring ───────────────────────────────────────────────────
+  # Alert if the internal wildcard cert stops renewing (Route53 DNS challenge
+  # via Caddy in a container). Check the live cert on localhost.
+  homelab.freshnessChecks.bees-cert = {
+    description = "bees internal TLS cert";
+    extraPath = [ pkgs.openssl ];
+    checkCommand = ''
+      host=linkding.internal.crussell.io
+      end=$(echo | openssl s_client -connect localhost:443 -servername "$host" 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
+      [ -n "$end" ] || { echo "could not read cert for $host"; exit 1; }
+      days=$(( ($(date -d "$end" +%s) - $(date +%s)) / 86400 ))
+      echo "$host cert valid ''${days}d"
+      [ "$days" -gt 14 ]
+    '';
+  };
+
+  # Surface prolonged failures of the most critical services (they auto-restart,
+  # so this only fires when the restart limit is exhausted).
+  systemd.services.caddy.onFailure = [ "ntfy-failure@caddy.service" ];
+  systemd.services.immich-server.onFailure = [ "ntfy-failure@immich-server.service" ];
+
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";
 }

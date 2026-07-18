@@ -66,12 +66,6 @@ let
 in
 {
   options.homelab = {
-    ntfyUrl = lib.mkOption {
-      type = lib.types.str;
-      default = "https://ntfy.internal.crussell.io/homelab-backups";
-      description = "Default ntfy topic for homelab alerts.";
-    };
-
     freshnessChecks = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options = {

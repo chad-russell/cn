@@ -6,6 +6,14 @@
 { config, lib, pkgs, unstable, ... }:
 
 {
+  ## Single ntfy topic for ALL homelab alerts — subscribe once to this.
+  ## (Consumed by modules/freshness-checks.nix and modules/restic-backup.nix.)
+  options.homelab.ntfyUrl = lib.mkOption {
+    type = lib.types.str;
+    default = "https://ntfy.internal.crussell.io/homelab-alerts";
+    description = "ntfy topic for all homelab alerts.";
+  };
+
   imports = [
     ./server-shell.nix
     ./nebula-hosts.nix

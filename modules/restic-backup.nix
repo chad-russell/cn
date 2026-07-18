@@ -24,7 +24,7 @@ let
   hostname = config.networking.hostName;
 
   # ── ntfy notification helper ────────────────────────────────────
-  ntfyUrl = "https://ntfy.internal.crussell.io/homelab-backups";
+  ntfyUrl = config.homelab.ntfyUrl;
   ntfyScript = pkgs.writeShellScript "restic-ntfy-notify" ''
     STATUS=$1
     TARGET=$2

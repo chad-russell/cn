@@ -15,6 +15,7 @@
     ./disk-config.nix
     ./caddy.nix
     ../../modules/base-server.nix
+    ../../modules/freshness-checks.nix
     ../../modules/beszel-agent.nix
     # NOTE: Do NOT import nebula-client.nix — this host IS a lighthouse.
     # Nebula is configured manually below with lighthouse/relay overrides.
@@ -122,6 +123,22 @@
   # Connects out to the hub on bees over Nebula (beszel.internal.crussell.io
   # resolves to 10.10.0.6); no inbound port required.
   # (enabled by default in modules/beszel-agent.nix)
+
+  # ── Monitoring: alert if the public cert isn't renewing ─────────
+  # If Let's Encrypt renewal silently fails, all public routes break when
+  # the cert expires. Check the live cert served by Caddy on localhost.
+  homelab.freshnessChecks.gateway-cert = {
+    description = "gateway public TLS cert";
+    extraPath = [ pkgs.openssl ];
+    checkCommand = ''
+      host=homeassistant.crussell.io
+      end=$(echo | openssl s_client -connect localhost:443 -servername "$host" 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
+      [ -n "$end" ] || { echo "could not read cert for $host"; exit 1; }
+      days=$(( ($(date -d "$end" +%s) - $(date +%s)) / 86400 ))
+      echo "$host cert valid ''${days}d"
+      [ "$days" -gt 14 ]
+    '';
+  };
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";
