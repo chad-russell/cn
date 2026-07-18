@@ -82,7 +82,7 @@
     checkCommand = ''
       export RESTIC_REPOSITORY="s3:https://s3.${config.services.homelab-backup.s3Region}.amazonaws.com/${config.services.homelab-backup.s3Bucket}/bees"
       export RESTIC_PASSWORD_FILE="${config.age.secrets.restic-password.path}"
-      t="$(restic snapshots --latest 1 --json 2>/dev/null | jq -r '.[0].time')"
+      t="$(restic snapshots --json 2>/dev/null | jq -r 'sort_by(.time) | last | .time')"
       [ -n "$t" ] || { echo "no snapshots in S3 repo"; exit 1; }
       ageh=$(( ($(date +%s) - $(date -d "$t" +%s)) / 3600 ))
       echo "newest snapshot is ''${ageh}h old"
