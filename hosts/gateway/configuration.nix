@@ -140,6 +140,10 @@
     '';
   };
 
+  # Alert if the public ingress stops serving (prolonged failure only —
+  # native NixOS Caddy auto-restarts, so this fires on restart-limit exhaustion).
+  systemd.services.caddy.onFailure = [ "ntfy-failure@caddy.service" ];
+
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";
 }
