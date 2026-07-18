@@ -51,6 +51,11 @@
       "/var/lib/jellyfin/data/transcodes"
       "/var/lib/jellyfin/log"
 
+      # Immich regeneratable from originals (thumbnails + transcoded videos).
+      # Saves ~10 GiB in S3 and speeds restores; Immich rebuilds these on demand.
+      "/mnt/photos/thumbs"
+      "/mnt/photos/encoded-video"
+
       # qBittorrent incomplete downloads
       "*.!qB"
 
