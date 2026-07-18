@@ -34,6 +34,11 @@
       # Caddy configuration (installed by nix but includes TLS certs)
       "/etc/caddy"
 
+      # Web services (bind-mount data + papra auth secret)
+      "/srv/papra/data"
+      "/srv/linkding/data"
+      "/var/lib/papra"
+
       # Immich photo library (on NAS via NFS)
       "/mnt/photos"
     ];
