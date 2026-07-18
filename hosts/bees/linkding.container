@@ -10,7 +10,7 @@ Environment=LD_CSRF_TRUSTED_ORIGINS=https://linkding.internal.crussell.io
 Environment=LD_DISABLE_BACKGROUND_TASKS=False
 Environment=TZ=America/New_York
 PublishPort=30080:9090
-Volume=/srv/linkding/data:/etc/linkding/data
+Volume=/var/lib/linkding/data:/etc/linkding/data
 
 [Service]
 Restart=always

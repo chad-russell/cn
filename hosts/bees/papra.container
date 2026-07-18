@@ -10,7 +10,7 @@ EnvironmentFile=/var/lib/papra/auth.env
 Environment=APP_BASE_URL=https://papra.internal.crussell.io
 Environment=TZ=America/New_York
 PublishPort=30083:1221
-Volume=/srv/papra/data:/app/app-data
+Volume=/var/lib/papra/data:/app/app-data
 
 [Service]
 Restart=always

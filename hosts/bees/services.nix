@@ -14,8 +14,8 @@
   };
 
   system.activationScripts.services-dirs = lib.stringAfter [ "users" ] ''
-    mkdir -p /srv/linkding/data
-    mkdir -p /srv/papra/data
+    mkdir -p /var/lib/linkding/data
+    mkdir -p /var/lib/papra/data
 
     if [ ! -f /var/lib/papra/auth.env ]; then
       mkdir -p /var/lib/papra
