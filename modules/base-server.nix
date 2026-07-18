@@ -67,6 +67,13 @@
   nix.settings.trusted-users = [ "root" "crussell" ];
   nix.settings.auto-optimise-store = true;
 
+  # Per-user nix profile dir home-manager activates into. Must exist before
+  # home-manager-crussell.service runs; absent on hosts that never had
+  # home-manager (e.g. a fresh nas/gateway), which fails first activation.
+  systemd.tmpfiles.rules = [
+    "d /nix/var/nix/profiles/per-user/crussell 0755 crussell users -"
+  ];
+
   boot.loader.systemd-boot.configurationLimit = 15;
   boot.loader.grub.configurationLimit = 15;
 
