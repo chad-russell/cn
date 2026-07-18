@@ -143,36 +143,38 @@ in
       }
     ];
 
-    # ── Reusable failure notifier ──────────────────────────────────
-    # Any service can do:  onFailure = [ "ntfy-failure@<name>.service" ];
-    systemd.services."ntfy-failure@" = {
-      description = "ntfy alert on service failure (%i)";
-      serviceConfig.Type = "oneshot";
-      scriptArgs = "%i";
-      script = ''
-        ${pkgs.curl}/bin/curl -fsS \
-          -H "Title: FAILED — $1 on ${hostname}" \
-          -H "Tags: rotating_light" -H "Priority: high" \
-          -d "Service '$1' failed on ${hostname}. Inspect: journalctl -u $1" \
-          "${config.homelab.ntfyUrl}" >/dev/null 2>&1 || true
-      '';
-    };
-
-    # ── Freshness check services + timers ──────────────────────────
-    systemd.services = lib.mapAttrs' (name: c: lib.nameValuePair "freshness-${name}" {
-      description = "Freshness check: ${c.description}";
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${mkCheckScript name c}";
-      } // (lib.optionalAttrs (c.environmentFile != null) {
-        EnvironmentFile = c.environmentFile;
-      });
-      path = [
-        pkgs.coreutils
-        pkgs.findutils
-        pkgs.curl
-      ] ++ c.extraPath;
-    }) cfg;
+    # ── Reusable failure notifier + freshness check services ───────
+    # The ntfy-failure@ template lets any service do:
+    #   onFailure = [ "ntfy-failure@<name>.service" ];
+    systemd.services =
+      {
+        "ntfy-failure@" = {
+          description = "ntfy alert on service failure (%i)";
+          serviceConfig.Type = "oneshot";
+          scriptArgs = "%i";
+          script = ''
+            ${pkgs.curl}/bin/curl -fsS \
+              -H "Title: FAILED — $1 on ${hostname}" \
+              -H "Tags: rotating_light" -H "Priority: high" \
+              -d "Service '$1' failed on ${hostname}. Inspect: journalctl -u $1" \
+              "${config.homelab.ntfyUrl}" >/dev/null 2>&1 || true
+          '';
+        };
+      }
+      // lib.mapAttrs' (name: c: lib.nameValuePair "freshness-${name}" {
+        description = "Freshness check: ${c.description}";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${mkCheckScript name c}";
+        } // (lib.optionalAttrs (c.environmentFile != null) {
+          EnvironmentFile = c.environmentFile;
+        });
+        path = [
+          pkgs.coreutils
+          pkgs.findutils
+          pkgs.curl
+        ] ++ c.extraPath;
+      }) cfg;
 
     systemd.timers = lib.mapAttrs' (name: c: lib.nameValuePair "freshness-${name}" {
       description = "Freshness check: ${c.description}";
