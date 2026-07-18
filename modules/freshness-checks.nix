@@ -172,11 +172,12 @@ in
         } // (lib.optionalAttrs (c.environmentFile != null) {
           EnvironmentFile = c.environmentFile;
         });
-        path = [
-          pkgs.coreutils
-          pkgs.findutils
-          pkgs.curl
-        ] ++ c.extraPath;
+      path = [
+        pkgs.coreutils
+        pkgs.findutils
+        pkgs.gawk
+        pkgs.curl
+      ] ++ c.extraPath;
       }) cfg;
 
     systemd.timers = lib.mapAttrs' (name: c: lib.nameValuePair "freshness-${name}" {
