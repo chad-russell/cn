@@ -66,6 +66,15 @@ let
 in
 {
   options.homelab = {
+    # Single ntfy topic for ALL homelab alerts — subscribe once to this.
+    # Consumed by this module's checks + the ntfy-failure@ template, and by
+    # modules/restic-backup.nix for its failure notifications.
+    ntfyUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "https://ntfy.internal.crussell.io/homelab-alerts";
+      description = "ntfy topic for all homelab alerts.";
+    };
+
     freshnessChecks = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options = {
