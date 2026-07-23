@@ -81,11 +81,12 @@ bubblebox itself spans three repos / concerns:
 A **package** is an OCI image (a `Containerfile`); an **entrypoint** is how
 bubblebox runs it (which binary to exec, what to compose in, binds/env) —
 authored alongside the Containerfile because the package author knows what the
-tool needs. **Config / dotfiles** are a separate concern: most tools read their
+tool needs. **Config / dotfiles** are a separate concern: every tool reads its
 personal config from the host `$HOME` via `writable_home` (e.g. aws reads
-`~/.aws/config`, vicinae reads `~/.config/vicinae/`), tracked under `dotfiles/`
-below. The one current exception is nvim, whose config is baked into its image
-(pending a design decision on how to make that overridable).
+`~/.aws/config`, vicinae reads `~/.config/vicinae/`, nvim reads
+`~/.config/nvim`), tracked under `dotfiles/` below. Runtime state that's
+regenerable (nvim's plugin tree + undo history, zoxide's db) is isolated to
+bubblebox-owned dirs via `/persist` binds.
 
 bubblebox auto-mounts each tool on first invocation (rootless FUSE) — no
 separate prepare/mount step. `cjust bubblebox` builds the images and
@@ -108,8 +109,8 @@ Current tools (defined in `~/Code/bubblebox-pkgs/`):
 - `sops` — Mozilla SOPS, built from Go source (not packaged in Fedora) via
   `go install` against a distroless/static runtime. Edit mode (`sops
   file.yaml`) needs an editor override; see `sops/entrypoint.toml`.
-- `nvim` — self-contained neovim (vendored config + isolated state via
-  `/persist` bind from `$BUBBLEBOX_DATA_DIR/nvim`).
+- `nvim` — neovim; config lives in dotfiles (`~/.config/nvim`), plugin trees +
+  undo history isolated to `/persist` (bound from `$BUBBLEBOX_DATA_DIR/nvim`).
 - `wezterm`, `ghostty` — GUI terminals; spawn the host shell via
   `systemd-run --user` so the shell inside the terminal has full host access
   (PATH, `/dev/fuse`, host tools, etc.).
@@ -135,10 +136,9 @@ add the name to `bubblebox/profile.toml`'s `packages` list, and re-run
 
 ### `dotfiles/`
 Host-native user dotfiles — the small exception to "everything lives in a
-sandbox." A tool's personal config (e.g. `~/.aws/config`, `~/.config/vicinae/`)
-lives here and is reached at runtime via `writable_home`; the one current
-exception is nvim, whose config is baked into its image. A few things are
-inherently host-resident regardless:
+sandbox." A tool's personal config (e.g. `~/.aws/config`, `~/.config/vicinae/`,
+`~/.config/nvim`) lives here and is reached at runtime via `writable_home`. A
+few things are inherently host-resident regardless:
 
 - **oh-my-posh** — renders the prompt on every command, can't pay a
   per-invocation sandbox spawn
