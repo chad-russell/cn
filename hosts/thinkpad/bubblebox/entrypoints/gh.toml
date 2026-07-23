@@ -1,9 +1,0 @@
-# gh — GitHub CLI. Auth tokens & prefs live at ~/.config/gh/ (machine-local,
-# secret), reached via writable_home. Network is the host's (bwrap shares net
-# by default). git + openssh-clients are vendored in the image (gh shells out
-# to git for repo operations); ~/.gitconfig and ~/.ssh/ are readable via
-# writable_home so git_protocol, user identity, and ssh keys carry through.
-primary = "gh"
-
-[sandbox]
-writable_home = true

@@ -11,7 +11,7 @@ host.
 ├── nebula/         # Nebula VPN container/service
 ├── backup/         # restic S3 backup Quadlet + timers (daily backup, weekly check)
 ├── wycliffe-vpn/   # on-demand GlobalProtect wrapper
-├── bubblebox/      # vendored per-tool configs for bubblebox sandboxes
+├── bubblebox/      # the host's bubblebox profile.toml (desired package set)
 ├── dotfiles/       # the rare host-native user dotfiles (linked by cjust)
 └── systemd/        # user/systemd units (mostly user services for now)
 ```
@@ -64,32 +64,58 @@ On-demand Wycliffe GlobalProtect container workflow. See
 `wycliffe-vpn/README.md`.
 
 ### `bubblebox/`
-Vendored per-tool configs for **bubblebox** sandboxes. Each subdir holds a
-`Containerfile` and (optionally) a `profile` of bubblewrap overrides for that
-tool. bubblebox source lives in a separate repo at `~/Code/bubblebox` (the
-`bubblebox-{init,build,mount,run,export}` scripts plus the FUSE server); this
-directory holds only the per-tool definitions, version-controlled alongside
-the rest of the host config.
+The host's **bubblebox profile** (`profile.toml`) — the desired set of bubblebox
+tools to install, plus the source registry it resolves them from. This is the
+`flake.nix` analog: a declarative input list that `bubblebox apply` realizes
+into a pinned generation (`profile.lock`). It's the only bubblebox file that is
+host-specific, so it lives here alongside the rest of the host config.
 
-bubblebox auto-mounts each tool on first invocation (rootless FUSE), so there's
-no separate prepare/mount step — `cjust bubblebox` builds the images and
-generates wrapper scripts at `~/.local/bin/<tool>`, then `nvim` / `aws` /
-`wezterm` / etc. work transparently.
+bubblebox itself spans three repos / concerns:
 
-Current tools:
+| concern | location | holds |
+|---|---|---|
+| **engine** | `~/Code/bubblebox` | the Rust CLI + FUSE server (`bubblebox build/run/apply/...`) |
+| **packages** | `~/Code/bubblebox-pkgs` | per-tool `Containerfile` + `entrypoint.toml` (the nixpkgs-analog source) |
+| **profile** | this dir (`bubblebox/profile.toml`) | the host's desired package set + source registration |
 
-- `aws/` — AWS CLI v2; non-secret `config` vendored into the image, credentials
-  and SSO cache remain at default `~/.aws/` (runtime, machine-local)
-- `bat/`, `dust/`, `eza/`, `rg/`, `fd/`, `tokei/`, `htop/` — CLI tools,
-  Rust ones built via `cargo install` against a distroless runtime
-- `nvim/` — self-contained neovim (vendored config + isolated state via
-  `/persist` bind from `$BUBBLEBOX_DATA_DIR/nvim`)
-- `wezterm/` — GUI terminal; spawns the host shell via `systemd-run --user`
-  so the shell inside the terminal has full host access (PATH, `/dev/fuse`,
-  host tools, etc.)
-- `noctalia/`, `vicinae/` — desktop shell + launcher; same daemon+client model
-  as their predecessors, with GPU + `/sys` + D-Bus access via the profile
-- `yazi/`, `zoxide/` — file manager and `cd` replacement
+A **package** is an OCI image (a `Containerfile`); an **entrypoint** is how
+bubblebox runs it (which binary to exec, what to compose in, binds/env) —
+authored alongside the Containerfile because the package author knows what the
+tool needs. **Config / dotfiles** are a separate concern: most tools read their
+personal config from the host `$HOME` via `writable_home` (e.g. aws reads
+`~/.aws/config`, vicinae reads `~/.config/vicinae/`), tracked under `dotfiles/`
+below. The one current exception is nvim, whose config is baked into its image
+(pending a design decision on how to make that overridable).
+
+bubblebox auto-mounts each tool on first invocation (rootless FUSE) — no
+separate prepare/mount step. `cjust bubblebox` builds the images and
+`bubblebox apply` materializes the profile, generating wrappers at
+`~/.local/bin/<tool>`, then `nvim` / `aws` / `wezterm` / etc. work transparently.
+
+Current tools (defined in `~/Code/bubblebox-pkgs/`):
+
+- `age` — `age` from Fedora; standalone ad-hoc encryption (notably `age -d
+  -i ~/.ssh/id_ed25519 nebula/pki/*.key.age` per repo convention). Not
+  composed into `sops` — sops uses age as a Go library.
+- `age-keygen` — a "virtual entrypoint" over the `age` package: its
+  `entrypoint.toml` sets `package = "age"` + `binary = "age-keygen"`, so
+  bubblebox execs `/usr/bin/age-keygen` from the age image rather than
+  duplicating the build (no Containerfile of its own).
+- `aws` — AWS CLI v2; config + credentials both live at the default `~/.aws/`
+  (personal dotfiles + machine-local runtime state, reached via writable_home).
+- `bat`, `dust`, `eza`, `rg`, `fd`, `tokei`, `htop` — CLI tools, Rust ones
+  built via `cargo install` against a distroless runtime.
+- `sops` — Mozilla SOPS, built from Go source (not packaged in Fedora) via
+  `go install` against a distroless/static runtime. Edit mode (`sops
+  file.yaml`) needs an editor override; see `sops/entrypoint.toml`.
+- `nvim` — self-contained neovim (vendored config + isolated state via
+  `/persist` bind from `$BUBBLEBOX_DATA_DIR/nvim`).
+- `wezterm`, `ghostty` — GUI terminals; spawn the host shell via
+  `systemd-run --user` so the shell inside the terminal has full host access
+  (PATH, `/dev/fuse`, host tools, etc.).
+- `noctalia`, `vicinae` — desktop shell + launcher; daemon+client model with
+  GPU + `/sys` + D-Bus access via their entrypoints.
+- `yazi`, `zoxide` — file manager and `cd` replacement.
 
 `opencode` is intentionally NOT a bubblebox tool — it's the AI coding agent and
 needs full host control, so it's installed directly via `cjust opencode-install`
@@ -98,21 +124,21 @@ needs full host control, so it's installed directly via `cjust opencode-install`
 Typical workflow:
 
 ```bash
-cjust bubblebox                # build + export all tools (idempotent)
-nvim ~/any/file                # wrapper at ~/.local/bin/nvim -> bubblebox-run
-bubblebox-mount wezterm        # pre-warm a tool's FUSE mount (optional)
-bubblebox-unmount wezterm      # tear down (rarely needed; auto-tears on reboot)
+cjust bubblebox                # build images + apply profile (idempotent)
+nvim ~/any/file                # wrapper at ~/.local/bin/nvim -> bubblebox run nvim
 ```
 
 To add a new bubblebox tool: drop a `<name>/` subdir with a `Containerfile`
-(and optionally a `profile`) under `bubblebox/`, add the name to the
-`bubblebox_tools` list at the top of the Justfile, and re-run `cjust bubblebox`.
+(and, if it needs binds/env, an `entrypoint.toml`) in `~/Code/bubblebox-pkgs/`,
+add the name to `bubblebox/profile.toml`'s `packages` list, and re-run
+`cjust bubblebox`.
 
 ### `dotfiles/`
 Host-native user dotfiles — the small exception to "everything lives in a
-sandbox." Almost every tool's config rides along with its bubblebox image
-(e.g. `bubblebox/nvim/config/`), because the binary runs from the sandbox. A
-few things are inherently host-resident:
+sandbox." A tool's personal config (e.g. `~/.aws/config`, `~/.config/vicinae/`)
+lives here and is reached at runtime via `writable_home`; the one current
+exception is nvim, whose config is baked into its image. A few things are
+inherently host-resident regardless:
 
 - **oh-my-posh** — renders the prompt on every command, can't pay a
   per-invocation sandbox spawn

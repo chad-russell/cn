@@ -1,9 +1,0 @@
-FROM rust:bookworm AS build
-RUN cargo install du-dust --root /out
-# Pre-create FHS mountpoints that distroless lacks, so bwrap can bind host dirs.
-RUN mkdir -p /dirs/mnt /dirs/media /dirs/opt /dirs/srv \
- && touch /dirs/mnt/.keep /dirs/media/.keep /dirs/opt/.keep /dirs/srv/.keep
-
-FROM gcr.io/distroless/cc-debian12
-COPY --from=build /out/bin/dust /usr/bin/dust
-COPY --from=build /dirs/ /

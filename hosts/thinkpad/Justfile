@@ -20,14 +20,18 @@
 # DATA TABLES (single source of truth)
 # ═══════════════════════════════════════════════════════════════════════════
 
-# bubblebox tools. Each is a subdir of bubblebox/<tool>/ containing a
-# Containerfile and (optionally) a profile. bubblebox source lives at
-# ~/Code/bubblebox (separate repo); this list points cjust at the per-tool
-# configs. Order doesn't matter for bubblebox. Add `helix` here if/when it's
-# ported.
-bubblebox_tools := "aws bat dust eza fd gh htop noctalia nvim rg tokei vicinae ghostty wezterm yazi zoxide"
+# Path to the bubblebox profile — single source of truth for the root list
+# (was: a hand-maintained `bubblebox_tools` string that had to be kept in sync
+# with this file's `packages` list). Recipes below read this via a python3
+# one-liner at runtime (tomllib is in stdlib since 3.11; the host image ships
+# python3). `bubblebox build` gracefully skips any "virtual entrypoint" whose
+# `package` field points at another package (e.g. age-keygen → age) — no
+# Containerfile of its own to build, no error.
+bubblebox_profile := justfile_directory() + "/bubblebox/profile.toml"
 
-# bubblebox source dir. The Rust CLI binary + fuse-mount + shared bin/ live here.
+# bubblebox engine dir (the Rust CLI binary + fuse-mount + shared bin/). The
+# package source tree (Containerfiles + entrypoints) is a separate repo at
+# ~/Code/bubblebox-pkgs, registered via profile.toml below.
 # Hardcoded to $HOME/Code/bubblebox (deliberate — this Justfile is thinkpad-
 # specific, and the layout matches the rest of the cn repo).
 bubblebox_dir := env_var_or_default("HOME", "/tmp") + "/Code/bubblebox"
@@ -50,7 +54,7 @@ user_units := "opencode-web vicinae"
 # symlink-backed config). Instead, use `cjust cosmic-backup` and
 # `cjust cosmic-restore` to copy settings between the repo and
 # ~/.config/cosmic.
-dotfiles := ".config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/wezterm .config/ghostty .config/vicinae/settings.json .config/opencode .local/share/applications/wezterm.desktop .local/share/applications/ghostty.desktop .zshrc .zshenv"
+dotfiles := ".aws/config .config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/wezterm .config/ghostty .config/vicinae/settings.json .config/opencode .local/share/applications/wezterm.desktop .local/share/applications/ghostty.desktop .zshrc .zshenv"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # setup
@@ -285,7 +289,7 @@ bubblebox-build *tools:
     set -euo pipefail
     tools="{{ tools }}"
     if [ -z "${tools}" ]; then
-      tools="{{ bubblebox_tools }}"
+      tools=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
     fi
     for t in $tools; do
       echo "==> bubblebox-build ${t}"
@@ -301,7 +305,7 @@ bubblebox-export *tools:
     set -euo pipefail
     tools="{{ tools }}"
     if [ -z "${tools}" ]; then
-      tools="{{ bubblebox_tools }}"
+      tools=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
     fi
     for t in $tools; do
       {{ bubblebox_bin }} export "$t"
@@ -413,6 +417,15 @@ nebula:
 backup:
     {{ justfile_directory() }}/backup/setup.sh
 
+# Pull image + install the on-demand Tailscale Quadlet. NOT enabled at boot
+# and NOT started by setup — start it manually when needed:
+#   sudo systemctl start tailscale
+#   sudo podman exec tailscale tailscale up   # first time only (browser auth)
+# See tailscale/README.md. Idempotent.
+[group('system')]
+tailscale:
+    {{ justfile_directory() }}/tailscale/setup.sh
+
 # Show the current state of this machine: host-image version, bootc deployment,
 # bubblebox mounts + wrappers, opencode install, and linked user units.
 # Read-only.
@@ -431,7 +444,7 @@ status:
     echo
     echo "=== bubblebox wrappers (~/.local/bin/) ==="
     dst_bin="${HOME}/.local/bin"
-    for t in {{ bubblebox_tools }}; do
+    for t in $(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))'); do
       if [ -x "${dst_bin}/${t}" ]; then echo "  ok   ${t}"; else echo "  MISS ${t}"; fi
     done
     echo

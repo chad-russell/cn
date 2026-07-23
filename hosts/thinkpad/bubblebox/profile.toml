@@ -2,26 +2,31 @@
 # Realized by `bubblebox apply` into ~/.config/bubblebox/profile.lock (the
 # pinned realization) + a content-addressed generation. See DESIGN-gc.md.
 #
-# The desired package set (floating; resolved from the registries, pinned in
-# the lock between applies). Only ROOTS go here — compose deps (e.g. nvim's
-# rg/fd) are pulled automatically via each entrypoint's compose list. Kept in
-# sync with `bubblebox_tools` in hosts/thinkpad/Justfile.
+# Each entry below is a ROOT — an entrypoint name exposed as a
+# ~/.local/bin/<name> wrapper. The entrypoint's `package` field (default =
+# the entrypoint's own name) names the underlying OCI image, so a root can
+# share another package's image (e.g. age-keygen → age) without a duplicate
+# build. Compose deps (e.g. nvim's rg/fd) are pulled automatically via each
+# entrypoint's compose list and don't need to be listed here.
 #
-# Forward-compatible with Phase 4 versioning ("nvim:stable"); for now each entry
-# is a bare package name. (Top-level keys must precede the [[source]]/[[cache]]
-# table headers — standard TOML.)
+# This file is the single source of truth — hosts/thinkpad/Justfile reads it
+# directly for bubblebox-build/export/status (no separate `bubblebox_tools`
+# list to keep in sync). Forward-compatible with Phase 4 versioning
+# ("nvim:stable"); for now each entry is a bare package name. (Top-level keys
+# must precede the [[source]]/[[cache]] table headers — standard TOML.)
 packages = [
-  "aws", "bat", "dust", "eza", "fd", "gh", "htop",
-  "noctalia", "nvim", "rg", "tokei", "vicinae",
+  "age", "age-keygen", "aws", "bat", "dust", "eza", "fd", "gh", "htop",
+  "noctalia", "nvim", "rg", "sops", "tokei", "vicinae",
   "ghostty", "wezterm", "yazi", "zoxide",
 ]
 
 # Registries: when present, apply is PROFILE-AUTHORITATIVE — it resolves using
 # ONLY these (no separate `source add`/`cache add` step needed). Empty → fall
-# back to sources.toml/caches.toml. The `local` path is host-specific; a
-# shippable profile uses `kind = "git"` + `url = "https://..."` against a
-# package repo.
+# back to sources.toml/caches.toml. The `local` path points at the bubblebox-pkgs
+# source repo (a separate git repo on disk, mirroring how a real external package
+# source would be consumed); flip to `kind = "git"` + `url = "..."` to dogfood
+# the published flow.
 [[source]]
 name = "personal"
 kind = "local"
-path = "~/Code/cn/hosts/thinkpad/bubblebox"
+path = "~/Code/bubblebox-pkgs"

@@ -1,0 +1,90 @@
+# Tailscale VPN client — rootful Quadlet unit (on-demand; NOT enabled at boot).
+#
+# Generated service name: tailscale.service
+#   sudo systemctl start tailscale   # daemon up (auto-reconnects from cached
+#                                    # state after the first `tailscale up`)
+#   sudo systemctl stop tailscale    # daemon down + tunnel + routes torn down
+#   sudo systemctl status tailscale
+#   sudo journalctl -u tailscale -f
+#
+# NOT auto-started at boot by design. Run `cjust tailscale` once to install,
+# then `sudo systemctl start tailscale`. containerboot runs `tailscale up`
+# itself on boot; on the very first start it prints an auth URL to the journal
+# (`sudo journalctl -u tailscale -f`) — open it once, then state is cached in
+# the tailscale-state volume and subsequent starts reconnect automatically.
+#
+# The `tailscale` CLI client lives inside the container. Read-only commands
+# only (changing prefs via `tailscale up/set` here crash-loops the next boot —
+# edit the TS_* env vars below instead):
+#   sudo podman exec tailscale tailscale status
+#
+# Why rootful + host network: Tailscale creates the `tailscale0` TUN device
+# and installs routes on the HOST so host traffic uses the overlay. That
+# requires a host network namespace and real CAP_NET_ADMIN, which means
+# rootful podman. Rootless + host-net + TUN is possible but fragile — same
+# reasoning as the nebula Quadlet (../nebula/nebula.container).
+#
+# Image: upstream tailscale/tailscale:latest, booted via its `containerboot`
+# Cmd. containerboot reads TS_* env vars and BOTH defaults are wrong for our
+# use, so the two Environment lines below are load-bearing (not optional):
+#
+#   TS_USERSPACE  defaults to true  → tailscaled runs with
+#                  --tun=userspace-networking, a SOCKS5/HTTP proxy mode that
+#                  NEVER creates the tailscale0 kernel TUN. Auth succeeds but
+#                  no host interface appears and host traffic isn't routed.
+#                  We force false so tailscaled creates a real tailscale0 TUN
+#                  (Network=host + NET_ADMIN + /dev/net/tun make that work).
+#
+#   TS_STATE_DIR  defaults to empty → containerboot runs tailscaled with
+#                  --state=mem:, i.e. state lives ONLY in RAM and is lost on
+#                  every container restart (so every start = re-browser-auth).
+#                  We point it at the volume mount so device identity + auth
+#                  persist across start/stop cycles.
+#
+#   TS_HOSTNAME + TS_EXTRA_ARGS — containerboot runs `tailscale up` on EVERY
+#                  boot. Tailscale refuses a bare `tailscale up` once the state
+#                  holds any non-default prefs ("changing settings via 'tailscale
+#                  up' requires mentioning all non-default flags"), which kills
+#                  the container in a crash loop. So every non-default pref must
+#                  be declared here so containerboot's `tailscale up` re-states
+#                  it each boot. containerboot already adds --accept-dns=false
+#                  automatically; we declare the other two non-default prefs
+#                  (hostname + accept-routes) via env. OPERATIONAL RULE: to
+#                  change Tailscale prefs, edit these env vars and restart —
+#                  do NOT run `tailscale up --<flag>` manually, or the next
+#                  boot will crash-loop with the same mismatch.
+
+[Unit]
+Description=Tailscale VPN client (on-demand; not enabled at boot)
+Documentation=https://tailscale.com/kb/1186/containers
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/tailscale/tailscale:latest
+ContainerName=tailscale
+# Tailscale needs to manage a host TUN and host routes.
+Network=host
+AddCapability=NET_ADMIN
+PodmanArgs=--device=/dev/net/tun
+# containerboot env overrides — see header comment for why each is required.
+Environment=TS_USERSPACE=false
+Environment=TS_STATE_DIR=/var/lib/tailscale
+# Non-default Tailscale prefs — containerboot re-states these on every
+# `tailscale up` so they match the persisted state (see header comment).
+Environment=TS_HOSTNAME=crussell
+Environment=TS_EXTRA_ARGS=--accept-routes
+# Device identity + cached auth state persist here so start/stop cycles don't
+# require re-authenticating in the browser. (Only used because TS_STATE_DIR
+# above points at it; without that env var containerboot uses --state=mem: and
+# this volume sits empty.)
+Volume=tailscale-state:/var/lib/tailscale
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+
+# No [Install] section. The unit is registered but intentionally NOT enabled
+# at boot — usage is occasional, so it stays inert until manually started:
+#   sudo systemctl start tailscale
