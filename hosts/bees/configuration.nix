@@ -137,8 +137,26 @@
 
   # Surface prolonged failures of the most critical services (they auto-restart,
   # so this only fires when the restart limit is exhausted).
-  systemd.services.caddy.onFailure = [ "ntfy-failure@caddy.service" ];
+  #
+  # immich-server is a native NixOS module, so a normal `systemd.services`
+  # override merges cleanly into its generated unit.
   systemd.services.immich-server.onFailure = [ "ntfy-failure@immich-server.service" ];
+
+  # caddy is a podman quadlet — its unit comes from the podman-system-generator
+  # at /run/systemd/generator/caddy.service, NOT from NixOS. Setting
+  # `systemd.services.caddy.*` makes NixOS write a stub caddy.service (no
+  # ExecStart) that shadows the generator output and breaks `systemctl restart`.
+  # Ship a drop-in via systemd.packages so it layers on the generated unit
+  # instead of replacing it.
+  systemd.packages = [
+    (pkgs.runCommand "caddy-on-failure-dropin" { } ''
+      mkdir -p $out/etc/systemd/system/caddy.service.d
+      cat > $out/etc/systemd/system/caddy.service.d/10-on-failure.conf <<'EOF'
+      [Unit]
+      OnFailure=ntfy-failure@caddy.service
+      EOF
+    '')
+  ];
 
   # ── State version ───────────────────────────────────────────────
   system.stateVersion = "25.11";
