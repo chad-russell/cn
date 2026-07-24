@@ -13,6 +13,7 @@
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
     ../../modules/beszel-agent.nix
+    ./hermes.nix
     ./backup.nix
     ./tailscale.nix
   ];
@@ -94,6 +95,11 @@
 
   # ── Firewall: disabled (router handles it) ───────────────────────
   networking.firewall.enable = false;
+
+  # ── Podman (for the Hermes Agent quadlet) ──────────────────────
+  virtualisation.podman = {
+    enable = true;
+  };
 
   # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
   programs.nix-ld.enable = true;

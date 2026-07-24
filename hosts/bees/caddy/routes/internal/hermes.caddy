@@ -1,0 +1,13 @@
+# Hermes Agent dashboard (bee — reached over Nebula).
+# The hermes podman quadlet on bee (10.10.0.12) serves the dashboard on
+# port 9119 behind basic auth. WebSocket/SSE-friendly transport so live
+# dashboard updates aren't cut off (mirrors the beszel.caddy pattern).
+
+@hermes host hermes.internal.crussell.io
+handle @hermes {
+    reverse_proxy 10.10.0.12:9119 {
+        transport http {
+            read_timeout 360s
+        }
+    }
+}

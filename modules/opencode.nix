@@ -55,8 +55,9 @@ in
     }
 
     (lib.mkIf cfg.enable {
-      # OPENROUTER_API_KEY for opencode's OpenRouter provider (env file).
+      # OPENROUTER_API_KEY + ZAI_API_KEY for opencode's LLM providers.
       age.secrets.openrouter-api-key.file = ../secrets/openrouter-api-key.age;
+      age.secrets.zai-api-key.file = ../secrets/zai-api-key.age;
 
       # ── Package ────────────────────────────────────────────────────
       environment.systemPackages = [
@@ -75,8 +76,11 @@ in
           Group = "users";
           WorkingDirectory = cfg.web.directory;
           ExecStart = "${unstable.opencode}/bin/opencode web --port ${toString cfg.web.port} --hostname ${cfg.web.hostname}";
-          # Provides OPENROUTER_API_KEY.
-          EnvironmentFile = config.age.secrets.openrouter-api-key.path;
+          # Provides OPENROUTER_API_KEY and ZAI_API_KEY.
+          EnvironmentFile = [
+            config.age.secrets.openrouter-api-key.path
+            config.age.secrets.zai-api-key.path
+          ];
           Restart = "always";
           RestartSec = "5";
           StartLimitIntervalSec = "60";
