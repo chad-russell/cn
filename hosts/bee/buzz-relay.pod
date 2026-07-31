@@ -5,6 +5,10 @@ Description=Buzz relay pod (relay + postgres + redis + minio)
 PodName=buzz-relay
 # Relay WS/REST/web (gateway proxies here over Nebula).
 PublishPort=3000:3000
+# Local loopback on port 80 so the co-located harness can connect via
+# ws://buzz.crussell.io (default port → Host header has no :port, which the
+# relay's exact host matching requires). Bound to localhost only.
+PublishPort=127.0.0.1:80:3000
 # MinIO API bound to host localhost only — for the bucket-init oneshot.
 # Not reachable from the LAN or externally.
 PublishPort=127.0.0.1:9000:9000

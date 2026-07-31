@@ -133,11 +133,11 @@
   services.buzz-harness = {
     enable = true;
     # Self-hosted relay on this same host. The relay binds communities by
-    # Host header, so we connect via the hostname (Host: buzz.crussell.io),
-    # not localhost (which 404s). The /etc/hosts entry below pins the hostname
-    # to 127.0.0.1, so this is a direct local connection — no gateway/Caddy
-    # hop, no TLS, and resilient to a gateway outage.
-    relayUrl = "ws://buzz.crussell.io:3000";
+    # exact Host header, so we connect via the hostname (Host: buzz.crussell.io),
+    # not localhost (which 404s). The /etc/hosts pin below resolves the hostname
+    # to 127.0.0.1, and the pod publishes port 80 on loopback, so this is a
+    # direct local connection — no gateway/Caddy hop, resilient to outages.
+    relayUrl = "ws://buzz.crussell.io";
     agents = {
       # Primary agent — native buzz-agent on Z.AI Coding Plan (glm-5.2).
       bumble = {
