@@ -132,6 +132,9 @@
         privateKeySecret = "buzz-agent-bumble-env";
         provider = "openai";
         model = "glm-5.2";
+        # The shared zai-api-key secret exposes ZHIPU_API_KEY; buzz-agent's
+        # openai provider wants OPENAI_COMPAT_API_KEY, so remap it.
+        apiKeyEnvFrom = "ZHIPU_API_KEY";
         extraEnv = {
           OPENAI_COMPAT_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
           OPENAI_COMPAT_API = "chat"; # force Chat Completions (endpoint isn't *.openai.com)

@@ -94,6 +94,18 @@ let
         '';
       };
 
+      apiKeyEnvFrom = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          If the provider key is exposed under a name buzz-agent doesn't expect,
+          set this to the source env var; the service remaps it onto the
+          provider's key var at launch. e.g. for Z.AI via the shared
+          zai-api-key secret: apiKeyEnvFrom = "ZHIPU_API_KEY" (which gets
+          exported as OPENAI_COMPAT_API_KEY for provider=openai).
+        '';
+      };
+
       extraOptions = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
@@ -135,6 +147,23 @@ in
     ) cfg.agents;
 
     systemd.services = lib.mapAttrs' (name: a:
+      let
+        # buzz-agent reads the API key from a provider-specific env var. Map
+        # from a host secret exposed under a different name (e.g. ZHIPU_API_KEY)
+        # onto the one the agent expects, so one shared secret serves both
+        # opencode (ZHIPU_API_KEY) and buzz-agent (OPENAI_COMPAT_API_KEY).
+        agentKeyVar = {
+          openai = "OPENAI_COMPAT_API_KEY";
+          openrouter = "OPENROUTER_API_KEY";
+          anthropic = "ANTHROPIC_API_KEY";
+        }.${a.provider} or null;
+        keyExport = lib.optionalString (agentKeyVar != null && a.apiKeyEnvFrom != null)
+          ("export " + agentKeyVar + "=\"${" + a.apiKeyEnvFrom + "}\"");
+        startScript = pkgs.writeShellScriptBin "buzz-acp-${name}" ''
+          ${keyExport}
+          exec ${cfg.package}/bin/buzz-acp ${lib.escapeShellArgs a.extraOptions}
+        '';
+      in
       lib.nameValuePair "buzz-acp-${name}" {
         description = "Buzz ACP harness — agent ${name}";
         after = [ "network-online.target" ];
@@ -178,7 +207,8 @@ in
           # nsec (BUZZ_PRIVATE_KEY) + provider keys.
           EnvironmentFile = [ config.age.secrets.${a.privateKeySecret}.path ] ++ a.environmentFiles;
           # extraOptions are buzz-acp's own CLI flags (e.g. ["--agents" "2"]).
-          ExecStart = "${cfg.package}/bin/buzz-acp ${lib.escapeShellArgs a.extraOptions}";
+          # The wrapper remaps the provider key env var (see apiKeyEnvFrom).
+          ExecStart = "${startScript}/bin/buzz-acp-${name}";
           Restart = "always";
           RestartSec = "5";
           StartLimitIntervalSec = "60";
