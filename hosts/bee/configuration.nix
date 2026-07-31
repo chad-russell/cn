@@ -146,6 +146,10 @@
         environmentFiles = [
           config.age.secrets.zai-api-key.path # provides ZHIPU_API_KEY (after the fix)
         ];
+        # Dedicated test channel (just you + the bot): respond to any owner
+        # message, no @mention needed. Drop this once the agent has a proper
+        # @ handle (re-created in the app) for use in shared channels.
+        extraOptions = [ "--no-mention-filter" ];
       };
 
       # Secondary agent — OpenRouter (swap models freely per agent).
