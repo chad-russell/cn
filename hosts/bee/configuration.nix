@@ -126,10 +126,12 @@
   #   4. Add each agent's pubkey to the relay + channels via the Buzz desktop app.
   services.buzz-harness = {
     enable = true;
-    # Self-hosted relay on this same host (podman pod, port 3000). Plain ws
-    # over localhost: no TLS hop, no gateway dependency — the always-on agent
-    # keeps working even if the gateway VPS is down.
-    relayUrl = "ws://localhost:3000";
+    # Self-hosted relay on this same host. The relay binds communities by
+    # Host header, so we use the public URL (Host: buzz.crussell.io) rather
+    # than localhost (which the relay 404s). bee reaches it via the gateway
+    # (verified hairpin) — when the gateway is down, no users can reach the
+    # relay anyway, so the agent has nothing to process either.
+    relayUrl = "wss://buzz.crussell.io";
     agents = {
       # Primary agent — native buzz-agent on Z.AI Coding Plan (glm-5.2).
       bumble = {
