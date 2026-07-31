@@ -21,6 +21,12 @@
 
   networking.hostName = "bee";
 
+  # Pin buzz.crussell.io to localhost so the co-located agent harness
+  # connects directly to the relay (port 3000) with the right Host header,
+  # bypassing the gateway/Caddy hairpin. bee is the relay host, so it never
+  # needs the public route.
+  networking.hosts."127.0.0.1" = [ "buzz.crussell.io" ];
+
   # ── Boot ─────────────────────────────────────────────────────────
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -127,11 +133,11 @@
   services.buzz-harness = {
     enable = true;
     # Self-hosted relay on this same host. The relay binds communities by
-    # Host header, so we use the public URL (Host: buzz.crussell.io) rather
-    # than localhost (which the relay 404s). bee reaches it via the gateway
-    # (verified hairpin) — when the gateway is down, no users can reach the
-    # relay anyway, so the agent has nothing to process either.
-    relayUrl = "wss://buzz.crussell.io";
+    # Host header, so we connect via the hostname (Host: buzz.crussell.io),
+    # not localhost (which 404s). The /etc/hosts entry below pins the hostname
+    # to 127.0.0.1, so this is a direct local connection — no gateway/Caddy
+    # hop, no TLS, and resilient to a gateway outage.
+    relayUrl = "ws://buzz.crussell.io:3000";
     agents = {
       # Primary agent — native buzz-agent on Z.AI Coding Plan (glm-5.2).
       bumble = {
