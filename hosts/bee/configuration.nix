@@ -138,6 +138,10 @@
         extraEnv = {
           OPENAI_COMPAT_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
           OPENAI_COMPAT_API = "chat"; # force Chat Completions (endpoint isn't *.openai.com)
+          # NIP-OA owner-attestation: lets the agent inherit the owner's relay
+          # membership on hosted relays where the user isn't a relay admin.
+          # Extracted from the desktop app's managed-agents.json. Not a secret.
+          BUZZ_AUTH_TAG = ''["auth","93984b5c44debc12757e0f5db1643c2808ee8b820b46ac704febb039de4c16a7","","a5b2da36a39eb7569f10e823ecb699cf0ccef495149cdca5144118f0d751efdc636d2f707b90c7a9ae6e92355453283433edf33678af21ca3c6aa481cb48d961"]'';
         };
         environmentFiles = [
           config.age.secrets.zai-api-key.path # provides ZHIPU_API_KEY (after the fix)
