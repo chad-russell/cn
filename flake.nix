@@ -23,6 +23,12 @@
       inputs.home-manager.follows = "home-manager";
     };
 
+    # ── Rust toolchain overlay (pins exact rustc for the buzz package) ──
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 
   outputs =
@@ -33,6 +39,7 @@
       home-manager,
       disko,
       agenix,
+      rust-overlay,
       ...
     }:
     let
@@ -42,6 +49,21 @@
       # ── Host metadata (single source of truth) ───────────────────
       hostMeta = import ./lib/host-meta.nix;
       deployable = lib.filterAttrs (_: h: h ? deployUser) hostMeta;
+
+      # ── Buzz CLI stack (buzz-acp + buzz-cli + buzz-agent + buzz-admin) ─
+      # Built against a pinned 1.95.0 toolchain (newer than nixos-25.11 ships).
+      buzzPkg =
+        let
+          pkgs' = import nixpkgs {
+            system = "x86_64-linux";
+            overlays = [ rust-overlay.overlays.default ];
+          };
+        in
+        import ./pkgs/buzz {
+          pkgs = pkgs';
+          rustToolchain = pkgs'.rust-bin.stable."1.95.0".default;
+          inherit lib;
+        };
 
       # Bash case bodies, generated from hostMeta so the deploy/install
       # scripts never drift from lib/host-meta.nix.
@@ -62,6 +84,7 @@
           system = "x86_64-linux";
           config.allowUnfree = true;
         };
+        buzz = buzzPkg;
       };
 
       # ── Helper to build a NixOS configuration ────────────────────
@@ -105,6 +128,9 @@
       nixosConfigurations.bees = mkHost { hostname = "bees"; };
       nixosConfigurations.nas = mkHost { hostname = "nas"; };
       nixosConfigurations.gateway = mkHost { hostname = "gateway"; };
+
+      # ── Packages ─────────────────────────────────────────────────
+      packages.x86_64-linux.buzz = buzzPkg;
 
       # ── Deploy script (nix run .#deploy) ─────────────────────────
       apps.x86_64-linux.deploy = {

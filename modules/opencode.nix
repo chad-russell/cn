@@ -55,7 +55,8 @@ in
     }
 
     (lib.mkIf cfg.enable {
-      # OPENROUTER_API_KEY + ZAI_API_KEY for opencode's LLM providers.
+      # OPENROUTER_API_KEY + ZHIPU_API_KEY for opencode's LLM providers.
+      # (zai-coding-plan provider reads ZHIPU_API_KEY — see secrets/zai-api-key.age)
       age.secrets.openrouter-api-key.file = ../secrets/openrouter-api-key.age;
       age.secrets.zai-api-key.file = ../secrets/zai-api-key.age;
 
@@ -76,7 +77,7 @@ in
           Group = "users";
           WorkingDirectory = cfg.web.directory;
           ExecStart = "${unstable.opencode}/bin/opencode web --port ${toString cfg.web.port} --hostname ${cfg.web.hostname}";
-          # Provides OPENROUTER_API_KEY and ZAI_API_KEY.
+          # Provides OPENROUTER_API_KEY and ZHIPU_API_KEY.
           EnvironmentFile = [
             config.age.secrets.openrouter-api-key.path
             config.age.secrets.zai-api-key.path

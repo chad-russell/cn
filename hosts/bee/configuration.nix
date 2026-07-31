@@ -12,8 +12,8 @@
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
+    ../../modules/buzz-harness.nix
     ../../modules/beszel-agent.nix
-    ./hermes.nix
     ./backup.nix
     ./tailscale.nix
   ];
@@ -96,7 +96,7 @@
   # ── Firewall: disabled (router handles it) ───────────────────────
   networking.firewall.enable = false;
 
-  # ── Podman (for the Hermes Agent quadlet) ──────────────────────
+  # ── Podman ──────────────────────────────────────────
   virtualisation.podman = {
     enable = true;
   };
@@ -112,6 +112,46 @@
 
   # ── opencode AI coding agent ────────────────────────────────────
   # (enable + web defaults live in modules/opencode.nix)
+
+  # ── Buzz agent harness (buzz-acp) ───────────────────────────────
+  # One systemd service per agent identity. Agents answer @mentions from any
+  # client (phone/laptop) while bee stays always-on. See PLANS note + the
+  # buzz-harness module for option reference.
+  #
+  # Before this is live you must (see modules/buzz-harness.nix + PLANS):
+  #   1. Fix secrets/zai-api-key.age to set ZHIPU_API_KEY (not ZAI_API_KEY).
+  #   2. Mint a keypair per agent: `buzz-admin generate-key` after first build.
+  #   3. Create secrets/buzz-agent-<name>-env.age = `BUZZ_PRIVATE_KEY=<nsec>`.
+  #   4. Add each agent's pubkey to the relay + channels via the Buzz desktop app.
+  services.buzz-harness = {
+    enable = true;
+    # relayUrl defaults to wss://crussell.communities.buzz.xyz (hosted).
+    agents = {
+      # Primary agent — native buzz-agent on Z.AI Coding Plan (glm-5.2).
+      bumble = {
+        privateKeySecret = "buzz-agent-bumble-env";
+        provider = "openai";
+        model = "glm-5.2";
+        extraEnv = {
+          OPENAI_COMPAT_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
+          OPENAI_COMPAT_API = "chat"; # force Chat Completions (endpoint isn't *.openai.com)
+        };
+        environmentFiles = [
+          config.age.secrets.zai-api-key.path # provides ZHIPU_API_KEY (after the fix)
+        ];
+      };
+
+      # Secondary agent — OpenRouter (swap models freely per agent).
+      # oracle = {
+      #   privateKeySecret = "buzz-agent-oracle-env";
+      #   provider = "openrouter";
+      #   model = "anthropic/claude-sonnet-4.5";
+      #   environmentFiles = [
+      #     config.age.secrets.openrouter-api-key.path # provides OPENROUTER_API_KEY
+      #   ];
+      # };
+    };
+  };
 
   # ── Beszel monitoring agent ────────────────────────────────────
   # (enabled by default in modules/beszel-agent.nix)

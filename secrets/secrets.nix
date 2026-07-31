@@ -7,7 +7,7 @@ in
   # ── OpenRouter API key (opencode) ─────────────────────────────
   "openrouter-api-key.age".publicKeys = [ crussell ];
 
-  # ── Z.AI API key (opencode + hermes agent) ───────────────────
+  # ── Z.AI API key (opencode) ───────────────────
   "zai-api-key.age".publicKeys = [ crussell ];
 
   # ── Restic backup secrets ──────────────────────────────────────
@@ -26,9 +26,10 @@ in
   # every beszel-agent. Created after first booting the hub.
   "beszel-agent-env.age".publicKeys = [ crussell ];
 
-  # ── Hermes Agent (bee) ────────────────────────────────────────
-  # Env file consumed by the hermes podman quadlet on bee. Holds
-  # OPENROUTER_API_KEY, TELEGRAM_BOT_TOKEN + ALLOWED_USERS, API_SERVER_KEY,
-  # and dashboard basic-auth credentials.
-  "hermes-env.age".publicKeys = [ crussell ];
+  # ── Buzz agent harness (buzz-acp on bee) ──────────────────────
+  # Per-agent env file: BUZZ_PRIVATE_KEY=<nsec-or-hex> for each agent
+  # identity that runs server-side. Mint a fresh keypair per agent
+  # (e.g. `buzz-admin generate-key`) — do NOT reuse laptop agents.
+  "buzz-agent-bumble-env.age".publicKeys = [ crussell ];
+  "buzz-agent-oracle-env.age".publicKeys = [ crussell ];
 }
