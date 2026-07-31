@@ -40,7 +40,7 @@ rustPlatform.buildRustPackage {
   cargoLock = {
     lockFile = ./Cargo.lock;
     outputHashes = {
-      "aws-creds-0.39.1" = lib.fakeHash;
+      "aws-creds-0.39.1" = "sha256-QAAm1phmeLFtDRgfDCoHijN1ce/rYzh18KziOUbL+hw=";
       "mesh-llm-api-client-0.74.0" = lib.fakeHash;
     };
   };
