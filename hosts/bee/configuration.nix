@@ -149,7 +149,10 @@
         # Dedicated test channel (just you + the bot): respond to any owner
         # message, no @mention needed. Drop this once the agent has a proper
         # @ handle (re-created in the app) for use in shared channels.
-        extraOptions = [ "--no-mention-filter" ];
+        extraOptions = [
+          "--no-mention-filter"
+          "--respond-to" "anyone" # TEMP: rule out owner-gate silent drop during testing
+        ];
       };
 
       # Secondary agent — OpenRouter (swap models freely per agent).
