@@ -37,7 +37,8 @@
       RemainAfterExit = true;
       EnvironmentFile = [ config.age.secrets.buzz-relay-env.path ];
     };
-    path = [ pkgs.minio-client ];
+    path = [ pkgs.minio-client "/run/current-system/sw" ];
+    environment.HOME = "/root";
     script = ''
       set -e
       for i in $(seq 1 30); do
