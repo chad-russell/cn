@@ -29,8 +29,7 @@ rustPlatform.buildRustPackage {
     owner = "block";
     repo = "buzz";
     inherit rev;
-    # Fill from the first build's fixed-output failure.
-    hash = lib.fakeHash;
+    hash = "sha256-wmcZXyfHClBbKBG1HPVJcKPvY/kbigS/YNyUPepU3JI=";
   };
 
   # The full workspace lockfile vendors every git dep regardless of which
