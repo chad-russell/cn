@@ -33,13 +33,15 @@ rustPlatform.buildRustPackage {
     hash = lib.fakeHash;
   };
 
-  # The full workspace lockfile vendors aws-creds (a patched crates-io dep via
-  # buzz-media → rust-s3) even though we don't compile buzz-media; it needs an
-  # outputHash. No other git deps are reached.
+  # The full workspace lockfile vendors every git dep regardless of which
+  # packages we compile, so both upstream git crates need outputHashes:
+  #   aws-creds (patched crates-io dep via buzz-media → rust-s3)
+  #   mesh-llm-api-client (buzz-relay-mesh / shared compute)
   cargoLock = {
     lockFile = ./Cargo.lock;
     outputHashes = {
       "aws-creds-0.39.1" = lib.fakeHash;
+      "mesh-llm-api-client-0.74.0" = lib.fakeHash;
     };
   };
 
