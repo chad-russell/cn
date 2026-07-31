@@ -16,7 +16,7 @@
 # must precede the [[source]]/[[cache]] table headers — standard TOML.)
 packages = [
   "age", "age-keygen", "aws", "bat", "dust", "eza", "fd", "gh", "htop",
-  "noctalia", "nvim", "rg", "sops", "tokei", "vicinae",
+  "noctalia", "nvim", "psql", "rg", "sops", "tokei", "vicinae",
   "ghostty", "wezterm", "yazi", "zoxide",
 ]
 
