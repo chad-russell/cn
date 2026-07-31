@@ -141,11 +141,11 @@ in
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
 
-        # buzz-cli + buzz-agent are in the package bin dir; add the system
-        # profile so an opencode runtime agent (installed system-wide) resolves.
+        # buzz-cli + buzz-agent come from the package (NixOS appends /bin).
+        # Add the system profile so an opencode runtime agent resolves too.
         path = [
-          "${cfg.package}/bin"
-          "/run/current-system/sw/bin"
+          cfg.package
+          "/run/current-system/sw"
         ];
 
         environment = {
