@@ -1,17 +1,14 @@
-# ── Buzz CLI stack: buzz-acp + buzz-cli + buzz-agent + buzz-admin ───────
+# ── Buzz CLI stack: buzz-acp + buzz-cli + buzz-agent ────────────────────
 #
-# Builds four headless Rust binaries from upstream block/buzz. These are
+# Builds three headless Rust binaries from upstream block/buzz. These are
 # pure-Rust (rustls/ring TLS — no openssl), and do NOT build buzz-relay, so the
-# cmake/opus toolchain the relay needs is avoided entirely. buzz-admin's DB ops
-# need Postgres only at runtime; `buzz-admin generate-key` needs nothing extra.
+# cmake/opus toolchain the relay needs is avoided entirely. buzz-admin is
+# intentionally excluded: it pulls buzz-media → rust-s3 (a git dep); mint agent
+# keypairs with `nak` instead (see GUIDES/DEPLOY_BUZZ_HARNESS_ON_BEE.md).
 #
 # Toolchain is pinned to the exact version from upstream rust-toolchain.toml
 # (1.95.0), which is newer than nixos-25.11 ships — hence the passed-in
 # rustToolchain (built from rust-overlay in flake.nix).
-#
-# On first build, two git deps in the upstream Cargo.lock need outputHashes.
-# nix will print the expected sha256 on the failed fixed-output derivation;
-# paste each into `outputHashes` below. See PLANS/BUZZ_HARNESS_ON_BEE.md.
 {
   pkgs,
   rustToolchain,
@@ -36,19 +33,13 @@ rustPlatform.buildRustPackage {
     hash = lib.fakeHash;
   };
 
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    # Two upstream git deps. Replace lib.fakeHash with the sha256 nix reports.
-    outputHashes = {
-      "https://github.com/Mesh-LLM/mesh-llm.git?tag=v0.74.0" = lib.fakeHash;
-      "https://github.com/tlongwell-block/rust-s3?rev=c9fce3620dd434c1f810101d672cf384268dbb0f" =
-        lib.fakeHash;
-    };
-  };
+  # The three built crates share no git deps (only buzz-relay/buzz-admin pull
+  # mesh-llm / rust-s3), so no outputHashes are needed.
+  cargoLock.lockFile = ./Cargo.lock;
 
   # Build only the headless crates (and their pure-Rust deps). This skips
-  # buzz-relay (needs cmake/opus) and the desktop/frontend (node). buzz-admin
-  # is included for `buzz-admin generate-key` (minting agent identities).
+  # buzz-relay (needs cmake/opus), buzz-admin (pulls a git dep), and the
+  # desktop/frontend (node).
   cargoBuildFlags = [
     "-p"
     "buzz-acp"
@@ -56,8 +47,6 @@ rustPlatform.buildRustPackage {
     "buzz-cli"
     "-p"
     "buzz-agent"
-    "-p"
-    "buzz-admin"
   ];
 
   # rustls + ring: no system TLS libs. stdenv provides the C toolchain ring needs.
@@ -68,7 +57,7 @@ rustPlatform.buildRustPackage {
   doCheck = false;
 
   meta = {
-    description = "Buzz headless CLI stack (buzz-acp, buzz-cli, buzz-agent, buzz-admin)";
+    description = "Buzz headless CLI stack (buzz-acp, buzz-cli, buzz-agent)";
     homepage = "https://github.com/block/buzz";
     license = lib.licenses.asl20;
     mainProgram = "buzz-acp";
