@@ -157,8 +157,10 @@ in
           openrouter = "OPENROUTER_API_KEY";
           anthropic = "ANTHROPIC_API_KEY";
         }.${a.provider} or null;
+        # NOTE: use the braceless $VAR form — Nix would otherwise try to
+        # interpolate a literal "${...}" in the generated bash.
         keyExport = lib.optionalString (agentKeyVar != null && a.apiKeyEnvFrom != null)
-          ("export " + agentKeyVar + "=\"${" + a.apiKeyEnvFrom + "}\"");
+          ("export " + agentKeyVar + "=\"$" + a.apiKeyEnvFrom + "\"");
         startScript = pkgs.writeShellScriptBin "buzz-acp-${name}" ''
           ${keyExport}
           exec ${cfg.package}/bin/buzz-acp ${lib.escapeShellArgs a.extraOptions}
