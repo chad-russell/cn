@@ -35,8 +35,8 @@
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
+      EnvironmentFile = [ config.age.secrets.buzz-relay-env.path ];
     };
-    environmentFile = [ config.age.secrets.buzz-relay-env.path ];
     path = [ pkgs.minio-client ];
     script = ''
       set -e
