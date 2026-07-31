@@ -33,9 +33,15 @@ rustPlatform.buildRustPackage {
     hash = lib.fakeHash;
   };
 
-  # The three built crates share no git deps (only buzz-relay/buzz-admin pull
-  # mesh-llm / rust-s3), so no outputHashes are needed.
-  cargoLock.lockFile = ./Cargo.lock;
+  # The full workspace lockfile vendors aws-creds (a patched crates-io dep via
+  # buzz-media → rust-s3) even though we don't compile buzz-media; it needs an
+  # outputHash. No other git deps are reached.
+  cargoLock = {
+    lockFile = ./Cargo.lock;
+    outputHashes = {
+      "aws-creds-0.39.1" = lib.fakeHash;
+    };
+  };
 
   # Build only the headless crates (and their pure-Rust deps). This skips
   # buzz-relay (needs cmake/opus), buzz-admin (pulls a git dep), and the
