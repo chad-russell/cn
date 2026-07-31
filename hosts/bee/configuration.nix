@@ -21,12 +21,6 @@
 
   networking.hostName = "bee";
 
-  # Pin buzz.crussell.io to localhost so the co-located agent harness
-  # connects directly to the relay (port 3000) with the right Host header,
-  # bypassing the gateway/Caddy hairpin. bee is the relay host, so it never
-  # needs the public route.
-  networking.hosts."127.0.0.1" = [ "buzz.crussell.io" ];
-
   # ── Boot ─────────────────────────────────────────────────────────
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -132,12 +126,12 @@
   #   4. Add each agent's pubkey to the relay + channels via the Buzz desktop app.
   services.buzz-harness = {
     enable = true;
-    # Self-hosted relay on this same host. The relay binds communities by
-    # exact Host header, so we connect via the hostname (Host: buzz.crussell.io),
-    # not localhost (which 404s). The /etc/hosts pin below resolves the hostname
-    # to 127.0.0.1, and the pod publishes port 80 on loopback, so this is a
-    # direct local connection — no gateway/Caddy hop, resilient to outages.
-    relayUrl = "ws://buzz.crussell.io";
+    # Self-hosted relay on this same host, reached via the public URL. The
+    # relay binds communities by exact Host header, and NIP-42 verifies the
+    # AUTH event's relay tag against RELAY_URL (wss://buzz.crussell.io) — so we
+    # must connect with wss://buzz.crussell.io (ws:// or localhost both fail
+    # these checks). bee reaches it via the gateway hairpin.
+    relayUrl = "wss://buzz.crussell.io";
     agents = {
       # Primary agent — native buzz-agent on Z.AI Coding Plan (glm-5.2).
       bumble = {
