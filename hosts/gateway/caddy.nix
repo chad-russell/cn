@@ -52,5 +52,14 @@
     virtualHosts."glooai.crussell.io".extraConfig = ''
       reverse_proxy 10.10.0.6:4637
     '';
+
+    # Buzz self-hosted relay (bee). WS upgrade + long-lived connections:
+    # Caddy's reverse_proxy handles Upgrade transparently; flush immediately
+    # so streamed events aren't buffered.
+    virtualHosts."buzz.crussell.io".extraConfig = ''
+      reverse_proxy 10.10.0.12:3000 {
+        flush_interval -1
+      }
+    '';
   };
 }

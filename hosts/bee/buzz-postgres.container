@@ -1,0 +1,17 @@
+[Unit]
+Description=Buzz relay Postgres
+
+[Container]
+Image=postgres:17-alpine
+ContainerName=buzz-postgres
+Pod=buzz-relay.pod
+Volume=buzz-postgres-data:/var/lib/postgresql/data
+EnvironmentFile=/run/agenix/buzz-relay-env
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

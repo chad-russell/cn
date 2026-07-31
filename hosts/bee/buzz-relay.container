@@ -1,0 +1,22 @@
+[Unit]
+Description=Buzz relay (ghcr.io/block/buzz) — wss://buzz.crussell.io
+# Cross-service ordering (Quadlet auto-adds the pod dependency via Pod=).
+# The relay retry-starts until PG accepts connections; resolves itself on
+# cold boot within a few seconds.
+Requires=buzz-postgres.service buzz-redis.service buzz-minio.service buzz-minio-init.service
+After=buzz-postgres.service buzz-redis.service buzz-minio.service buzz-minio-init.service
+
+[Container]
+Image=ghcr.io/block/buzz:main
+ContainerName=buzz-relay
+Pod=buzz-relay.pod
+Volume=buzz-git-data:/data/git
+EnvironmentFile=/run/agenix/buzz-relay-env
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

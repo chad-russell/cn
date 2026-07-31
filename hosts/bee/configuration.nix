@@ -13,6 +13,7 @@
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
     ../../modules/buzz-harness.nix
+    ./buzz-relay.nix
     ../../modules/beszel-agent.nix
     ./backup.nix
     ./tailscale.nix
@@ -125,7 +126,10 @@
   #   4. Add each agent's pubkey to the relay + channels via the Buzz desktop app.
   services.buzz-harness = {
     enable = true;
-    # relayUrl defaults to wss://crussell.communities.buzz.xyz (hosted).
+    # Self-hosted relay on this same host (podman pod, port 3000). Plain ws
+    # over localhost: no TLS hop, no gateway dependency — the always-on agent
+    # keeps working even if the gateway VPS is down.
+    relayUrl = "ws://localhost:3000";
     agents = {
       # Primary agent — native buzz-agent on Z.AI Coding Plan (glm-5.2).
       bumble = {

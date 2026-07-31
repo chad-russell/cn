@@ -26,6 +26,12 @@ in
   # every beszel-agent. Created after first booting the hub.
   "beszel-agent-env.age".publicKeys = [ crussell ];
 
+  # ── Buzz self-hosted relay (podman pod on bee) ────────────────
+  # One env file for all containers in the buzz-relay pod: relay identity,
+  # owner pubkey, HMAC secret, and inlined PG/Redis/MinIO connection strings.
+  # See hosts/bee/buzz-relay.nix.
+  "buzz-relay-env.age".publicKeys = [ crussell ];
+
   # ── Buzz agent harness (buzz-acp on bee) ──────────────────────
   # Per-agent env file: BUZZ_PRIVATE_KEY=<nsec-or-hex> for each agent
   # identity that runs server-side. Mint a fresh keypair per agent

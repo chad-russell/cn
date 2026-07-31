@@ -1,0 +1,18 @@
+[Unit]
+Description=Buzz relay MinIO (S3 media + git CAS)
+
+[Container]
+Image=minio/minio:RELEASE.2025-09-07T16-13-09Z
+ContainerName=buzz-minio
+Pod=buzz-relay.pod
+Volume=buzz-minio-data:/data
+EnvironmentFile=/run/agenix/buzz-relay-env
+Exec=server /data --console-address ":9001"
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
