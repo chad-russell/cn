@@ -1,6 +1,6 @@
-# ── Buzz CLI stack: buzz-acp + buzz-cli + buzz-agent ────────────────────
+# ── Buzz CLI stack: buzz-acp + buzz-cli + buzz-agent + buzz-dev-mcp ────
 #
-# Builds three headless Rust binaries from upstream block/buzz. These are
+# Builds four headless Rust binaries from upstream block/buzz. These are
 # pure-Rust (rustls/ring TLS — no openssl), and do NOT build buzz-relay, so the
 # cmake/opus toolchain the relay needs is avoided entirely. buzz-admin is
 # intentionally excluded: it pulls buzz-media → rust-s3 (a git dep); mint agent
@@ -54,6 +54,8 @@ rustPlatform.buildRustPackage {
     "buzz-cli"
     "-p"
     "buzz-agent"
+    "-p"
+    "buzz-dev-mcp"
   ];
 
   # rustls + ring: no system TLS libs. stdenv provides the C toolchain ring needs.

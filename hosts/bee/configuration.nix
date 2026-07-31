@@ -144,6 +144,11 @@
         extraEnv = {
           OPENAI_COMPAT_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
           OPENAI_COMPAT_API = "chat"; # force Chat Completions (endpoint isn't *.openai.com)
+          # Give buzz-agent a shell tool (buzz-dev-mcp) so it can run
+          # `buzz messages send` to reply. Without this, build_mcp_servers
+          # returns empty and the agent has no tools — it receives messages
+          # but can never post a reply.
+          BUZZ_ACP_MCP_COMMAND = "buzz-dev-mcp";
           # NIP-OA owner-attestation: lets the agent inherit the owner's relay
           # membership on hosted relays where the user isn't a relay admin.
           # Extracted from the desktop app's managed-agents.json. Not a secret.
