@@ -54,7 +54,7 @@ user_units := "opencode-web vicinae"
 # symlink-backed config). Instead, use `cjust cosmic-backup` and
 # `cjust cosmic-restore` to copy settings between the repo and
 # ~/.config/cosmic.
-dotfiles := ".aws/config .config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/nvim .config/wezterm .config/ghostty .config/vicinae/settings.json .config/opencode .local/share/applications/wezterm.desktop .local/share/applications/ghostty.desktop .zshrc .zshenv"
+dotfiles := ".aws/config .config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/nvim .config/wezterm .config/ghostty .config/vicinae/settings.json .config/opencode .local/bin/zen-browser .local/share/applications/wezterm.desktop .local/share/applications/ghostty.desktop .zshrc .zshenv"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # setup
@@ -214,6 +214,105 @@ icons:
       echo "  set ${v}/settings.ini gtk-icon-theme-name=Papirus"
     done
     echo "==> Papirus is now the active icon theme (GNOME + Niri/GTK)."
+
+# Cap Zen Browser's memory via a cgroup v2 soft limit, by overriding its
+# flatpak desktop file to launch through the `zen-browser` wrapper script
+# (deployed by `cjust link` to ~/.local/bin/). Idempotent — re-running
+# re-derives from the current flatpak export (so Zen desktop-file updates
+# flow through) and rewrites the override.
+#
+# Why a wrapper, not `systemd-run --scope -p MemoryHigh=...` in Exec=:
+# flatpak calls StartTransientScope itself via its session helper, creating
+# `app-flatpak-<appid>-<id>.scope` as a SIBLING under app.slice. An outer
+# scope we wrap the launch in is bypassed — the browser escapes with
+# MemoryHigh=infinity (verified empirically). The only reliable attachment
+# point is flatpak's own scope, which the wrapper polls for and caps with
+# `systemctl --user set-property --runtime` once it appears. The wrapper
+# also re-caps an already-running instance if the launch forwarded to one.
+#
+# Why MemoryHigh (not MemoryMax): MemoryHigh is a cgroup v2 *soft* limit.
+# When the scope exceeds it, the kernel aggressively reclaims pages inside
+# it (swap → zram) and emits PSI memory-pressure events, but never OOM-kills.
+# Firefox/Zen's nsAvailableMemoryWatcher reacts to PSI by unloading tabs —
+# so the browser self-governs as if the box only has $mem RAM, which is the
+# goal: stop it from eating everything before its own unload logic kicks in,
+# without ever killing it. MemoryMax would OOM-kill the whole browser;
+# MemoryHigh just throttles/reclaims.
+#
+# The wrapper script (dotfiles/.local/bin/zen-browser) is generic — it reads
+# the limit from ZEN_MEMHIGH. This recipe generates only the desktop override,
+# baking the limit into an `env ZEN_MEMHIGH=$mem` prefix on each Exec= line,
+# so `cjust zen-memlimit 12G` regenerates with the new value without touching
+# the wrapper. The override is host-local regenerable state (NOT a symlinked
+# dotfile) — Zen's desktop file ships hundreds of i18n lines and changes
+# across versions, so the source of truth is THIS recipe (version-controlled).
+# Clear with `cjust zen-memlimit-clear`.
+#
+# Default is 16G on a 32G host; pass any systemd size, e.g. `cjust zen-memlimit 12G`.
+# NOTE: this recipe generates the override for FUTURE launches. A currently
+# running Zen instance keeps whatever MemoryHigh its scope had at attach time
+# — cap it live with:
+#   scope=$(systemctl --user list-units --type=scope --all --no-legend | \
+#           awk '/app-flatpak-app\.zen_browser\.zen-[0-9]+\.scope/{print $1}')
+#   systemctl --user set-property --runtime "$scope" MemoryHigh=16G
+[group('setup')]
+zen-memlimit mem="16G":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    appid="app.zen_browser.zen"
+    # Resolve the original desktop file from the flatpak export (system install
+    # first, then per-user). Reading from the export — not a prior override —
+    # keeps this idempotent and lets Zen desktop-file updates flow through.
+    src=""
+    for cand in \
+      "/var/lib/flatpak/exports/share/applications/${appid}.desktop" \
+      "${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share/applications/${appid}.desktop"; do
+      if [ -e "$cand" ]; then src="$cand"; break; fi
+    done
+    if [ -z "$src" ]; then
+      echo "ERROR: no ${appid}.desktop in flatpak exports — is Zen installed?" >&2
+      exit 1
+    fi
+    wrapper="${HOME}/.local/bin/zen-browser"
+    if [ ! -x "$wrapper" ]; then
+      echo "ERROR: ${wrapper} missing or not executable — run 'cjust link' first." >&2
+      exit 1
+    fi
+    dst_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    dst="${dst_dir}/${appid}.desktop"
+    mkdir -p "$dst_dir"
+    # Rewrite every Exec= line: drop flatpak's run-prefix + appid, keep the
+    # per-action flags + file-forwarding markers, prepend an env ZEN_MEMHIGH
+    # + the wrapper path. `.*app\.zen_browser\.zen ` is robust to changes in
+    # flatpak's run flags; if the appid token itself ever moves, the line is
+    # left untouched (safe — just no limit until the recipe is updated).
+    sed -E "s|^Exec=.*app\\.zen_browser\\.zen (.*)$|Exec=env ZEN_MEMHIGH={{ mem }} ${wrapper} \\1|g" "$src" > "$dst"
+    update-desktop-database "$dst_dir" 2>/dev/null || true
+    echo "Wrote ${dst}"
+    echo "  source:     ${src}"
+    echo "  wrapper:    ${wrapper}"
+    echo "  MemoryHigh: {{ mem }} (cgroup v2 soft limit; no OOM kill)"
+    echo
+    echo "Future launches from the menu are capped. Verify after relaunch:"
+    echo "  systemctl --user show app-flatpak-${appid}-*.scope -p MemoryHigh -p MemoryMax   # MemoryHigh=..., MemoryMax=infinity"
+    echo "  grep -E 'some|full' /proc/pressure/memory                                      # PSI rises as Zen grows past {{ mem }}"
+
+# Remove the Zen memory override; Zen falls back to its stock flatpak desktop
+# file (unlimited). Idempotent.
+[group('setup')]
+zen-memlimit-clear:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    appid="app.zen_browser.zen"
+    dst_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    dst="${dst_dir}/${appid}.desktop"
+    if [ -e "$dst" ]; then
+      rm "$dst"
+      update-desktop-database "$dst_dir" 2>/dev/null || true
+      echo "Removed ${dst} — Zen now uses the stock flatpak desktop file."
+    else
+      echo "No override at ${dst} (nothing to do)."
+    fi
 
 # ═══════════════════════════════════════════════════════════════════════════
 # cosmic — backup / restore settings (NOT symlinked; cosmic dislikes
