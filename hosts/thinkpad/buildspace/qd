@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+#
+# qd — thin convenience wrapper around systemctl for the buildspace quadlet
+# stack. The raw systemd commands always work; this just saves typing.
+# See README.md.
+#
+#   qd buildspace up          start the whole stack (db + minio + app)
+#   qd buildspace down        stop the whole stack
+#   qd buildspace restart     restart the app (and its db/minio via PartOf)
+#   qd buildspace status      status of app + db + minio
+#   qd buildspace logs        tail the app journal
+set -euo pipefail
+
+if command -v systemctl >/dev/null 2>&1; then
+  SYS=(systemctl --user); JRN=(journalctl --user)
+elif command -v flatpak-spawn >/dev/null 2>&1; then
+  SYS=(flatpak-spawn --host systemctl --user); JRN=(flatpak-spawn --host journalctl --user)
+else
+  echo "FATAL: no systemctl found (run on the host or a toolbox with flatpak-spawn)" >&2
+  exit 1
+fi
+
+proj="${1:-}"; cmd="${2:-up}"
+case "$proj" in
+  buildspace|bs) svc="buildspace-dev-app" ;;
+  *) echo "usage: $0 <buildspace|bs> <up|down|restart|status|logs>" >&2; exit 1 ;;
+esac
+
+case "$cmd" in
+  up)      "${SYS[@]}" start "$svc" ;;
+  down)    "${SYS[@]}" stop "$svc" ;;
+  restart) "${SYS[@]}" restart "$svc" ;;
+  status)  "${SYS[@]}" status buildspace-dev-app buildspace-dev-db buildspace-dev-minio ;;
+  logs)    "${JRN[@]}" -u buildspace-dev-app -f ;;
+  *) echo "unknown command: $cmd" >&2
+     echo "commands: up down restart status logs" >&2; exit 1 ;;
+esac

@@ -1,0 +1,101 @@
+# The buildspace dev app (Bun + Turborepo monorepo) as a podman quadlet container.
+#
+# This ONE unit drives the whole stack:
+#   systemctl --user start buildspace-dev-app   # starts db + minio, then app
+#   systemctl --user stop  buildspace-dev-app   # stops app + db + minio (via PartOf=)
+#
+# How start/stop cascade works:
+#   - Requires=/After= pull in buildspace-dev-db + buildspace-dev-minio.
+#   - db & minio declare PartOf=buildspace-dev-app, so `stop`/`restart` of this
+#     unit propagates to them.
+#
+# Unlike the gloo quadlets (which use the published devcontainers/javascript-node
+# image), buildspace is a Bun monorepo, so this uses the published oven/bun image
+# matching the repo's pinned toolchain (containers/dev/Dockerfile +
+# packageManager bun@1.3.14). There is NO .build unit — deps install at first
+# start via dev-server.sh (bun install), and code changes are picked up live via
+# the bind mount (Next.js HMR / bun --hot).
+#
+# Not [Install]-enabled anywhere: the stack only runs when you start it.
+[Unit]
+Description=Buildspace quadlet dev stack — app (Bun/turbo dev, 8 ports)
+Requires=buildspace-dev-db.container buildspace-dev-minio.container
+After=buildspace-dev-db.container buildspace-dev-minio.container
+
+[Container]
+Image=docker.io/oven/bun:1.3.14
+ContainerName=buildspace-quadlet-app
+Network=buildspace-dev.network
+WorkingDir=/workspace
+
+# NOTE: no UserNS=keep-id, intentionally different from the gloo quadlets.
+# The gloo units use keep-id because devcontainers/javascript-node runs as the
+# `node` user (UID 1000). The oven/bun image runs as root, and rootless podman
+# maps container UID 0 → the host user automatically, so files written to the
+# bind-mounted repo (node_modules, .next caches) are owned by your host user
+# without any userns flag.
+
+# Browser/API-facing ports published to the host. These match the per-app dev
+# scripts in the repo (apps/*/package.json) run via `bun dev` (turbo run dev):
+#   3000 marketplace | 3002 runtime  | 3003 login   | 3004 docs
+#   3005 studio      | 3006 super-admin | 3008 registry | 3010 jobs
+# code-review (3007) is NOT published — it is reached by `jobs` over the shared
+# container loopback at http://localhost:3007 (see CODE_REVIEW_SVC_URL below),
+# mirroring how docker-compose.local.yml keeps it internal.
+PublishPort=3000:3000
+PublishPort=3002:3002
+PublishPort=3003:3003
+PublishPort=3004:3004
+PublishPort=3005:3005
+PublishPort=3006:3006
+PublishPort=3008:3008
+PublishPort=3010:3010
+
+# Product repo (read/write). :Z so podman labels the bind mount for SELinux
+# (~/Code/buildspace is not pre-labeled, unlike ~/Gloo). Edits on the host are
+# picked up live by the dev servers.
+Volume=/var/home/crussell/Code/buildspace:/workspace:Z
+
+# Startup script lives outside the product repo; relabel (:z) + mount read-only.
+Volume=/var/home/crussell/Code/cn/hosts/thinkpad/buildspace/dev-server.sh:/usr/local/bin/dev-server.sh:z,ro
+
+# Infra wiring: postgres + S3 (MinIO) on the quadlet network, plus the
+# code-review↔jobs loopback. These mirror docker-compose.local.yml's
+# x-buildspace-service environment and the jobs/code-review overrides, resolved
+# via the `postgres` / `minio` network aliases.
+#
+# No EnvironmentFile=: the stack boots with zero repo files. Next.js / Bun apps
+# still load per-app .env / .env.local natively from the bind mount if you add
+# them (see apps/*/.env.example for the per-app integration secrets).
+Environment=NODE_ENV=development
+Environment=HOME=/tmp/buildspace-home
+Environment=BUN_INSTALL=/tmp/buildspace-home/.bun
+Environment=CONTAINERIZED_DEV=true
+Environment=DATABASE_URL=postgresql://buildspace:buildspace@postgres:5432/buildspace
+Environment=BUILDSPACE_INTERNAL_R2_ENDPOINT=http://minio:9000
+Environment=BUILDSPACE_INTERNAL_R2_ACCESS_KEY_ID=buildspace
+Environment=BUILDSPACE_INTERNAL_R2_SECRET_ACCESS_KEY=buildspace123
+Environment=BUILDSPACE_INTERNAL_R2_BUCKET=buildspace-internal
+Environment=NEXT_TELEMETRY_DISABLED=1
+Environment=CODE_REVIEW_GITHUB_TOKEN=local-dev-placeholder-token
+Environment=CODE_REVIEW_SVC_TOKEN=local-dev-code-review-token
+Environment=CODE_REVIEW_SVC_URL=http://localhost:3007
+# runtime constructs `new ResendProvider(process.env.RESEND_API_KEY ?? "")`
+# unconditionally at boot; the Resend SDK throws "Missing API key" on a falsy
+# value. A non-empty placeholder satisfies the constructor — only real email
+# sends would fail, which is fine for local dev. (Stripe/GitHub are conditional
+# and stay null/healthy without their keys.)
+Environment=RESEND_API_KEY=re_local_dev_placeholder
+# Super-admin (apps/super-admin) and Studio gate access on this comma-separated
+# allowlist (packages/config isSuperAdminEmail, trim+lowercase). The seeded
+# super_admin is test@buildspace.so (created by `bun db:seed`). Without this,
+# sign-in succeeds but super-admin shows the "not allowlisted" page.
+Environment=BUILDSPACE_SUPER_ADMIN_EMAILS=test@buildspace.so
+
+Exec=/usr/local/bin/dev-server.sh
+
+[Service]
+# First run pulls the image + runs `bun install` across the whole monorepo
+# (large); give it 15 minutes. Dev server: no auto-restart (default Restart=no)
+# so you see crashes instead of a restart loop.
+TimeoutStartSec=900

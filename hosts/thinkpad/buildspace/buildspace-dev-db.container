@@ -1,0 +1,29 @@
+# PostgreSQL 17 for the buildspace quadlet stack.
+# NetworkAlias=postgres lets the app resolve it by the hostname in DATABASE_URL
+# (postgresql://buildspace:buildspace@postgres:5432/buildspace), matching
+# docker-compose.local.yml exactly. Not published to the host — the app reaches
+# it over the buildspace-dev network. To use a DB GUI from the host, add
+# `PublishPort=5434:5432` here and re-run install.sh.
+[Unit]
+Description=Buildspace quadlet dev stack — PostgreSQL
+# Stop/restart this with the app unit (see buildspace-dev-app.container).
+PartOf=buildspace-dev-app.container
+
+[Container]
+Image=docker.io/library/postgres:17
+ContainerName=buildspace-quadlet-db
+Network=buildspace-dev.network
+NetworkAlias=postgres
+Environment=POSTGRES_USER=buildspace
+Environment=POSTGRES_PASSWORD=buildspace
+Environment=POSTGRES_DB=buildspace
+ShmSize=512m
+HealthCmd=pg_isready -U buildspace -d buildspace
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=20
+Volume=buildspace-dev-db.volume:/var/lib/postgresql/data
+
+[Service]
+# First run pulls postgres:17; give it room past the 90s default.
+TimeoutStartSec=120

@@ -1,0 +1,6 @@
+# Persistent MinIO (S3) data for the buildspace quadlet stack.
+# Default volume name: systemd-buildspace-dev-minio
+[Unit]
+Description=Buildspace quadlet dev stack — MinIO data
+
+[Volume]
