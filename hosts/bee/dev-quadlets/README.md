@@ -132,14 +132,18 @@ their real `*.internal.crussell.io` origin. **gpl and polymer are already wired
 in their `dev-server.sh`**; buildspace has no known URL env. Remaining steps are
 **external and manual** (only for polymer/buildspace — gpl needs nothing):
 
-- **gpl — local dev auth (no setup):** gpl's `hummingbird-login.ts` uses Hummingbird
-  SSO only when `BETTER_AUTH_URL` is non-localhost; `dev-server.sh` sets
-  `BETTER_AUTH_URL=""`/`NEXT_PUBLIC_BETTER_AUTH_URL=""` to keep the **local dev
-  auth fallback** active (matching the thinkpad) and let better-auth derive URLs
-  from the request host. No Hummingbird redirect, no localhost leak, no IDP
-  registration. (To switch to real Hummingbird SSO instead, set those to
-  `https://gpl.internal.crussell.io` in `dev-server.sh` and register the
-  callback URI `…/auth/hummingbird/callback` in the Hummingbird dashboard.)
+- **gpl — local dev auth (needs a one-line gpl-code change):** gpl's
+  `hummingbird-login.ts` selects Hummingbird SSO vs. a local dev auth fallback.
+  It used to key that choice on `BETTER_AUTH_URL` being localhost, which broke
+  behind the Caddy (a real origin flipped SSO on; an empty one made
+  `auth-client.ts` fall back to `localhost:3006`). The fix in the gpl repo:
+  `shouldUseLocalAuthFallback()` returns true whenever
+  `NODE_ENV === "development"` (Next.js's own "is `next dev` running" signal) —
+  then `dev-server.sh` sets `BETTER_AUTH_URL`/`NEXT_PUBLIC_BETTER_AUTH_URL` to
+  `https://gpl.internal.crussell.io` so the local dev auth runs with correct
+  proxied URLs. No Hummingbird setup. Behind Caddy this ALSO needs
+  `allowedDevOrigins` in gpl's `next.config.ts` (Next.js blocks its dev/HMR
+  channel for non-localhost origins, which prevents client hydration without it).
 - **polymer — WorkOS:** add both redirect URIs to the WorkOS dashboard:
   `https://polymer.internal.crussell.io/callback` and
   `https://admin360.internal.crussell.io/callback`. `WORKOS_COOKIE_DOMAIN` is
