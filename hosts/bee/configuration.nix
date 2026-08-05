@@ -122,6 +122,12 @@
   # the desktop app SSHes in and spawns `hermes serve`. Without this, `hermes
   # serve` crashes on startup with PermissionError on .env. NixOS merges
   # extraGroups lists across modules, so this appends to base-server's [wheel].
+  #
+  # The `hermes` group is declared here (not by the hermes-agent module) because
+  # we set services.hermes-agent.createUser = false to avoid the module
+  # redefining crussell. The group survives so the setgid state dir keeps
+  # working for both the gateway (crussell:hermes) and direct `hermes serve`.
+  users.groups.hermes = { };
   users.users.crussell.extraGroups = [ "hermes" ];
 
   # ── opencode AI coding agent ────────────────────────────────────
@@ -143,6 +149,17 @@
   # @-mentioning Bee (external agents without managed-list membership).
   services.hermes-agent = {
     enable = true;
+
+    # Run the gateway as the real user (crussell), not a sandboxed `hermes`
+    # system user, so the agent has full filesystem/project access matching
+    # the direct "Connect via SSH" mode. crussell is already in the `hermes`
+    # group (extraGroups below) for read/write access to the shared state dir
+    # (/var/lib/hermes, group hermes, setgid). The sandboxing overrides that
+    # remove ProtectSystem/ReadWritePaths are further below.
+    user = "crussell";
+    group = "hermes";
+    createUser = false;
+    workingDirectory = "/home/crussell";
 
     # Expose the `hermes` CLI system-wide (and export HERMES_HOME pointing at
     # the service's state dir) so it's on PATH for SSH login shells. This lets
@@ -200,6 +217,23 @@
   systemd.services.hermes-agent.serviceConfig.EnvironmentFile = [
     config.age.secrets.hermes-bee-env.path
   ];
+
+  # ── Hermes gateway: run as crussell with NO filesystem sandbox ──────
+  # The upstream NixOS module hardcodes ProtectSystem=strict and
+  # ReadWritePaths=[stateDir workingDirectory], and sets HOME=stateDir.
+  # Since we run the gateway as crussell (not a locked-down system user),
+  # strip those so the agent has the same filesystem access as a login
+  # shell — it can see and modify crussell's projects, git config, etc.
+  # HOME points at crussell's real home so git/ssh find their configs;
+  # HERMES_HOME (/var/lib/hermes/.hermes) stays the source of truth for
+  # agent state and is set by the module.
+  systemd.services.hermes-agent = {
+    serviceConfig = {
+      ProtectSystem = lib.mkForce false;
+      ReadWritePaths = lib.mkForce [ ];
+    };
+    environment.HOME = lib.mkForce "/home/crussell";
+  };
 
   # ── Beszel monitoring agent ────────────────────────────────────
   # (enabled by default in modules/beszel-agent.nix)
