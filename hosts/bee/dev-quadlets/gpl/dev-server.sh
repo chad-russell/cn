@@ -9,12 +9,18 @@
 # the logs and restart it manually (systemctl --user restart gpl-dev-app).
 #
 # bee/Caddy difference from the thinkpad version: the app is fronted by the bees
-# Caddy at https://gpl.internal.crussell.io (see hosts/bees/caddy/routes/internal/dev.caddy),
-# so we export BETTER_AUTH_URL / NEXT_PUBLIC_BETTER_AUTH_URL to that origin. Next.js
-# will NOT override an already-set process env from .env.local, so these win —
-# meaning absolute auth URLs / callbacks point at the Caddy origin, not localhost.
-# (For Hummingbird SSO you must additionally register the new callback URI in the
-# Hummingbird dashboard — see the README checklist.)
+# Caddy at https://gpl.internal.crussell.io (see hosts/bees/caddy/routes/internal/dev.caddy).
+# For auth we FORCE gpl's LOCAL DEV AUTH FALLBACK (no Hummingbird SSO), matching
+# the thinkpad dev experience. gpl's src/lib/hummingbird-login.ts selects SSO
+# only when BETTER_AUTH_URL is a NON-localhost URL; .env.local sets it to
+# localhost:3006 (→ local fallback on the thinkpad). We set BOTH auth URLs to
+# EMPTY below so: (a) shouldUseLocalAuthFallback() stays true (no Hummingbird
+# redirect, no localhost SSO URL), and (b) Next.js's env loader sees them as
+# already-set and does NOT overlay the localhost values from /workspace/.env.local.
+# better-auth then derives its URLs from the request host (gpl.internal.crussell.io)
+# → correct behind the proxy with zero SSO setup. (To use real Hummingbird SSO
+# here instead, set these to https://gpl.internal.crussell.io and register the
+# callback URI in the Hummingbird dashboard.)
 #
 # This file is Nix-managed (materialized under /etc/dev-quadlets/gpl/) and
 # bind-mounted read-only into the container, so nothing is vendored into the gpl
@@ -23,9 +29,11 @@ set -u
 
 cd /workspace || { echo "FATAL: /workspace not mounted" >&2; exit 1; }
 
-# Public origin for Caddy fronting (see header comment).
-export BETTER_AUTH_URL=https://gpl.internal.crussell.io
-export NEXT_PUBLIC_BETTER_AUTH_URL=https://gpl.internal.crussell.io
+# Force the local dev auth fallback behind Caddy (see header comment). EMPTY, not
+# unset — unset would let Next.js overlay the localhost value from .env.local and
+# flip gpl into Hummingbird SSO mode (which then redirects to localhost:3000).
+export BETTER_AUTH_URL=""
+export NEXT_PUBLIC_BETTER_AUTH_URL=""
 
 # The devcontainers/javascript-node image ships pnpm via corepack; enable it if
 # `pnpm` isn't already on PATH.

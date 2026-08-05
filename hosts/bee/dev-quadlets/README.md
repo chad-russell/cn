@@ -129,14 +129,17 @@ podman exec buildspace-quadlet-app bun db:seed   # optional; creates the super_a
 
 The apps ship assuming `localhost`. Behind the bees Caddy they need to know
 their real `*.internal.crussell.io` origin. **gpl and polymer are already wired
-in their `dev-server.sh`** (exported/inlined before `next dev`); buildspace has
-no known URL env. Remaining steps are **external and manual**:
+in their `dev-server.sh`**; buildspace has no known URL env. Remaining steps are
+**external and manual** (only for polymer/buildspace — gpl needs nothing):
 
-- **gpl — Hummingbird SSO:** register the new callback URI
-  `https://gpl.internal.crussell.io/auth/hummingbird/callback` in the
-  Hummingbird IDP (Salesforce/Google in `~/Gloo/360-gpl/.env.local` are
-  unaffected; `BETTER_AUTH_URL`/`NEXT_PUBLIC_BETTER_AUTH_URL` are already
-  exported to the Caddy origin in `dev-server.sh`).
+- **gpl — local dev auth (no setup):** gpl's `hummingbird-login.ts` uses Hummingbird
+  SSO only when `BETTER_AUTH_URL` is non-localhost; `dev-server.sh` sets
+  `BETTER_AUTH_URL=""`/`NEXT_PUBLIC_BETTER_AUTH_URL=""` to keep the **local dev
+  auth fallback** active (matching the thinkpad) and let better-auth derive URLs
+  from the request host. No Hummingbird redirect, no localhost leak, no IDP
+  registration. (To switch to real Hummingbird SSO instead, set those to
+  `https://gpl.internal.crussell.io` in `dev-server.sh` and register the
+  callback URI `…/auth/hummingbird/callback` in the Hummingbird dashboard.)
 - **polymer — WorkOS:** add both redirect URIs to the WorkOS dashboard:
   `https://polymer.internal.crussell.io/callback` and
   `https://admin360.internal.crussell.io/callback`. `WORKOS_COOKIE_DOMAIN` is
