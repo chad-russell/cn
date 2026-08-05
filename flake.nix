@@ -29,6 +29,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # ── Hermes Agent (replaces buzz-acp for Bee) ──────────────────────
+    # Does NOT follow our nixpkgs: Hermes needs nodejs_26 which nixos-25.11
+    # doesn't ship. The module builds its own package internally.
+    hermes-agent = {
+      url = "github:NousResearch/hermes-agent";
+    };
+
   };
 
   outputs =
@@ -40,6 +47,7 @@
       disko,
       agenix,
       rust-overlay,
+      hermes-agent,
       ...
     }:
     let
@@ -124,7 +132,10 @@
     in
     {
       # ── NixOS Configurations ─────────────────────────────────────
-      nixosConfigurations.bee = mkHost { hostname = "bee"; };
+      nixosConfigurations.bee = mkHost {
+        hostname = "bee";
+        extraModules = [ hermes-agent.nixosModules.default ];
+      };
       nixosConfigurations.bees = mkHost { hostname = "bees"; };
       nixosConfigurations.nas = mkHost { hostname = "nas"; };
       nixosConfigurations.gateway = mkHost { hostname = "gateway"; };

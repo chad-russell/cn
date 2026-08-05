@@ -38,4 +38,17 @@ in
   # (e.g. `buzz-admin generate-key`) — do NOT reuse laptop agents.
   "buzz-agent-bumble-env.age".publicKeys = [ crussell ];
   "buzz-agent-oracle-env.age".publicKeys = [ crussell ];
+
+  # ── Hermes Agent gateway on bee (replaces buzz-acp) ────────────
+  # Combined env: BUZZ_PRIVATE_KEY (Bee's identity) + OPENAI_API_KEY
+  # (Z.AI key remapped for Hermes' OpenAI-compatible provider).
+  "hermes-bee-env.age".publicKeys = [ crussell ];
+
+  # ── Hermes Agent CLI/TUI/Desktop on thinkpad ───────────────────
+  # OPENAI_API_KEY=<Z.AI coding key> so Hermes' OpenAI-compatible provider
+  # resolver finds it. Same key value as zai-api-key.age (which exports it
+  # under ZHIPU_API_KEY for opencode); remapped to OPENAI_API_KEY for Hermes.
+  # Sourced into shells via dotfiles/.zshenv (age-decrypt on login) and into
+  # the GUI desktop app via the ~/.local/bin/hermes-desktop wrapper.
+  "hermes-thinkpad-env.age".publicKeys = [ crussell ];
 }

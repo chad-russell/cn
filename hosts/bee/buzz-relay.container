@@ -12,6 +12,8 @@ ContainerName=buzz-relay
 Pod=buzz-relay.pod
 Volume=buzz-git-data:/data/git
 EnvironmentFile=/run/agenix/buzz-relay-env
+# Invite and join flows use WebView fetch rather than the native HTTP bridge.
+PodmanArgs=--env=BUZZ_CORS_ORIGINS=https://buzz.crussell.io,tauri://localhost,http://tauri.localhost,https://tauri.localhost
 
 [Service]
 Restart=always

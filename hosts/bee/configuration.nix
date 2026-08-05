@@ -3,7 +3,7 @@
 # NixOS install on Crucial P3 Plus 1TB NVMe, 32GB RAM.
 # General-purpose server — services to be added incrementally.
 
-{ config, lib, pkgs, unstable, ... }:
+{ config, lib, pkgs, unstable, buzz, ... }:
 
 {
   imports = [
@@ -115,68 +115,78 @@
   # (enable + web defaults live in modules/opencode.nix)
 
   # ── Buzz agent harness (buzz-acp) ───────────────────────────────
-  # One systemd service per agent identity. Agents answer @mentions from any
-  # client (phone/laptop) while bee stays always-on. See PLANS note + the
-  # buzz-harness module for option reference.
-  #
-  # Before this is live you must (see modules/buzz-harness.nix + PLANS):
-  #   1. Fix secrets/zai-api-key.age to set ZHIPU_API_KEY (not ZAI_API_KEY).
-  #   2. Mint a keypair per agent: `buzz-admin generate-key` after first build.
-  #   3. Create secrets/buzz-agent-<name>-env.age = `BUZZ_PRIVATE_KEY=<nsec>`.
-  #   4. Add each agent's pubkey to the relay + channels via the Buzz desktop app.
-  services.buzz-harness = {
-    enable = true;
-    # Self-hosted relay on this same host, reached via the public URL. The
-    # relay binds communities by exact Host header, and NIP-42 verifies the
-    # AUTH event's relay tag against RELAY_URL (wss://buzz.crussell.io) — so we
-    # must connect with wss://buzz.crussell.io (ws:// or localhost both fail
-    # these checks). bee reaches it via the gateway hairpin.
-    relayUrl = "wss://buzz.crussell.io";
-    agents = {
-      # Primary agent — native buzz-agent on Z.AI Coding Plan (glm-5.2).
-      bumble = {
-        privateKeySecret = "buzz-agent-bumble-env";
-        provider = "openai";
-        model = "glm-5.2";
-        # The shared zai-api-key secret exposes ZHIPU_API_KEY; buzz-agent's
-        # openai provider wants OPENAI_COMPAT_API_KEY, so remap it.
-        apiKeyEnvFrom = "ZHIPU_API_KEY";
-        extraEnv = {
-          OPENAI_COMPAT_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
-          OPENAI_COMPAT_API = "chat"; # force Chat Completions (endpoint isn't *.openai.com)
-          # Give buzz-agent a shell tool (buzz-dev-mcp) so it can run
-          # `buzz messages send` to reply. Without this, build_mcp_servers
-          # returns empty and the agent has no tools — it receives messages
-          # but can never post a reply.
-          BUZZ_ACP_MCP_COMMAND = "buzz-dev-mcp";
-          # NIP-OA owner-attestation: lets the agent inherit the owner's relay
-          # membership on hosted relays where the user isn't a relay admin.
-          # Extracted from the desktop app's managed-agents.json. Not a secret.
-          BUZZ_AUTH_TAG = ''["auth","93984b5c44debc12757e0f5db1643c2808ee8b820b46ac704febb039de4c16a7","","a5b2da36a39eb7569f10e823ecb699cf0ccef495149cdca5144118f0d751efdc636d2f707b90c7a9ae6e92355453283433edf33678af21ca3c6aa481cb48d961"]'';
-        };
-        environmentFiles = [
-          config.age.secrets.zai-api-key.path # provides ZHIPU_API_KEY (after the fix)
-        ];
-        # Dedicated test channel (just you + the bot): respond to any owner
-        # message, no @mention needed. Drop this once the agent has a proper
-        # @ handle (re-created in the app) for use in shared channels.
-        extraOptions = [
-          "--no-mention-filter"
-          "--respond-to" "anyone" # TEMP: rule out owner-gate silent drop during testing
-        ];
-      };
+  # Disabled — replaced by Hermes Agent gateway (see below). Kept as a
+  # fallback: re-enable by setting enable = true and disabling hermes-agent.
+  services.buzz-harness.enable = false;
 
-      # Secondary agent — OpenRouter (swap models freely per agent).
-      # oracle = {
-      #   privateKeySecret = "buzz-agent-oracle-env";
-      #   provider = "openrouter";
-      #   model = "anthropic/claude-sonnet-4.5";
-      #   environmentFiles = [
-      #     config.age.secrets.openrouter-api-key.path # provides OPENROUTER_API_KEY
-      #   ];
-      # };
+  # ── Age secrets ─────────────────────────────────────────────────
+  age.secrets.hermes-bee-env.file = ../../secrets/hermes-bee-env.age;
+
+  # ── Hermes Agent gateway (replaces buzz-acp for Bee) ────────────
+  # Runs Hermes' native Buzz platform adapter: connects directly to the
+  # relay via NIP-42-authenticated WebSocket, detects @mentions by message
+  # content (not just p-tags), and uses the `buzz` CLI for outbound.
+  # This solves the desktop v0.5.4 autocomplete filter that prevented
+  # @-mentioning Bee (external agents without managed-list membership).
+  services.hermes-agent = {
+    enable = true;
+
+    # Expose the `hermes` CLI system-wide (and export HERMES_HOME pointing at
+    # the service's state dir) so it's on PATH for SSH login shells. This lets
+    # the desktop app's "Connect via SSH" mode spawn `hermes serve --isolated
+    # --host 127.0.0.1 --port 0` on bee over Nebula SSH and tunnel it back to
+    # the laptop, attaching the desktop UI to bee's agent state. Loopback bind
+    # → no auth provider needed; the SSH key is the gate. The spawned `serve`
+    # shares /var/lib/hermes/.hermes with the long-running gateway service.
+    addToSystemPackages = true;
+
+    settings = {
+      custom_providers = [
+        {
+          name = "zai-coding";
+          base_url = "https://api.z.ai/api/coding/paas/v4";
+          key_env = "OPENAI_API_KEY";
+        }
+      ];
+      model = {
+        provider = "zai-coding";
+        default = "glm-5.2";
+      };
+      display.platforms.buzz = {
+        interim_assistant_messages = false;
+        tool_progress = "off";
+      };
+      gateway.platforms.buzz = {
+        enabled = true;
+        extra = {
+          relay_url = "https://buzz.crussell.io";
+          require_mention = true;
+          allow_all_users = true;
+        };
+      };
     };
+
+    environment = {
+      BUZZ_RELAY_URL = "https://buzz.crussell.io";
+      BUZZ_ALLOW_ALL_USERS = "true";
+      OPENAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
+      BUZZ_AUTH_TAG = ''["auth","93984b5c44debc12757e0f5db1643c2808ee8b820b46ac704febb039de4c16a7","","a5b2da36a39eb7569f10e823ecb699cf0ccef495149cdca5144118f0d751efdc636d2f707b90c7a9ae6e92355453283433edf33678af21ca3c6aa481cb48d961"]'';
+    };
+
+    environmentFiles = [
+      config.age.secrets.hermes-bee-env.path
+    ];
+
+    # buzz CLI for outbound message delivery
+    extraPackages = [ buzz ];
   };
+
+  # Inject secrets directly into the systemd service environment so the
+  # Hermes runtime provider resolver sees OPENAI_API_KEY before python-dotenv
+  # loads .env. Without this, the resolver falls back to "no-key-required".
+  systemd.services.hermes-agent.serviceConfig.EnvironmentFile = [
+    config.age.secrets.hermes-bee-env.path
+  ];
 
   # ── Beszel monitoring agent ────────────────────────────────────
   # (enabled by default in modules/beszel-agent.nix)
