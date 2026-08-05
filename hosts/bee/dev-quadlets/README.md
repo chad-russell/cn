@@ -39,11 +39,12 @@ user manager (and the user podman socket) is always up.
 | polymer | `devcontainers/javascript-node:24` | postgres:16 | minio | 3000, 3001 | `polymer.internal`, `admin360.internal` |
 | buildspace | `oven/bun:1.3.14` | postgres:17 | minio (pinned) | 3000,3002–3006,3008,3010 | `bs-*.internal` (8) |
 
-(All `*.internal.crussell.io` — abbreviated above.) gpl/polymer use
-`UserNS=keep-id` (the devcontainers image runs as `node` UID 1000 → mapped to
-crussell); buildspace doesn't (the `oven/bun` image runs as root → rootless
-maps UID 0 → crussell automatically). DB + MinIO are never published to the host
-— the app reaches them over the quadlet network by alias.
+(All `*.internal.crussell.io` — abbreviated above.) All three app containers
+run as **root (UID 0) inside the container** — in rootless podman that maps to
+crussell on the host, so bind-mount artifacts (`node_modules`, `.next`, caches)
+land crussell-owned. The thinkpad units use `UserNS=keep-id` for this, but
+bee's rootless podman + native overlay breaks keep-id (recursive-userns
+permission error), so bee runs `User=0` instead — same ownership outcome.
 
 ## Daily use (on bee, over SSH)
 

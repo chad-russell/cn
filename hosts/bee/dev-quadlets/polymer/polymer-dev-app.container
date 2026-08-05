@@ -31,10 +31,14 @@ After=polymer-dev-db.container polymer-dev-minio.container
 Image=mcr.microsoft.com/devcontainers/javascript-node:24
 ContainerName=polymer-quadlet-app
 Network=polymer-dev.network
-# keep-id so files written to the bind-mounted repo are owned by host UID 1000.
-# The devcontainers image runs as `node` (UID 1000); keep-id maps that to the
-# host user, so node_modules/.next stay host-writable as crussell.
-UserNS=keep-id
+# Run as root inside the container. The devcontainers image defaults to `node`
+# (UID 1000), but bee's rootless podman + native overlay breaks UserNS=keep-id
+# (recursive-userns "Permission denied" on the overlay merged dir — the thinkpad
+# units use keep-id, which works there). Running as root (UID 0) instead gives
+# the SAME crussell ownership of bind-mount artifacts (node_modules/.next): in
+# rootless podman container-UID-0 maps to the host user, so writes land owned by
+# crussell — the same model buildspace's oven/bun image (also root) uses here.
+User=0
 WorkingDir=/workspace
 
 # Browser-facing ports published to the host (reachable on bee at
