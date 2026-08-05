@@ -47,6 +47,16 @@ output "Dell Inc. DELL P3225QE 616K784" {
     position x=320 y=-1440
 }
 
+// Second Dell P3225QE (different serial than the work one above), centered
+// above the laptop — same layout as DP-5: 4K @ scale 1.25 → logical 3072x1728,
+// so x = 960-1536 = -576 centers it on the 1920-wide laptop, y = -1728 seats
+// it directly above eDP-1.
+output "Dell Inc. DELL P3225QE 5KCK784" {
+    mode "3840x2160@59.997"
+    scale 1.25
+    position x=-576 y=-1728
+}
+
 // Home monitors: two 4K displays, right one (DP-5) centered above laptop
 output "DP-3" {
     mode "3840x2160@60.00"

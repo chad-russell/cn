@@ -15,8 +15,8 @@
 # ("nvim:stable"); for now each entry is a bare package name. (Top-level keys
 # must precede the [[source]]/[[cache]] table headers — standard TOML.)
 packages = [
-  "age", "age-keygen", "aws", "bat", "dust", "eza", "fd", "gh", "htop",
-  "noctalia", "nvim", "psql", "rg", "sops", "tokei", "vicinae",
+  "age", "age-keygen", "aws", "bat", "dust", "eza", "fastfetch", "fd", "gh", "htop",
+  "noctalia", "nvim", "psql", "rg", "sops", "tokei", "vicinae", "witr",
   "ghostty", "wezterm", "yazi", "zoxide",
 ]
 
