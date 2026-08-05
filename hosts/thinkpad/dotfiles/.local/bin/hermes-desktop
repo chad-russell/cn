@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# hermes-desktop — launch the host-built Hermes Electron app, sourcing the
+# cn-secrets env cache first so the compositor-launched GUI sees provider keys.
+#
+# dotfiles/.zshenv only covers shells + their children. GUI apps launched
+# directly by the compositor (niri/COSMIC `spawn`, the launcher, a .desktop
+# entry) read the systemd user session env, not .zshenv — so they'd miss the
+# OPENAI_API_KEY that hermes' provider resolver looks for. This wrapper is the
+# bridge: it sources the same per-login tmpfs cache .zshenv writes, then execs
+# the Electron binary. Same pattern as zen-browser (a wrapper that does extra
+# setup before exec'ing the real binary).
+#
+# The desktop app itself is built off-host by `cjust hermes-desktop-build`
+# (Justfile) — the Electron app dir lands at ~/.local/share/hermes-desktop/.
+# See hosts/thinkpad/README.md for the rationale.
+
+set -euo pipefail
+
+# Source the cn-secrets cache (written by dotfiles/.zshenv on first login).
+# Silent + non-fatal if absent — hermes will fall back to its own .env or fail
+# with a clear "API key not set" message from `hermes doctor`.
+_cache="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/cn-secrets.env"
+if [ -f "$_cache" ]; then
+  # shellcheck disable=SC1090
+  set -a; . "$_cache"; set +a
+fi
+unset _cache
+
+dest="$HOME/.local/share/hermes-desktop"
+
+# Locate the Electron binary inside the unpacked dir. electron-builder names
+# the main binary after the package.json `name` field (hermes), so check that
+# first; the productName-derived name is the secondary candidate. We avoid
+# `find ... | head -1` as a primary because linux-unpacked/ contains several
+# executables (chrome-sandbox, crashpad_handler, etc.) that aren't the app.
+bin=""
+for cand in "${dest}/hermes" "${dest}/hermes-desktop" "${dest}/Hermes"; do
+  if [ -x "$cand" ]; then bin="$cand"; break; fi
+done
+# Last-resort fallback: scan, but exclude known Electron helper binaries.
+if [ -z "$bin" ]; then
+  bin="$(find "${dest}" -maxdepth 1 -type f -executable \
+          ! -name 'chrome-sandbox' \
+          ! -name '*crashpad*' \
+          ! -name 'vulkan_*' \
+          2>/dev/null | head -1 || true)"
+fi
+
+if [ -z "$bin" ]; then
+  echo "ERROR: no executable found inside ${dest}." >&2
+  echo "       Run 'cjust hermes-desktop-build' first." >&2
+  exit 1
+fi
+
+exec "$bin" "$@"

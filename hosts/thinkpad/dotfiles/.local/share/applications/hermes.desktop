@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Hermes
+Comment=Hermes Agent (Nous Research) — desktop app, host-built
+Exec=/var/home/crussell/.local/bin/hermes-desktop
+Icon=dialog-information
+Categories=Development;
+Keywords=ai;agent;llm;chat;coding;
+Terminal=false
+StartupWMClass=Hermes

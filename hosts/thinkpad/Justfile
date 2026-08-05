@@ -54,7 +54,7 @@ user_units := "opencode-web vicinae"
 # symlink-backed config). Instead, use `cjust cosmic-backup` and
 # `cjust cosmic-restore` to copy settings between the repo and
 # ~/.config/cosmic.
-dotfiles := ".aws/config .config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/nvim .config/wezterm .config/ghostty .config/vicinae/settings.json .config/opencode .local/bin/zen-browser .local/share/applications/wezterm.desktop .local/share/applications/ghostty.desktop .zshrc .zshenv"
+dotfiles := ".aws/config .config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/nvim .config/wezterm .config/ghostty .config/vicinae/settings.json .config/opencode .local/bin/zen-browser .local/bin/hermes-desktop .local/share/applications/wezterm.desktop .local/share/applications/ghostty.desktop .local/share/applications/hermes.desktop .zshrc .zshenv"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # setup
@@ -475,6 +475,153 @@ opencode-install:
     echo "opencode installed to ~/.local/bin/opencode"
     # First-time auth (or after wiping ~/.local/share/opencode/auth.json):
     #   opencode auth login
+
+# ═══════════════════════════════════════════════════════════════════════════
+# hermes (host install + off-host desktop build)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Like opencode, hermes runs on the host directly (NOT in bubblebox) — it's an
+# AI agent and needs full host control to edit files and run tools in the
+# user's working directory. See hosts/thinkpad/README.md ("opencode and hermes
+# are the exceptions"). The CLI/TUI come from the official installer; the
+# desktop GUI is built off-host in a throwaway container (the `cjust icons`
+# Papirus pattern), keeping Electron's ~200 MB of build cruft off the host.
+#
+# Secrets: provider keys live in secrets/hermes-thinkpad-env.age (agenix),
+# decrypted into a per-login tmpfs by dotfiles/.zshenv. The desktop wrapper at
+# dotfiles/.local/bin/hermes-desktop sources that cache so compositor-launched
+# GUI sees the keys too (shells already get them via .zshenv).
+
+# Install the hermes CLI/TUI via the official installer. Lays down
+# ~/.local/bin/hermes (already on PATH via .zshenv) and self-manages
+# ~/.hermes/hermes-agent/ (Python venv + Node + ripgrep + ffmpeg). Re-run after
+# `cjust image-upgrade` or any `hermes uninstall` to pick up a fresh install.
+# `hermes update` (run by hermes itself) handles in-place upgrades thereafter.
+[group('hermes')]
+hermes-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v curl >/dev/null 2>&1; then
+      echo "ERROR: curl not found on host." >&2
+      echo "       Rebuild the host image, reboot, then re-run." >&2
+      exit 1
+    fi
+    curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+    echo
+    echo "hermes installed to ~/.local/bin/hermes"
+    # First-time setup (provider config, model pick): the OPENAI_API_KEY env
+    # var is already exported by .zshenv (from secrets/hermes-thinkpad-env.age).
+    # To point hermes at the Z.AI coding endpoint (OpenAI-compatible), declare
+    # a custom provider in ~/.hermes/config.yaml:
+    #   hermes config set custom_providers '[{name:zai-coding,base_url:https://api.z.ai/api/coding/paas/v4,key_env:OPENAI_API_KEY}]'
+    #   hermes config set model.provider zai-coding
+    #   hermes config set model.default glm-5.2
+
+# Build the hermes desktop (Electron) app OFF-HOST in a throwaway Fedora+Node
+# podman container, then copy only the unpacked app dir onto the host. Mirrors
+# `cjust icons` (Papirus): containerizing keeps Electron's build cruft
+# (~200 MB node_modules, the Electron download, gcc-c++/make) off the host, so
+# no host-image change or reboot is needed. Idempotent; re-run any time, e.g.
+# after `hermes update` bumps the source tree.
+#
+# Output: ~/.local/share/hermes-desktop/ (the unpacked Electron dir). Launch
+# via ~/.local/bin/hermes-desktop (wrapper that sources the cn-secrets cache so
+# the compositor-launched GUI sees provider keys) or the "Hermes" launcher entry
+# (dotfiles/.local/share/applications/hermes.desktop, symlinked by `cjust link`).
+#
+# Why not bubblebox: hermes is an AI coding agent (same category as opencode) —
+# its tool backend spawns synchronous subprocesses in arbitrary host cwds with
+# I/O capture, which has no precedent in the bubblebox tree and fights the
+# sandbox's read-only / content-addressed model. See README for the long version.
+[group('hermes')]
+hermes-desktop-build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v hermes >/dev/null 2>&1; then
+      echo "ERROR: hermes not found — run 'cjust hermes-install' first." >&2
+      exit 1
+    fi
+    if [ ! -d "$HOME/.hermes/hermes-agent" ]; then
+      echo "ERROR: ~/.hermes/hermes-agent missing — run 'cjust hermes-install' first." >&2
+      exit 1
+    fi
+    dest="$HOME/.local/share/hermes-desktop"
+    stage="$(mktemp -d)"
+    trap 'rm -rf "${stage}"' EXIT
+    # Build inside a throwaway container against the host's hermes-agent
+    # checkout. We invoke npm directly (the same path `hermes desktop
+    # --build-only` runs internally) instead of the hermes CLI: the venv's
+    # `hermes` script has a host-absolute shebang and won't resolve inside the
+    # container. electron-builder's `--dir` flag emits release/linux-unpacked/
+    # (the unpacked Electron app, no installers). Native Node modules need
+    # gcc-c++/make (Fedora — NOT build-essential, which is a Debian-ism).
+    echo "==> building hermes-desktop in a throwaway podman container..."
+    podman run --rm \
+      -v "$HOME/.hermes/hermes-agent:/work:Z" \
+      -v "${stage}:/out:Z" \
+      docker.io/library/fedora:latest \
+      bash -c '
+        set -euo pipefail
+        # Fedora build deps. build-essential does not exist on Fedora (Debian
+        # only); gcc-c++ + make are the Fedora equivalents and what npm needs
+        # for native modules. python3 is required by node-gyp.
+        dnf install -y --quiet nodejs npm gcc-c++ make python3 git
+        cd /work
+        echo "--- npm install (workspace from repo root) ---"
+        npm install --no-fund --no-audit
+        # npm sometimes fails to set the exec bit on `bin` script targets when
+        # installing on a bind-mounted volume (cross-env, electron-builder, etc.
+        # show up as `Permission denied` / exit 126 on invocation). Walk every
+        # node_modules/.bin/* symlink and chmod its target. No-op when npm got
+        # it right; rescue when it did not.
+        for link in node_modules/.bin/*; do
+          [ -L "$link" ] || continue
+          tgt=$(readlink -f "$link") && [ -f "$tgt" ] && chmod +x "$tgt" 2>/dev/null || true
+        done
+        echo "--- npm run pack (apps/desktop, electron-builder --dir) ---"
+        cd apps/desktop
+        npm run pack
+        # electron-builder --dir emits release/linux-unpacked/.
+        if [ -d release/linux-unpacked ]; then
+          cp -a release/linux-unpacked /out/hermes-desktop
+        else
+          echo "ERROR: release/linux-unpacked/ missing after pack" >&2
+          find release -maxdepth 2 -type d >&2 || true
+          exit 1
+        fi
+        echo "  built -> /out/hermes-desktop"
+      '
+    # Install the built dir onto the host.
+    rm -rf "${dest}"
+    mkdir -p "$(dirname "${dest}")"
+    cp -a "${stage}/hermes-desktop" "${dest}"
+    # Locate the Electron binary inside the unpacked dir. electron-builder
+    # names the main binary after productName (Hermes), but linux-unpacked/
+    # also contains chrome-sandbox, chrome_crashpad_handler, libEGL.so, etc.
+    # that are executable but not the app. Same exclusion logic as the
+    # ~/.local/bin/hermes-desktop wrapper.
+    bin=""
+    for cand in "${dest}/hermes" "${dest}/Hermes" "${dest}/hermes-desktop"; do
+      if [ -x "$cand" ]; then bin="$cand"; break; fi
+    done
+    if [ -z "$bin" ]; then
+      bin="$(find "${dest}" -maxdepth 1 -type f -executable \
+              ! -name 'chrome-sandbox' ! -name '*crashpad*' ! -name 'vulkan_*' ! -name 'lib*' \
+              2>/dev/null | head -1 || true)"
+    fi
+    if [ -z "$bin" ]; then
+      echo "WARNING: no main app binary found inside ${dest}." >&2
+      echo "         Contents:" >&2
+      ls -la "${dest}" >&2
+    else
+      echo "  main binary: ${bin#${dest}/}"
+    fi
+    echo "==> hermes-desktop installed to ${dest}"
+    echo
+    echo "Launch via:"
+    echo "  hermes desktop --skip-build      # upstream launcher (uses ~/.hermes)"
+    echo "  ~/.local/bin/hermes-desktop      # host wrapper (sources cn-secrets env first)"
+    echo "  Launcher → 'Hermes'              # the .desktop entry (run 'cjust link' to install)"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # host image (bootc)

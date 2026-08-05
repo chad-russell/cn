@@ -118,9 +118,11 @@ Current tools (defined in `~/Code/bubblebox-pkgs/`):
   GPU + `/sys` + D-Bus access via their entrypoints.
 - `yazi`, `zoxide` — file manager and `cd` replacement.
 
-`opencode` is intentionally NOT a bubblebox tool — it's the AI coding agent and
-needs full host control, so it's installed directly via `cjust opencode-install`
-(see below).
+`opencode` and `hermes` are intentionally NOT bubblebox tools — they're AI
+agents and need full host control (spawning subprocesses in arbitrary cwds
+with synchronous I/O capture has no precedent in the bubblebox tree and fights
+the sandbox's read-only / content-addressed model). They're installed directly
+on the host via `cjust opencode-install` / `cjust hermes-install`. See below.
 
 Typical workflow:
 
@@ -133,6 +135,66 @@ To add a new bubblebox tool: drop a `<name>/` subdir with a `Containerfile`
 (and, if it needs binds/env, an `entrypoint.toml`) in `~/Code/bubblebox-pkgs/`,
 add the name to `bubblebox/profile.toml`'s `packages` list, and re-run
 `cjust bubblebox`.
+
+### `hermes/` (host-installed CLI/TUI/Desktop)
+
+[Hermes Agent](https://hermes-agent.nousresearch.com/) (Nous Research) — the AI
+agent with a CLI, TUI (`hermes --tui`), and Electron desktop app. Same category
+as opencode (AI coding agent needing full host control), so it's host-installed
+by the official installer, NOT a bubblebox tool. The desktop app's *build* is
+off-host (see below), but the running agent lives on the host.
+
+```bash
+cjust hermes-install           # curl|bash installer -> ~/.local/bin/hermes
+hermes --tui                   # TUI launches; installer self-manages Python+Node
+cjust hermes-desktop-build     # build the Electron app off-host, extract to host
+hermes desktop --skip-build    # launch via the upstream launcher
+~/.local/bin/hermes-desktop    # …or the host wrapper (sources cn-secrets first)
+```
+
+The three surfaces (CLI, TUI, Desktop) are the same `hermes` binary driving
+the same agent — all share state at `~/.hermes/` (config, sessions, skills,
+memory, `.env`).
+
+**Why the desktop is built off-host.** `hermes desktop` builds the Electron
+app from source via npm, which needs `gcc-c++ make` + ~200 MB of `node_modules`
++ the Electron runtime download. None of that should land on the read-only
+`/usr` host image (it would force a rebuild + reboot, and the host would carry
+build cruft forever). Instead, `cjust hermes-desktop-build` follows the
+`cjust icons` (Papirus) pattern: build inside a throwaway Fedora+Node podman
+container via `hermes desktop --build-only`, then copy only the unpacked app
+dir to `~/.local/share/hermes-desktop/`. No host-image change, no reboot.
+
+**Why not bubblebox for the GUI.** The *rendering* of an Electron window fits
+bubblebox fine (same surface as wezterm/ghostty: `writable_run` + `/dev`
+dev-bind + mesa). What doesn't fit is the *agent backend*: it spawns
+synchronous subprocesses in arbitrary host working directories dozens of times
+per task, capturing stdout/stderr/exit. The only host-escape primitives in the
+bubblebox tree are `bubblebox-host-shell` (interactive `--pty`) and
+`vicinae-launch` (fire-and-forget, no `--wait`) — neither is the right shape
+for programmatic subprocess exec, and the read-only rootfs fights
+`hermes update`. The clean split is: agent backend on host (like opencode),
+desktop GUI host-built.
+
+**Secrets.** Provider keys live in `secrets/hermes-thinkpad-env.age` (agenix),
+which exports `OPENAI_API_KEY` (the Z.AI coding key, remapped for hermes'
+OpenAI-compatible provider resolver — same key value as `zai-api-key.age`).
+`dotfiles/.zshenv` decrypts it alongside `zai-api-key.age` into per-login
+tmpfs, so every shell (and any CLI/TUI invocation) sees the key. The desktop
+wrapper (`dotfiles/.local/bin/hermes-desktop`) sources the same cache before
+exec'ing the Electron app, so compositor-launched GUI sees it too (`.zshenv`
+alone wouldn't — GUI apps read the systemd session env, not the shell env).
+
+First-time provider config (after `cjust hermes-install`): point hermes at the
+Z.AI coding endpoint by declaring a custom OpenAI-compatible provider in
+`~/.hermes/config.yaml`:
+
+```bash
+hermes config set custom_providers '[{name:zai-coding,base_url:https://api.z.ai/api/coding/paas/v4,key_env:OPENAI_API_KEY}]'
+hermes config set model.provider zai-coding
+hermes config set model.default glm-5.2
+hermes doctor   # verify deps + provider config
+```
 
 ### `dotfiles/`
 Host-native user dotfiles — the small exception to "everything lives in a
@@ -237,5 +299,10 @@ Examples:
   it, plus the small set of host-resident tools (just, fzf, oh-my-posh,
   nodejs/npm for opencode).
 - Dev tools live in bubblebox sandboxes, not on the host image.
-- opencode is the one exception: it's installed on the host because it's the
-  AI coding agent and needs full host control when something breaks.
+- opencode and hermes are the exceptions: they're installed on the host
+  because they're AI coding agents and need full host control when something
+  breaks. opencode lands via `cjust opencode-install` (npm global); hermes
+  lands via `cjust hermes-install` (official installer) + `cjust
+  hermes-desktop-build` (off-host Electron build). Hermes's desktop build
+  stays off the host image on purpose — it's per-user, iterates on its own
+  update channel, and doesn't deserve an image rebuild + reboot cycle.
