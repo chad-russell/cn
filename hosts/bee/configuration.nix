@@ -109,6 +109,12 @@
   environment.systemPackages = [
     pkgs.git
     pkgs.github-cli
+    # System python3 for the hermes desktop app's SSH remote bootstrap. The
+    # hermes-agent module ships its own venv Python (private, used by the
+    # `hermes` binary's nix-store shebang), but the desktop's SSH lifecycle
+    # invokes bare `python3` directly when probing/spawning the remote backend,
+    # so a system python3 must be on the SSH login shell's PATH.
+    pkgs.python3
   ];
 
   # ── opencode AI coding agent ────────────────────────────────────
