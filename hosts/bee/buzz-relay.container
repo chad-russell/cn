@@ -13,7 +13,9 @@ Pod=buzz-relay.pod
 Volume=buzz-git-data:/data/git
 EnvironmentFile=/run/agenix/buzz-relay-env
 # Invite and join flows use WebView fetch rather than the native HTTP bridge.
-PodmanArgs=--env=BUZZ_CORS_ORIGINS=https://buzz.crussell.io,tauri://localhost,http://tauri.localhost,https://tauri.localhost
+# Desktop probes NIP-11 and uses this sidecar instead of the legacy /pair
+# fallback when relays require membership before joining.
+PodmanArgs=--env=BUZZ_CORS_ORIGINS=https://buzz.crussell.io,tauri://localhost,http://tauri.localhost,https://tauri.localhost --env=BUZZ_PAIRING_RELAY_URL=wss://buzz.crussell.io/pair
 
 [Service]
 Restart=always

@@ -19,6 +19,7 @@
   environment.etc = {
     "containers/systemd/buzz-relay.pod".source = ./buzz-relay.pod;
     "containers/systemd/buzz-relay.container".source = ./buzz-relay.container;
+    "containers/systemd/buzz-pair-relay.container".source = ./buzz-pair-relay.container;
     "containers/systemd/buzz-postgres.container".source = ./buzz-postgres.container;
     "containers/systemd/buzz-redis.container".source = ./buzz-redis.container;
     "containers/systemd/buzz-minio.container".source = ./buzz-minio.container;
