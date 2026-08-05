@@ -84,7 +84,26 @@ projects use disjoint host-port ranges, **gpl + polymer + buildspace can all run
 on bee at the same time** (unlike the thinkpad, where polymer+buildspace collide
 on `:3000`).
 
+> **RAM is the real limiter, not ports.** The dev compilers are memory-heavy
+> (polymer's Turbopack app alone peaks ~20 GB; buildspace's turbo runs 8+ apps;
+> bee has 27 GB + zram swap). Running polymer + buildspace at once can OOM-kill
+> a dev server (native segfault). For stability, run **one heavy project at a
+> time** (gpl is light; polymer and buildspace are heavy). `qd <project> restart`
+> brings a crashed stack back.
+
 ## First run (per project)
+
+> **One-time: clear host-installed `node_modules`.** Each repo was previously
+> run on bee's **host** (pnpm/bun via Nix), so its `node_modules/` is
+> incompatible with the container's toolchain — `pnpm exec`/turbo will fail with
+> a `confirmModulesPurge`/reconcile prompt or native errors. Before the first
+> `qd <project> up`, delete it once so `dev-server.sh` does a fresh in-container
+> install:
+> ```bash
+> rm -rf ~/Gloo/360-gpl/node_modules      # or 360-polymer, or ~/buildspace
+> ```
+> (This was already done during initial bring-up — only repeat if a repo's deps
+> were touched on the host again.)
 
 The first `start` installs deps inside the container against the live bind mount
 and boots against a **fresh, empty** postgres. Once the app container is up,
