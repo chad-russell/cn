@@ -73,7 +73,13 @@ in
   environment.etc = lib.listToAttrs (map
     (rel: lib.nameValuePair "dev-quadlets/${rel}" {
       source = ./dev-quadlets/${rel};
-      mode = "0444";
+      # 0555 (not 0444) so dev-server.sh is EXECUTABLE: the devcontainers images
+      # set ENTRYPOINT=[docker-entrypoint.sh] + CMD=[node], and a non-executable
+      # dev-server.sh makes the entrypoint fall through to `node <script>`
+      # (SyntaxError). With the exec bit, docker-entrypoint.sh exec's it via the
+      # shebang → bash. The *.container/*.volume/*.network units are just read by
+      # the generator, so the exec bit is harmless for them.
+      mode = "0555";
     })
     etcFiles);
 
