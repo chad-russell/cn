@@ -119,9 +119,12 @@ the schema:
 podman exec gpl-quadlet-app pnpm db:push
 podman exec gpl-quadlet-app pnpm db:seed   # optional; creates admin@gpl.org/admin123
 
-# polymer
+# polymer — db:seed is REQUIRED (not optional): it creates the Gloo system org
+# (external_org_id matching the WorkOS staging org) + your user record + org
+# membership. Without it, WorkOS login succeeds but the dashboard throws
+# "Organization not found" on first load.
 podman exec polymer-quadlet-app pnpm db:push
-podman exec polymer-quadlet-app pnpm db:seed   # optional
+podman exec polymer-quadlet-app pnpm db:seed
 
 # buildspace
 podman exec buildspace-quadlet-app bun db:migrate
