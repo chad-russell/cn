@@ -12,9 +12,9 @@
 # This file is Nix-managed (materialized under /etc/dev-quadlets/polymer/) and
 # bind-mounted read-only into the container at /usr/local/bin/dev-server.sh, so
 # nothing is vendored into the polymer checkout. polymer is reached over SSH
-# tunnels (laptop localhost:3000/3001 -> bee:3100/3101; see
-# hosts/thinkpad/dev-tunnels), so — like the thinkpad — the apps see localhost
-# and no proxy/auth-URL overrides are needed here.
+# tunnels (laptop localhost:3000/3001 -> bee:3100/3101; see `cjust dev-tunnel` /
+# `cjust dev-up`), so — like the thinkpad — the apps see localhost and no
+# proxy/auth-URL overrides are needed here.
 set -u
 
 cd /workspace || { echo "FATAL: /workspace not mounted" >&2; exit 1; }

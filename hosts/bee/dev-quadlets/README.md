@@ -22,7 +22,7 @@ tunnels** so the apps see `localhost` exactly as they do on the thinkpad.
 ├── *.network / *.volume / *.container              quadlet input files
 ├── dev-server.sh                                   PID 1 of each app container
 hosts/bee/dev-quadlets.nix                          NixOS module that wires it all up
-hosts/thinkpad/dev-tunnels                          laptop-side SSH tunnel helper
+hosts/thinkpad/Justfile (cjust dev-tunnel / dev-up) laptop-side SSH tunnel recipes
 ```
 
 The NixOS module (`hosts/bee/dev-quadlets.nix`):
@@ -69,14 +69,16 @@ qd gpl down            # stops app + db + minio (PartOf= cascade)
 **2. Open the tunnel from your laptop** and browse `localhost`:
 
 ```bash
-~/Code/cn/hosts/thinkpad/dev-tunnels gpl        # then browse http://localhost:3006
-~/Code/cn/hosts/thinkpad/dev-tunnels polymer    # http://localhost:3000 + http://localhost:3001
-~/Code/cn/hosts/thinkpad/dev-tunnels buildspace # 8 ports: 3000,3002–3006,3008,3010
+cjust dev-up gpl          # start gpl on bee AND open the tunnel (one shot)
+# — or, if the stack is already running on bee —
+cjust dev-tunnel gpl          # then browse http://localhost:3006
+cjust dev-tunnel polymer      # http://localhost:3000 + http://localhost:3001
+cjust dev-tunnel buildspace   # 8 ports: 3000,3002–3006,3008,3010
 ```
 
-Ctrl-C closes a tunnel. `dev-tunnels <project>` forwards the **same** ports you'd
-use on the thinkpad onto bee's offset published ports; the apps can't tell the
-difference from local dev.
+Ctrl-C closes a tunnel. `cjust dev-tunnel <project>` forwards the **same** ports
+you'd use on the thinkpad onto bee's offset published ports; the apps can't tell
+the difference from local dev.
 
 ### Port scheme
 
@@ -84,7 +86,7 @@ bee also runs the production **buzz-relay** (owns bee's `:3000` and `:5000`), so
 the dev stacks publish on **offset host ports** on bee that never collide with
 buzz-relay or each other: gpl `:3006`, polymer `:3100`/`:3101` (container
 `:3000`/`:3001`), buildspace `:32xx` (container `:3000`/`:3002`–`:3010`). The
-`dev-tunnels` helper re-maps those onto the thinkpad-standard localhost ports
+`cjust dev-tunnel` (and `cjust dev-up`) re-maps those onto the thinkpad-standard localhost ports
 (`:3000`, `:3006`, …) so nothing in the apps or your muscle memory changes.
 Because the three projects use disjoint host-port ranges on bee, all three *can*
 run simultaneously — see the RAM caveat below.

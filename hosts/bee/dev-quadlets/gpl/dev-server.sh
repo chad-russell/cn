@@ -11,9 +11,9 @@
 # This file is Nix-managed (materialized under /etc/dev-quadlets/gpl/) and
 # bind-mounted read-only into the container at /usr/local/bin/dev-server.sh, so
 # nothing is vendored into the gpl checkout. gpl is reached over an SSH tunnel
-# (laptop localhost:3006 -> bee:3006; see hosts/thinkpad/dev-tunnels), so — like
-# the thinkpad — the app sees localhost and no proxy/auth-URL overrides are
-# needed here.
+# (laptop localhost:3006 -> bee:3006; see `cjust dev-tunnel` / `cjust dev-up`),
+# so — like the thinkpad — the app sees localhost and no proxy/auth-URL overrides
+# are needed here.
 set -u
 
 cd /workspace || { echo "FATAL: /workspace not mounted" >&2; exit 1; }

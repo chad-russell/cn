@@ -5,8 +5,9 @@ using the repo-supplied devcontainers plus a small personal override.
 
 This is the personal, thinkpad-local counterpart to the **bee remote dev
 stacks** (`hosts/bee/dev-quadlets/`, reached over SSH tunnels — see
-`hosts/thinkpad/dev-tunnels`). It favors **local containers** over SSHing to
-bee, while reusing the same devcontainers the whole team uses.
+`cjust dev-tunnel` / `cjust dev-up` in `hosts/thinkpad/Justfile`). It favors
+**local containers** over SSHing to bee, while reusing the same devcontainers
+the whole team uses.
 
 ## Architecture
 
@@ -35,7 +36,7 @@ translate cleanly.
 
 - **bee is the remote dev host** — the same gpl/polymer stacks (plus buildspace)
   run there as rootless user-quadlets via `hosts/bee/dev-quadlets.nix`, reached
-  over SSH tunnels (`hosts/thinkpad/dev-tunnels`). See
+  over SSH tunnels (`cjust dev-tunnel` / `cjust dev-up`). See
   `hosts/bee/dev-quadlets/README.md`.
 - **The override is personal** (`userns_mode`, published ports) — never commit
   it to a product repo; `userns_mode` breaks Docker Desktop on macOS.
