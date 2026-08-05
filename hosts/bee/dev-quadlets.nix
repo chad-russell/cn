@@ -60,7 +60,9 @@ let
     "buildspace/dev-server.sh"
   ];
 
-  # Everything that goes under /etc/dev-quadlets/.
+  # Everything that goes under /etc/dev-quadlets/ (rel paths below, prefixed at
+  # etc-key time so they land at /etc/dev-quadlets/<project>/<file> — matching
+  # what the .container Volume= lines and the activation script target).
   etcFiles = quadletUnits ++ devServers;
 in
 {
@@ -68,8 +70,12 @@ in
   #    environment.etc creates /etc/dev-quadlets/<path> as a symlink into the
   #    nix store, which the containers bind-mount (units for the generator to
   #    read; dev-server.sh mounted :ro into the app container).
-  environment.etc = lib.genAttrs etcFiles
-    (path: { source = ./dev-quadlets/${path}; mode = "0444"; });
+  environment.etc = lib.listToAttrs (map
+    (rel: lib.nameValuePair "dev-quadlets/${rel}" {
+      source = ./dev-quadlets/${rel};
+      mode = "0444";
+    })
+    etcFiles);
 
   # 2. Symlink the quadlet units into crussell's user quadlet search path and
   #    reload the user manager. Runs after users exist (we chown to crussell).
