@@ -117,6 +117,13 @@
     pkgs.python3
   ];
 
+  # crussell needs membership in the `hermes` group to read/write the
+  # gateway's state dir (/var/lib/hermes/.hermes, mode 2770 hermes:hermes) when
+  # the desktop app SSHes in and spawns `hermes serve`. Without this, `hermes
+  # serve` crashes on startup with PermissionError on .env. NixOS merges
+  # extraGroups lists across modules, so this appends to base-server's [wheel].
+  users.users.crussell.extraGroups = [ "hermes" ];
+
   # ── opencode AI coding agent ────────────────────────────────────
   # (enable + web defaults live in modules/opencode.nix)
 
