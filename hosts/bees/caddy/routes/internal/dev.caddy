@@ -12,12 +12,14 @@
 # here) leaves the streams open. flush_interval -1 flushes streamed responses
 # immediately so HMR/SSE arrive without buffering.
 #
-# Port collisions: polymer (:3000) + buildspace marketplace (:3000) share a port;
-# gpl (:3006) + buildspace super-admin (:3006) share a port. Only ONE of a
-# colliding pair can be running (and fronted) at a time — otherwise the shared
-# hostname proxies to whichever app happens to be up.
+# Port scheme: bee's dev stacks publish on OFFSET host ports so they don't
+# collide with buzz-relay (which owns bee's :3000 and :5000) or with each other —
+# gpl uses :3006, polymer uses the :31xx block, buildspace uses the :32xx block.
+# This means gpl + polymer + buildspace can all run on bee SIMULTANEOUSLY. The
+# apps still listen on their repo-defined ports INSIDE the container; only the
+# host port differs.
 
-# ── gpl (Next.js, :3006) ─────────────────────────────────────────────
+# ── gpl (Next.js, host :3006 -> container :3006) ──────────────────────
 @gpl host gpl.internal.crussell.io
 handle @gpl {
 	reverse_proxy 10.10.0.12:3006 {
@@ -25,75 +27,75 @@ handle @gpl {
 	}
 }
 
-# ── polymer (Next.js x2, :3000 + :3001) ───────────────────────────────
+# ── polymer (Next.js x2, host :31xx -> container :3000/:3001) ──────────
 @polymer host polymer.internal.crussell.io
 handle @polymer {
-	reverse_proxy 10.10.0.12:3000 {
+	reverse_proxy 10.10.0.12:3100 {
 		flush_interval -1
 	}
 }
 
 @admin360 host admin360.internal.crussell.io
 handle @admin360 {
-	reverse_proxy 10.10.0.12:3001 {
+	reverse_proxy 10.10.0.12:3101 {
 		flush_interval -1
 	}
 }
 
-# ── buildspace (Bun/turbo monorepo, 8 published ports) ───────────────
-# marketplace (:3000) collides with polymer; super-admin (:3006) collides with gpl.
+# ── buildspace (Bun/turbo monorepo, host :32xx -> container :3000..:3010) ──
 @bs-marketplace host bs-marketplace.internal.crussell.io
 handle @bs-marketplace {
-	reverse_proxy 10.10.0.12:3000 {
+	reverse_proxy 10.10.0.12:3200 {
 		flush_interval -1
 	}
 }
 
 @bs-runtime host bs-runtime.internal.crussell.io
 handle @bs-runtime {
-	reverse_proxy 10.10.0.12:3002 {
+	reverse_proxy 10.10.0.12:3202 {
 		flush_interval -1
 	}
 }
 
 @bs-login host bs-login.internal.crussell.io
 handle @bs-login {
-	reverse_proxy 10.10.0.12:3003 {
+	reverse_proxy 10.10.0.12:3203 {
 		flush_interval -1
 	}
 }
 
 @bs-docs host bs-docs.internal.crussell.io
 handle @bs-docs {
-	reverse_proxy 10.10.0.12:3004 {
+	reverse_proxy 10.10.0.12:3204 {
 		flush_interval -1
 	}
 }
 
 @bs-studio host bs-studio.internal.crussell.io
 handle @bs-studio {
-	reverse_proxy 10.10.0.12:3005 {
+	reverse_proxy 10.10.0.12:3205 {
 		flush_interval -1
 	}
 }
 
 @bs-super-admin host bs-super-admin.internal.crussell.io
 handle @bs-super-admin {
-	reverse_proxy 10.10.0.12:3006 {
+	reverse_proxy 10.10.0.12:3206 {
 		flush_interval -1
 	}
 }
 
 @bs-registry host bs-registry.internal.crussell.io
 handle @bs-registry {
-	reverse_proxy 10.10.0.12:3008 {
+	reverse_proxy 10.10.0.12:3208 {
 		flush_interval -1
 	}
 }
 
 @bs-jobs host bs-jobs.internal.crussell.io
 handle @bs-jobs {
-	reverse_proxy 10.10.0.12:3010 {
+	reverse_proxy 10.10.0.12:3210 {
 		flush_interval -1
 	}
 }
+

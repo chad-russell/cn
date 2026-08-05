@@ -36,8 +36,8 @@ user manager (and the user podman socket) is always up.
 | Project | App image | DB | S3 | App port(s) | Caddy hostname(s) |
 | --- | --- | --- | --- | --- | --- |
 | gpl | `devcontainers/javascript-node:22` | postgres:15 | minio | 3006 | `gpl.internal` |
-| polymer | `devcontainers/javascript-node:24` | postgres:16 | minio | 3000, 3001 | `polymer.internal`, `admin360.internal` |
-| buildspace | `oven/bun:1.3.14` | postgres:17 | minio (pinned) | 3000,3002–3006,3008,3010 | `bs-*.internal` (8) |
+| polymer | `devcontainers/javascript-node:24` | postgres:16 | minio | 3100→3000, 3101→3001 | `polymer.internal`, `admin360.internal` |
+| buildspace | `oven/bun:1.3.14` | postgres:17 | minio (pinned) | 3200/3202–3206/3208/3210 → 3000/3002–3010 | `bs-*.internal` (8) |
 
 (All `*.internal.crussell.io` — abbreviated above.) All three app containers
 run as **root (UID 0) inside the container** — in rootless podman that maps to
@@ -71,12 +71,18 @@ You can also hit the published ports directly on bee if you're on the LAN/Nebula
 (`http://192.168.20.105:3006` or `http://10.10.0.12:3006`) — rootless podman on
 bee publishes to `0.0.0.0`.
 
-### Port-collision rule
+### Port scheme (all three projects run simultaneously)
 
-polymer (:3000) and buildspace marketplace (:3000) share a port; gpl (:3006) and
-buildspace super-admin (:3006) share a port. **Only one of a colliding pair can
-be running at a time** — otherwise the shared Caddy hostname proxies to
-whichever app happens to be up. gpl + polymer are always safe together.
+bee also runs the production **buzz-relay** (owns bee's `:3000` and `:5000`), so
+the dev stacks publish on **offset host ports** that never collide with buzz-relay
+or with each other: **gpl** uses `:3006`, **polymer** uses the `:31xx` block
+(container `:3000`/`:3001`), **buildspace** uses the `:32xx` block (container
+`:3000`/`:3002`–`:3010`). The Caddy routes point at these host ports; the apps
+still listen on their repo-defined ports *inside* the container, so
+`NEXT_PUBLIC_BASE_URL` / `BETTER_AUTH_URL` etc. are unaffected. Because the three
+projects use disjoint host-port ranges, **gpl + polymer + buildspace can all run
+on bee at the same time** (unlike the thinkpad, where polymer+buildspace collide
+on `:3000`).
 
 ## First run (per project)
 

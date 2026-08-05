@@ -41,10 +41,14 @@ Network=polymer-dev.network
 User=0
 WorkingDir=/workspace
 
-# Browser-facing ports published to the host (reachable on bee at
-# 192.168.20.105 / 10.10.0.12, and via bees Caddy at polymer/admin360.internal).
-PublishPort=3000:3000
-PublishPort=3001:3001
+# Browser-facing ports published to the host. On bee these are OFFSET (+100)
+# from the in-container ports to avoid colliding with buzz-relay, which owns
+# :3000 and :5000 on bee (the thinkpad units publish raw 3000/3001, which works
+# there). The Caddy routes (polymer.internal -> :3100, admin360.internal -> :3101)
+# point at these host ports; the apps still listen on 3000/3001 inside the
+# container, so NEXT_PUBLIC_BASE_URL etc. are unaffected.
+PublishPort=3100:3000
+PublishPort=3101:3001
 
 # Product repo (read/write). bee has no SELinux, so no :Z suffix (unlike thinkpad).
 Volume=/home/crussell/Gloo/360-polymer:/workspace

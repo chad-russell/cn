@@ -36,22 +36,25 @@ WorkingDir=/workspace
 # the bind-mounted repo (node_modules, .next caches) are owned by crussell
 # without any userns flag.
 
-# Browser/API-facing ports published to the host (reachable on bee at
-# 192.168.20.105 / 10.10.0.12, and via bees Caddy at bs-*.internal.crussell.io).
-# These match the per-app dev scripts run via `bun dev` (turbo run dev):
-#   3000 marketplace | 3002 runtime  | 3003 login   | 3004 docs
-#   3005 studio      | 3006 super-admin | 3008 registry | 3010 jobs
+# Browser/API-facing ports published to the host. On bee these are OFFSET (+200)
+# from the in-container ports to avoid colliding with buzz-relay (owns bee's
+# :3000 and :5000) AND with the other dev stacks (gpl :3006, polymer :31xx) — so
+# buildspace, gpl, and polymer can all run on bee SIMULTANEOUSLY. The Caddy
+# routes (bs-*.internal -> :32xx) point at these host ports; the apps still
+# listen on their repo-defined ports inside the container.
+#   3200 marketplace | 3202 runtime  | 3203 login   | 3204 docs
+#   3205 studio      | 3206 super-admin | 3208 registry | 3210 jobs
 # code-review (3007) is NOT published — it is reached by `jobs` over the shared
 # container loopback at http://localhost:3007 (see CODE_REVIEW_SVC_URL below),
 # mirroring how docker-compose.local.yml keeps it internal.
-PublishPort=3000:3000
-PublishPort=3002:3002
-PublishPort=3003:3003
-PublishPort=3004:3004
-PublishPort=3005:3005
-PublishPort=3006:3006
-PublishPort=3008:3008
-PublishPort=3010:3010
+PublishPort=3200:3000
+PublishPort=3202:3002
+PublishPort=3203:3003
+PublishPort=3204:3004
+PublishPort=3205:3005
+PublishPort=3206:3006
+PublishPort=3208:3008
+PublishPort=3210:3010
 
 # Product repo (read/write). bee has no SELinux, so no :Z suffix (unlike the
 # thinkpad units). Repo lives at ~/buildspace on bee (not ~/Code/buildspace).
