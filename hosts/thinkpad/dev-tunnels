@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+#
+# dev-tunnels — forward laptop localhost ports to the bee dev stacks over SSH.
+#
+# Why tunnels (not a proxy): Next.js dev servers hard-code localhost assumptions
+# — the HMR/dev channel is restricted to localhost origins (Next.js
+# allowedDevOrigins), and gpl/polymer auth clients fall back to localhost:3000 /
+# 3006. So for remote dev on bee we SSH-forward the SAME ports you'd use on the
+# thinkpad onto bee's offset published ports (which exist only to avoid
+# colliding with buzz-relay on bee). Browse http://localhost:<port> exactly like
+# the thinkpad; every callback / cookie / HMR URL works unchanged. Ctrl-C closes
+# the tunnels.
+#
+# Start the stack on bee FIRST, then open the tunnel:
+#   ssh -o IdentitiesOnly=yes crussell@10.10.0.12 'qd gpl up'   # start stack
+#   ~/Code/cn/hosts/thinkpad/dev-tunnels gpl                    # open tunnel
+#   # browse http://localhost:3006
+#
+# Usage:  dev-tunnels <gpl|polymer|buildspace|bs>   [extra ssh -L args...]
+set -euo pipefail
+
+BEE="${BEE:-crussell@10.10.0.12}"
+# -N: no remote command. ExitOnForwardFailure: die if a laptop port is already in
+# use (e.g. the same project running locally). ServerAliveInterval: keep alive.
+SSH_OPTS=(-o IdentitiesOnly=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -N)
+
+case "${1:-}" in
+  gpl)
+    # gpl app :3006 (bee publishes :3006 directly — no offset needed).
+    exec ssh "${SSH_OPTS[@]}" "$BEE" -L 3006:localhost:3006 "${@:2}"
+    ;;
+  polymer)
+    # polymer :3000 + admin360 :3001 (bee publishes :3100 / :3101).
+    exec ssh "${SSH_OPTS[@]}" "$BEE" -L 3000:localhost:3100 -L 3001:localhost:3101 "${@:2}"
+    ;;
+  buildspace|bs)
+    # 8 apps (bee publishes :32xx = thinkpad port + 200).
+    exec ssh "${SSH_OPTS[@]}" "$BEE" \
+      -L 3000:localhost:3200 -L 3002:localhost:3202 -L 3003:localhost:3203 -L 3004:localhost:3204 \
+      -L 3005:localhost:3205 -L 3006:localhost:3206 -L 3008:localhost:3208 -L 3010:localhost:3210 "${@:2}"
+    ;;
+  *)
+    cat >&2 <<EOF
+usage: $(basename "$0") <gpl|polymer|buildspace|bs>   [extra ssh -L args...]
+
+forwards laptop localhost:<thinkpad-ports> -> bee dev stack, then browse localhost:
+  gpl         -> http://localhost:3006
+  polymer     -> http://localhost:3000 (polymer) + http://localhost:3001 (admin360)
+  buildspace  -> http://localhost:{3000,3002,3003,3004,3005,3006,3008,3010}
+
+note: polymer+buildspace share laptop :3000, and gpl+buildspace share :3006 —
+run one of a colliding pair at a time (same rule as the thinkpad). Override the
+bee target with BEE=user@host.
+EOF
+    exit 1
+    ;;
+esac

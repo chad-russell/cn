@@ -8,32 +8,15 @@
 # and blocks until it exits — at which point the container stops so you can read
 # the logs and restart it manually (systemctl --user restart gpl-dev-app).
 #
-# bee/Caddy difference from the thinkpad version: the app is fronted by the bees
-# Caddy at https://gpl.internal.crussell.io (see hosts/bees/caddy/routes/internal/dev.caddy),
-# so we point BETTER_AUTH_URL / NEXT_PUBLIC_BETTER_AUTH_URL at that origin. This
-# needs ONE small gpl-code change: src/lib/hummingbird-login.ts's
-# shouldUseLocalAuthFallback() now treats any NODE_ENV=development run as local
-# (instead of keying off BETTER_AUTH_URL being localhost), so a real origin here
-# does NOT flip gpl into Hummingbird SSO. Result: local dev auth (no SSO setup)
-# with the better-auth client POSTing to the proxied origin. Next.js won't
-# overlay these with the localhost values from /workspace/.env.local.
-#
 # This file is Nix-managed (materialized under /etc/dev-quadlets/gpl/) and
-# bind-mounted read-only into the container, so nothing is vendored into the gpl
-# checkout.
+# bind-mounted read-only into the container at /usr/local/bin/dev-server.sh, so
+# nothing is vendored into the gpl checkout. gpl is reached over an SSH tunnel
+# (laptop localhost:3006 -> bee:3006; see hosts/thinkpad/dev-tunnels), so — like
+# the thinkpad — the app sees localhost and no proxy/auth-URL overrides are
+# needed here.
 set -u
 
 cd /workspace || { echo "FATAL: /workspace not mounted" >&2; exit 1; }
-
-# Point better-auth at the bees Caddy origin. gpl's src/lib/hummingbird-login.ts
-# selects Hummingbird SSO vs. local-dev-auth-fallback; it now treats any
-# NODE_ENV=development run as local (regardless of BETTER_AUTH_URL), so setting a
-# real origin here keeps the local dev auth fallback AND lets the better-auth
-# client (src/lib/auth-client.ts, which falls back to localhost:3006 when this is
-# empty) POST to the correct proxied origin. Next.js won't overlay these with the
-# localhost values from /workspace/.env.local.
-export BETTER_AUTH_URL=https://gpl.internal.crussell.io
-export NEXT_PUBLIC_BETTER_AUTH_URL=https://gpl.internal.crussell.io
 
 # The devcontainers/javascript-node image ships pnpm via corepack; enable it if
 # `pnpm` isn't already on PATH.
@@ -137,10 +120,10 @@ const bucket = "gpl-assets";
 })();
 NODE
 
-# Bind to 0.0.0.0 so the published :3006 is reachable from the host (and through
-# the bees Caddy). The repo's `dev` script (`next dev -p 3006`) binds to localhost,
+# Bind to 0.0.0.0 so the published :3006 is reachable (over the SSH tunnel from
+# the laptop). The repo's `dev` script (`next dev -p 3006`) binds to localhost,
 # which would be invisible outside the container.
-echo "==> gpl -> http://0.0.0.0:3006  (Caddy: https://gpl.internal.crussell.io)"
+echo "==> gpl -> http://0.0.0.0:3006"
 pnpm exec next dev -p 3006 -H 0.0.0.0 &
 PID_APP=$!
 

@@ -9,30 +9,19 @@
 #   apps/polymer   -> :3000   (webpack; --turbo is disabled — it panics on polymer)
 #   apps/admin360  -> :3001   (turbo)
 #
-# bee/Caddy difference from the thinkpad version: both apps are fronted by the
-# bees Caddy under *.internal.crussell.io. Because the two apps share ONE
-# container / process-env but each needs its OWN NEXT_PUBLIC_BASE_URL, those
-# public origins are injected INLINE at each `next dev` launch below (a single
-# Environment= in the .container can't give each app a different value).
-# Next.js will NOT override an already-set process env from .env / .env.local, so
-# these inline values win. WORKOS_COOKIE_DOMAIN is exported once (shared) so auth
-# cookies are scoped across both *.internal.crussell.io subdomains. You must
-# still register the new redirect URIs in the WorkOS dashboard — see README.
-#
 # This file is Nix-managed (materialized under /etc/dev-quadlets/polymer/) and
-# bind-mounted read-only into the container, so nothing is vendored into the
-# polymer checkout.
+# bind-mounted read-only into the container at /usr/local/bin/dev-server.sh, so
+# nothing is vendored into the polymer checkout. polymer is reached over SSH
+# tunnels (laptop localhost:3000/3001 -> bee:3100/3101; see
+# hosts/thinkpad/dev-tunnels), so — like the thinkpad — the apps see localhost
+# and no proxy/auth-URL overrides are needed here.
 set -u
 
 cd /workspace || { echo "FATAL: /workspace not mounted" >&2; exit 1; }
 
-# Scope WorkOS auth cookies across both polymer/admin360 subdomains so a sign-in
-# on one is recognized by the other (matches the production cross-subdomain model
-# described in apps/*/.env.example WORKOS_COOKIE_DOMAIN).
-export WORKOS_COOKIE_DOMAIN=.internal.crussell.io
-
 # The devcontainers/javascript-node image ships pnpm via corepack; enable it if
-# `pnpm` isn't already on PATH.
+# `pnpm` isn't already on PATH (the old custom image pre-baked pnpm, this one
+# doesn't).
 command -v pnpm >/dev/null 2>&1 || corepack enable >/dev/null 2>&1 || true
 
 if [ ! -d node_modules ]; then
@@ -40,9 +29,9 @@ if [ ! -d node_modules ]; then
   pnpm install || { echo "FATAL: pnpm install failed" >&2; exit 1; }
 fi
 
-# The devcontainers base image has no pg_isready; use node's net module for a TCP
-# readiness check. Postgres accepts connections as soon as the socket is open,
-# which is good enough before db:push / the dev server.
+# The devcontainers base image has no pg_isready (the old custom image did); use
+# node's net module for a TCP readiness check. Postgres accepts connections as
+# soon as the socket is open, which is good enough before db:push / the dev server.
 echo "==> waiting for postgres at polymer_db:5432 ..."
 node <<'NODE' || { echo "FATAL: postgres not reachable" >&2; exit 1; }
 const net = require("net");
@@ -62,20 +51,12 @@ const net = require("net");
 })(0);
 NODE
 
-# Per-app public origins (Caddy). Inline env on the `next dev` invocation is the
-# only way to give each app a distinct NEXT_PUBLIC_BASE_URL from one container.
-echo "==> apps/polymer  -> http://0.0.0.0:3000 (webpack, no turbo)  [Caddy: https://polymer.internal.crussell.io]"
-NEXT_PUBLIC_BASE_URL=https://polymer.internal.crussell.io \
-NEXT_PUBLIC_WORKOS_REDIRECT_URI=https://polymer.internal.crussell.io/callback \
-NEXT_PUBLIC_ADMIN360_URL=https://admin360.internal.crussell.io \
-  pnpm --dir apps/polymer exec next dev -H 0.0.0.0 &
+echo "==> apps/polymer  -> http://0.0.0.0:3000 (webpack, no turbo)"
+pnpm --dir apps/polymer exec next dev -H 0.0.0.0 &
 PID_POLY=$!
 
-echo "==> apps/admin360 -> http://0.0.0.0:3001 (turbo)  [Caddy: https://admin360.internal.crussell.io]"
-NEXT_PUBLIC_BASE_URL=https://admin360.internal.crussell.io \
-NEXT_PUBLIC_WORKOS_REDIRECT_URI=https://admin360.internal.crussell.io/callback \
-NEXT_PUBLIC_POLYMER_URL=https://polymer.internal.crussell.io \
-  pnpm --dir apps/admin360 exec next dev --turbo --port 3001 -H 0.0.0.0 &
+echo "==> apps/admin360 -> http://0.0.0.0:3001 (turbo)"
+pnpm --dir apps/admin360 exec next dev --turbo --port 3001 -H 0.0.0.0 &
 PID_ADMIN=$!
 
 # On stop (SIGTERM from podman) / Ctrl-C, tear both dev servers down and exit 0

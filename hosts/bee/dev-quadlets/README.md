@@ -1,11 +1,18 @@
 # bee remote dev stacks — podman user-quadlets (gpl, polymer, buildspace)
 
-This mirrors the **thinkpad's** rootless user-quadlet dev setup (the one that's
-been "perfect") onto `bee`, so you can use bee as a remote dev machine for the
-three Gloo/buildspace projects. Same container images, same dev-server.sh model,
-same `keep-id` ownership semantics, same on-demand (no auto-start) behavior —
-just delivered **NixOS-declaratively** and fronted by the **bees internal Caddy**
-so you can reach the dev servers from your laptop over the Nebula overlay.
+This mirrors the **thinkpad's** rootless user-quadlet dev setup onto `bee`, so
+you can use bee as a remote dev machine for the three Gloo/buildspace projects.
+Same container images, same `dev-server.sh` model, same on-demand (no auto-start)
+behavior — delivered **NixOS-declaratively** and reached over **SSH port-forward
+tunnels** so the apps see `localhost` exactly as they do on the thinkpad.
+
+> **Why tunnels, not a reverse proxy.** Next.js dev servers hard-code localhost
+> assumptions: the HMR/dev channel is restricted to localhost origins (Next.js
+> `allowedDevOrigins`), and gpl/polymer auth clients fall back to `localhost:3000`
+> / `3006`. Fronting them with a non-localhost proxy (Caddy) breaks hydration and
+> auth and would require editing the product repos (incl. personal hostnames — a
+> no-go for the team repos). SSH-forwarding `localhost` sidesteps all of it: zero
+> product-repo changes, every callback/cookie/HMR URL works unchanged.
 
 ## Architecture
 
@@ -15,7 +22,7 @@ so you can reach the dev servers from your laptop over the Nebula overlay.
 ├── *.network / *.volume / *.container              quadlet input files
 ├── dev-server.sh                                   PID 1 of each app container
 hosts/bee/dev-quadlets.nix                          NixOS module that wires it all up
-hosts/bees/caddy/routes/internal/dev.caddy          bees Caddy → 10.10.0.12:<port>
+hosts/thinkpad/dev-tunnels                          laptop-side SSH tunnel helper
 ```
 
 The NixOS module (`hosts/bee/dev-quadlets.nix`):
@@ -25,7 +32,7 @@ The NixOS module (`hosts/bee/dev-quadlets.nix`):
 2. Symlinks the `*.container` / `*.volume` / `*.network` files into
    `~/.config/containers/systemd/` (the rootless user-quadlet search path) for
    `crussell`, then `systemctl --user daemon-reload`s.
-3. Ships a `qd` wrapper (one script for all three projects).
+3. Ships a `qd` wrapper on bee (one script for all three projects).
 
 So `nix run .#deploy -- bee` registers/updates everything — **no manual install
 step, no `cn` checkout required on bee.** Linger is on for `crussell`, so the
@@ -33,86 +40,82 @@ user manager (and the user podman socket) is always up.
 
 ## What runs (per project)
 
-| Project | App image | DB | S3 | App port(s) | Caddy hostname(s) |
-| --- | --- | --- | --- | --- | --- |
-| gpl | `devcontainers/javascript-node:22` | postgres:15 | minio | 3006 | `gpl.internal` |
-| polymer | `devcontainers/javascript-node:24` | postgres:16 | minio | 3100→3000, 3101→3001 | `polymer.internal`, `admin360.internal` |
-| buildspace | `oven/bun:1.3.14` | postgres:17 | minio (pinned) | 3200/3202–3206/3208/3210 → 3000/3002–3010 | `bs-*.internal` (8) |
+| Project | App image | DB | S3 | Tunnel ports (laptop `localhost:`) |
+| --- | --- | --- | --- | --- |
+| gpl | `devcontainers/javascript-node:22` | postgres:15 | minio | `3006` |
+| polymer | `devcontainers/javascript-node:24` | postgres:16 | minio | `3000` (polymer), `3001` (admin360) |
+| buildspace | `oven/bun:1.3.14` | postgres:17 | minio (pinned) | `3000`, `3002`, `3003`, `3004`, `3005`, `3006`, `3008`, `3010` |
 
-(All `*.internal.crussell.io` — abbreviated above.) All three app containers
-run as **root (UID 0) inside the container** — in rootless podman that maps to
-crussell on the host, so bind-mount artifacts (`node_modules`, `.next`, caches)
-land crussell-owned. The thinkpad units use `UserNS=keep-id` for this, but
-bee's rootless podman + native overlay breaks keep-id (recursive-userns
-permission error), so bee runs `User=0` instead — same ownership outcome.
+All three app containers run as **root (UID 0) inside the container** — in
+rootless podman that maps to crussell on the host, so bind-mount artifacts
+(`node_modules`, `.next`, caches) land crussell-owned. The thinkpad units use
+`UserNS=keep-id` for this, but bee's rootless podman + native overlay breaks
+keep-id (recursive-userns permission error), so bee runs `User=0` instead — same
+ownership outcome.
 
-## Daily use (on bee, over SSH)
+## Daily use
+
+**1. Start the stack on bee** (db + minio + app, on-demand — nothing auto-starts):
 
 ```bash
 ssh -o IdentitiesOnly=yes crussell@10.10.0.12
-
-qd gpl up              # or: systemctl --user start gpl-dev-app   (starts db+minio+app)
+qd gpl up              # or: systemctl --user start gpl-dev-app
 qd gpl status          # status of app + db + minio
 qd gpl logs            # journalctl --user -u gpl-dev-app -f
 qd gpl down            # stops app + db + minio (PartOf= cascade)
-
 # same for:  qd polymer ...   |   qd buildspace ...
 ```
 
-Then browse from your laptop (the bees Caddy terminates TLS and proxies to bee
-over Nebula):
+**2. Open the tunnel from your laptop** and browse `localhost`:
 
-- **https://gpl.internal.crussell.io**
-- **https://polymer.internal.crussell.io** / **https://admin360.internal.crussell.io**
-- **https://bs-marketplace.internal.crussell.io** (+ `bs-runtime`, `bs-login`,
-  `bs-docs`, `bs-studio`, `bs-super-admin`, `bs-registry`, `bs-jobs`)
+```bash
+~/Code/cn/hosts/thinkpad/dev-tunnels gpl        # then browse http://localhost:3006
+~/Code/cn/hosts/thinkpad/dev-tunnels polymer    # http://localhost:3000 + http://localhost:3001
+~/Code/cn/hosts/thinkpad/dev-tunnels buildspace # 8 ports: 3000,3002–3006,3008,3010
+```
 
-You can also hit the published ports directly on bee if you're on the LAN/Nebula
-(`http://192.168.20.105:3006` or `http://10.10.0.12:3006`) — rootless podman on
-bee publishes to `0.0.0.0`.
+Ctrl-C closes a tunnel. `dev-tunnels <project>` forwards the **same** ports you'd
+use on the thinkpad onto bee's offset published ports; the apps can't tell the
+difference from local dev.
 
-### Port scheme (all three projects run simultaneously)
+### Port scheme
 
 bee also runs the production **buzz-relay** (owns bee's `:3000` and `:5000`), so
-the dev stacks publish on **offset host ports** that never collide with buzz-relay
-or with each other: **gpl** uses `:3006`, **polymer** uses the `:31xx` block
-(container `:3000`/`:3001`), **buildspace** uses the `:32xx` block (container
-`:3000`/`:3002`–`:3010`). The Caddy routes point at these host ports; the apps
-still listen on their repo-defined ports *inside* the container, so
-`NEXT_PUBLIC_BASE_URL` / `BETTER_AUTH_URL` etc. are unaffected. Because the three
-projects use disjoint host-port ranges, **gpl + polymer + buildspace can all run
-on bee at the same time** (unlike the thinkpad, where polymer+buildspace collide
-on `:3000`).
+the dev stacks publish on **offset host ports** on bee that never collide with
+buzz-relay or each other: gpl `:3006`, polymer `:3100`/`:3101` (container
+`:3000`/`:3001`), buildspace `:32xx` (container `:3000`/`:3002`–`:3010`). The
+`dev-tunnels` helper re-maps those onto the thinkpad-standard localhost ports
+(`:3000`, `:3006`, …) so nothing in the apps or your muscle memory changes.
+Because the three projects use disjoint host-port ranges on bee, all three *can*
+run simultaneously — see the RAM caveat below.
 
 > **RAM is the real limiter, not ports.** The dev compilers are memory-heavy
 > (polymer's Turbopack app alone peaks ~20 GB; buildspace's turbo runs 8+ apps;
-> bee has 27 GB + zram swap). Running polymer + buildspace at once can OOM-kill
-> a dev server (native segfault). For stability, run **one heavy project at a
-> time** (gpl is light; polymer and buildspace are heavy). `qd <project> restart`
-> brings a crashed stack back.
+> bee has 27 GB + zram swap). Running polymer + buildspace at once can OOM-kill a
+> dev server (native segfault). For stability, run **one heavy project at a time**
+> (gpl is light; polymer and buildspace are heavy). `qd <project> restart` brings
+> a crashed stack back.
 
 ## First run (per project)
 
-> **One-time: clear host-installed `node_modules`.** Each repo was previously
-> run on bee's **host** (pnpm/bun via Nix), so its `node_modules/` is
-> incompatible with the container's toolchain — `pnpm exec`/turbo will fail with
-> a `confirmModulesPurge`/reconcile prompt or native errors. Before the first
+> **One-time: clear host-installed `node_modules`.** Each repo was previously run
+> on bee's **host** (pnpm/bun via Nix), so its `node_modules/` is incompatible
+> with the container's toolchain — `pnpm exec`/turbo will fail with a
+> `confirmModulesPurge`/reconcile prompt or native errors. Before the first
 > `qd <project> up`, delete it once so `dev-server.sh` does a fresh in-container
 > install:
 > ```bash
 > rm -rf ~/Gloo/360-gpl/node_modules      # or 360-polymer, or ~/buildspace
 > ```
-> (This was already done during initial bring-up — only repeat if a repo's deps
-> were touched on the host again.)
 
 The first `start` installs deps inside the container against the live bind mount
-and boots against a **fresh, empty** postgres. Once the app container is up,
-push the schema:
+and boots against a **fresh, empty** postgres. Once the app container is up, push
+the schema:
 
 ```bash
 # gpl
 podman exec gpl-quadlet-app pnpm db:push
-podman exec gpl-quadlet-app pnpm db:seed   # optional
+podman exec gpl-quadlet-app pnpm db:seed   # optional; creates admin@gpl.org/admin123
 
 # polymer
 podman exec polymer-quadlet-app pnpm db:push
@@ -124,41 +127,6 @@ podman exec buildspace-quadlet-app bun db:seed   # optional; creates the super_a
 ```
 
 (MinIO buckets are created automatically by each `dev-server.sh`.)
-
-## Public-URL config for the Caddy front (one-time + per-IDP)
-
-The apps ship assuming `localhost`. Behind the bees Caddy they need to know
-their real `*.internal.crussell.io` origin. **gpl and polymer are already wired
-in their `dev-server.sh`**; buildspace has no known URL env. Remaining steps are
-**external and manual** (only for polymer/buildspace — gpl needs nothing):
-
-- **gpl — local dev auth (needs a one-line gpl-code change):** gpl's
-  `hummingbird-login.ts` selects Hummingbird SSO vs. a local dev auth fallback.
-  It used to key that choice on `BETTER_AUTH_URL` being localhost, which broke
-  behind the Caddy (a real origin flipped SSO on; an empty one made
-  `auth-client.ts` fall back to `localhost:3006`). The fix in the gpl repo:
-  `shouldUseLocalAuthFallback()` returns true whenever
-  `NODE_ENV === "development"` (Next.js's own "is `next dev` running" signal) —
-  then `dev-server.sh` sets `BETTER_AUTH_URL`/`NEXT_PUBLIC_BETTER_AUTH_URL` to
-  `https://gpl.internal.crussell.io` so the local dev auth runs with correct
-  proxied URLs. No Hummingbird setup. Behind Caddy this ALSO needs
-  `allowedDevOrigins` in gpl's `next.config.ts` (Next.js blocks its dev/HMR
-  channel for non-localhost origins, which prevents client hydration without it).
-- **polymer — WorkOS:** add both redirect URIs to the WorkOS dashboard:
-  `https://polymer.internal.crussell.io/callback` and
-  `https://admin360.internal.crussell.io/callback`. `WORKOS_COOKIE_DOMAIN` is
-  exported to `.internal.crussell.io` so auth cookies are shared across the two
-  subdomains.
-- **buildspace:** no URL env at the compose level. If an app generates wrong
-  absolute URLs through the `bs-*` hostnames, add the override inline at its
-  launch in `dev-server.sh` (or via `apps/<app>/.env.local`).
-
-> **SSH-tunnel fallback:** for an OAuth-heavy session where you don't want to
-> touch any of the above, tunnel instead — `ssh -L 3006:localhost:3006
-> crussell@10.10.0.12` then browse `http://localhost:3006`. The app still thinks
-> it's on localhost, so every callback/cookie/absolute URL works unchanged.
-> (Just don't combine a tunnel with the Caddy origin env — pick one access mode
-> per session.)
 
 ## Editing the units / scripts
 
@@ -196,6 +164,7 @@ qd gpl restart
 - **Repo paths** use `/home/crussell` (not `/var/home/crussell`); buildspace
   lives at `~/buildspace` (not `~/Code/buildspace`).
 - **`dev-server.sh` is Nix-managed** (bind-mounted from
-  `/etc/dev-quadlets/<project>/`) and additionally exports the
-  `*.internal.crussell.io` public URLs so the apps generate correct absolute
-  URLs behind the bees Caddy.
+  `/etc/dev-quadlets/<project>/`); otherwise identical to the thinkpad — no
+  proxy/auth overrides, because the SSH tunnel makes the app see `localhost`.
+- **App containers run as `User=0`** (not `UserNS=keep-id`) — bee's rootless
+  overlay breaks keep-id; `User=0` gives the same crussell-owned bind mounts.
