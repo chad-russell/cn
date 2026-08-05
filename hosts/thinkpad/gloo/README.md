@@ -3,9 +3,9 @@
 Run Gloo projects locally on the thinkpad in **podman-compose dev stacks**,
 using the repo-supplied devcontainers plus a small personal override.
 
-This is the personal, thinkpad-local counterpart to the bee dev setup. It
-favors **local containers** over SSHing to bee, while reusing the same
-devcontainers the whole team uses.
+This is the personal, thinkpad-local counterpart to the **bee remote dev
+stacks** (`hosts/bee/dev-quadlets/`). It favors **local containers** over
+SSHing to bee, while reusing the same devcontainers the whole team uses.
 
 ## Architecture
 
@@ -32,8 +32,9 @@ translate cleanly.
 
 ## Notes
 
-- **bee stays the reference** for `.env.local` and as a remote dev option; this
-  setup runs locally.
+- **bee is the remote dev host** — the same gpl/polymer stacks (plus buildspace)
+  run there as rootless user-quadlets via `hosts/bee/dev-quadlets.nix`, fronted
+  by the bees internal Caddy. See `hosts/bee/dev-quadlets/README.md`.
 - **The override is personal** (`userns_mode`, published ports) — never commit
   it to a product repo; `userns_mode` breaks Docker Desktop on macOS.
 - **Other projects** (hb, gpl): same pattern

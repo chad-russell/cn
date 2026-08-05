@@ -1,0 +1,65 @@
+# The polymer dev app (Next.js x2) as a podman quadlet container — bee edition.
+#
+# This ONE unit drives the whole stack:
+#   systemctl --user start polymer-dev-app   # pulls image, starts db+minio, then app
+#   systemctl --user stop  polymer-dev-app   # stops app + db + minio (via PartOf=)
+#
+# How start/stop cascade works:
+#   - Requires=/After= pull in polymer-dev-db + polymer-dev-minio.
+#   - db & minio declare PartOf=polymer-dev-app, so `stop`/`restart` of this unit
+#     propagates to them.
+#
+# Runs from the PUBLISHED devcontainers/javascript-node:24 image (no .build unit)
+# — podman pulls it on first start. The repo is bind-mounted (live code);
+# dev-server.sh is bind-mounted read-only from /etc/dev-quadlets/polymer/
+# (Nix-managed, since bee has no cn checkout).
+#
+# Caddy fronting: the two apps are reachable via the bees Caddy at
+# https://polymer.internal.crussell.io (:3000) and https://admin360.internal.crussell.io
+# (:3001). Because both apps share ONE container/process-env but need DIFFERENT
+# NEXT_PUBLIC_BASE_URL values, those per-app public URLs are injected inline at
+# each `next dev` launch in dev-server.sh (not here). See dev-server.sh + the
+# README checklist for the external WorkOS redirect-URI registration step.
+#
+# Not [Install]-enabled anywhere: the stack only runs when you start it.
+[Unit]
+Description=Polymer quadlet dev stack — app (Next.js :3000 + :3001)
+Requires=polymer-dev-db.container polymer-dev-minio.container
+After=polymer-dev-db.container polymer-dev-minio.container
+
+[Container]
+Image=mcr.microsoft.com/devcontainers/javascript-node:24
+ContainerName=polymer-quadlet-app
+Network=polymer-dev.network
+# keep-id so files written to the bind-mounted repo are owned by host UID 1000.
+# The devcontainers image runs as `node` (UID 1000); keep-id maps that to the
+# host user, so node_modules/.next stay host-writable as crussell.
+UserNS=keep-id
+WorkingDir=/workspace
+
+# Browser-facing ports published to the host (reachable on bee at
+# 192.168.20.105 / 10.10.0.12, and via bees Caddy at polymer/admin360.internal).
+PublishPort=3000:3000
+PublishPort=3001:3001
+
+# Product repo (read/write). bee has no SELinux, so no :Z suffix (unlike thinkpad).
+Volume=/home/crussell/Gloo/360-polymer:/workspace
+
+# Startup script lives outside the product repo (Nix-managed); mount read-only.
+Volume=/etc/dev-quadlets/polymer/dev-server.sh:/usr/local/bin/dev-server.sh:ro
+
+# Repo gitignored env (WorkOS, etc.) plus forced local DB URLs onto the quadlet
+# postgres (resolved via the polymer_db network alias). Per-app public URLs
+# (NEXT_PUBLIC_BASE_URL etc.) are NOT set here — see dev-server.sh header.
+EnvironmentFile=/home/crussell/Gloo/360-polymer/.env.local
+Environment=NODE_ENV=development
+Environment=POSTGRES_URL=postgres://postgres:password@polymer_db:5432/postgres
+Environment=DATABASE_URL=postgres://postgres:password@polymer_db:5432/postgres
+
+Exec=/usr/local/bin/dev-server.sh
+
+[Service]
+# First run pulls the image + runs pnpm install; subsequent runs are fast. Dev
+# server: no auto-restart (default Restart=no) so you see crashes instead of a
+# restart loop.
+TimeoutStartSec=600

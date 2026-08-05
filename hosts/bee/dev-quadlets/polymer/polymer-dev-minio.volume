@@ -1,0 +1,6 @@
+# Persistent MinIO (S3) data for the polymer quadlet stack.
+# Default volume name: systemd-polymer-dev-minio
+[Unit]
+Description=Polymer quadlet dev stack — MinIO data
+
+[Volume]

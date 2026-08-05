@@ -1,0 +1,10 @@
+# Podman network for the gpl quadlet dev stack.
+#
+# Default network name is systemd-gpl-dev. Containers on it resolve each
+# other by ContainerName and by NetworkAlias (DNS), so the app reaches postgres/minio
+# via the gpl-db / gpl-minio hostnames baked into DATABASE_URL / S3_ENDPOINT.
+[Unit]
+Description=GPL quadlet dev stack — podman network
+
+[Network]
+Label=io.gloo.project=gpl

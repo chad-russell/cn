@@ -1,0 +1,25 @@
+# PostgreSQL 15 for the gpl quadlet stack (matches .devcontainer/docker-compose.yml).
+# NetworkAlias=gpl-db lets the app resolve it by the hostname used in DATABASE_URL.
+[Unit]
+Description=GPL quadlet dev stack — PostgreSQL
+# Stop/restart this with the app unit (see gpl-dev-app.container).
+PartOf=gpl-dev-app.container
+
+[Container]
+Image=docker.io/library/postgres:15
+ContainerName=gpl-quadlet-db
+Network=gpl-dev.network
+NetworkAlias=gpl-db
+Environment=POSTGRES_PASSWORD=admin
+Environment=POSTGRES_USER=admin
+Environment=POSTGRES_DB=gpl_db
+ShmSize=512m
+HealthCmd=pg_isready -U admin
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=5
+Volume=gpl-dev-db.volume:/var/lib/postgresql/data
+
+[Service]
+# First run pulls postgres:15; give it room past the 90s default.
+TimeoutStartSec=120

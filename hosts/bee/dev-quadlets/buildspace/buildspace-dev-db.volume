@@ -1,0 +1,6 @@
+# Persistent PostgreSQL data for the buildspace quadlet stack.
+# Default volume name: systemd-buildspace-dev-db
+[Unit]
+Description=Buildspace quadlet dev stack — PostgreSQL data
+
+[Volume]

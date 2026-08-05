@@ -1,0 +1,6 @@
+# Persistent PostgreSQL data for the gpl quadlet stack.
+# Default volume name: systemd-gpl-dev-db
+[Unit]
+Description=GPL quadlet dev stack — PostgreSQL data
+
+[Volume]

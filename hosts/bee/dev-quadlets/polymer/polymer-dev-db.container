@@ -1,0 +1,25 @@
+# PostgreSQL 16 for the polymer quadlet stack.
+# NetworkAlias=polymer_db lets the app resolve it by the hostname in .env.local.
+[Unit]
+Description=Polymer quadlet dev stack — PostgreSQL
+# Stop/restart this with the app unit (see polymer-dev-app.container).
+PartOf=polymer-dev-app.container
+
+[Container]
+Image=docker.io/library/postgres:16
+ContainerName=polymer-quadlet-db
+Network=polymer-dev.network
+NetworkAlias=polymer_db
+Environment=POSTGRES_PASSWORD=password
+Environment=POSTGRES_USER=postgres
+Environment=POSTGRES_DB=postgres
+ShmSize=512m
+HealthCmd=pg_isready -U postgres
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=5
+Volume=polymer-dev-db.volume:/var/lib/postgresql/data
+
+[Service]
+# First run pulls postgres:16; give it room past the 90s default.
+TimeoutStartSec=120

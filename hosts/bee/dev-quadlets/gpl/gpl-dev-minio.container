@@ -1,0 +1,24 @@
+# MinIO (S3-compatible storage) for the gpl quadlet stack.
+# NetworkAlias=gpl-minio (HYPHEN, not underscore). MinIO strictly validates the
+# Host header and REJECTS underscores with "Invalid Request (invalid hostname)"
+# — underscores are invalid in DNS hostnames (RFC 1123). The `gpl-assets` bucket
+# is auto-created by dev-server.sh on app start (using the repo's own
+# @aws-sdk/client-s3 dep). No host ports are published — only 3006 is exposed to
+# the host (the browser-facing app port).
+[Unit]
+Description=GPL quadlet dev stack — MinIO (S3)
+# Stop/restart this with the app unit (see gpl-dev-app.container).
+PartOf=gpl-dev-app.container
+
+[Container]
+Image=docker.io/minio/minio:latest
+ContainerName=gpl-quadlet-minio
+Network=gpl-dev.network
+NetworkAlias=gpl-minio
+Environment=MINIO_ROOT_USER=minioadmin
+Environment=MINIO_ROOT_PASSWORD=minioadmin
+Volume=gpl-dev-minio.volume:/data
+Exec=server /data --console-address :9001
+
+[Service]
+TimeoutStartSec=120

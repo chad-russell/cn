@@ -1,0 +1,11 @@
+# Podman network for the buildspace quadlet dev stack.
+#
+# Default network name is systemd-buildspace-dev. Containers on it resolve each
+# other by ContainerName and by NetworkAlias (DNS), so the app reaches its
+# postgres/minio via the `postgres` / `minio` hostnames baked into DATABASE_URL /
+# BUILDSPACE_INTERNAL_R2_ENDPOINT (matching docker-compose.local.yml).
+[Unit]
+Description=Buildspace quadlet dev stack — podman network
+
+[Network]
+Label=io.buildspace.project=buildspace

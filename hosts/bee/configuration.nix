@@ -15,6 +15,7 @@
     ../../modules/buzz-harness.nix
     ./buzz-relay.nix
     ../../modules/beszel-agent.nix
+    ./dev-quadlets.nix
     ./backup.nix
     ./tailscale.nix
   ];

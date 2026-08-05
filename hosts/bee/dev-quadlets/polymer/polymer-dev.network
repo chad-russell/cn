@@ -1,0 +1,11 @@
+# Podman network for the polymer quadlet dev stack.
+#
+# Default network name is systemd-polymer-dev. Containers on it resolve each
+# other by ContainerName and by NetworkAlias (DNS), so the app reaches its
+# postgres/minio via the polymer_db / polymer_minio hostnames baked into
+# DATABASE_URL / .env.local.
+[Unit]
+Description=Polymer quadlet dev stack — podman network
+
+[Network]
+Label=io.gloo.project=polymer
