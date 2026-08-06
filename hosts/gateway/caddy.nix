@@ -69,5 +69,15 @@
         }
       }
     '';
+
+    # Buildspace connectors app (Slack/GitHub/etc. webhooks). Runs on the laptop
+    # (think, 10.10.0.10) on port 3011, started manually for local dev. Slack's
+    # servers POST here (Events + Interactivity), so it must be public. Two POST
+    # routes: /webhooks/slack (events) + /webhooks/slack/interactive (approval
+    # card clicks). Laptop is not always-on — for 24/7 Slack use, route this to
+    # bees or deploy connectors to Railway instead.
+    virtualHosts."connectors.crussell.io".extraConfig = ''
+      reverse_proxy 10.10.0.10:3011
+    '';
   };
 }

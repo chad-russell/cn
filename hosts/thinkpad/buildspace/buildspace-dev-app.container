@@ -50,6 +50,10 @@ PublishPort=3005:3005
 PublishPort=3006:3006
 PublishPort=3008:3008
 PublishPort=3010:3010
+# Connectors app (apps/connectors) — not started by dev-server.sh/turbo, run it
+# manually via `podman exec`. Published so the gateway Caddy route can reach it
+# at this host's Nebula IP (10.10.0.10:3011) for Slack webhook testing.
+PublishPort=3011:3011
 
 # Product repo (read/write). :Z so podman labels the bind mount for SELinux
 # (~/Code/buildspace is not pre-labeled, unlike ~/Gloo). Edits on the host are
