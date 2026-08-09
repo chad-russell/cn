@@ -4,18 +4,29 @@
 # pure-Rust (rustls/ring TLS — no openssl), and do NOT build buzz-relay, so the
 # cmake/opus toolchain the relay needs is avoided entirely. buzz-admin is
 # intentionally excluded: it pulls buzz-media → rust-s3 (a git dep); mint agent
-# keypairs with `nak` instead (see GUIDES/DEPLOY_BUZZ_HARNESS_ON_BEE.md).
+# keypairs with `nak` instead.
 #
 # Toolchain is pinned to the exact version from upstream rust-toolchain.toml
 # (1.95.0), which is newer than nixos-25.11 ships — hence the passed-in
 # rustToolchain (built from rust-overlay in flake.nix).
+#
+# Vendor strategy: cargoHash (fetchCargoVendor), NOT cargoLock. The workspace
+# has git deps (aws-creds via buzz-media → rust-s3; mesh-llm-api-client via
+# buzz-relay-mesh) whose transitive crates re-resolve differently than the
+# committed Cargo.lock records. cargoLock's importCargoLock runs a
+# dedup-and-check that regenerates and compares the lockfile, which never
+# reaches a fixed point on those git deps. fetchCargoVendor vendors straight
+# from the source's own ./Cargo.lock as a single fixed-output (fetching git deps
+# via nix-prefetch-git), so there's no consistency check and no per-git-dep
+# outputHashes to maintain. To bump: update rev + version, set cargoHash = "",
+# build, paste the reported sha256.
 {
   pkgs,
   rustToolchain,
   lib,
 }:
 let
-  rev = "10d5a26414dc90dc89fd27de74b21e105d4fa622";
+  rev = "119a84897f225c1e3213a09cd149abb37dcb3abc";
   rustPlatform = pkgs.makeRustPlatform {
     cargo = rustToolchain;
     rustc = rustToolchain;
@@ -23,26 +34,16 @@ let
 in
 rustPlatform.buildRustPackage {
   pname = "buzz-cli-stack";
-  version = "unstable-2026-07-31";
+  version = "unstable-2026-08-09";
 
   src = pkgs.fetchFromGitHub {
     owner = "block";
     repo = "buzz";
     inherit rev;
-    hash = "sha256-wmcZXyfHClBbKBG1HPVJcKPvY/kbigS/YNyUPepU3JI=";
+    hash = "sha256-814mVQ1R54p3yLumEK+ihREJYadcWnz/G4wNHSRo+hg=";
   };
 
-  # The full workspace lockfile vendors every git dep regardless of which
-  # packages we compile, so both upstream git crates need outputHashes:
-  #   aws-creds (patched crates-io dep via buzz-media → rust-s3)
-  #   mesh-llm-api-client (buzz-relay-mesh / shared compute)
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "aws-creds-0.39.1" = "sha256-QAAm1phmeLFtDRgfDCoHijN1ce/rYzh18KziOUbL+hw=";
-      "mesh-llm-api-client-0.74.0" = "sha256-nkt/bTHvc7ACAP2Gx/Px/hGad5ryzWn2eA9isXKF05s=";
-    };
-  };
+  cargoHash = "sha256-YH2H6h7KBFil4EnHyg/rA0bLqybg3h6G+nGRmnifmB4=";
 
   # Build only the headless crates (and their pure-Rust deps). This skips
   # buzz-relay (needs cmake/opus), buzz-admin (pulls a git dep), and the
