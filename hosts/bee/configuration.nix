@@ -232,6 +232,23 @@
     serviceConfig = {
       ProtectSystem = lib.mkForce false;
       ReadWritePaths = lib.mkForce [ ];
+      # The upstream module's ExecStart is `hermes gateway` (foreground). On a
+      # deploy/restart, a stale lock-holder can block it: if an in-chat restart
+      # or the desktop app spawns a detached `hermes gateway restart` supervisor
+      # (reparented to PID 1, surviving systemd's stop/start cycle), it holds
+      # the gateway lock and every systemd restart exits "Gateway already
+      # running" → crash loop, and the orphan (which may have come up without
+      # the buzz platform loaded) is the only thing "running". Two flags fix it:
+      #   --replace              kill any existing gateway instance holding the
+      #                          lock so systemd's instance always wins at start
+      #   --external-supervisor  declare systemd owns this gateway; in-chat
+      #                          restarts/updates exit back to systemd instead
+      #                          of spawning a detached replacement that escapes
+      #                          supervision — prevents the orphan in the first
+      #                          place. (Both flags are documented as systemd-
+      #                          intended in `hermes gateway run --help`.)
+      ExecStart = lib.mkForce
+        "/run/current-system/sw/bin/hermes gateway run --replace --external-supervisor";
     };
     environment.HOME = lib.mkForce "/home/crussell";
   };
