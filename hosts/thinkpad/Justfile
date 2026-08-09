@@ -54,7 +54,7 @@ user_units := "opencode-web vicinae"
 # symlink-backed config). Instead, use `cjust cosmic-backup` and
 # `cjust cosmic-restore` to copy settings between the repo and
 # ~/.config/cosmic.
-dotfiles := ".aws/config .config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/nvim .config/wezterm .config/ghostty .config/vicinae/settings.json .config/opencode .local/bin/zen-browser .local/bin/hermes-desktop .local/share/applications/wezterm.desktop .local/share/applications/ghostty.desktop .local/share/applications/hermes.desktop .zshrc .zshenv"
+dotfiles := ".aws/config .config/oh-my-posh.json .config/environment.d/10-bubblebox.conf .config/niri/config.kdl .config/nvim .config/wezterm .config/ghostty .config/vicinae/settings.json .config/opencode .local/bin/zen-browser .local/bin/hermes-desktop .local/bin/buzz-desktop .local/share/applications/wezterm.desktop .local/share/applications/ghostty.desktop .local/share/applications/hermes.desktop .local/share/applications/buzz.desktop .zshrc .zshenv"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # setup
@@ -622,6 +622,130 @@ hermes-desktop-build:
     echo "  hermes desktop --skip-build      # upstream launcher (uses ~/.hermes)"
     echo "  ~/.local/bin/hermes-desktop      # host wrapper (sources cn-secrets env first)"
     echo "  Launcher → 'Hermes'              # the .desktop entry (run 'cjust link' to install)"
+    # Refresh the launcher icon (Icon=hermes) so a rebuild always leaves a
+    # branded icon in place. Idempotent + non-fatal.
+    {{ just_executable() }} hermes-icon || echo "  (hermes-icon skipped)"
+
+# Install the official Hermes launcher icon (Icon=hermes) from the upstream
+# hermes-agent repo into the user hicolor theme, so the .desktop entry shows the
+# branded Hermes glyph instead of a generic info icon. Idempotent; re-run any
+# time, and invoked automatically at the tail of `cjust hermes-desktop-build`.
+# Mirrors the `cjust icons` (Papirus) pattern: per-user, off the host image.
+#
+# IMPORTANT: GNOME/GTK only scan STANDARD hicolor size dirs (16..512, per the
+# system /usr/share/icons/hicolor/index.theme). The upstream icon.png is
+# 1024x1024 — non-standard, so a copy in 1024x1024/ is INVISIBLE to GNOME (the
+# app shows a generic gear). We therefore install downscaled copies at 512x512
+# and 256x256. ImageMagick (magick/convert) does a real resize; if absent we
+# just copy the source into each dir (GNOME scales the loaded image to the
+# requested size regardless of the declared dir size, so that still works — the
+# only thing that matters is landing in a standard dir).
+[group('hermes')]
+hermes-icon:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tmp="$(mktemp)"; trap 'rm -f "${tmp}"' EXIT
+    url="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/apps/desktop/assets/icon.png"
+    curl -fsSL "${url}" -o "${tmp}"
+    base="${HOME}/.local/share/icons/hicolor"
+    for s in 512 256; do
+      dir="${base}/${s}x${s}/apps"
+      mkdir -p "${dir}"
+      if command -v magick >/dev/null 2>&1; then
+        magick "${tmp}" -resize ${s}x${s} "${dir}/hermes.png"
+      elif command -v convert >/dev/null 2>&1; then
+        convert "${tmp}" -resize ${s}x${s} "${dir}/hermes.png"
+      else
+        cp -f "${tmp}" "${dir}/hermes.png"
+      fi
+      echo "  ${s}x${s}/apps/hermes.png"
+    done
+    # Drop a stale non-standard 1024x1024 copy from an older recipe version
+    # (GNOME ignores that dir, so it only wastes space).
+    rm -rf "${base}/1024x1024"
+    gtk-update-icon-cache -f -t "${base}" 2>/dev/null || true
+    echo "==> hermes icon installed at standard sizes (512x512, 256x256; Icon=hermes)"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# buzz desktop (host-installed AppImage)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Buzz desktop is a Tauri app; upstream publishes a Linux AppImage per release
+# (tag pattern desktop-v*). The AppImage is the right artifact for this atomic
+# (Silverblue/bootc) host: a single self-contained file under ~/.local/share/,
+# no rpm-ostree layering, survives image upgrades — same "host small + state in
+# named places" rule as hermes-desktop.
+#
+# Why not bubblebox: bubblebox is a read-only FUSE sandbox for dev CLI tools.
+# Wrapping a 167 MB prebuilt GUI in an OCI image (authored in the separate
+# bubblebox-pkgs repo) gives no isolation benefit for your own comms app, needs
+# network + relay creds anyway, and turns every update into an image rebuild.
+# The off-host-acquire + host-wrapper pattern (hermes-desktop precedent) is the
+# simpler, on-repo fit. See hosts/thinkpad/README.md.
+#
+# This recipe is BOTH install and update: it resolves the latest desktop-v*
+# release, downloads the AppImage (+ .sig), extracts the version-matched branded
+# icon, and is a no-op when already current. Launch via ~/.local/bin/buzz-desktop
+# (wrapper that sources cn-secrets env) or the "Buzz" launcher entry (run
+# `cjust link`). Re-run any time to pull a newer release.
+
+# Install or update the Buzz desktop AppImage to the latest desktop-v* release.
+# Idempotent; safe to re-run. Stores under ~/.local/share/buzz-desktop/.
+[group('buzz')]
+buzz-desktop-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v curl >/dev/null 2>&1; then
+      echo "ERROR: curl not found on host." >&2; exit 1
+    fi
+    api="https://api.github.com/repos/block/buzz/releases/latest"
+    # releases/latest on block/buzz points at the desktop-v* line (the desktop
+    # app ships there, separate from the relay's :main channel). Fetch the body
+    # whole, then parse — piping curl into `grep -m1` makes grep close the pipe
+    # early and curl exits 23 (SIGPIPE) under `set -o pipefail`.
+    resp="$(curl -fsSL "${api}")"
+    tag="$(printf '%s\n' "${resp}" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"desktop-v\([^"]*\)".*/\1/p')"
+    if [ -z "${tag}" ]; then
+      echo "ERROR: could not resolve latest desktop-v* tag from ${api}" >&2; exit 1
+    fi
+    dest="${HOME}/.local/share/buzz-desktop"
+    mkdir -p "${dest}"
+    cur="$(cat "${dest}/version" 2>/dev/null || true)"
+    if [ "${cur}" = "${tag}" ] && [ -x "${dest}/Buzz.AppImage" ]; then
+      echo "buzz-desktop desktop-v${tag} already installed"; exit 0
+    fi
+    echo "==> installing Buzz desktop desktop-v${tag}"
+    base="https://github.com/block/buzz/releases/download/desktop-v${tag}/Buzz_${tag}_amd64"
+    curl -fL "${base}.AppImage" -o "${dest}/Buzz.AppImage.new"
+    curl -fsSL "${base}.AppImage.sig" -o "${dest}/Buzz.AppImage.sig" || true
+    chmod +x "${dest}/Buzz.AppImage.new"
+    # Extract the version-matched branded icon straight from the AppImage
+    # (squashfs-root/ holds a <identifier>.png + .DirIcon). This always matches
+    # the installed release's branding, like rendering Papirus from git HEAD.
+    root="$(mktemp -d)"; trap 'rm -rf "${root}"' EXIT
+    ( cd "${root}" && "${dest}/Buzz.AppImage.new" --appimage-extract >/dev/null 2>&1 ) || true
+    icon="$(find "${root}/squashfs-root" -maxdepth 1 -type f -name '*.png' 2>/dev/null | head -1 || true)"
+    if [ -n "${icon}" ]; then
+      # Install at the png's real dimensions (AppImage icons are often 256x256,
+      # not 512x512) so the hicolor dir matches the asset and gtk-update-icon-cache
+      # doesn't warn about a size mismatch.
+      dim="$(file "${icon}" | sed -n 's/.*image data, \([0-9][0-9]*\) x.*/\1/p' | head -1)"
+      [ -n "${dim}" ] || dim=512
+      icon_dir="${HOME}/.local/share/icons/hicolor/${dim}x${dim}/apps"
+      mkdir -p "${icon_dir}"
+      cp -f "${icon}" "${icon_dir}/buzz.png"
+      echo "  icon <- extracted from AppImage (${dim}x${dim}) -> ${icon_dir}/buzz.png"
+    else
+      echo "  WARNING: could not extract icon from AppImage; Icon=buzz may be blank." >&2
+    fi
+    gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+    mv -f "${dest}/Buzz.AppImage.new" "${dest}/Buzz.AppImage"
+    echo "${tag}" > "${dest}/version"
+    echo "==> buzz-desktop desktop-v${tag} installed -> ${dest}/Buzz.AppImage"
+    echo
+    echo "Launch via:"
+    echo "  ~/.local/bin/buzz-desktop        # host wrapper (sources cn-secrets env first)"
+    echo "  Launcher → 'Buzz'                # the .desktop entry (run 'cjust link' to install)"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # host image (bootc)

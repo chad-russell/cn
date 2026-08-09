@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# buzz-desktop — launch the host-installed Buzz desktop AppImage, sourcing the
+# cn-secrets env cache first so the compositor-launched GUI sees provider/relay
+# keys. Same pattern as hermes-desktop: dotfiles/.zshenv only covers shells +
+# their children, so GUI apps launched directly by the compositor (niri/COSMIC
+# `spawn`, the launcher, the .desktop entry) read the systemd user session env
+# and would miss keys the app's provider resolver looks for.
+#
+# The AppImage itself comes from `cjust buzz-desktop-install` (downloads the
+# latest github release desktop-v* AppImage into ~/.local/share/buzz-desktop/).
+# See hosts/thinkpad/README.md for the rationale (off-host acquisition + host
+# wrapper, like hermes-desktop — NOT bubblebox).
+
+set -euo pipefail
+
+# Source the cn-secrets cache (written by dotfiles/.zshenv on first login).
+# Silent + non-fatal if absent — buzz authenticates to the relay via NIP-42 on
+# its own, so a missing cache just means no injected provider env.
+_cache="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/cn-secrets.env"
+if [ -f "$_cache" ]; then
+  # shellcheck disable=SC1090
+  set -a; . "$_cache"; set +a
+fi
+unset _cache
+
+appimg="$HOME/.local/share/buzz-desktop/Buzz.AppImage"
+
+if [ ! -x "$appimg" ]; then
+  echo "ERROR: $appimg missing or not executable." >&2
+  echo "       Run 'cjust buzz-desktop-install' first." >&2
+  exit 1
+fi
+
+# AppImages normally mount via /dev/fuse on the user session. On the rare host
+# where user FUSE isn't available (some atomic-host configs), fall back to
+# extracting + running from a tmpdir. The FUSE path is preferred (faster, less
+# disk); the fallback is a safety net, not the default.
+if [ -w /dev/fuse ] 2>/dev/null && [ -e /dev/fuse ]; then
+  exec "$appimg" "$@"
+else
+  echo "buzz-desktop: /dev/fuse unavailable, using --appimage-extract-and-run" >&2
+  exec "$appimg" --appimage-extract-and-run "$@"
+fi
