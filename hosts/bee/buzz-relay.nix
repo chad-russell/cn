@@ -25,6 +25,16 @@
     "containers/systemd/buzz-minio.container".source = ./buzz-minio.container;
   };
 
+  # Enable podman's auto-update timer so the buzz-relay / buzz-pair-relay
+  # containers (which carry AutoUpdate=registry) pull and recreate on schedule.
+  systemd.timers.podman-auto-update = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+    };
+  };
+
   # Idempotently create the buzz-media bucket once MinIO is accepting
   # connections. Reaches MinIO at 127.0.0.1:9000 (pod publishes it to host
   # localhost only). Retries for up to ~30s so it tolerates MinIO startup lag.
