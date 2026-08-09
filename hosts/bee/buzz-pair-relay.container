@@ -3,6 +3,7 @@ Description=Buzz device pairing relay (NIP-AB)
 
 [Container]
 Image=ghcr.io/block/buzz:main
+AutoUpdate=registry
 ContainerName=buzz-pair-relay
 Pod=buzz-relay.pod
 PodmanArgs=--entrypoint=/usr/local/bin/buzz-pair-relay

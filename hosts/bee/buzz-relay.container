@@ -8,6 +8,7 @@ After=buzz-postgres.service buzz-redis.service buzz-minio.service buzz-minio-ini
 
 [Container]
 Image=ghcr.io/block/buzz:main
+AutoUpdate=registry
 ContainerName=buzz-relay
 Pod=buzz-relay.pod
 Volume=buzz-git-data:/data/git
