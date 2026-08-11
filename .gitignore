@@ -10,11 +10,33 @@ env.*
 secrets/*.yml
 secrets/*.env
 
+# Private keys (never commit — the nebula/.gitignore handles its own,
+# but catch any stray keys elsewhere in the repo)
+*.key
+*.pem
+*.p12
+
+# Editor / IDE directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS artifacts
+.DS_Store
+
+# Nix
+result
+
 # Archive
 .archived
-result
-hosts/thinkpad/image/state/
+
+# Images / composefs descriptors (build artifacts)
+*.cfs
+
+# Python
 **/__pycache__
 
-# Images
-*.cfs
+# State dirs
+hosts/thinkpad/image/state/
