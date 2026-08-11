@@ -26,12 +26,14 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "nvme" "usbhid" "sd_mod" ];
+  boot.initrd.availableKernelModules =
+    [ "xhci_pci" "ahci" "nvme" "usbhid" "sd_mod" ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-intel" ];
 
   # ── Hardware ─────────────────────────────────────────────────────
-  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+  hardware.cpu.intel.updateMicrocode =
+    lib.mkDefault config.hardware.enableRedistributableFirmware;
   zramSwap.enable = true;
 
   # ── Networking ───────────────────────────────────────────────────
@@ -47,7 +49,15 @@
   fileSystems."/mnt/backups" = {
     device = "192.168.20.31:/pool/backups";
     fsType = "nfs";
-    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
+    options = [
+      "x-systemd.automount"
+      "noauto"
+      "timeo=14"
+      "nfsvers=4"
+      "rw"
+      "soft"
+      "intr"
+    ];
   };
 
   # ── Nebula ──────────────────────────────────────────────────────
@@ -73,12 +83,26 @@
 
     tun.disable = true;
 
-    firewall.outbound = [{ port = "any"; proto = "any"; host = "any"; }];
-    firewall.inbound  = [{ port = "any"; proto = "any"; host = "any"; }];
+    firewall.outbound = [{
+      port = "any";
+      proto = "any";
+      host = "any";
+    }];
+    firewall.inbound = [{
+      port = "any";
+      proto = "any";
+      host = "any";
+    }];
 
     settings = {
-      logging = { level = "info"; format = "text"; };
-      punchy = { punch = true; respond = true; };
+      logging = {
+        level = "info";
+        format = "text";
+      };
+      punchy = {
+        punch = true;
+        respond = true;
+      };
       firewall.conntrack = {
         tcp_timeout = "120h";
         udp_timeout = "3m";
@@ -99,9 +123,7 @@
   networking.firewall.enable = false;
 
   # ── Podman ──────────────────────────────────────────
-  virtualisation.podman = {
-    enable = true;
-  };
+  virtualisation.podman = { enable = true; };
 
   # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
   programs.nix-ld.enable = true;
@@ -172,13 +194,11 @@
     addToSystemPackages = true;
 
     settings = {
-      custom_providers = [
-        {
-          name = "zai-coding";
-          base_url = "https://api.z.ai/api/coding/paas/v4";
-          key_env = "OPENAI_API_KEY";
-        }
-      ];
+      custom_providers = [{
+        name = "zai-coding";
+        base_url = "https://api.z.ai/api/coding/paas/v4";
+        key_env = "OPENAI_API_KEY";
+      }];
       model = {
         provider = "zai-coding";
         default = "glm-5.2";
@@ -201,12 +221,10 @@
       BUZZ_RELAY_URL = "https://buzz.crussell.io";
       BUZZ_ALLOW_ALL_USERS = "true";
       OPENAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
-      BUZZ_AUTH_TAG = ''["auth","93984b5c44debc12757e0f5db1643c2808ee8b820b46ac704febb039de4c16a7","","a5b2da36a39eb7569f10e823ecb699cf0ccef495149cdca5144118f0d751efdc636d2f707b90c7a9ae6e92355453283433edf33678af21ca3c6aa481cb48d961"]'';
+      # BUZZ_AUTH_TAG (NIP-42 relay auth event) is in hermes-bee-env.age.
     };
 
-    environmentFiles = [
-      config.age.secrets.hermes-bee-env.path
-    ];
+    environmentFiles = [ config.age.secrets.hermes-bee-env.path ];
 
     # buzz CLI for outbound message delivery
     extraPackages = [ buzz ];
@@ -215,9 +233,8 @@
   # Inject secrets directly into the systemd service environment so the
   # Hermes runtime provider resolver sees OPENAI_API_KEY before python-dotenv
   # loads .env. Without this, the resolver falls back to "no-key-required".
-  systemd.services.hermes-agent.serviceConfig.EnvironmentFile = [
-    config.age.secrets.hermes-bee-env.path
-  ];
+  systemd.services.hermes-agent.serviceConfig.EnvironmentFile =
+    [ config.age.secrets.hermes-bee-env.path ];
 
   # ── Hermes gateway: run as crussell with NO filesystem sandbox ──────
   # The upstream NixOS module hardcodes ProtectSystem=strict and
