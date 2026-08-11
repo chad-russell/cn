@@ -534,16 +534,3 @@ Existing examples: `linkding.container`, `papra.container`, `caddy/caddy.contain
 2. Deploy `bees` so Nix updates `/etc/caddy`.
 3. Validate and reload Caddy inside the `systemd-caddy` container.
 4. Test with `curl -I https://<host>` from a network that can resolve/reach the domain.
-
-## Archived / Deprecated Context
-
-Older docs or git history may refer to these paths and names. **None of these
-paths exist in the current repo** — they are included only for git-history
-archaeology:
-
-- `servers/hub/quadlets/...`
-- `servers/hub/caddy/...`
-- `servers/hub/dev-stacks/...`
-- `servers/media/...`
-- `brunch/config/...`
-- host name `hub` for what is now `bees`
