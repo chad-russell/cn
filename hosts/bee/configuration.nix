@@ -138,6 +138,9 @@
     # invokes bare `python3` directly when probing/spawning the remote backend,
     # so a system python3 must be on the SSH login shell's PATH.
     pkgs.python3
+    # OpenAI Codex CLI (from nixos-unstable — not in 25.11). Used via the
+    # Hermes codex skill and the openai-codex provider integration.
+    unstable.codex
   ];
 
   # crussell needs membership in the `hermes` group to read/write the
