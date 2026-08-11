@@ -4,7 +4,7 @@ Root navigation and operating guide for agents working in this personal infrastr
 
 **Read this first.** The repository uses a unified Nix flake. Prefer the Nix configuration and live host state over older docs when facts disagree.
 
-Last validated via SSH: **2026-07-05**.
+Last validated via SSH: **2026-08-10**.
 
 ## Ground Rules for Agents
 
@@ -18,42 +18,85 @@ Last validated via SSH: **2026-07-05**.
 
 ```text
 .
-├── flake.nix                  # Unified NixOS flake: hosts, deploy/install apps
+├── flake.nix                  # Unified NixOS flake: hosts, deploy/install apps, checks
 ├── flake.lock
+├── treefmt.toml               # nixfmt-classic formatter config (run: treefmt)
 ├── AGENTS.md                  # This guide
 ├── hosts/
-│   ├── bee/                   # Beelink mini PC: Nebula lighthouse
+│   ├── bee/                   # Beelink mini PC: dev server + Nebula lighthouse
 │   │   ├── configuration.nix
-│   │   └── disk-config.nix
+│   │   ├── disk-config.nix
+│   │   ├── backup.nix         # Restic backup to S3
+│   │   ├── tailscale.nix      # On-demand Tailscale (not default-on)
+│   │   ├── buzz-relay.nix     # Self-hosted Buzz relay pod (6 containers)
+│   │   ├── buzz-relay.pod     # Podman pod definition
+│   │   ├── buzz-*.container   # Relay containers (relay, postgres, redis, minio, pair-relay)
+│   │   └── dev-quadlets.nix   # Dev environment stacks + README
+│   │       └── dev-quadlets/  # gpl, polymer, buildspace (container + volume + network per project)
 │   ├── bees/                  # Production server: all shared + media + ingress services
 │   │   ├── configuration.nix
-│   │   ├── caddy.nix + caddy/ (Caddyfile, routes)
+│   │   ├── disk-config.nix
+│   │   ├── caddy.nix + caddy/ (Caddyfile, routes, caddy.container)
+│   │   │   └── routes/internal/ (services.caddy, media.caddy, beszel.caddy)
 │   │   ├── gloo-proxy.nix + gloo-proxy/ (Gloo AI proxy: module + package)
 │   │   ├── media-services.nix
-│   │   ├── immich.nix
+│   │   ├── immich.nix + immich-backup.nix
+│   │   ├── beszel.nix         # Beszel monitoring hub
 │   │   ├── ntfy.nix, datenight.nix
-│   │   ├── services.nix, linkding.container, papra.container
+│   │   ├── services.nix
+│   │   ├── backup.nix         # Restic backup to S3
+│   │   └── *.container        # linkding, papra, jellyfin, jellyseerr, sonarr, radarr, prowlarr, qbittorrent
+│   ├── gateway/               # Hetzner Cloud VPS: public TLS ingress
+│   │   ├── configuration.nix
+│   │   ├── caddy.nix          # Native NixOS Caddy (HTTP-01, no secrets)
 │   │   └── disk-config.nix
+│   ├── nas/                   # NFS storage server
+│   │   ├── configuration.nix
+│   │   ├── disk-config.nix
+│   │   ├── nfs-exports.nix
+│   │   ├── samba.nix
+│   │   └── btrfs-maintenance.nix
 │   ├── homeassistant/         # HAOS operational docs + helper scripts + Nebula add-on
 │   │   ├── addons/nebula/     # Local HAOS add-on: Nebula VPN client
+│   │   ├── incidents/         # Post-mortem notes
 │   │   ├── scripts/           # Deploy, SSH, supervisor helpers
 │   │   └── README.md
-│   └── thinkpad/              # `think` laptop: custom Bluefin image + bubblebox/dotfiles/gloo dev tooling
+│   └── thinkpad/              # `think` laptop: custom Bluefin image (NOT NixOS deploy target)
+│       ├── Justfile            # `cjust` task runner (entry point for all maintenance)
+│       ├── README.md           # Comprehensive thinkpad-specific guide
+│       ├── host-image/        # bootc Containerfile + build/switch/upgrade scripts
+│       ├── nebula/            # Nebula VPN (rootful podman quadlet)
+│       ├── backup/            # Restic S3 backup quadlets + timers
+│       ├── bubblebox/         # Host's bubblebox profile.toml
+│       ├── dotfiles/          # Host-native dotfiles (symlinked by `cjust link`)
+│       ├── systemd/user/      # User systemd units
+│       ├── gloo/              # Gloo dev quadlets (local copies)
+│       ├── buildspace/        # Buildspace dev stack
+│       ├── tailscale/         # On-demand Tailscale container
+│       └── wycliffe-vpn/      # GlobalProtect VPN wrapper
 ├── lib/
 │   └── host-meta.nix          # Single source of truth: host → IPs + deploy metadata
 ├── modules/
 │   ├── base-server.nix        # Shared server baseline: user, SSH, networkd, packages, GC, NFS client
 │   ├── server-shell.nix       # Shared zsh/CLI setup for servers
+│   ├── server-home.nix        # Home-manager config for crussell on all servers
 │   ├── nebula-client.nix      # Shared Nebula client defaults (used by servers)
 │   ├── nebula-hosts.nix       # /etc/hosts entries for Nebula overlay names (generated from lib/host-meta.nix)
 │   ├── opencode.nix           # opencode CLI + web service (default-on for importers)
 │   ├── beszel-agent.nix       # Beszel agent (default-on for importers)
+│   ├── restic-backup.nix      # Shared restic backup job builder
+│   ├── btrfs-snapshots.nix    # Btrfs snapshot management
+│   ├── buzz-harness.nix       # Buzz agent harness (disabled on bee, replaced by Hermes)
+│   ├── freshness-checks.nix   # Periodic health checks with ntfy alerting
 │   └── fzf-history-widget.zsh # Shared fzf Ctrl+R widget for zsh
 ├── nebula/
 │   ├── configs/               # Nebula config templates
 │   ├── pki/                   # Nebula CA/certs and age-encrypted private keys
 │   └── scripts/               # Nebula helper binaries/scripts
+├── pkgs/
+│   └── buzz/                  # Buzz CLI (Rust, built against pinned toolchain)
 ├── secrets/                   # Agenix secrets used by server modules
+└── treefmt.toml               # nixfmt-classic formatter config
 ```
 
 ## Current Architecture
@@ -108,7 +151,7 @@ Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
-| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay).                                                                                                          |
+| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), self-hosted Buzz relay, Hermes Agent gateway, opencode web, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
 | `think`         | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Not a NixOS deploy target. |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 25.11 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
@@ -172,22 +215,28 @@ ssh -o IdentitiesOnly=yes crussell@<host-nebula-ip>
 sudo nixos-rebuild switch --flake github:chad-russell/cn#<host>
 ```
 
-Install/wipe a new host with nixos-anywhere:
+Install/wipe a new host with nixos-anywhere (requires mandatory safety flag):
 
 ```bash
-# WARNING: destructive
-nix run .#install -- bees 192.168.20.41
-nix run .#install -- bee 192.168.20.105
+# WARNING: destructive. The flag is mandatory to prevent confusing install with deploy.
+nix run .#install -- bees 192.168.20.41 --i-understand-this-wipes-the-disk
+nix run .#install -- bee 192.168.20.105 --i-understand-this-wipes-the-disk
 ```
 
 Useful validation before deploy:
 
 ```bash
-# Fast eval check
+# Eval gate: check all hosts eval cleanly (fast — no building)
+nix flake check
+
+# Eval a single host
 nix eval .#nixosConfigurations.bees.config.networking.hostName --raw
 
 # Build without switching
 nix build .#nixosConfigurations.bees.config.system.build.toplevel
+
+# Format check (no changes if clean)
+nix shell nixpkgs#treefmt nixpkgs#nixfmt-classic -c treefmt --ci
 ```
 
 ## Service Operations by Host
@@ -197,11 +246,15 @@ nix build .#nixosConfigurations.bees.config.system.build.toplevel
 Source files:
 
 - `hosts/bees/configuration.nix`
-- `hosts/bees/caddy.nix` + `hosts/bees/caddy/` (Caddyfile, routes)
+- `hosts/bees/caddy.nix` + `hosts/bees/caddy/` (Caddyfile, routes, caddy.container)
 - `hosts/bees/media-services.nix` — Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr
-- `hosts/bees/immich.nix` — Immich server + ML
+- `hosts/bees/immich.nix` + `hosts/bees/immich-backup.nix` — Immich server + ML
+- `hosts/bees/beszel.nix` — Beszel monitoring hub
 - `hosts/bees/ntfy.nix`, `datenight.nix`
 - `hosts/bees/services.nix` + `*.container` — linkding, papra
+- `hosts/bees/gloo-proxy.nix` + `gloo-proxy/` — Gloo AI proxy
+- `hosts/bees/backup.nix` — Restic backup to S3
+- `*.container` files — jellyfin, jellyseerr, sonarr, radarr, prowlarr, qbittorrent, linkding, papra
 
 Live systemd services:
 
@@ -303,19 +356,32 @@ To rotate the token: create a new one in the hub UI, re-encrypt `secrets/beszel-
 
 Source files:
 
-- `hosts/bee/configuration.nix`
+- `hosts/bee/configuration.nix` — host config + Hermes Agent gateway
+- `hosts/bee/disk-config.nix`
+- `hosts/bee/backup.nix` — Restic backup to S3
+- `hosts/bee/tailscale.nix` — on-demand Tailscale (not enabled at boot)
+- `hosts/bee/buzz-relay.nix` + `buzz-relay.pod` + `buzz-*.container` — self-hosted Buzz relay
+- `hosts/bee/dev-quadlets.nix` + `dev-quadlets/` — dev environment stacks
 
 Running services:
 
 - `nebula@homelab.service` — `10.10.0.12`
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
-
-> Gloo dev no longer runs on bee — it moved to the thinkpad and runs via
-> podman quadlets. See `hosts/thinkpad/gloo/` (`hosts/thinkpad/gloo/README.md`)
-> for the current workflow.
+- `hermes-agent.service` — Hermes Agent gateway (replaces buzz-acp; see `hosts/bee/configuration.nix`). Runs as `crussell` with full host access. Connects to the Buzz relay via NIP-42 auth, uses the `buzz` CLI for outbound message delivery.
+- `buzz-relay-pod.service` — self-hosted Buzz relay (podman pod: relay, postgres, redis, minio, pair-relay)
+- Dev stacks (`dev-quadlets/`) — gpl, polymer, buildspace (podman quadlets, reached via SSH tunnels; see `hosts/bee/dev-quadlets/README.md` and `cjust dev-tunnel`)
+- Restic backup (daily S3 backup via `hosts/bee/backup.nix`)
+- `opencode-web.service` — opencode web interface on port `4096`
+- Beszel agent (default-on via `modules/beszel-agent.nix`)
 
 bee is podman-only (no Docker daemon). Deploy with `nix run .#deploy -- bee`
 from the deploy origin (`bees`).
+
+> Dev stacks for gpl, polymer, and buildspace run on bee via podman quadlets
+> (`hosts/bee/dev-quadlets/`). They're reached from the thinkpad via SSH
+> tunnels (`cjust dev-tunnel <project>`). The thinkpad also has local copies
+> of the gpl/polymer quadlets under `hosts/thinkpad/gloo/` for when the laptop
+> is offline.
 
 ### gateway — Hetzner Cloud VPS (public ingress)
 
@@ -365,7 +431,7 @@ nix run .#deploy -- gateway
 Install/rebuild (destructive — same IP preserved):
 
 ```bash
-nix run .#install -- gateway
+nix run .#install -- gateway --i-understand-this-wipes-the-disk
 ```
 
 Use `ssh -o IdentitiesOnly=yes root@178.156.171.212` to verify.
@@ -471,7 +537,9 @@ Existing examples: `linkding.container`, `papra.container`, `caddy/caddy.contain
 
 ## Archived / Deprecated Context
 
-Older docs may refer to:
+Older docs or git history may refer to these paths and names. **None of these
+paths exist in the current repo** — they are included only for git-history
+archaeology:
 
 - `servers/hub/quadlets/...`
 - `servers/hub/caddy/...`
@@ -479,5 +547,3 @@ Older docs may refer to:
 - `servers/media/...`
 - `brunch/config/...`
 - host name `hub` for what is now `bees`
-
-Treat those as historical unless the files still exist and the current Nix config agrees.
