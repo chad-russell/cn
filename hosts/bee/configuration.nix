@@ -247,12 +247,22 @@
         tool_progress = "off";
       };
       gateway.platforms.buzz = {
-        enabled = true;
+        # Paused 2026-08-11 — migrated personal delivery to Telegram forum
+        # topics. Re-enable here (and redeploy) to revive buzz delivery.
+        enabled = false;
         extra = {
           relay_url = "https://buzz.crussell.io";
           require_mention = true;
           allow_all_users = true;
         };
+      };
+      # Telegram bot (crussell_hermes_bot). Token lives in .env
+      # (TELEGRAM_BOT_TOKEN), read by the gateway at startup. Forum
+      # topics in a single super-group give the per-topic separation
+      # that buzz channels provided (bible / tastytrade / general).
+      gateway.platforms.telegram = {
+        enabled = true;
+        extra.require_mention = true;
       };
     };
 
@@ -260,8 +270,14 @@
       BUZZ_RELAY_URL = "https://buzz.crussell.io";
       BUZZ_ALLOW_ALL_USERS = "true";
       ZAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
-      # ZAI_CODING_KEY, OPENROUTER_API_KEY, GLOO_API_KEY, and
-      # BUZZ_AUTH_TAG (NIP-42 relay auth event) are in hermes-bee-env.age.
+      # ZAI_CODING_KEY, OPENROUTER_API_KEY, GLOO_API_KEY,
+      # BUZZ_AUTH_TAG (NIP-42 relay auth event), and TELEGRAM_BOT_TOKEN
+      # are in hermes-bee-env.age.
+      # Telegram: bee has direct IPv4 to api.telegram.org, so skip the
+      # fallback-IP transport (which hangs during PTB initialize on this host).
+      HERMES_TELEGRAM_DISABLE_FALLBACK_IPS = "true";
+      # Allow Chad's Telegram account (user ID 8307124200).
+      TELEGRAM_ALLOWED_USERS = "8307124200";
     };
 
     environmentFiles = [ config.age.secrets.hermes-bee-env.path ];
