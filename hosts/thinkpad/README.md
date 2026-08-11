@@ -11,9 +11,10 @@ host.
 ├── nebula/         # Nebula VPN container/service
 ├── backup/         # restic S3 backup Quadlet + timers (daily backup, weekly check)
 ├── wycliffe-vpn/   # on-demand GlobalProtect wrapper
-├── bubblebox/      # the host's bubblebox profile.toml (desired package set)
-├── dotfiles/       # the rare host-native user dotfiles (linked by cjust)
-└── systemd/        # user/systemd units (mostly user services for now)
+└── bubblebox/      # declarative host profile (packages + dotfiles + units)
+    ├── profile.toml   # desired package set + [[files]] + [[units]] declarations
+    ├── files/         # host-native dotfiles, mirroring $HOME (managed by `bubblebox apply`)
+    └── units/         # systemd user units (managed by `bubblebox apply`)
 ```
 
 ## Guiding principle
@@ -26,27 +27,29 @@ Keep the host small and explicit.
 - persistent mutable state should live in obvious, named locations
 - the rare dotfile that must live host-native (e.g. oh-my-posh, which runs on
   every prompt render and so can't pay a per-invocation sandbox spawn) is
-  tracked under `dotfiles/` and symlinked into `$HOME` by `cjust link`
+  tracked under `bubblebox/files/` and symlinked into `$HOME` by `bubblebox
+  apply` (declared via `[[files]]` in `bubblebox/profile.toml`)
 
 ## Task runner: `cjust`
 
 `cjust` is the single entry point for setting up and maintaining this machine.
-It's a thin wrapper (defined in `dotfiles/.zshrc`) around the task runner
+It's a thin wrapper (defined in `bubblebox/files/.zshrc`) around the task runner
 `just`, pointing at `hosts/thinkpad/Justfile`. `just` and `fzf` are baked into
 the host image so it works before any sandbox is set up.
 
 ```bash
-cjust              # fuzzy recipe chooser (just --choose)
-cjust setup        # full first-run: dotfiles + units + bubblebox + opencode
-cjust link         # (re)symlink host-native dotfiles into $HOME
-cjust units        # (re)symlink systemd user units + enable lingering
-cjust bubblebox    # build FUSE server + all tool images + export wrappers
-cjust status       # show host-image / bootc / bubblebox / opencode state
-cjust -l           # list all recipes
+cjust                  # fuzzy recipe chooser (just --choose)
+cjust setup            # full first-run: bubblebox (tools + dotfiles + units) + opencode
+cjust bubblebox        # build FUSE server + all tool images + apply profile
+cjust bubblebox-apply  # (re)apply the profile: dotfiles + units + package wrappers
+cjust status           # show host-image / bootc / bubblebox / opencode state
+cjust -l               # list all recipes
 ```
 
-Adding a new bubblebox tool, user unit, or dotfile is a one-line edit to a
-data table at the top of the Justfile.
+Dotfiles and systemd user units are declared in `bubblebox/profile.toml` (the
+`[[files]]` and `[[units]]` sections) and realized by `cjust bubblebox-apply`.
+`cjust link` and `cjust units` are retired — the declarative profile is the
+single source of truth.
 
 ## Current architecture
 
@@ -65,10 +68,13 @@ On-demand Wycliffe GlobalProtect container workflow. See
 
 ### `bubblebox/`
 The host's **bubblebox profile** (`profile.toml`) — the desired set of bubblebox
-tools to install, plus the source registry it resolves them from. This is the
-`flake.nix` analog: a declarative input list that `bubblebox apply` realizes
-into a pinned generation (`profile.lock`). It's the only bubblebox file that is
-host-specific, so it lives here alongside the rest of the host config.
+tools to install, the source registry it resolves them from, **plus** the
+host-resident dotfiles (`[[files]]`) and systemd user units (`[[units]]`). This
+is the `flake.nix` analog: a declarative input list that `bubblebox apply`
+realizes into a pinned generation (`profile.lock`). Alongside the profile live
+`files/` (the dotfile sources, mirroring `$HOME`) and `units/` (the systemd unit
+sources). It's the host-specific bubblebox config, so it lives here alongside
+the rest of the host config.
 
 bubblebox itself spans three repos / concerns:
 
@@ -76,7 +82,7 @@ bubblebox itself spans three repos / concerns:
 |---|---|---|
 | **engine** | `~/Code/bubblebox` | the Rust CLI + FUSE server (`bubblebox build/run/apply/...`) |
 | **packages** | `~/Code/bubblebox-pkgs` | per-tool `Containerfile` + `entrypoint.toml` (the nixpkgs-analog source) |
-| **profile** | this dir (`bubblebox/profile.toml`) | the host's desired package set + source registration |
+| **profile** | this dir (`bubblebox/profile.toml`) | the host's desired package set + source registration + `[[files]]` / `[[units]]` |
 
 A **package** is an OCI image (a `Containerfile`); an **entrypoint** is how
 bubblebox runs it (which binary to exec, what to compose in, binds/env) —
@@ -84,9 +90,10 @@ authored alongside the Containerfile because the package author knows what the
 tool needs. **Config / dotfiles** are a separate concern: every tool reads its
 personal config from the host `$HOME` via `writable_home` (e.g. aws reads
 `~/.aws/config`, vicinae reads `~/.config/vicinae/`, nvim reads
-`~/.config/nvim`), tracked under `dotfiles/` below. Runtime state that's
-regenerable (nvim's plugin tree + undo history, zoxide's db) is isolated to
-bubblebox-owned dirs via `/persist` binds.
+`~/.config/nvim`), tracked under `bubblebox/files/` and declared in `[[files]]`
+(see [Host-resident dotfiles](#host-resident-dotfiles-bubbleboxfiles--files)
+below). Runtime state that's regenerable (nvim's plugin tree + undo history,
+zoxide's db) is isolated to bubblebox-owned dirs via `/persist` binds.
 
 bubblebox auto-mounts each tool on first invocation (rootless FUSE) — no
 separate prepare/mount step. `cjust bubblebox` builds the images and
@@ -179,11 +186,12 @@ desktop GUI host-built.
 **Secrets.** Provider keys live in `secrets/hermes-thinkpad-env.age` (agenix),
 which exports `OPENAI_API_KEY` (the Z.AI coding key, remapped for hermes'
 OpenAI-compatible provider resolver — same key value as `zai-api-key.age`).
-`dotfiles/.zshenv` decrypts it alongside `zai-api-key.age` into per-login
-tmpfs, so every shell (and any CLI/TUI invocation) sees the key. The desktop
-wrapper (`dotfiles/.local/bin/hermes-desktop`) sources the same cache before
-exec'ing the Electron app, so compositor-launched GUI sees it too (`.zshenv`
-alone wouldn't — GUI apps read the systemd session env, not the shell env).
+`bubblebox/files/.zshenv` decrypts it alongside `zai-api-key.age` into
+per-login tmpfs, so every shell (and any CLI/TUI invocation) sees the key. The
+desktop wrapper (`bubblebox/files/.local/bin/hermes-desktop`) sources the same
+cache before exec'ing the Electron app, so compositor-launched GUI sees it too
+(`.zshenv` alone wouldn't — GUI apps read the systemd session env, not the
+shell env).
 
 First-time provider config (after `cjust hermes-install`): point hermes at the
 Z.AI coding endpoint by declaring a custom OpenAI-compatible provider in
@@ -196,41 +204,52 @@ hermes config set model.default glm-5.2
 hermes doctor   # verify deps + provider config
 ```
 
-### `dotfiles/`
+### Host-resident dotfiles (`bubblebox/files/` + `[[files]]`)
+
 Host-native user dotfiles — the small exception to "everything lives in a
-sandbox." A tool's personal config (e.g. `~/.aws/config`, `~/.config/vicinae/`,
-`~/.config/nvim`) lives here and is reached at runtime via `writable_home`. A
-few things are inherently host-resident regardless:
+sandbox." A tool's personal config (e.g. `~/.aws/config`,
+`~/.config/vicinae/`, `~/.config/nvim`) lives under `bubblebox/files/`
+(mirroring `$HOME`-relative layout) and is declared in the `[[files]]` section
+of `bubblebox/profile.toml`. `bubblebox apply` hashes each file's content into
+the content-addressed store and symlinks `$HOME/<dst>` → the store blob, so the
+checkout is the single source of truth. A few things are inherently
+host-resident regardless:
 
 - **oh-my-posh** — renders the prompt on every command, can't pay a
   per-invocation sandbox spawn
-- **opencode** config (`opencode.json`) — the agent runs on the host directly
-  (see `cjust opencode-install`), so its config lives with the rest of the
-  host dotfiles; auth stays at the default `~/.local/share/opencode/auth.json`
-  (machine-local, gitignored by virtue of being outside this tree)
+- **opencode** config — the agent runs on the host directly (see `cjust
+  opencode-install`), so its config lives with the rest of the host dotfiles;
+  auth stays at the default `~/.local/share/opencode/auth.json` (machine-local,
+  gitignored by virtue of being outside this tree)
 
-This directory mirrors `$HOME`-relative layout. Files are delivered by
-symlink, not copied, so edits land in the repo live and the checkout is the
-single source of truth. No templating, no secrets, no dotfiles manager.
+This is declarative, not live-edit: change the source file under
+`bubblebox/files/` and re-run `cjust bubblebox-apply` to re-link. No
+templating, no secrets, no dotfiles manager. (For `kind = "dir"` entries like
+`.config/nvim`, `bubblebox apply` walks the tree into per-file store symlinks;
+user-owned files inside managed dirs — e.g. opencode's `auth.json` — are never
+touched.)
 
 ```bash
-# set up / refresh all host-native dotfile symlinks (idempotent)
-cjust link
+# set up / refresh all host-native dotfiles (idempotent, part of the profile)
+cjust bubblebox-apply
 ```
 
-To add another host-native dotfile: drop it under `dotfiles/` at its
-`$HOME`-relative path, add the path to the `dotfiles` list at the top of
-`hosts/thinkpad/Justfile`, and re-run `cjust link`. Secrets stay on the
-existing rails (agenix/age, see the repo-wide `AGENTS.md`) — don't add them
+To add another host-native dotfile: drop it under `bubblebox/files/` at its
+`$HOME`-relative path, add a `[[files]]` entry (with `dst = "<path>"`) to
+`bubblebox/profile.toml`, and re-run `cjust bubblebox-apply`. Secrets stay on
+the existing rails (agenix/age, see the repo-wide `AGENTS.md`) — don't add them
 here.
 
-#### COSMIC desktop settings — `dotfiles/.config/cosmic/`
+#### COSMIC desktop settings — `bubblebox/files/.config/cosmic/`
 
-The entire COSMIC settings tree is vendored here and symlinked as one
-directory (`dotfiles/.config/cosmic` → `~/.config/cosmic`). It covers the
-compositor (`com.system76.CosmicComp`), panels + dock, themes (dark/light),
-applets (time, audio, battery), terminal, files, app library/list, and
-shortcuts.
+The entire COSMIC settings tree is vendored under
+`bubblebox/files/.config/cosmic/` and managed via **copy**, not bubblebox
+symlinks — COSMIC dislikes symlinks for its config tree, so this is a permanent
+exception. `cjust cosmic-backup` copies the live `~/.config/cosmic` into the
+repo tree for git tracking, and `cjust cosmic-restore` copies it back. It
+covers the compositor (`com.system76.CosmicComp`), panels + dock, themes
+(dark/light), applets (time, audio, battery), terminal, files, app
+library/list, and shortcuts.
 
 `cosmic-config` persists each key as a **plain-text, RON-like file** under
 `<app>/v1/<key>`, which makes the tree:
@@ -243,18 +262,23 @@ shortcuts.
 
 Notes:
 
-- Settings for a **newly installed** COSMIC app land in the repo
-  automatically (they're written through the symlink). If an app starts
-  emitting runtime **state** rather than settings, add its subdir to a
-  `.gitignore` under `dotfiles/.config/cosmic/`.
-- On a fresh machine, `cjust link` backs up any pre-existing
-  `~/.config/cosmic` to `~/.config/cosmic.bak.<ts>` and symlinks the repo
-  tree in its place, so replication is one command.
-- COSMIC reads most keys on the fly; a few (compositor bindings, themes)
-  need a session restart to fully apply after an edit.
+- Settings for a **newly installed** COSMIC app are captured by re-running
+  `cjust cosmic-backup` (it copies the whole live tree into the repo). If an
+  app starts emitting runtime **state** rather than settings, add its subdir
+  to a `.gitignore` under `bubblebox/files/.config/cosmic/`.
+- On a fresh machine, `cjust cosmic-restore` copies the repo tree over
+  `~/.config/cosmic` (after removing any pre-existing dir or stale symlink),
+  so replication is one command.
+- COSMIC reads most keys on the fly; a few (compositor bindings, themes) need
+  a session restart to fully apply after an edit.
 
-### `systemd/`
-Systemd units, mostly **user** services for now (`systemd/user/`). Current units:
+### Systemd user units (`bubblebox/units/` + `[[units]]`)
+
+Systemd units, mostly **user** services, now declared in the `[[units]]` section
+of `bubblebox/profile.toml` with sources under `bubblebox/units/`. `bubblebox
+apply` symlinks each unit into `~/.config/systemd/user/`, daemon-reloads, and
+enables lingering; units with `enable = true` in the profile are also started.
+Current units:
 
 - `opencode-web.service` — runs the opencode web frontend. opencode is
   host-installed (via `cjust opencode-install`), so the unit just calls
@@ -266,19 +290,16 @@ Systemd units, mostly **user** services for now (`systemd/user/`). Current units
   `spawn-at-startup`. The `Mod+Space { spawn "vicinae" "toggle"; }` client
   keybind in niri is unaffected (it's an IPC client, not the daemon).
 
-To install every unit (symlink into `~/.config/systemd/user/`, daemon-reload,
-and enable lingering):
-
 ```bash
-cjust units
-# then enable the specific unit(s):
+cjust bubblebox-apply
+# then enable/start a specific unit (if not auto-enabled via `enable = true`):
 systemctl --user enable --now opencode-web
 systemctl --user enable --now vicinae
 ```
 
-Adding a unit: drop `<name>.service` in `systemd/user/`, add the name (without
-`.service`) to the `user_units` list at the top of `hosts/thinkpad/Justfile`,
-and re-run `cjust units`.
+Adding a unit: drop `<name>.service` in `bubblebox/units/`, add a `[[units]]`
+entry (`name = "<name>"`, optionally `enable = true`) to
+`bubblebox/profile.toml`, and re-run `cjust bubblebox-apply`.
 
 ## State philosophy
 
