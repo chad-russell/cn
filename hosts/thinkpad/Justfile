@@ -796,6 +796,55 @@ backup:
 tailscale:
     {{ justfile_directory() }}/tailscale/setup.sh
 
+# Enable inbound SSH on the thinkpad (for remote access over Nebula from bee/
+# bees). Idempotent. (sudo)
+#
+# - Installs an /etc/ssh/sshd_config.d drop-in forcing key-only auth.
+# - Authorizes this host's own ed25519 pub key (the SAME keypair lives on bee
+#   and bees, so all three hosts can log in here).
+# - Enables + starts the system sshd. openssh-server ships in the Silverblue
+#   base image (no host-image change), and `systemctl enable` persists in /etc
+#   across bootc upgrades, so this survives image rebuilds + reboots.
+#
+# Why key-only: crussell has a password set, and sshd binds to ALL interfaces
+# (Nebula 10.10.0.10 + LAN/WiFi). Disabling password auth avoids opening a new
+# LAN brute-force surface and matches the gateway posture. To allow password
+# auth again, delete /etc/ssh/sshd_config.d/10-key-only.conf and restart sshd.
+#
+# Connect from bee/bees over Nebula:
+#   ssh -o IdentitiesOnly=yes crussell@10.10.0.10
+[group('system')]
+ssh:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # 1. Harden: key-only auth drop-in (read by sshd after sshd_config).
+    dropin=/etc/ssh/sshd_config.d/10-key-only.conf
+    sudo install -d -m 755 "$(dirname "$dropin")"
+    printf '%s\n' \
+      '# Managed by `cjust ssh` (hosts/thinkpad/Justfile). Key-only auth.' \
+      'PasswordAuthentication no' \
+      'KbdInteractiveAuthentication no' \
+      'PermitRootLogin no' \
+      | sudo tee "$dropin" >/dev/null
+    sudo chmod 644 "$dropin"
+    echo "  wrote $dropin (PasswordAuthentication no)"
+    # 2. Authorize the shared ed25519 key (same keypair on bee/bees/think).
+    install -d -m 700 "$HOME/.ssh"
+    pub="$HOME/.ssh/id_ed25519.pub"
+    auth="$HOME/.ssh/authorized_keys"
+    touch "$auth"; chmod 600 "$auth"
+    if [ -s "$pub" ]; then
+      grep -qF "$(cat "$pub")" "$auth" || cat "$pub" >> "$auth"
+      echo "  authorized: $(awk '{print $1, $3}' "$pub")"
+    else
+      echo "  WARN: $pub missing — no key added (install one manually)" >&2
+    fi
+    # 3. Enable + start the system sshd.
+    sudo systemctl enable --now sshd.service
+    echo "==> sshd enabled. Connect over Nebula:"
+    echo "    ssh -o IdentitiesOnly=yes crussell@10.10.0.10"
+    sudo ss -tlnp 2>/dev/null | grep ':22 ' || true
+
 # Show the current state of this machine: host-image version, bootc deployment,
 # bubblebox mounts + wrappers, opencode install, and linked user units.
 # Read-only.
