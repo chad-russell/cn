@@ -32,24 +32,12 @@
     # ── Hermes Agent (replaces buzz-acp for Bee) ──────────────────────
     # Does NOT follow our nixpkgs: Hermes needs nodejs_26 which nixos-25.11
     # doesn't ship. The module builds its own package internally.
-    hermes-agent = {
-      url = "github:NousResearch/hermes-agent";
-    };
+    hermes-agent = { url = "github:NousResearch/hermes-agent"; };
 
   };
 
-  outputs =
-    {
-      self,
-      nixpkgs,
-      nixpkgs-unstable,
-      home-manager,
-      disko,
-      agenix,
-      rust-overlay,
-      hermes-agent,
-      ...
-    }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, disko, agenix
+    , rust-overlay, hermes-agent, ... }:
     let
       lib = nixpkgs.lib;
       username = "crussell";
@@ -60,30 +48,27 @@
 
       # ── Buzz CLI stack (buzz-acp + buzz-cli + buzz-agent + buzz-admin) ─
       # Built against a pinned 1.95.0 toolchain (newer than nixos-25.11 ships).
-      buzzPkg =
-        let
-          pkgs' = import nixpkgs {
-            system = "x86_64-linux";
-            overlays = [ rust-overlay.overlays.default ];
-          };
-        in
-        import ./pkgs/buzz {
-          pkgs = pkgs';
-          rustToolchain = pkgs'.rust-bin.stable."1.95.0".default;
-          inherit lib;
+      buzzPkg = let
+        pkgs' = import nixpkgs {
+          system = "x86_64-linux";
+          overlays = [ rust-overlay.overlays.default ];
         };
+      in import ./pkgs/buzz {
+        pkgs = pkgs';
+        rustToolchain = pkgs'.rust-bin.stable."1.95.0".default;
+        inherit lib;
+      };
 
       # Bash case bodies, generated from hostMeta so the deploy/install
       # scripts never drift from lib/host-meta.nix.
-      deployCase = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (n: h: "          ${n}) TARGET=\"${h.deployUser}@${h.nebula}\" ;;") deployable
-      );
-      installIpCase = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (n: h: "          ${n}) IP=\"\${IP:-${h.lan}}\" ;;") deployable
-      );
-      installUserCase = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (n: h: "          ${n}) SSH_USER=\"${h.installUser}\" ;;") deployable
-      );
+      deployCase = lib.concatStringsSep "\n" (lib.mapAttrsToList
+        (n: h: "          ${n}) TARGET=\"${h.deployUser}@${h.nebula}\" ;;")
+        deployable);
+      installIpCase = lib.concatStringsSep "\n"
+        (lib.mapAttrsToList (n: h: "          ${n}) IP=\"\${IP:-${h.lan}}\" ;;")
+          deployable);
+      installUserCase = lib.concatStringsSep "\n" (lib.mapAttrsToList
+        (n: h: "          ${n}) SSH_USER=\"${h.installUser}\" ;;") deployable);
       availableHosts = lib.concatStringsSep " " (lib.attrNames deployable);
 
       # ── Shared args passed to all NixOS hosts ────────────────────
@@ -98,13 +83,8 @@
       # ── Helper to build a NixOS configuration ────────────────────
       # Every host gets home-manager (consistent shell/dotfiles for
       # `crussell`); pass extraModules for host-specific extras.
-      mkHost =
-        {
-          hostname,
-          system ? "x86_64-linux",
-          extraModules ? [ ],
-          extraSpecialArgs ? { },
-        }:
+      mkHost = { hostname, system ? "x86_64-linux", extraModules ? [ ]
+        , extraSpecialArgs ? { }, }:
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = specialArgs // extraSpecialArgs;
@@ -122,15 +102,11 @@
             {
               # Make this flake self-referential for deployments
               nix.registry.cn.flake = self;
-              nix.settings.experimental-features = [
-                "nix-command"
-                "flakes"
-              ];
+              nix.settings.experimental-features = [ "nix-command" "flakes" ];
             }
           ] ++ extraModules;
         };
-    in
-    {
+    in {
       # ── NixOS Configurations ─────────────────────────────────────
       nixosConfigurations.bee = mkHost {
         hostname = "bee";
@@ -143,93 +119,119 @@
       # ── Packages ─────────────────────────────────────────────────
       packages.x86_64-linux.buzz = buzzPkg;
 
+      # ── Eval gate (nix flake check) ──────────────────────────────
+      # Eval the full system toplevel for each NixOS host. Catches syntax
+      # errors, option typos, and type mismatches without deploying.
+      # Run with: nix flake check (or nix build .#checks.x86_64-linux.<host>)
+      checks.x86_64-linux = builtins.listToAttrs (builtins.map (host: {
+        name = host;
+        value = self.nixosConfigurations.${host}.config.system.build.toplevel;
+      }) (builtins.attrNames self.nixosConfigurations));
+
       # ── Deploy script (nix run .#deploy) ─────────────────────────
       apps.x86_64-linux.deploy = {
         type = "app";
         program = "${
-          nixpkgs.legacyPackages.x86_64-linux.writeShellScriptBin "deploy" ''
-            set -euo pipefail
+            nixpkgs.legacyPackages.x86_64-linux.writeShellScriptBin "deploy" ''
+              set -euo pipefail
 
-            if [ $# -lt 1 ]; then
-              echo "Usage: nix run .#deploy -- <host> [host...]"
-              echo "  Example: nix run .#deploy -- bee bees"
-              echo ""
-              echo "Run from the deploy origin (bees). Builds happen on this"
-              echo "machine; the target is switched over SSH (or locally if it"
-              echo "is this host)."
-              echo ""
-              echo "Available hosts: ${availableHosts}"
-              exit 1
-            fi
+              if [ $# -lt 1 ]; then
+                echo "Usage: nix run .#deploy -- <host> [host...]"
+                echo "  Example: nix run .#deploy -- bee bees"
+                echo ""
+                echo "Run from the deploy origin (bees). Builds happen on this"
+                echo "machine; the target is switched over SSH (or locally if it"
+                echo "is this host)."
+                echo ""
+                echo "Available hosts: ${availableHosts}"
+                exit 1
+              fi
 
-            HOSTS="$@"
-            THIS_HOST="$(hostname)"
+              HOSTS="$@"
+              THIS_HOST="$(hostname)"
 
-            for host in $HOSTS; do
-              case "$host" in
-            ${deployCase}
+              for host in $HOSTS; do
+                case "$host" in
+              ${deployCase}
+                  *)
+                    echo "Unknown host: $host" >&2
+                    exit 1
+                    ;;
+                esac
+
+                if [ "$host" = "$THIS_HOST" ]; then
+                  echo ">>> Deploying to $host (local)..."
+                  sudo nixos-rebuild switch --flake .#$host
+                else
+                  echo ">>> Deploying to $host ($TARGET)..."
+                  nixos-rebuild switch --flake .#$host --target-host "$TARGET" --sudo
+                fi
+
+                echo ">>> $host done."
+                echo ""
+              done
+
+              echo "All hosts deployed."
+            ''
+          }/bin/deploy";
+      };
+
+      # ── Install script (nix run .#install <host>) ────────────────
+      # Destructive: runs nixos-anywhere to wipe and install NixOS.
+      # Requires an explicit --i-understand-this-wipes-the-disk flag so
+      # agents (and humans) can't confuse it with `deploy`.
+      apps.x86_64-linux.install = {
+        type = "app";
+        program = "${
+            nixpkgs.legacyPackages.x86_64-linux.writeShellScriptBin "install" ''
+              set -euo pipefail
+
+              CONFIRM_FLAG="--i-understand-this-wipes-the-disk"
+
+              # Filter out the confirm flag from positional args
+              ARGS=()
+              CONFIRMED=false
+              for arg in "$@"; do
+                if [ "$arg" = "$CONFIRM_FLAG" ]; then
+                  CONFIRMED=true
+                else
+                  ARGS+=("$arg")
+                fi
+              done
+              set -- "''${ARGS[@]}"
+
+              if [ $# -lt 1 ] || [ "$CONFIRMED" = false ]; then
+                echo "Usage: nix run .#install -- <host> <ip> $CONFIRM_FLAG"
+                echo "  Example: nix run .#install -- bees 192.168.20.41 $CONFIRM_FLAG"
+                echo ""
+                echo "Runs nixos-anywhere to WIPE the target disk and install NixOS."
+                echo "The $CONFIRM_FLAG flag is MANDATORY."
+                echo ""
+                echo "Available hosts: ${availableHosts}"
+                exit 1
+              fi
+
+              HOST="$1"
+              IP="''${2:-}"
+
+              case "$HOST" in
+              ${installIpCase}
                 *)
-                  echo "Unknown host: $host" >&2
+                  echo "Unknown host: $HOST" >&2
                   exit 1
                   ;;
               esac
 
-              if [ "$host" = "$THIS_HOST" ]; then
-                echo ">>> Deploying to $host (local)..."
-                sudo nixos-rebuild switch --flake .#$host
-              else
-                echo ">>> Deploying to $host ($TARGET)..."
-                nixos-rebuild switch --flake .#$host --target-host "$TARGET" --sudo
-              fi
+              echo ">>> Installing NixOS on $HOST ($IP)..."
+              echo ">>> WARNING: This will ERASE the disk on $IP"
 
-              echo ">>> $host done."
-              echo ""
-            done
+              case "$HOST" in
+              ${installUserCase}
+              esac
 
-            echo "All hosts deployed."
-          ''
-        }/bin/deploy";
-      };
-
-      # ── Install script (nix run .#install <host>) ────────────────
-      apps.x86_64-linux.install = {
-        type = "app";
-        program = "${
-          nixpkgs.legacyPackages.x86_64-linux.writeShellScriptBin "install" ''
-            set -euo pipefail
-
-            if [ $# -lt 1 ]; then
-              echo "Usage: nix run .#install -- <host> <ip>"
-              echo "  Example: nix run .#install -- bees 192.168.20.41"
-              echo ""
-              echo "This runs nixos-anywhere to wipe and install NixOS."
-              echo "WARNING: This will ERASE the target disk."
-              exit 1
-            fi
-
-            HOST="$1"
-            IP="''${2:-}"
-
-            case "$HOST" in
-            ${installIpCase}
-              *)
-                echo "Unknown host: $HOST" >&2
-                exit 1
-                ;;
-            esac
-
-            echo ">>> Installing NixOS on $HOST ($IP)..."
-            echo ">>> WARNING: This will ERASE the disk on $IP"
-            read -p "Continue? [y/N] " confirm
-            [ "$confirm" = "y" ] || exit 1
-
-            case "$HOST" in
-            ${installUserCase}
-            esac
-
-            nix run github:nix-community/nixos-anywhere -- --flake .#$HOST $SSH_USER@$IP
-          ''
-        }/bin/install";
+              nix run github:nix-community/nixos-anywhere -- --flake .#$HOST $SSH_USER@$IP
+            ''
+          }/bin/install";
       };
     };
 }
