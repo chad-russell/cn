@@ -39,7 +39,7 @@ FROM quay.io/fedora-ostree-desktops/silverblue:${FEDORA_MAJOR_VERSION}
 # the `distrobox` CLI on the host for ad-hoc containers, replacing `toolbox`.
 #
 # `just` and `fzf` are host-native on purpose: they back the `cjust` task menu
-# (hosts/thinkpad/Justfile + the cjust function in dotfiles/.zshrc). Like
+# (hosts/thinkpad/Justfile + the cjust function in bubblebox/files/.zshrc). Like
 # oh-my-posh they can't live in a bubblebox — `cjust` must run before any box
 # is set up. (`just` was previously borrowed from the `default` box, which
 # made the menu depend on the thing it bootstraps; `fzf` backs `just --choose`.)
@@ -127,7 +127,7 @@ RUN sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config && \
 # USB-C DP tunnel cycling in/out of runtime suspend, which drops HPD and forces
 # a link retrain each wake. Keeping the tunnel awake fixes the external-monitor
 # black-screen cycling at full 4K@60, so the 1440p workaround in
-# dotfiles/.config/monitors.xml + niri config can be reverted once this is live.
+# bubblebox/files/.config/monitors.xml + niri config can be reverted once this is live.
 RUN mkdir -p /usr/lib/bootc/kargs.d && \
     printf 'kargs = ["usbcore.autosuspend=-1"]\nmatch-architectures = ["x86_64"]\n' \
     > /usr/lib/bootc/kargs.d/10-usb-autosuspend.toml

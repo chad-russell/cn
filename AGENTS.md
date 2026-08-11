@@ -68,8 +68,8 @@ Last validated via SSH: **2026-08-10**.
 │       ├── nebula/            # Nebula VPN (rootful podman quadlet)
 │       ├── backup/            # Restic S3 backup quadlets + timers
 │       ├── bubblebox/         # Host's bubblebox profile.toml
-│       ├── dotfiles/          # Host-native dotfiles (symlinked by `cjust link`)
-│       ├── systemd/user/      # User systemd units
+│       ├── bubblebox/files/  # Host-native dotfiles (managed by bubblebox apply)
+│       ├── bubblebox/units/  # User systemd units (managed by bubblebox apply)
 │       ├── gloo/              # Gloo dev quadlets (local copies)
 │       ├── buildspace/        # Buildspace dev stack
 │       ├── tailscale/         # On-demand Tailscale container

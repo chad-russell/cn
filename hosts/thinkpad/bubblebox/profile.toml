@@ -30,3 +30,78 @@ packages = [
 name = "personal"
 kind = "local"
 path = "~/Code/bubblebox-pkgs"
+
+# ── Host-resident files (Phase B) ────────────────────────────────────────────
+# Source files live in `files/` next to this profile.toml, mirroring $HOME.
+# `bubblebox apply` hashes each file's content into the content-addressed store
+# and symlinks $HOME/<dst> → the store blob. Re-apply to change (declarative —
+# no live-edit). `kind = "dir"` walks the tree into per-file store symlinks;
+# user-owned files in managed dirs (e.g. opencode's auth.json) are never touched.
+#
+# Replaces the old Justfile `dotfiles` string + `cjust link`.
+[[files]]
+dst = ".zshrc"
+
+[[files]]
+dst = ".zshenv"
+
+[[files]]
+dst = ".aws/config"
+
+[[files]]
+dst = ".config/oh-my-posh.json"
+
+[[files]]
+dst = ".config/environment.d/10-bubblebox.conf"
+
+[[files]]
+dst = ".config/niri/config.kdl"
+
+[[files]]
+dst = ".config/ghostty/config"
+
+[[files]]
+dst = ".config/vicinae/settings.json"
+
+[[files]]
+dst = ".config/wezterm/wezterm.lua"
+
+[[files]]
+dst = ".config/nvim"
+kind = "dir"
+
+[[files]]
+dst = ".config/opencode"
+kind = "dir"
+
+[[files]]
+dst = ".local/bin/zen-browser"
+
+[[files]]
+dst = ".local/bin/hermes-desktop"
+
+[[files]]
+dst = ".local/bin/buzz-desktop"
+
+[[files]]
+dst = ".local/share/applications/wezterm.desktop"
+
+[[files]]
+dst = ".local/share/applications/ghostty.desktop"
+
+[[files]]
+dst = ".local/share/applications/hermes.desktop"
+
+[[files]]
+dst = ".local/share/applications/buzz.desktop"
+
+# ── Systemd user units (Phase C) ─────────────────────────────────────────────
+# Source files live in `units/` next to this profile.toml. Replaces the old
+# Justfile `user_units` string + `cjust units`.
+[[units]]
+name = "opencode-web"
+enable = true
+
+[[units]]
+name = "vicinae"
+enable = true
