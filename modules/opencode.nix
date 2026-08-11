@@ -14,10 +14,8 @@
 
 { config, lib, pkgs, unstable, ... }:
 
-let
-  cfg = config.services.opencode;
-in
-{
+let cfg = config.services.opencode;
+in {
   options.services.opencode = {
     enable = lib.mkEnableOption "opencode AI coding agent";
 
@@ -25,7 +23,8 @@ in
       enable = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Enable a system-level systemd service for `opencode web`";
+        description =
+          "Enable a system-level systemd service for `opencode web`";
       };
 
       port = lib.mkOption {
@@ -50,9 +49,7 @@ in
 
   config = lib.mkMerge [
     # Default opencode + web ON for every host that imports this module.
-    {
-      services.opencode.enable = lib.mkDefault true;
-    }
+    { services.opencode.enable = lib.mkDefault true; }
 
     (lib.mkIf cfg.enable {
       # OPENROUTER_API_KEY for openrouter models.
@@ -61,9 +58,7 @@ in
       age.secrets.zai-api-key.file = ../secrets/zai-api-key.age;
 
       # ── Package ────────────────────────────────────────────────────
-      environment.systemPackages = [
-        unstable.opencode
-      ];
+      environment.systemPackages = [ unstable.opencode ];
 
       # ── Web interface systemd service ──────────────────────────────
       systemd.services.opencode-web = lib.mkIf cfg.web.enable {
@@ -76,7 +71,9 @@ in
           User = "crussell";
           Group = "users";
           WorkingDirectory = cfg.web.directory;
-          ExecStart = "${unstable.opencode}/bin/opencode web --port ${toString cfg.web.port} --hostname ${cfg.web.hostname}";
+          ExecStart = "${unstable.opencode}/bin/opencode web --port ${
+              toString cfg.web.port
+            } --hostname ${cfg.web.hostname}";
           # Provides OPENROUTER_API_KEY (openrouter) + ZHIPU_API_KEY (zhipuai-coding-plan).
           EnvironmentFile = [
             config.age.secrets.openrouter-api-key.path

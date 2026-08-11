@@ -29,8 +29,7 @@
   networking.hostName = "bees";
 
   # ── Essential packages ────────────────────────────────────────────────
-  environment.systemPackages = with pkgs; [
-  ];
+  environment.systemPackages = with pkgs; [ ];
 
   # ── Boot ─────────────────────────────────────────────────────────
   boot.loader.systemd-boot.enable = true;
@@ -53,7 +52,8 @@
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # ── Hardware ─────────────────────────────────────────────────────
-  hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+  hardware.cpu.amd.updateMicrocode =
+    lib.mkDefault config.hardware.enableRedistributableFirmware;
   hardware.enableRedistributableFirmware = lib.mkForce true;
   hardware.enableAllFirmware = true;
   zramSwap.enable = true;
@@ -84,21 +84,45 @@
   fileSystems."/mnt/media" = {
     device = "192.168.20.31:/pool/media";
     fsType = "nfs";
-    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
+    options = [
+      "x-systemd.automount"
+      "noauto"
+      "timeo=14"
+      "nfsvers=4"
+      "rw"
+      "soft"
+      "intr"
+    ];
   };
 
   # ── NFS: Photos from NAS ────────────────────────────────────────
   fileSystems."/mnt/photos" = {
     device = "192.168.20.31:/pool/photos";
     fsType = "nfs";
-    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
+    options = [
+      "x-systemd.automount"
+      "noauto"
+      "timeo=14"
+      "nfsvers=4"
+      "rw"
+      "soft"
+      "intr"
+    ];
   };
 
   # ── NFS: Backups from NAS ───────────────────────────────────────
   fileSystems."/mnt/backups" = {
     device = "192.168.20.31:/pool/backups";
     fsType = "nfs";
-    options = [ "x-systemd.automount" "noauto" "timeo=14" "nfsvers=4" "rw" "soft" "intr" ];
+    options = [
+      "x-systemd.automount"
+      "noauto"
+      "timeo=14"
+      "nfsvers=4"
+      "rw"
+      "soft"
+      "intr"
+    ];
   };
 
   # ── Nebula ──────────────────────────────────────────────────────
@@ -140,7 +164,8 @@
   #
   # immich-server is a native NixOS module, so a normal `systemd.services`
   # override merges cleanly into its generated unit.
-  systemd.services.immich-server.onFailure = [ "ntfy-failure@immich-server.service" ];
+  systemd.services.immich-server.onFailure =
+    [ "ntfy-failure@immich-server.service" ];
 
   # caddy is a podman quadlet — its unit comes from the podman-system-generator
   # at /run/systemd/generator/caddy.service, NOT from NixOS. Setting
