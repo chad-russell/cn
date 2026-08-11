@@ -7,4 +7,4 @@ Icon=buzz
 Categories=Network;InstantMessaging;Chat;
 Keywords=buzz;nostr;chat;communities;agent;
 Terminal=false
-StartupWMClass=xyz.block.buzz.app
+StartupWMClass=buzz-desktop
