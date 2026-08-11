@@ -41,13 +41,27 @@
 
       tun.disable = false;
 
-      firewall.outbound = [{ port = "any"; proto = "any"; host = "any"; }];
-      firewall.inbound  = [{ port = "any"; proto = "any"; host = "any"; }];
+      firewall.outbound = [{
+        port = "any";
+        proto = "any";
+        host = "any";
+      }];
+      firewall.inbound = [{
+        port = "any";
+        proto = "any";
+        host = "any";
+      }];
 
       settings = {
-        punchy = { punch = true; respond = true; };
+        punchy = {
+          punch = true;
+          respond = true;
+        };
         preferred_ranges = [ "192.168.20.0/24" ];
-        logging = { level = "info"; format = "text"; };
+        logging = {
+          level = "info";
+          format = "text";
+        };
         lighthouse.interval = 60;
         firewall.conntrack = {
           tcp_timeout = "120h";
@@ -59,10 +73,11 @@
     };
 
     # Ensure nebula service user can read cert files when enabled
-    systemd.tmpfiles.rules = lib.mkIf config.services.nebula.networks.homelab.enable [
-      "Z /etc/nebula/ca.crt  0440 root nebula-homelab -"
-      "Z /etc/nebula/host.crt 0440 root nebula-homelab -"
-      "Z /etc/nebula/host.key 0440 root nebula-homelab -"
-    ];
+    systemd.tmpfiles.rules =
+      lib.mkIf config.services.nebula.networks.homelab.enable [
+        "Z /etc/nebula/ca.crt  0440 root nebula-homelab -"
+        "Z /etc/nebula/host.crt 0440 root nebula-homelab -"
+        "Z /etc/nebula/host.key 0440 root nebula-homelab -"
+      ];
   };
 }

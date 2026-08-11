@@ -27,9 +27,8 @@
   # GRUB device is auto-configured by disko (EF02 BIOS boot partition)
   boot.loader.grub.enable = true;
 
-  boot.initrd.availableKernelModules = [
-    "ahci" "xhci_pci" "virtio_pci" "virtio_scsi" "sd_mod" "sr_mod"
-  ];
+  boot.initrd.availableKernelModules =
+    [ "ahci" "xhci_pci" "virtio_pci" "virtio_scsi" "sd_mod" "sr_mod" ];
 
   # ── Hardware ─────────────────────────────────────────────────────
   # (enableRedistributableFirmware hoisted into modules/base-server.nix)
@@ -81,21 +80,35 @@
 
     # No upstream lighthouses — this IS the public lighthouse.
     # Nodes discover it via their staticHostMap entries for 10.10.0.2.
-    lighthouses = [];
-    relays = [];
-    staticHostMap = {};
+    lighthouses = [ ];
+    relays = [ ];
+    staticHostMap = { };
 
     listen.host = "0.0.0.0";
     listen.port = 4242;
 
     tun.disable = false;
 
-    firewall.outbound = [{ port = "any"; proto = "any"; host = "any"; }];
-    firewall.inbound  = [{ port = "any"; proto = "any"; host = "any"; }];
+    firewall.outbound = [{
+      port = "any";
+      proto = "any";
+      host = "any";
+    }];
+    firewall.inbound = [{
+      port = "any";
+      proto = "any";
+      host = "any";
+    }];
 
     settings = {
-      punchy = { punch = true; respond = true; };
-      logging = { level = "info"; format = "text"; };
+      punchy = {
+        punch = true;
+        respond = true;
+      };
+      logging = {
+        level = "info";
+        format = "text";
+      };
       lighthouse.interval = 60;
       firewall.conntrack = {
         tcp_timeout = "12m";

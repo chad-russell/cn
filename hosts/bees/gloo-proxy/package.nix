@@ -1,8 +1,4 @@
-{
-  lib,
-  stdenv,
-  bun,
-}:
+{ lib, stdenv, bun, }:
 
 stdenv.mkDerivation rec {
   pname = "gloo-proxy";

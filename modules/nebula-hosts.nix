@@ -7,11 +7,9 @@
 
 { lib, ... }:
 
-let
-  hostMeta = import ../lib/host-meta.nix;
-in
-{
-  networking.extraHosts = lib.concatLines (
-    lib.mapAttrsToList (name: h: "${h.nebula}\t${h.hostsName or name}") hostMeta
-  );
+let hostMeta = import ../lib/host-meta.nix;
+in {
+  networking.extraHosts = lib.concatLines
+    (lib.mapAttrsToList (name: h: "${h.nebula}	${h.hostsName or name}")
+      hostMeta);
 }

@@ -38,7 +38,8 @@
     serviceConfig = {
       Type = "oneshot";
       # Only re-allocate chunks that are less than 10% utilized
-      ExecStart = "${pkgs.btrfs-progs}/bin/btrfs balance start -dusage=10 -musage=10 /pool/media";
+      ExecStart =
+        "${pkgs.btrfs-progs}/bin/btrfs balance start -dusage=10 -musage=10 /pool/media";
       IOSchedulingClass = "idle";
       Nice = 19;
     };

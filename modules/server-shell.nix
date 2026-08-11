@@ -56,7 +56,9 @@ let
               "background": "transparent",
               "properties": {
                 "shell": "sh",
-                "command": "sh -lc '. /etc/os-release 2>/dev/null; echo ${ID:-linux}'",
+                "command": "sh -lc '. /etc/os-release 2>/dev/null; echo ${
+                  "ID:-linux"
+                }'",
                 "trim_space": true,
                 "cache_duration": "none"
               },
@@ -118,8 +120,7 @@ let
       "version": 3
     }
   '';
-in
-{
+in {
   # ── Shell ────────────────────────────────────────────────────────
   programs.zsh.enable = true;
 
@@ -161,49 +162,49 @@ in
     '';
 
     interactiveShellInit = ''
-      # -- Vi keymap --
-      bindkey -v
+        # -- Vi keymap --
+        bindkey -v
 
-      # -- fzf-history-widget (Ctrl+R) --
-      ${builtins.readFile ./fzf-history-widget.zsh}
-      bindkey -M vicmd '^R' fzf-history-widget
+        # -- fzf-history-widget (Ctrl+R) --
+        ${builtins.readFile ./fzf-history-widget.zsh}
+        bindkey -M vicmd '^R' fzf-history-widget
 
-      # -- Keybindings --
-      bindkey '^F' autosuggest-accept
-      bindkey '^[[C' autosuggest-accept
-      bindkey '^P' up-line-or-history
-      bindkey '^N' down-line-or-history
+        # -- Keybindings --
+        bindkey '^F' autosuggest-accept
+        bindkey '^[[C' autosuggest-accept
+        bindkey '^P' up-line-or-history
+        bindkey '^N' down-line-or-history
 
-      # -- History search aliases --
-      alias -- hist='history 1'
+        # -- History search aliases --
+        alias -- hist='history 1'
 
-      hgrep() {
-        history 1 | command grep --color=auto "$@"
-      }
+        hgrep() {
+          history 1 | command grep --color=auto "$@"
+        }
 
-      # -- Custom functions --
-      mkcd() {
-        mkdir -p $1
-        cd $1
-      }
+        # -- Custom functions --
+        mkcd() {
+          mkdir -p $1
+          cd $1
+        }
 
-      killport() {
-        lsof -ti:$1 | xargs kill -9
-      }
+        killport() {
+          lsof -ti:$1 | xargs kill -9
+        }
 
-      # -- Shell aliases --
-      alias e='eza'
-      alias el='eza -alF'
-      alias ll='eza -l --icons'
-      alias la='eza -la --icons'
-      alias cd='z'
-    alias v='vim'
-    alias vi='vim'
+        # -- Shell aliases --
+        alias e='eza'
+        alias el='eza -alF'
+        alias ll='eza -l --icons'
+        alias la='eza -la --icons'
+        alias cd='z'
+      alias v='vim'
+      alias vi='vim'
 
-      # -- Zoxide init --
-      if command -v zoxide &>/dev/null; then
-        eval "$(zoxide init zsh)"
-      fi
+        # -- Zoxide init --
+        if command -v zoxide &>/dev/null; then
+          eval "$(zoxide init zsh)"
+        fi
     '';
   };
 

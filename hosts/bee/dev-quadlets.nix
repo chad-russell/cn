@@ -54,24 +54,20 @@ let
   ];
 
   # dev-server.sh for each project (bind-mount source, NOT a quadlet unit).
-  devServers = [
-    "gpl/dev-server.sh"
-    "polymer/dev-server.sh"
-    "buildspace/dev-server.sh"
-  ];
+  devServers =
+    [ "gpl/dev-server.sh" "polymer/dev-server.sh" "buildspace/dev-server.sh" ];
 
   # Everything that goes under /etc/dev-quadlets/ (rel paths below, prefixed at
   # etc-key time so they land at /etc/dev-quadlets/<project>/<file> — matching
   # what the .container Volume= lines and the activation script target).
   etcFiles = quadletUnits ++ devServers;
-in
-{
+in {
   # 1. Materialize units + dev-server.sh read-only under /etc/dev-quadlets/.
   #    environment.etc creates /etc/dev-quadlets/<path> as a symlink into the
   #    nix store, which the containers bind-mount (units for the generator to
   #    read; dev-server.sh mounted :ro into the app container).
-  environment.etc = lib.listToAttrs (map
-    (rel: lib.nameValuePair "dev-quadlets/${rel}" {
+  environment.etc = lib.listToAttrs (map (rel:
+    lib.nameValuePair "dev-quadlets/${rel}" {
       source = ./dev-quadlets/${rel};
       # 0555 (not 0444) so dev-server.sh is EXECUTABLE: the devcontainers images
       # set ENTRYPOINT=[docker-entrypoint.sh] + CMD=[node], and a non-executable
@@ -80,8 +76,7 @@ in
       # shebang → bash. The *.container/*.volume/*.network units are just read by
       # the generator, so the exec bit is harmless for them.
       mode = "0555";
-    })
-    etcFiles);
+    }) etcFiles);
 
   # 2. Symlink the quadlet units into crussell's user quadlet search path and
   #    reload the user manager. Runs after users exist (we chown to crussell).

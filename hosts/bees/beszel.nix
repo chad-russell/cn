@@ -40,7 +40,8 @@
     environment.APP_URL = "https://beszel.internal.crussell.io";
 
     serviceConfig = {
-      ExecStart = "${pkgs.beszel}/bin/beszel-hub serve --http 127.0.0.1:8091 --dir /var/lib/beszel";
+      ExecStart =
+        "${pkgs.beszel}/bin/beszel-hub serve --http 127.0.0.1:8091 --dir /var/lib/beszel";
       User = "beszel";
       Group = "beszel";
       StateDirectory = "beszel";

@@ -18,10 +18,8 @@
 
 { config, lib, pkgs, ... }:
 
-let
-  cfg = config.services.beszel-agent;
-in
-{
+let cfg = config.services.beszel-agent;
+in {
   options.services.beszel-agent = {
     enable = lib.mkEnableOption "Beszel monitoring agent";
 
@@ -54,61 +52,61 @@ in
 
     (lib.mkIf cfg.enable {
       users.users.beszel-agent = {
-      isSystemUser = true;
-      group = "beszel-agent";
-      home = "/var/lib/beszel-agent";
-      createHome = false;
-    };
-    users.groups.beszel-agent = { };
-
-    # Hub public KEY + universal TOKEN — shared by every agent. Owned by
-    # the beszel-agent user so the (non-root) service can read it.
-    age.secrets.beszel-agent-env = {
-      file = ../secrets/beszel-agent-env.age;
-      owner = "beszel-agent";
-      group = "beszel-agent";
-    };
-
-    systemd.services.beszel-agent = {
-      description = "Beszel monitoring agent";
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-      wantedBy = [ "multi-user.target" ];
-
-      environment = {
-        HUB_URL = cfg.hubUrl;
-        # WebSocket push only — disable the inbound SSH listener so no
-        # port needs to be opened on the host.
-        DISABLE_SSH = "true";
-      } // (lib.optionalAttrs (cfg.extraFilesystems != [ ]) {
-        EXTRA_FILESYSTEMS = lib.concatStringsSep "," cfg.extraFilesystems;
-      }) // cfg.extraEnv;
-
-      serviceConfig = {
-        ExecStart = "${pkgs.beszel}/bin/beszel-agent";
-        # /run/agenix/beszel-agent-env provides KEY= and TOKEN=
-        EnvironmentFile = config.age.secrets.beszel-agent-env.path;
-        User = "beszel-agent";
-        Group = "beszel-agent";
-        StateDirectory = "beszel-agent";
-        Restart = "on-failure";
-        RestartSec = 5;
-
-        # Hardening. Host stats (CPU/mem/net/disk/temp) are read from the
-        # world-readable /proc and /sys, so a strict sandbox is fine; the
-        # StateDirectory (/var/lib/beszel-agent) stays writable.
-        NoNewPrivileges = true;
-        ProtectSystem = "strict";
-        ProtectHome = true;
-        PrivateTmp = true;
-        ProtectClock = true;
-        ProtectHostname = true;
-        ProtectKernelLogs = true;
-        LockPersonality = true;
-        RestrictSUIDSGID = true;
-        KeyringMode = "private";
+        isSystemUser = true;
+        group = "beszel-agent";
+        home = "/var/lib/beszel-agent";
+        createHome = false;
       };
-    };
+      users.groups.beszel-agent = { };
+
+      # Hub public KEY + universal TOKEN — shared by every agent. Owned by
+      # the beszel-agent user so the (non-root) service can read it.
+      age.secrets.beszel-agent-env = {
+        file = ../secrets/beszel-agent-env.age;
+        owner = "beszel-agent";
+        group = "beszel-agent";
+      };
+
+      systemd.services.beszel-agent = {
+        description = "Beszel monitoring agent";
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+        wantedBy = [ "multi-user.target" ];
+
+        environment = {
+          HUB_URL = cfg.hubUrl;
+          # WebSocket push only — disable the inbound SSH listener so no
+          # port needs to be opened on the host.
+          DISABLE_SSH = "true";
+        } // (lib.optionalAttrs (cfg.extraFilesystems != [ ]) {
+          EXTRA_FILESYSTEMS = lib.concatStringsSep "," cfg.extraFilesystems;
+        }) // cfg.extraEnv;
+
+        serviceConfig = {
+          ExecStart = "${pkgs.beszel}/bin/beszel-agent";
+          # /run/agenix/beszel-agent-env provides KEY= and TOKEN=
+          EnvironmentFile = config.age.secrets.beszel-agent-env.path;
+          User = "beszel-agent";
+          Group = "beszel-agent";
+          StateDirectory = "beszel-agent";
+          Restart = "on-failure";
+          RestartSec = 5;
+
+          # Hardening. Host stats (CPU/mem/net/disk/temp) are read from the
+          # world-readable /proc and /sys, so a strict sandbox is fine; the
+          # StateDirectory (/var/lib/beszel-agent) stays writable.
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          PrivateTmp = true;
+          ProtectClock = true;
+          ProtectHostname = true;
+          ProtectKernelLogs = true;
+          LockPersonality = true;
+          RestrictSUIDSGID = true;
+          KeyringMode = "private";
+        };
+      };
     })
   ];
 }

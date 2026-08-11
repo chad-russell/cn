@@ -18,11 +18,8 @@
   # group so it can traverse directories with "other" permissions denied.
   users.groups.nas-photos = { gid = 1000; };
   users.users.immich.extraGroups = [ "nas-photos" "users" ];
-  systemd.services.immich-server.serviceConfig.SupplementaryGroups = [
-    "redis-immich"
-    "nas-photos"
-    "users"
-  ];
+  systemd.services.immich-server.serviceConfig.SupplementaryGroups =
+    [ "redis-immich" "nas-photos" "users" ];
 
   # Reduce Redis log verbosity
   services.redis.servers.immich.logLevel = "warning";

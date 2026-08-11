@@ -42,12 +42,9 @@ let
   # ── Shared restic options ───────────────────────────────────────
   resticPkg = pkgs.restic;
 
-  makeBackupJob =
-    { name, repo, passwordFile, environmentFile, retention }:
-    let
-      jobName = "homelab-${name}";
-    in
-    {
+  makeBackupJob = { name, repo, passwordFile, environmentFile, retention }:
+    let jobName = "homelab-${name}";
+    in {
       "${jobName}" = {
         package = resticPkg;
         repository = repo;
@@ -67,10 +64,7 @@ let
           RandomizedDelaySec = "1h";
         };
 
-        extraBackupArgs = [
-          "--cleanup-cache"
-          "--one-file-system"
-        ];
+        extraBackupArgs = [ "--cleanup-cache" "--one-file-system" ];
 
         backupPrepareCommand = ''
           echo "Starting ${name} backup for ${hostname} at $(date)"
@@ -89,10 +83,8 @@ let
   # a weekly timer), keeping S3 GET costs negligible.
   makeCheckJob =
     { name, repo, passwordFile, environmentFile ? null, requires ? [ ] }:
-    let
-      jobName = "homelab-${name}";
-    in
-    {
+    let jobName = "homelab-${name}";
+    in {
       "restic-checks-${jobName}" = {
         description = "Restic weekly integrity check (${name})";
         path = [ resticPkg ];
@@ -115,8 +107,7 @@ let
       };
     };
 
-in
-{
+in {
   options.services.homelab-backup = {
     enable = lib.mkEnableOption "homelab restic backup (NAS + S3)";
 
@@ -158,38 +149,29 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = cfg.paths != [ ];
-        message = "homelab-backup: at least one path must be specified";
-      }
-    ];
+    assertions = [{
+      assertion = cfg.paths != [ ];
+      message = "homelab-backup: at least one path must be specified";
+    }];
 
     # ── Restic backup jobs ────────────────────────────────────────
-    services.restic.backups =
-      let
-        nasRetension = [
-          "--keep-daily 30"
-        ];
-        s3Retention = [
-          "--keep-daily 30"
-          "--keep-monthly 12"
-        ];
-      in
-      (makeBackupJob {
-        name = "nas";
-        repo = "${cfg.nasMountPoint}/${hostname}";
-        passwordFile = config.age.secrets.restic-password.path;
-        environmentFile = null;
-        retention = nasRetension;
-      }) //
-      (makeBackupJob {
-        name = "s3";
-        repo = "s3:https://s3.${cfg.s3Region}.amazonaws.com/${cfg.s3Bucket}/${hostname}";
-        passwordFile = config.age.secrets.restic-password.path;
-        environmentFile = config.age.secrets.restic-s3-credentials.path;
-        retention = s3Retention;
-      });
+    services.restic.backups = let
+      nasRetension = [ "--keep-daily 30" ];
+      s3Retention = [ "--keep-daily 30" "--keep-monthly 12" ];
+    in (makeBackupJob {
+      name = "nas";
+      repo = "${cfg.nasMountPoint}/${hostname}";
+      passwordFile = config.age.secrets.restic-password.path;
+      environmentFile = null;
+      retention = nasRetension;
+    }) // (makeBackupJob {
+      name = "s3";
+      repo =
+        "s3:https://s3.${cfg.s3Region}.amazonaws.com/${cfg.s3Bucket}/${hostname}";
+      passwordFile = config.age.secrets.restic-password.path;
+      environmentFile = config.age.secrets.restic-s3-credentials.path;
+      retention = s3Retention;
+    });
 
     # ── Decrypt secrets via agenix ────────────────────────────────
     age.secrets = {
@@ -208,45 +190,42 @@ in
     };
 
     # ── ntfy notifications on failure ─────────────────────────────
-    systemd.services =
-      let
-        nasRequires = [ "mnt-backups.automount" ];
-        nasRepo = "${cfg.nasMountPoint}/${hostname}";
-        s3Repo = "s3:https://s3.${cfg.s3Region}.amazonaws.com/${cfg.s3Bucket}/${hostname}";
-        resticPwd = config.age.secrets.restic-password.path;
-        s3Creds = config.age.secrets.restic-s3-credentials.path;
-      in
-      {
-        "restic-backups-homelab-nas" = {
-          requires = nasRequires;
-          after = nasRequires;
-          onFailure = [ "restic-ntfy-failure@nas.service" ];
-        };
-        "restic-backups-homelab-s3" = {
-          onFailure = [ "restic-ntfy-failure@s3.service" ];
-        };
-        "restic-ntfy-failure@" = {
-          description = "Send ntfy notification on restic backup failure";
-          serviceConfig.Type = "oneshot";
-          script = ''
-            TARGET=$1
-            ${ntfyScript} "FAILED" "$TARGET" "Check journalctl for details"
-          '';
-          scriptArgs = "%i";
-        };
-      }
-      // (makeCheckJob {
-        name = "nas";
-        repo = nasRepo;
-        passwordFile = resticPwd;
+    systemd.services = let
+      nasRequires = [ "mnt-backups.automount" ];
+      nasRepo = "${cfg.nasMountPoint}/${hostname}";
+      s3Repo =
+        "s3:https://s3.${cfg.s3Region}.amazonaws.com/${cfg.s3Bucket}/${hostname}";
+      resticPwd = config.age.secrets.restic-password.path;
+      s3Creds = config.age.secrets.restic-s3-credentials.path;
+    in {
+      "restic-backups-homelab-nas" = {
         requires = nasRequires;
-      })
-      // (makeCheckJob {
-        name = "s3";
-        repo = s3Repo;
-        passwordFile = resticPwd;
-        environmentFile = s3Creds;
-      });
+        after = nasRequires;
+        onFailure = [ "restic-ntfy-failure@nas.service" ];
+      };
+      "restic-backups-homelab-s3" = {
+        onFailure = [ "restic-ntfy-failure@s3.service" ];
+      };
+      "restic-ntfy-failure@" = {
+        description = "Send ntfy notification on restic backup failure";
+        serviceConfig.Type = "oneshot";
+        script = ''
+          TARGET=$1
+          ${ntfyScript} "FAILED" "$TARGET" "Check journalctl for details"
+        '';
+        scriptArgs = "%i";
+      };
+    } // (makeCheckJob {
+      name = "nas";
+      repo = nasRepo;
+      passwordFile = resticPwd;
+      requires = nasRequires;
+    }) // (makeCheckJob {
+      name = "s3";
+      repo = s3Repo;
+      passwordFile = resticPwd;
+      environmentFile = s3Creds;
+    });
 
     # ── Weekly check timers ───────────────────────────────────────
     systemd.timers = {

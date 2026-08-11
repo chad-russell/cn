@@ -25,11 +25,11 @@ let
   # The device is the same for all subvolumes on btrfs.
   findDevice = subvol:
     let
-      fs = lib.findSingle
-        (fs: fs.fsType == "btrfs" && fs.options != null && lib.any (o: lib.hasPrefix "subvol=${subvol}" o) fs.options)
-        null null config.fileSystems;
-    in
-    if fs == null then null else fs.device;
+      fs = lib.findSingle (fs:
+        fs.fsType == "btrfs" && fs.options != null
+        && lib.any (o: lib.hasPrefix "subvol=${subvol}" o) fs.options) null null
+        config.fileSystems;
+    in if fs == null then null else fs.device;
 
   # Take a snapshot of a subvolume
   snapshotScript = pkgs.writeShellScript "btrfs-snapshot" ''
@@ -137,8 +137,7 @@ let
     echo "=== btrfs snapshot run complete ==="
   '';
 
-in
-{
+in {
   options.services.btrfs-snapshots = {
     enable = lib.mkEnableOption "btrfs snapshot timer";
 
@@ -170,27 +169,24 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = cfg.subvolumes != [ ];
-        message = "btrfs-snapshots: at least one subvolume must be specified";
-      }
-    ];
+    assertions = [{
+      assertion = cfg.subvolumes != [ ];
+      message = "btrfs-snapshots: at least one subvolume must be specified";
+    }];
 
     # Auto-detect device if not specified
-    services.btrfs-snapshots.device = lib.mkDefault (
-      let
-        rootFs = config.fileSystems."/" or null;
-      in
-      if rootFs != null then rootFs.device else null
-    );
+    services.btrfs-snapshots.device = lib.mkDefault
+      (let rootFs = config.fileSystems."/" or null;
+      in if rootFs != null then rootFs.device else null);
 
     systemd.services.btrfs-snapshots = {
       description = "Btrfs Snapshot & Prune";
       path = [ btrfsProgs pkgs.util-linux ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${snapshotAll} ${cfg.device} ${toString cfg.keepDaily} ${lib.concatStringsSep " " cfg.subvolumes}";
+        ExecStart = "${snapshotAll} ${cfg.device} ${toString cfg.keepDaily} ${
+            lib.concatStringsSep " " cfg.subvolumes
+          }";
       };
     };
 

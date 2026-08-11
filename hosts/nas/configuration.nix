@@ -54,13 +54,14 @@
     "xhci_pci"
     "usbhid"
     "sr_mod"
-    "mmc_block"       # eMMC — don't mount, but detect to avoid confusion
+    "mmc_block" # eMMC — don't mount, but detect to avoid confusion
   ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-intel" ];
 
   # ── Hardware ─────────────────────────────────────────────────────
-  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+  hardware.cpu.intel.updateMicrocode =
+    lib.mkDefault config.hardware.enableRedistributableFirmware;
   zramSwap.enable = true;
 
   # ── Networking ───────────────────────────────────────────────────
@@ -109,8 +110,8 @@
   # ── Extra packages ───────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     btrfs-progs
-    smartmontools       # SMART disk health monitoring
-    hdparm              # disk power management
+    smartmontools # SMART disk health monitoring
+    hdparm # disk power management
     rsync
     tree
     pciutils
@@ -122,14 +123,14 @@
     enable = true;
     autodetect = true;
     notifications = {
-      mail.enable = false;  # TODO: enable with ntfy or email
+      mail.enable = false; # TODO: enable with ntfy or email
       test = true;
     };
   };
 
   # ── SSH hardening (NAS holds all the data) ──────────────────────
   services.openssh.settings = {
-    PasswordAuthentication = lib.mkForce false;  # Key-only
+    PasswordAuthentication = lib.mkForce false; # Key-only
   };
 
   # ── Monitoring ──────────────────────────────────────────────────

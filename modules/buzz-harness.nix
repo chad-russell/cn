@@ -55,7 +55,8 @@ let
       runtimeArgs = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Args passed to the runtime binary (e.g. [\"acp\"] for opencode).";
+        description =
+          ''Args passed to the runtime binary (e.g. ["acp"] for opencode).'';
       };
 
       provider = lib.mkOption {
@@ -109,19 +110,19 @@ let
       extraOptions = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Extra buzz-acp CLI flags (e.g. [\"--agents\" \"2\"]).";
+        description = ''Extra buzz-acp CLI flags (e.g. ["--agents" "2"]).'';
       };
     };
   };
-in
-{
+in {
   options.services.buzz-harness = {
     enable = lib.mkEnableOption "Buzz agent harness (buzz-acp)";
 
     package = lib.mkOption {
       type = lib.types.package;
       default = buzz;
-      description = "Buzz CLI stack package (provides buzz-acp, buzz-cli, buzz-agent).";
+      description =
+        "Buzz CLI stack package (provides buzz-acp, buzz-cli, buzz-agent).";
     };
 
     relayUrl = lib.mkOption {
@@ -143,8 +144,7 @@ in
     age.secrets = lib.mapAttrs' (_: a:
       lib.nameValuePair a.privateKeySecret {
         file = ../secrets/${a.privateKeySecret}.age;
-      }
-    ) cfg.agents;
+      }) cfg.agents;
 
     systemd.services = lib.mapAttrs' (name: a:
       let
@@ -159,14 +159,14 @@ in
         }.${a.provider} or null;
         # NOTE: use the braceless $VAR form — Nix would otherwise try to
         # interpolate a literal "${...}" in the generated bash.
-        keyExport = lib.optionalString (agentKeyVar != null && a.apiKeyEnvFrom != null)
-          ("export " + agentKeyVar + "=\"$" + a.apiKeyEnvFrom + "\"");
+        keyExport =
+          lib.optionalString (agentKeyVar != null && a.apiKeyEnvFrom != null)
+          ("export " + agentKeyVar + ''="$'' + a.apiKeyEnvFrom + ''"'');
         startScript = pkgs.writeShellScriptBin "buzz-acp-${name}" ''
           ${keyExport}
           exec ${cfg.package}/bin/buzz-acp ${lib.escapeShellArgs a.extraOptions}
         '';
-      in
-      lib.nameValuePair "buzz-acp-${name}" {
+      in lib.nameValuePair "buzz-acp-${name}" {
         description = "Buzz ACP harness — agent ${name}";
         after = [ "network-online.target" ];
         wants = [ "network-online.target" ];
@@ -174,10 +174,7 @@ in
 
         # buzz-cli + buzz-agent come from the package (NixOS appends /bin).
         # Add the system profile so an opencode runtime agent resolves too.
-        path = [
-          cfg.package
-          "/run/current-system/sw"
-        ];
+        path = [ cfg.package "/run/current-system/sw" ];
 
         environment = {
           BUZZ_RELAY_URL = cfg.relayUrl;
@@ -189,13 +186,14 @@ in
           # buzz-agent provider config (harmless when runtime != buzz-agent).
           BUZZ_AGENT_PROVIDER = a.provider;
           HOME = "/home/crussell";
-        }
-        // (lib.optionalAttrs (a.runtime == "buzz-agent") (
-          if a.provider == "openrouter" then { OPENROUTER_MODEL = a.model; }
-          else if a.provider == "anthropic" then { ANTHROPIC_MODEL = a.model; }
-          else { OPENAI_COMPAT_MODEL = a.model; }
-        ))
-        // a.extraEnv;
+        } // (lib.optionalAttrs (a.runtime == "buzz-agent")
+          (if a.provider == "openrouter" then {
+            OPENROUTER_MODEL = a.model;
+          } else if a.provider == "anthropic" then {
+            ANTHROPIC_MODEL = a.model;
+          } else {
+            OPENAI_COMPAT_MODEL = a.model;
+          })) // a.extraEnv;
 
         serviceConfig = {
           Type = "simple";
@@ -207,7 +205,8 @@ in
           Group = "users";
           WorkingDirectory = "/home/crussell";
           # nsec (BUZZ_PRIVATE_KEY) + provider keys.
-          EnvironmentFile = [ config.age.secrets.${a.privateKeySecret}.path ] ++ a.environmentFiles;
+          EnvironmentFile = [ config.age.secrets.${a.privateKeySecret}.path ]
+            ++ a.environmentFiles;
           # extraOptions are buzz-acp's own CLI flags (e.g. ["--agents" "2"]).
           # The wrapper remaps the provider key env var (see apiKeyEnvFrom).
           ExecStart = "${startScript}/bin/buzz-acp-${name}";
@@ -216,7 +215,6 @@ in
           StartLimitIntervalSec = "60";
           StartLimitBurst = "5";
         };
-      }
-    ) cfg.agents;
+      }) cfg.agents;
   };
 }

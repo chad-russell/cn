@@ -1,0 +1,11 @@
+# treefmt — deterministic formatting for the cn repo.
+# Run: nix shell nixpkgs#treefmt nixpkgs#nixfmt-classic -c treefmt
+# Run: nix shell nixpkgs#treefmt nixpkgs#nixfmt-classic -c treefmt --ci
+#
+# Uses nixfmt-classic (the stable RFC 166 formatter, package 'nixfmt-classic',
+# binary 'nixfmt'). This keeps agent-edited files consistent without manual
+# effort. treefmt resolves the binary from PATH, so invoke via a nix shell
+# that provides both treefmt and nixfmt-classic.
+[formatter.nix]
+command = "nixfmt"
+includes = ["*.nix"]

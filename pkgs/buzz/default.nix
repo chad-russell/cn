@@ -20,19 +20,14 @@
 # via nix-prefetch-git), so there's no consistency check and no per-git-dep
 # outputHashes to maintain. To bump: update rev + version, set cargoHash = "",
 # build, paste the reported sha256.
-{
-  pkgs,
-  rustToolchain,
-  lib,
-}:
+{ pkgs, rustToolchain, lib, }:
 let
   rev = "119a84897f225c1e3213a09cd149abb37dcb3abc";
   rustPlatform = pkgs.makeRustPlatform {
     cargo = rustToolchain;
     rustc = rustToolchain;
   };
-in
-rustPlatform.buildRustPackage {
+in rustPlatform.buildRustPackage {
   pname = "buzz-cli-stack";
   version = "unstable-2026-08-09";
 
@@ -48,16 +43,8 @@ rustPlatform.buildRustPackage {
   # Build only the headless crates (and their pure-Rust deps). This skips
   # buzz-relay (needs cmake/opus), buzz-admin (pulls a git dep), and the
   # desktop/frontend (node).
-  cargoBuildFlags = [
-    "-p"
-    "buzz-acp"
-    "-p"
-    "buzz-cli"
-    "-p"
-    "buzz-agent"
-    "-p"
-    "buzz-dev-mcp"
-  ];
+  cargoBuildFlags =
+    [ "-p" "buzz-acp" "-p" "buzz-cli" "-p" "buzz-agent" "-p" "buzz-dev-mcp" ];
 
   # rustls + ring: no system TLS libs. stdenv provides the C toolchain ring needs.
   nativeBuildInputs = [ ];

@@ -24,35 +24,31 @@ let
   # Build the per-check script. Generating one script per check (rather than
   # a shared helper + env vars) avoids systemd Environment= newline issues
   # and lets `checkCommand` be arbitrary multi-line bash.
-  mkCheckScript =
-    name: c:
+  mkCheckScript = name: c:
     pkgs.writeShellScript "freshness-${name}" ''
       set -o pipefail
       STATUS=OK
       MSG=""
-      ${
-        if c.checkCommand != null then
-          ''
-            # command mode: exit 0 = fresh, non-zero = stale
-            if MSG=$(${c.checkCommand} 2>&1); then :; else STATUS=STALE; fi
-          ''
+      ${if c.checkCommand != null then ''
+        # command mode: exit 0 = fresh, non-zero = stale
+        if MSG=$(${c.checkCommand} 2>&1); then :; else STATUS=STALE; fi
+      '' else ''
+        # file mode: age of newest matching file
+        newest="$(find '${
+          toString c.path
+        }' -name '${c.glob}' -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1)"
+        if [ -z "$newest" ]; then
+          MSG="no file matching '${c.glob}' in ${toString c.path}"
+          STATUS=STALE
         else
-          ''
-            # file mode: age of newest matching file
-            newest="$(find '${toString c.path}' -name '${c.glob}' -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1)"
-            if [ -z "$newest" ]; then
-              MSG="no file matching '${c.glob}' in ${toString c.path}"
-              STATUS=STALE
-            else
-              ts="''${newest%% *}"
-              file="''${newest#* }"
-              now=$(date +%s)
-              ageh=$(( (now - ''${ts%.*}) / 3600 ))
-              MSG="newest is ''${ageh}h old: $file"
-              [ "''${ageh}" -lt ${toString c.maxAgeHours} ] || STATUS=STALE
-            fi
-          ''
-      }
+          ts="''${newest%% *}"
+          file="''${newest#* }"
+          now=$(date +%s)
+          ageh=$(( (now - ''${ts%.*}) / 3600 ))
+          MSG="newest is ''${ageh}h old: $file"
+          [ "''${ageh}" -lt ${toString c.maxAgeHours} ] || STATUS=STALE
+        fi
+      ''}
       echo "${c.description}: $STATUS — $MSG"
       if [ "$STATUS" != "OK" ]; then
         ${pkgs.curl}/bin/curl -fsS \
@@ -63,8 +59,7 @@ let
         exit 1
       fi
     '';
-in
-{
+in {
   options.homelab = {
     # Single ntfy topic for ALL homelab alerts — subscribe once to this.
     # Consumed by this module's checks + the ntfy-failure@ template, and by
@@ -96,7 +91,8 @@ in
           maxAgeHours = lib.mkOption {
             type = lib.types.ints.positive;
             default = 36;
-            description = "Max acceptable age of the newest matching file (file mode).";
+            description =
+              "Max acceptable age of the newest matching file (file mode).";
           };
           # command mode
           checkCommand = lib.mkOption {
@@ -115,7 +111,8 @@ in
           extraPath = lib.mkOption {
             type = lib.types.listOf lib.types.package;
             default = [ ];
-            description = "Extra packages on PATH for the check command (command mode).";
+            description =
+              "Extra packages on PATH for the check command (command mode).";
           };
           # common
           onCalendar = lib.mkOption {
@@ -136,35 +133,32 @@ in
   };
 
   config = {
-    assertions = [
-      {
-        assertion =
-          lib.all
-            (c: (c.path != null && c.glob != null) != (c.checkCommand != null))
-            (builtins.attrValues cfg);
-        message = "freshnessChecks: each check must set EITHER {path,glob} (file mode) OR checkCommand (command mode) — not both, not neither.";
-      }
-    ];
+    assertions = [{
+      assertion = lib.all
+        (c: (c.path != null && c.glob != null) != (c.checkCommand != null))
+        (builtins.attrValues cfg);
+      message =
+        "freshnessChecks: each check must set EITHER {path,glob} (file mode) OR checkCommand (command mode) — not both, not neither.";
+    }];
 
     # ── Reusable failure notifier + freshness check services ───────
     # The ntfy-failure@ template lets any service do:
     #   onFailure = [ "ntfy-failure@<name>.service" ];
-    systemd.services =
-      {
-        "ntfy-failure@" = {
-          description = "ntfy alert on service failure (%i)";
-          serviceConfig.Type = "oneshot";
-          scriptArgs = "%i";
-          script = ''
-            ${pkgs.curl}/bin/curl -fsS \
-              -H "Title: FAILED — $1 on ${hostname}" \
-              -H "Tags: rotating_light" -H "Priority: high" \
-              -d "Service '$1' failed on ${hostname}. Inspect: journalctl -u $1" \
-              "${config.homelab.ntfyUrl}" >/dev/null 2>&1 || true
-          '';
-        };
-      }
-      // lib.mapAttrs' (name: c: lib.nameValuePair "freshness-${name}" {
+    systemd.services = {
+      "ntfy-failure@" = {
+        description = "ntfy alert on service failure (%i)";
+        serviceConfig.Type = "oneshot";
+        scriptArgs = "%i";
+        script = ''
+          ${pkgs.curl}/bin/curl -fsS \
+            -H "Title: FAILED — $1 on ${hostname}" \
+            -H "Tags: rotating_light" -H "Priority: high" \
+            -d "Service '$1' failed on ${hostname}. Inspect: journalctl -u $1" \
+            "${config.homelab.ntfyUrl}" >/dev/null 2>&1 || true
+        '';
+      };
+    } // lib.mapAttrs' (name: c:
+      lib.nameValuePair "freshness-${name}" {
         description = "Freshness check: ${c.description}";
         serviceConfig = {
           Type = "oneshot";
@@ -172,22 +166,19 @@ in
         } // (lib.optionalAttrs (c.environmentFile != null) {
           EnvironmentFile = c.environmentFile;
         });
-      path = [
-        pkgs.coreutils
-        pkgs.findutils
-        pkgs.gawk
-        pkgs.curl
-      ] ++ c.extraPath;
+        path = [ pkgs.coreutils pkgs.findutils pkgs.gawk pkgs.curl ]
+          ++ c.extraPath;
       }) cfg;
 
-    systemd.timers = lib.mapAttrs' (name: c: lib.nameValuePair "freshness-${name}" {
-      description = "Freshness check: ${c.description}";
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = c.onCalendar;
-        Persistent = true;
-        RandomizedDelaySec = "30m";
-      };
-    }) cfg;
+    systemd.timers = lib.mapAttrs' (name: c:
+      lib.nameValuePair "freshness-${name}" {
+        description = "Freshness check: ${c.description}";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = c.onCalendar;
+          Persistent = true;
+          RandomizedDelaySec = "30m";
+        };
+      }) cfg;
   };
 }

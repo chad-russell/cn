@@ -1,8 +1,8 @@
 let
   # SSH ed25519 public key — decrypt with: age -d -i ~/.ssh/id_ed25519 <file>.age
-  crussell = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpNEpdHo8X0L9rgsJ+8fuXA4DodZftJaCd3Q6eCrVsw crussell@fedora";
-in
-{
+  crussell =
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpNEpdHo8X0L9rgsJ+8fuXA4DodZftJaCd3Q6eCrVsw crussell@fedora";
+in {
   "ca.key.age".publicKeys = [ crussell ];
   "bee-host.key.age".publicKeys = [ crussell ];
   "bees.key.age".publicKeys = [ crussell ];

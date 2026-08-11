@@ -13,8 +13,7 @@ let
       cp -r . $out/
     '';
   };
-in
-{
+in {
   systemd.services.datenight = {
     description = "Date Night Restaurant Picker";
     after = [ "network-online.target" ];

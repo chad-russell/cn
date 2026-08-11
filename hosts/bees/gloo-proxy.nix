@@ -15,8 +15,7 @@
 let
   cfg = config.services.gloo-proxy;
   gloo-proxy = pkgs.callPackage ./gloo-proxy/package.nix { };
-in
-{
+in {
   options.services.gloo-proxy = {
     enable = lib.mkEnableOption "Gloo AI OpenAI-compatible proxy";
 

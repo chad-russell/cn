@@ -16,8 +16,7 @@
 let
   dumpDir = "/mnt/photos/backups";
   pg = config.services.postgresql.package;
-in
-{
+in {
   systemd.services.immich-db-dump = {
     description = "Immich Postgres logical dump";
     path = [
