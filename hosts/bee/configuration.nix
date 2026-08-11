@@ -197,11 +197,47 @@
     addToSystemPackages = true;
 
     settings = {
-      custom_providers = [{
-        name = "zai-coding";
-        base_url = "https://api.z.ai/api/coding/paas/v4";
-        key_env = "OPENAI_API_KEY";
-      }];
+      custom_providers = [
+        {
+          name = "zai-coding";
+          base_url = "https://api.z.ai/api/coding/paas/v4";
+          key_env = "ZAI_CODING_KEY";
+        }
+        {
+          name = "gloo";
+          base_url = "https://platform.ai.gloo.com/ai/v2";
+          key_env = "GLOO_API_KEY";
+          discover_models = false;
+          models = [
+            "gloo-anthropic-claude-opus-4.8"
+            "gloo-anthropic-claude-sonnet-4.6"
+            "gloo-anthropic-claude-haiku-4.5"
+            "gloo-openai-gpt-5.5"
+            "gloo-openai-gpt-5.4"
+            "gloo-openai-gpt-5.2"
+            "gloo-openai-gpt-5.1"
+            "gloo-openai-gpt-5.3-codex"
+            "gloo-google-gemini-3.5-flash"
+            "gloo-google-gemini-3.1-pro"
+            "gloo-google-gemini-2.5-pro"
+            "gloo-deepseek-v4-pro"
+            "gloo-deepseek-v4-flash"
+            "gloo-xai-grok-4.5"
+            "gloo-qwen-3.7-max"
+            "gloo-qwen-3-coder"
+            "gloo-kimi-k3"
+            "gloo-z-ai-glm-5.2"
+            "gloo-minimax-m3"
+            "gloo-mistral-large-3"
+          ];
+        }
+      ];
+      # Disable the built-in zai provider so it doesn't shadow the zai-coding
+      # custom provider. The built-in zai auto-detects ZAI keys in env vars
+      # (GLM_API_KEY, ZAI_API_KEY, Z_AI_API_KEY) and would re-seed itself in
+      # auth.json on every restart. Using ZAI_CODING_KEY avoids this, and
+      # this flag suppresses any stale state from before the rename.
+      providers.zai.enabled = false;
       model = {
         provider = "zai-coding";
         default = "glm-5.2";
@@ -223,8 +259,9 @@
     environment = {
       BUZZ_RELAY_URL = "https://buzz.crussell.io";
       BUZZ_ALLOW_ALL_USERS = "true";
-      OPENAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
-      # BUZZ_AUTH_TAG (NIP-42 relay auth event) is in hermes-bee-env.age.
+      ZAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
+      # ZAI_CODING_KEY, OPENROUTER_API_KEY, GLOO_API_KEY, and
+      # BUZZ_AUTH_TAG (NIP-42 relay auth event) are in hermes-bee-env.age.
     };
 
     environmentFiles = [ config.age.secrets.hermes-bee-env.path ];
