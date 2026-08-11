@@ -270,6 +270,42 @@
     environment.HOME = lib.mkForce "/home/crussell";
   };
 
+  # ── hermes-serve: HTTP/JSON-RPC API for remote clients over Nebula ────
+  # `hermes-agent.service` above runs `hermes gateway` — the Buzz platform
+  # adapter that makes OUTBOUND WebSocket connections to the relay and accepts
+  # no inbound API. This is the complementary `hermes serve` backend: the
+  # JSON-RPC/WebSocket surface the desktop app and mobile clients attach to.
+  # Bound to the Nebula IP only (10.10.0.12:9119) → reachable from the
+  # overlay but never on the LAN or public internet.
+  #
+  # The June 2026 Hermes hardening removed `--insecure`: a non-loopback bind
+  # ALWAYS engages the auth gate. We configure the bundled `basic`
+  # dashboard-auth plugin (plugins/dashboard_auth/basic in the Hermes venv)
+  # by setting HERMES_DASHBOARD_BASIC_AUTH_{USERNAME,PASSWORD,SECRET} in
+  # secrets/hermes-bee-env.age. Sessions are HMAC-signed opaque tokens the
+  # provider mints and verifies itself — no IDP, no database. The Android
+  # client authenticates via POST /auth/password-login. The SECRET must be
+  # stable across restarts or all sessions are invalidated on every redeploy.
+  systemd.services.hermes-serve = {
+    description = "Hermes Serve API (Nebula 10.10.0.12:9119)";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" "hermes-agent.service" ];
+    environment = {
+      HERMES_HOME = "/var/lib/hermes/.hermes";
+      HOME = "/home/crussell";
+    };
+    serviceConfig = {
+      Type = "simple";
+      User = "crussell";
+      Group = "hermes";
+      ExecStart =
+        "/run/current-system/sw/bin/hermes serve --host 10.10.0.12 --port 9119";
+      EnvironmentFile = [ config.age.secrets.hermes-bee-env.path ];
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+  };
+
   # ── Beszel monitoring agent ────────────────────────────────────
   # (enabled by default in modules/beszel-agent.nix)
 
