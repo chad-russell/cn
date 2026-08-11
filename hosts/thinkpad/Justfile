@@ -340,11 +340,20 @@ setup: bubblebox opencode-install
 405|# wrappers. The declarative counterpart to bubblebox-build + bubblebox-export:
 406|# build (or pull) populates the store; apply declares what's active.
 407|[group('bubblebox')]
-408|bubblebox-apply:
-409|    #!/usr/bin/env bash
-410|    set -euo pipefail
-411|    install -Dm644 "{{ justfile_directory() }}/bubblebox/profile.toml" "$HOME/.config/bubblebox/profile.toml"
-412|    {{ bubblebox_bin }} apply
+bubblebox-apply:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Sync profile.toml + the files/ and units/ source trees to the config dir
+    # (bubblebox reads profile.toml from there, and resolves [[files]]/[[units]]
+    # source paths relative to it).
+    install -Dm644 "{{ justfile_directory() }}/bubblebox/profile.toml" "$HOME/.config/bubblebox/profile.toml"
+    rsync -a --delete \
+      "{{ justfile_directory() }}/bubblebox/files/" \
+      "$HOME/.config/bubblebox/files/"
+    rsync -a --delete \
+      "{{ justfile_directory() }}/bubblebox/units/" \
+      "$HOME/.config/bubblebox/units/"
+    {{ bubblebox_bin }} apply
 413|
 414|# Reclaim store bytes no generation/binding/mount references. Dry-run by
 415|# default (reclaims nothing until you prune old generations —
