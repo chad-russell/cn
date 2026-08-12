@@ -259,8 +259,9 @@
       };
       # Self-hosted SearXNG as the web search backend (free, unlimited,
       # no API key). SEARXNG_URL is set in the environment block below.
+      # Note: SearXNG is search-only — it cannot extract page content.
+      # web_extract falls through to the native HTTP fetcher (default).
       web.search_backend = "searxng";
-      web.extract_backend = "searxng";
       display.platforms.buzz = {
         interim_assistant_messages = false;
         tool_progress = "off";
