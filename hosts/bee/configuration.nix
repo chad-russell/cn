@@ -262,6 +262,11 @@
       # Note: SearXNG is search-only — it cannot extract page content.
       # web_extract falls through to the native HTTP fetcher (default).
       web.search_backend = "searxng";
+      # Allow the browser toolset to navigate to localhost/private IPs.
+      # bee is a dev server — local QA testing of dev stacks (polymer,
+      # gpl, buildspace) is a primary use case. The browser.* tools block
+      # private URLs by default (SSRF guard); this lifts it for localhost.
+      browser.allow_private_urls = true;
       display.platforms.buzz = {
         interim_assistant_messages = false;
         tool_progress = "off";
