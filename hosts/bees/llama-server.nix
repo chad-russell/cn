@@ -32,9 +32,9 @@ let
   # Host port for the OpenAI-compatible API (Nebula: 10.10.0.6:8888)
   hostPort = 8888;
 
-  # Context window (tokens). 32K balances story-writing needs with
-  # KV-cache memory (~5 GB at Q8 KV for a 70B model).
-  contextSize = 32768;
+  # Context window (tokens). 64K meets Hermes Agent's minimum requirement
+  # and is generous for story-writing. KV cache at Q8 uses ~10 GB VRAM.
+  contextSize = 65536;
 
   # Wrapper: takes a model basename, runs the llama-server container.
   # The model file must exist at /var/lib/llama/models/<name>.gguf
