@@ -145,7 +145,7 @@
       multipliers = "1 2 4 8 16 32 64";
       overalljails = true;
     };
-    jails.sshd = ''
+    jails.sshd = lib.mkForce ''
       enabled = true
       port = ssh
     '';
