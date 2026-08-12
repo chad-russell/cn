@@ -132,6 +132,25 @@
   networking.firewall.allowedTCPPorts = [ 22 80 443 ];
   networking.firewall.allowedUDPPorts = [ 4242 ];
 
+  # ── fail2ban: SSH brute-force protection ──────────────────────────
+  # The gateway is the only publicly exposed host (port 22 open to the
+  # internet). Observed 3,500+ failed SSH attempts in 24h from bot nets.
+  # Bans after 5 failures with incremental backoff for repeat offenders.
+  services.fail2ban = {
+    enable = true;
+    maxretry = 5;
+    bantime = "1h";
+    bantime-increment = {
+      enable = true;
+      multipliers = "1 2 4 8 16 32 64";
+      overalljails = true;
+    };
+    jails.sshd = ''
+      enabled = true
+      port = ssh
+    '';
+  };
+
   # ── Beszel monitoring agent ────────────────────────────────────
   # Connects out to the hub on bees over Nebula (beszel.internal.crussell.io
   # resolves to 10.10.0.6); no inbound port required.
