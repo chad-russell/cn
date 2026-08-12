@@ -16,6 +16,7 @@
     ./buzz-relay.nix
     ../../modules/beszel-agent.nix
     ./dev-quadlets.nix
+    ./searxng.nix
     ./backup.nix
     ./tailscale.nix
   ];
@@ -141,6 +142,14 @@
     # OpenAI Codex CLI (from nixos-unstable — not in 25.11). Used via the
     # Hermes codex skill and the openai-codex provider integration.
     unstable.codex
+    # Chromium for agent-browser (Hermes browser toolset). NixOS chromium
+    # bundles all shared libs; agent-browser's own Chrome-for-Testing download
+    # fails on NixOS (missing libglib etc.). AGENT_BROWSER_EXECUTABLE_PATH
+    # in the hermes-agent environment points at this binary.
+    pkgs.chromium
+    # Node.js for agent-browser's .js launcher shim (the native Rust binary
+    # is self-contained, but Hermes calls agent-browser via node_modules/.bin).
+    pkgs.nodejs_22
   ];
 
   # crussell needs membership in the `hermes` group to read/write the
@@ -242,6 +251,16 @@
         provider = "zai-coding";
         default = "glm-5.2";
       };
+      # Use a fast, cheap OpenRouter model for context compression
+      # (summarization). $0.03/M input tokens, 1M context window.
+      auxiliary.compression = {
+        provider = "openrouter";
+        model = "qwen/qwen3.7-flash";
+      };
+      # Self-hosted SearXNG as the web search backend (free, unlimited,
+      # no API key). SEARXNG_URL is set in the environment block below.
+      web.search_backend = "searxng";
+      web.extract_backend = "searxng";
       display.platforms.buzz = {
         interim_assistant_messages = false;
         tool_progress = "off";
@@ -270,6 +289,13 @@
       BUZZ_RELAY_URL = "https://buzz.crussell.io";
       BUZZ_ALLOW_ALL_USERS = "true";
       ZAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
+      # SearXNG self-hosted search (see hosts/bee/searxng.nix). Powers
+      # Hermes' web_search toolset — no API key needed, localhost-only.
+      SEARXNG_URL = "http://127.0.0.1:8888";
+      # Browser automation: agent-browser uses nixpkgs chromium (already
+      # in systemPackages below). NixOS chromium has all shared libs;
+      # agent-browser's own Chrome download lacks them on NixOS.
+      AGENT_BROWSER_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
       # ZAI_CODING_KEY, OPENROUTER_API_KEY, GLOO_API_KEY,
       # BUZZ_AUTH_TAG (NIP-42 relay auth event), and TELEGRAM_BOT_TOKEN
       # are in hermes-bee-env.age.

@@ -50,4 +50,9 @@ in {
   # Sourced into shells via dotfiles/.zshenv (age-decrypt on login) and into
   # the GUI desktop app via the ~/.local/bin/hermes-desktop wrapper.
   "hermes-thinkpad-env.age".publicKeys = [ crussell ];
+
+  # ── SearXNG meta-search engine on bee (localhost-only) ──────────
+  # Secret key for Flask session signing (SEARX_SECRET_KEY env var).
+  # See hosts/bee/searxng.nix.
+  "searx-secret.age".publicKeys = [ crussell ];
 }
