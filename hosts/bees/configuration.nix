@@ -22,6 +22,7 @@
     ./datenight.nix
     ./caddy.nix
     ./services.nix
+    ./llama-server.nix
     ./backup.nix
     ./beszel.nix
   ];
