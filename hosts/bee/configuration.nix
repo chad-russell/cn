@@ -267,7 +267,9 @@
       # Enable session checkpoints (rollback snapshots for long sessions)
       checkpoints.enabled = true;
       # MCP servers — GitHub tools (26 tools: PRs, issues, code search, etc.)
-      # Uses gh CLI's OAuth token (gh is authed as crussell).
+      # use gh CLI's OAuth token (gh is authed as crussell). Linear uses the
+      # official hosted read-only MCP endpoint; OAuth is completed interactively
+      # on first connection/login, and no Linear secret is stored in Nix.
       # Note: SQLite was considered but removed — sqlite3 via terminal is
       # more capable than an MCP wrapper, with no persistent subprocess.
       mcp_servers = {
@@ -276,6 +278,10 @@
             export GITHUB_PERSONAL_ACCESS_TOKEN="$(gh auth token)"
             exec ${pkgs.nodejs_22}/bin/npx -y @modelcontextprotocol/server-github
           ''}";
+        };
+        linear = {
+          url = "https://mcp.linear.app/mcp/readonly";
+          auth = "oauth";
         };
       };
       # Self-hosted SearXNG as the web search backend (free, unlimited,
