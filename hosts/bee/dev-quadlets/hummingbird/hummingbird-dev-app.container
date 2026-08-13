@@ -58,10 +58,14 @@ Volume=/etc/dev-quadlets/hummingbird/dev-server.sh:/usr/local/bin/dev-server.sh:
 # S3/CloudFront dummy values are required by api/server/controllers/aws.ts at
 # module load time — without all five the API throws "AWS config is not set" on
 # boot. These match .devcontainer/envs/api.env.devcontainer.
+#
+# NOTE: PORT is NOT set here. The API reads process.env.PORT (default 8000) and
+# Vite also reads PORT (loadEnv in vite.config.ts). If we set PORT=8000 at the
+# container level, Vite would steal it and start on :8000, colliding with the
+# API. Instead, dev-server.sh sets PORT=8000 inline for the API process only.
 Environment=NODE_ENV=development
 Environment=APP_ENV=local
 Environment=CONN_URL=postgresql://postgres:postgres@hummingbird-db:5432/postgres
-Environment=PORT=8000
 Environment=AWS_REGION=us-east-1
 Environment=AWS_S3_ACCESS_KEY_ID=minio
 Environment=AWS_S3_SECRET_ACCESS_KEY=password

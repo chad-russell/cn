@@ -62,12 +62,15 @@ pnpm --filter api run prisma:generate || true
 pnpm --filter api run rev79:codegen || true
 
 # Start the API (Express + tsx watch, binds 0.0.0.0:8000 in dev mode).
+# Set PORT=8000 inline so the API uses it — but vite (web) doesn't inherit it
+# (vite reads PORT via loadEnv and would collide if it were in the container env).
 echo "==> api  -> http://0.0.0.0:8000"
-cd /workspace/api && pnpm run dev &
+cd /workspace/api && PORT=8000 pnpm run dev &
 PID_API=$!
 
 # Start the web (Vite, binds 0.0.0.0:3000; CONTAINER=true enables poll-based
-# file watching for reliable HMR over the bind mount).
+# file watching for reliable HMR over the bind mount). Vite defaults to :3000
+# via vite.config.ts (PORT || '3000'), and we don't set PORT in its env.
 echo "==> web  -> http://0.0.0.0:3000"
 cd /workspace/web && CONTAINER=true NODE_ENV=development APP_ENV=local pnpm run dev &
 PID_WEB=$!
