@@ -21,23 +21,29 @@ RUN curl -fsSL https://bun.sh/install | bash -s "bun-v1.2.10"
 ENV PATH="/root/.bun/bin:${PATH}"
 
 # Worker system dependencies (mirrors storyhub-worker/Dockerfile + podman/
-# Containerfile.storyhub-worker, adapted for Debian bookworm). These are needed
-# for: image thumbnails (vips, sharp), document conversion (libreoffice, pandoc),
-# video thumbnails (ffmpeg), and text extraction (markitdown, tesseract).
+# Containerfile.storyhub-worker, adapted for Debian bookworm package names).
+# These are needed for: image thumbnails (vips, sharp), document conversion
+# (libreoffice, pandoc), video thumbnails (ffmpeg), and text extraction
+# (markitdown, tesseract).
+#
+# Debian bookworm package name differences from alpine:
+#   vips → libvips-tools (the CLI); libvips-dev for the headers
+#   pango → libpango-1.0-0 + libpango1.0-dev
+#   fonts-linux-libertine → fonts-linuxlibertine (no hyphen)
 RUN apt-get update && apt-get install -y --no-install-recommends \
       postgresql-client \
-      vips \
+      libvips-tools \
       libvips-dev \
       libreoffice \
       imagemagick \
-      pango \
+      libpango-1.0-0 \
       libpango1.0-dev \
       libmagickwand-dev \
       ghostscript \
       ffmpeg \
       fontconfig \
       fonts-liberation \
-      fonts-linux-libertine \
+      fonts-linuxlibertine \
       pandoc \
       texlive-xetex \
       python3 \
