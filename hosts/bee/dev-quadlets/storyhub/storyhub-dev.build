@@ -1,8 +1,13 @@
 # Build unit: builds the custom storyhub dev image with worker system deps.
 #
-# A minimal .build unit needs ImageTag= + (File= or SetWorkingDirectory=).
-# File= is relative to the unit directory (/etc/dev-quadlets/storyhub/).
-# SetWorkingDirectory=unit sets the podman build context to the unit directory.
+# ImageTag= sets the tag for the built image. File= must be an ABSOLUTE path
+# because the .build unit resolves relative paths against the quadlet unit
+# directory (~/.config/containers/systemd/), where the Containerfile is NOT
+# symlinked (only *.container/*.volume/*.network units are). The Containerfile
+# lives at /etc/dev-quadlets/storyhub/storyhub-dev.Containerfile (Nix-managed).
+# SetWorkingDirectory=unit sets the podman build context to the unit directory,
+# which is fine since the Containerfile doesn't COPY any local files (it's a
+# pure FROM + RUN image).
 #
 # The app container references the built image via Image=storyhub-dev.build.
 # The generated app service depends on storyhub-dev-build.service, so podman
@@ -13,7 +18,7 @@ Description=Storyhub quadlet dev stack — build worker image
 
 [Build]
 ImageTag=localhost/storyhub-dev:latest
-File=storyhub-dev.Containerfile
+File=/etc/dev-quadlets/storyhub/storyhub-dev.Containerfile
 SetWorkingDirectory=unit
 
 [Service]
