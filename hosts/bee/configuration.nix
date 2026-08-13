@@ -351,6 +351,28 @@
   systemd.services.hermes-agent.serviceConfig.EnvironmentFile =
     [ config.age.secrets.hermes-bee-env.path ];
 
+  # The Hermes NixOS module deep-merges declarative settings into the existing
+  # mutable config.yaml so user-owned keys survive. That means removing a nested
+  # key from Nix does not delete a previously merged key on disk. Prune the old
+  # sqlite MCP explicitly so the live managed config matches our intended MCP
+  # set (GitHub + read-only Linear).
+  system.activationScripts."hermes-prune-stale-mcps" =
+    lib.stringAfter [ "hermes-agent-setup" ] ''
+      ${pkgs.python3.withPackages (ps: [ ps.pyyaml ])}/bin/python3 - <<'PY'
+      from pathlib import Path
+      import yaml
+
+      path = Path("/var/lib/hermes/.hermes/config.yaml")
+      config = yaml.safe_load(path.read_text()) or {}
+      mcp_servers = config.get("mcp_servers")
+      if isinstance(mcp_servers, dict) and "sqlite" in mcp_servers:
+          del mcp_servers["sqlite"]
+          path.write_text(yaml.dump(config, default_flow_style=False, sort_keys=False))
+      PY
+      chown crussell:hermes /var/lib/hermes/.hermes/config.yaml
+      chmod 0660 /var/lib/hermes/.hermes/config.yaml
+    '';
+
   # ── Hermes gateway: run as crussell with NO filesystem sandbox ──────
   # The upstream NixOS module hardcodes ProtectSystem=strict and
   # ReadWritePaths=[stateDir workingDirectory], and sets HOME=stateDir.
