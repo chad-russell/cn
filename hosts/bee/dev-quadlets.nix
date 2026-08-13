@@ -1,4 +1,4 @@
-# ── bee: Remote dev quadlet stacks (gpl, polymer, buildspace) ──────────
+# ── bee: Remote dev quadlet stacks (gpl, polymer, buildspace, hummingbird, storyhub) ─
 #
 # Mirrors the thinkpad's rootless user-quadlet dev stacks (the "perfect" setup)
 # but delivered NixOS-declaratively, so `nix run .#deploy -- bee` registers them
@@ -51,11 +51,32 @@ let
     "buildspace/buildspace-dev-db.container"
     "buildspace/buildspace-dev-minio.container"
     "buildspace/buildspace-dev-app.container"
+    # hummingbird (Hummingbird API + web)
+    "hummingbird/hummingbird-dev.network"
+    "hummingbird/hummingbird-dev-db.volume"
+    "hummingbird/hummingbird-dev-db.container"
+    "hummingbird/hummingbird-dev-app.container"
+    # storyhub (StoryHub web + worker, with custom image build)
+    "storyhub/storyhub-dev.network"
+    "storyhub/storyhub-dev-db.volume"
+    "storyhub/storyhub-dev-minio.volume"
+    "storyhub/storyhub-dev-db.container"
+    "storyhub/storyhub-dev-minio.container"
+    "storyhub/storyhub-dev.build"
+    "storyhub/storyhub-dev-app.container"
   ];
 
   # dev-server.sh for each project (bind-mount source, NOT a quadlet unit).
-  devServers =
-    [ "gpl/dev-server.sh" "polymer/dev-server.sh" "buildspace/dev-server.sh" ];
+  # storyhub-dev.Containerfile is the build context for the .build unit (NOT a
+  # quadlet unit either, but installed the same way so File= can reference it).
+  devServers = [
+    "gpl/dev-server.sh"
+    "polymer/dev-server.sh"
+    "buildspace/dev-server.sh"
+    "hummingbird/dev-server.sh"
+    "storyhub/dev-server.sh"
+    "storyhub/storyhub-dev.Containerfile"
+  ];
 
   # Everything that goes under /etc/dev-quadlets/ (rel paths below, prefixed at
   # etc-key time so they land at /etc/dev-quadlets/<project>/<file> — matching
@@ -101,22 +122,30 @@ in {
   '';
 
   # 3. `qd` convenience wrapper (sister to the per-project qd on the thinkpad,
-  #    but one script for all three projects since bee has no cn checkout to
-  #    hold per-project copies). Raw `systemctl --user` always works too.
+  #    but one script for all projects since bee has no cn checkout to hold
+  #    per-project copies). Raw `systemctl --user` always works too.
   environment.systemPackages = [
     (pkgs.writeShellScriptBin "qd" ''
-      # qd <gpl|polymer|buildspace> <up|down|restart|status|logs>
+      # qd <gpl|polymer|buildspace|hummingbird|storyhub|hb|sh> <up|down|restart|status|logs>
       set -euo pipefail
       proj="''${1:-}"; cmd="''${2:-up}"
       case "$proj" in
-        gpl|polymer|buildspace) svc="$proj-dev-app" ;;
-        *) echo "usage: qd <gpl|polymer|buildspace> <up|down|restart|status|logs>" >&2; exit 1 ;;
+        hb) proj="hummingbird" ;; sh) proj="storyhub" ;;
+      esac
+      case "$proj" in
+        gpl|polymer|buildspace|hummingbird|storyhub) svc="$proj-dev-app" ;;
+        *) echo "usage: qd <gpl|polymer|buildspace|hummingbird|storyhub|hb|sh> <up|down|restart|status|logs>" >&2; exit 1 ;;
       esac
       case "$cmd" in
         up)      systemctl --user start "$svc" ;;
         down)    systemctl --user stop "$svc" ;;
         restart) systemctl --user restart "$svc" ;;
-        status)  systemctl --user status "$svc" "$proj-dev-db" "$proj-dev-minio" ;;
+        # Hummingbird has no minio — only show db+minio if they exist.
+        status)  if [ "$proj" = "hummingbird" ]; then
+                   systemctl --user status "$svc" "$proj-dev-db"
+                 else
+                   systemctl --user status "$svc" "$proj-dev-db" "$proj-dev-minio"
+                 fi ;;
         logs)    journalctl --user -u "$svc" -f ;;
         *) echo "unknown command: $cmd (up|down|restart|status|logs)" >&2; exit 1 ;;
       esac

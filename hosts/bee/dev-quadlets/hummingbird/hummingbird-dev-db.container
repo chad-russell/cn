@@ -1,0 +1,24 @@
+# PostgreSQL 16 for the hummingbird quadlet stack (matches .devcontainer + podman/).
+# NetworkAlias=hummingbird-db lets the app resolve it by the hostname used in CONN_URL.
+[Unit]
+Description=Hummingbird quadlet dev stack — PostgreSQL
+# Stop/restart this with the app unit (see hummingbird-dev-app.container).
+PartOf=hummingbird-dev-app.container
+
+[Container]
+Image=docker.io/library/postgres:16
+ContainerName=hummingbird-quadlet-db
+Network=hummingbird-dev.network
+NetworkAlias=hummingbird-db
+Environment=POSTGRES_PASSWORD=postgres
+Environment=POSTGRES_DB=postgres
+ShmSize=512m
+HealthCmd=pg_isready -U postgres
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=5
+Volume=hummingbird-dev-db.volume:/var/lib/postgresql/data
+
+[Service]
+# First run pulls postgres:16; give it room past the 90s default.
+TimeoutStartSec=120

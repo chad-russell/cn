@@ -1,0 +1,24 @@
+# PostgreSQL 16 for the storyhub quadlet stack.
+# NetworkAlias=storyhub-db lets the app and worker resolve it by the hostname
+# used in DATABASE_URL / DIRECT_URL.
+[Unit]
+Description=Storyhub quadlet dev stack — PostgreSQL
+# Stop/restart this with the app unit (see storyhub-dev-app.container).
+PartOf=storyhub-dev-app.container
+
+[Container]
+Image=docker.io/library/postgres:16
+ContainerName=storyhub-quadlet-db
+Network=storyhub-dev.network
+NetworkAlias=storyhub-db
+Environment=POSTGRES_PASSWORD=postgres
+Environment=POSTGRES_DB=postgres
+ShmSize=512m
+HealthCmd=pg_isready -U postgres
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=5
+Volume=storyhub-dev-db.volume:/var/lib/postgresql/data
+
+[Service]
+TimeoutStartSec=120

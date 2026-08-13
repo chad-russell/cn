@@ -1,0 +1,10 @@
+# Podman network for the storyhub quadlet dev stack.
+#
+# Default network name is systemd-storyhub-dev. Containers on it resolve
+# each other by ContainerName and by NetworkAlias (DNS), so the app and worker
+# reach postgres/minio via the storyhub-db / storyhub-minio hostnames.
+[Unit]
+Description=Storyhub quadlet dev stack — podman network
+
+[Network]
+Label=io.gloo.project=storyhub

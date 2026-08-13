@@ -1,0 +1,10 @@
+# Podman network for the hummingbird quadlet dev stack.
+#
+# Default network name is systemd-hummingbird-dev. Containers on it resolve
+# each other by ContainerName and by NetworkAlias (DNS), so the app reaches
+# postgres via the hummingbird-db hostname baked into CONN_URL.
+[Unit]
+Description=Hummingbird quadlet dev stack — podman network
+
+[Network]
+Label=io.gloo.project=hummingbird

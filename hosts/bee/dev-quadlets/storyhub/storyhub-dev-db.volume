@@ -1,0 +1,6 @@
+# Persistent PostgreSQL data for the storyhub quadlet stack.
+# Default volume name: systemd-storyhub-dev-db
+[Unit]
+Description=Storyhub quadlet dev stack — PostgreSQL data
+
+[Volume]

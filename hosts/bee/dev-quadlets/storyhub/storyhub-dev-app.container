@@ -1,0 +1,90 @@
+# The storyhub dev app (Next.js web :3001 + Bun worker :8001) as a podman
+# quadlet container — bee edition.
+#
+# This ONE unit drives the whole stack:
+#   systemctl --user start storyhub-dev-app   # builds image, starts db+minio, then app
+#   systemctl --user stop  storyhub-dev-app   # stops app + db + minio (via PartOf=)
+#
+# How start/stop cascade works:
+#   - Requires=/After= pull in storyhub-dev-db + storyhub-dev-minio.
+#   - db & minio declare PartOf=storyhub-dev-app, so `stop`/`restart` of this
+#     unit propagates to them.
+#
+# Uses a CUSTOM image (localhost/storyhub-dev:latest) built by the .build unit,
+# NOT the published devcontainers image. The custom image adds the worker's
+# heavy system dependencies (vips, libreoffice, imagemagick, ghostscript,
+# ffmpeg, pandoc, markitdown) that the devcontainers image lacks. The repo is
+# bind-mounted (live code); dev-server.sh is bind-mounted read-only from
+# /etc/dev-quadlets/storyhub/ (Nix-managed).
+#
+# Both the StoryHub web app and the StoryHub worker run in this ONE container,
+# sharing the same repo mount and network. This matches the podman/ pod design
+# where web-storyhub and worker-storyhub are in the same pod (shared volume
+# mounts, cross-references via localhost).
+#
+# Not [Install]-enabled anywhere: the stack only runs when you start it.
+[Unit]
+Description=Storyhub quadlet dev stack — app (Next.js :3001 + worker :8001)
+Requires=storyhub-dev-db.container storyhub-dev-minio.container
+After=storyhub-dev-db.container storyhub-dev-minio.container
+
+[Container]
+Image=storyhub-dev.build
+ContainerName=storyhub-quadlet-app
+Network=storyhub-dev.network
+# Run as root (same model as gpl/polymer/buildspace — rootless podman maps
+# container UID 0 to crussell on the host).
+User=0
+WorkingDir=/workspace
+
+# Browser-facing ports published to the host. On bee these are OFFSET from the
+# in-container ports to avoid collisions. The SSH tunnel re-maps these onto the
+# standard localhost ports:
+#   web    localhost:3001 -> bee:3301 (container :3001)
+#   worker localhost:8001 -> bee:3309 (container :8001)
+# MinIO API/console are published by the minio container itself (3390/3391).
+PublishPort=3301:3001
+PublishPort=3309:8001
+
+# Product repo (read/write). bee has no SELinux, so no :Z suffix.
+Volume=/home/crussell/Gloo/360-hummingbird:/workspace
+
+# Startup script lives outside the product repo (Nix-managed); mount read-only.
+Volume=/etc/dev-quadlets/storyhub/dev-server.sh:/usr/local/bin/dev-server.sh:ro
+
+# Infra wiring: postgres + S3 (MinIO) on the quadlet network.
+#
+# S3_ENDPOINT points at localhost:9000 because StoryHub web generates presigned
+# upload URLs that the BROWSER must reach (the browser uploads directly to S3).
+# Over the SSH tunnel, localhost:9000 maps to bee:3390 (MinIO's published port).
+# The worker uses the internal hostname storyhub-minio:9000 (set in dev-server.sh)
+# since it runs server-side inside the container.
+#
+# STORYHUB_STANDALONE=true: runs StoryHub without requiring the Hummingbird API
+# for auth (uses dev session data). Set HUMMINGBIRD_API_URL to the Hummingbird
+# container hostname if you want real auth integration with a running HB stack.
+#
+# No EnvironmentFile= — the app boots with zero repo files. Next.js loads .env
+# natively from the bind mount if present.
+Environment=NODE_ENV=development
+Environment=DATABASE_URL=postgresql://postgres:postgres@storyhub-db:5432/postgres
+Environment=DIRECT_URL=postgresql://postgres:postgres@storyhub-db:5432/postgres
+Environment=SESSION_SECRET=dev-session-secret-please-change-1234567890-abcdefghijklmnopqrstuvwxyz
+Environment=STORYHUB_STANDALONE=true
+Environment=HUMMINGBIRD_URL=http://localhost:3000
+Environment=STORYHUB_WORKER_URL=http://localhost:8001
+Environment=STORYHUB_WORKER_BEARER_TOKEN=g360-storyhub-worker-bearer-token
+Environment=S3_ENDPOINT=http://localhost:9000
+Environment=AWS_ACCESS_KEY_ID=minio
+Environment=AWS_SECRET_ACCESS_KEY=password
+Environment=MEDIA_ITEMS_BUCKET=storyhub-media-items
+Environment=AWS_REGION=us-east-1
+
+Exec=/usr/local/bin/dev-server.sh
+
+[Service]
+# First run builds the image (libreoffice + texlive are large; up to 20 minutes)
+# + runs pnpm install. Give it 20 minutes. Subsequent starts use layer cache.
+# Dev server: no auto-restart (default Restart=no) so you see crashes instead
+# of a restart loop.
+TimeoutStartSec=1200

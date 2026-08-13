@@ -1,0 +1,25 @@
+# MinIO (S3-compatible storage) for the storyhub quadlet stack.
+# NetworkAlias=storyhub-minio (HYPHEN — underscores are invalid in DNS hostnames).
+# The storyhub-media-items bucket is auto-created by dev-server.sh on app start.
+# MinIO console (:9001) is published to the host for browser debugging, and
+# both API (:9000) and console (:9001) are tunneled to the laptop so presigned
+# upload URLs (which embed the S3_ENDPOINT host) resolve in the browser.
+[Unit]
+Description=Storyhub quadlet dev stack — MinIO (S3)
+# Stop/restart this with the app unit (see storyhub-dev-app.container).
+PartOf=storyhub-dev-app.container
+
+[Container]
+Image=docker.io/minio/minio:latest
+ContainerName=storyhub-quadlet-minio
+Network=storyhub-dev.network
+NetworkAlias=storyhub-minio
+Environment=MINIO_ROOT_USER=minio
+Environment=MINIO_ROOT_PASSWORD=password
+Volume=storyhub-dev-minio.volume:/data
+PublishPort=3390:9000
+PublishPort=3391:9001
+Exec=server /data --console-address :9001
+
+[Service]
+TimeoutStartSec=120

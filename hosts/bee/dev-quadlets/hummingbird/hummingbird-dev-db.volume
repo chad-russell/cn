@@ -1,0 +1,6 @@
+# Persistent PostgreSQL data for the hummingbird quadlet stack.
+# Default volume name: systemd-hummingbird-dev-db
+[Unit]
+Description=Hummingbird quadlet dev stack — PostgreSQL data
+
+[Volume]

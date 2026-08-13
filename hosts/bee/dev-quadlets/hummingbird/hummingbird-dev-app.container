@@ -1,0 +1,79 @@
+# The hummingbird dev app (Express API :8000 + Vite web :3000) as a podman
+# quadlet container — bee edition.
+#
+# This ONE unit drives the whole stack:
+#   systemctl --user start hummingbird-dev-app   # starts db, then app
+#   systemctl --user stop  hummingbird-dev-app   # stops app + db (via PartOf=)
+#
+# How start/stop cascade works:
+#   - Requires=/After= pull in hummingbird-dev-db.
+#   - db declares PartOf=hummingbird-dev-app, so `stop`/`restart` of this unit
+#     propagates to it.
+#
+# Runs from the PUBLISHED devcontainers/javascript-node:24 image (no .build
+# unit) — podman pulls it on first start. The repo is bind-mounted (live code);
+# dev-server.sh is bind-mounted read-only from /etc/dev-quadlets/hummingbird/
+# (Nix-managed, since bee has no cn checkout).
+#
+# Hummingbird has no MinIO in dev — the API boots with dummy S3/CloudFront
+# values (matching .devcontainer). File upload/viewing won't work, but all
+# project management features do.
+#
+# Not [Install]-enabled anywhere: the stack only runs when you start it.
+[Unit]
+Description=Hummingbird quadlet dev stack — app (API :8000 + web :3000)
+Requires=hummingbird-dev-db.container
+After=hummingbird-dev-db.container
+
+[Container]
+Image=mcr.microsoft.com/devcontainers/javascript-node:24
+ContainerName=hummingbird-quadlet-app
+Network=hummingbird-dev.network
+# Run as root inside the container. The devcontainers image defaults to `node`
+# (UID 1000), but bee's rootless podman + native overlay breaks UserNS=keep-id.
+# Running as root (UID 0) gives the same crussell ownership of bind-mount
+# artifacts (node_modules, build caches) — same model as gpl/polymer/buildspace.
+User=0
+WorkingDir=/workspace
+
+# Browser-facing ports published to the host. On bee these are OFFSET from the
+# in-container ports to avoid colliding with buzz-relay (:3000/:5000) and the
+# other dev stacks. The SSH tunnel (cjust dev-tunnel hummingbird) re-maps these
+# onto the standard localhost ports:
+#   web  localhost:3000 -> bee:3300 (container :3000)
+#   api  localhost:8000 -> bee:3308 (container :8000)
+PublishPort=3300:3000
+PublishPort=3308:8000
+
+# Product repo (read/write). bee has no SELinux, so no :Z suffix.
+Volume=/home/crussell/Gloo/360-hummingbird:/workspace
+
+# Startup script lives outside the product repo (Nix-managed); mount read-only.
+Volume=/etc/dev-quadlets/hummingbird/dev-server.sh:/usr/local/bin/dev-server.sh:ro
+
+# Infra wiring: postgres on the quadlet network (resolved via the hummingbird-db
+# network alias). No EnvironmentFile= — the app boots with zero repo files.
+# Next.js / Vite loads .env natively from the bind mount if present.
+#
+# S3/CloudFront dummy values are required by api/server/controllers/aws.ts at
+# module load time — without all five the API throws "AWS config is not set" on
+# boot. These match .devcontainer/envs/api.env.devcontainer.
+Environment=NODE_ENV=development
+Environment=APP_ENV=local
+Environment=CONN_URL=postgresql://postgres:postgres@hummingbird-db:5432/postgres
+Environment=PORT=8000
+Environment=AWS_REGION=us-east-1
+Environment=AWS_S3_ACCESS_KEY_ID=minio
+Environment=AWS_S3_SECRET_ACCESS_KEY=password
+Environment=AWS_S3_BUCKET=storyhub-media-items
+Environment=AWS_S3_ENDPOINT=http://localhost:9000
+Environment=AWS_CLOUDFRONT_URL=http://localhost:9000/storyhub-media-items
+Environment=AWS_CLOUDFRONT_KEYPAIR_ID=dummy-keypair-id
+Environment=CLOUDFRONT_KEYPAIR_USER_CONTENT_PRIVATE_KEY=dummy
+
+Exec=/usr/local/bin/dev-server.sh
+
+[Service]
+# First run pulls the image + runs pnpm install; give it 10 minutes. Dev server:
+# no auto-restart (default Restart=no) so you see crashes instead of a restart loop.
+TimeoutStartSec=600

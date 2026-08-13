@@ -807,85 +807,99 @@ bubblebox-apply:
 863|    dst_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 864|    if ls -1 "${dst_dir}"/*.service 2>/dev/null; then :; else echo "(none linked)"; fi
 865|
-866|# ═══════════════════════════════════════════════════════════════════════════
-867|# bee remote dev — SSH tunnels (dev access for gpl/polymer/buildspace on bee)
-868|# ═══════════════════════════════════════════════════════════════════════════
-869|#
-870|# Next.js dev servers hard-code localhost (the HMR/dev channel is restricted to
-871|# localhost via allowedDevOrigins; gpl/polymer auth clients fall back to
-872|# localhost:3000/3006), so remote dev on bee uses SSH port-forwarding instead
-873|# of a reverse proxy: the SAME laptop ports you'd use locally are mapped onto
-874|# bee's offset published ports (which exist only to avoid colliding with the
-875|# production buzz-relay on bee's :3000/:5000). Browse http://localhost:<port>
-876|# exactly like local dev — every callback / cookie / HMR URL works unchanged.
-877|# Ctrl-C closes a tunnel.
-878|#
-879|# gpl + polymer + buildspace use disjoint port ranges on bee, so they CAN all
-880|# run there at once — BUT on the laptop polymer (:3000) + buildspace (:3000)
-881|# collide, and gpl (:3006) + buildspace (:3006) collide; run one of a colliding
-882|# pair at a time (same rule as local dev on the thinkpad).
-883|#
-884|# Override the bee target with BEE=user@host (default crussell@10.10.0.12).
-885|# Stacks themselves are managed on bee with `qd` (see hosts/bee/dev-quadlets/).
-886|
-887|# Open the SSH tunnel for one project (stack must already be running on bee).
-888|# Blocks the terminal — Ctrl-C to close. Maps the thinkpad-standard localhost
-889|# ports onto bee's offset published ports:
-890|#   gpl         localhost:3006                      -> bee:3006
-891|#   polymer     localhost:3000 + :3001              -> bee:3100 / :3101
-892|#   buildspace  localhost:3000,3002-3006,3008,3010  -> bee:32xx
-893|[group('bee')]
-894|dev-tunnel project:
-895|    #!/usr/bin/env bash
-896|    set -euo pipefail
-897|    BEE="${BEE:-crussell@10.10.0.12}"
-898|    SSH_OPTS=(-o IdentitiesOnly=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -N)
-899|    case "{{ project }}" in
-900|      gpl)
-901|        echo "==> gpl tunnel: http://localhost:3006 -> bee:3006  (Ctrl-C to close)"
-902|        exec ssh "${SSH_OPTS[@]}" "$BEE" -L 3006:localhost:3006
-903|        ;;
-904|      polymer)
-905|        echo "==> polymer tunnel: http://localhost:3000 + :3001 -> bee:3100/3101  (Ctrl-C to close)"
-906|        exec ssh "${SSH_OPTS[@]}" "$BEE" -L 3000:localhost:3100 -L 3001:localhost:3101
-907|        ;;
-908|      buildspace|bs)
-909|        echo "==> buildspace tunnel: http://localhost:{3000,3002-3006,3008,3010} -> bee:32xx  (Ctrl-C to close)"
-910|        exec ssh "${SSH_OPTS[@]}" "$BEE" \
-911|          -L 3000:localhost:3200 -L 3002:localhost:3202 -L 3003:localhost:3203 -L 3004:localhost:3204 \
-912|          -L 3005:localhost:3205 -L 3006:localhost:3206 -L 3008:localhost:3208 -L 3010:localhost:3210
-913|        ;;
-914|      *)
-915|        echo "usage: cjust dev-tunnel <gpl|polymer|buildspace|bs>" >&2
-916|        echo "  gpl         -> http://localhost:3006" >&2
-917|        echo "  polymer     -> http://localhost:3000 (polymer) + http://localhost:3001 (admin360)" >&2
-918|        echo "  buildspace  -> http://localhost:{3000,3002,3003,3004,3005,3006,3008,3010}" >&2
-919|        echo "start the stack on bee first:  ssh -o IdentitiesOnly=yes \"$BEE\" 'qd <project> up'" >&2
-920|        echo "polymer+buildspace share laptop :3000, gpl+buildspace share :3006." >&2
-921|        exit 1
-922|        ;;
-923|    esac
-924|
-925|# One-shot: start the stack on bee (`qd <project> up`), then open the tunnel.
-926|# `qd up` blocks until the app container is running — on a cold first start that
-927|# means the in-container pnpm/bun install runs first (can take minutes); watch
-928|# progress in another terminal with `ssh -o IdentitiesOnly=yes $BEE 'qd <project> logs'`.
-929|# Then Ctrl-C closes the tunnel (the stack keeps running on bee).
-930|[group('bee')]
-931|dev-up project:
-932|    #!/usr/bin/env bash
-933|    set -euo pipefail
-934|    BEE="${BEE:-crussell@10.10.0.12}"
-935|    case "{{ project }}" in
-936|      gpl|polymer|buildspace) proj="{{ project }}" ;;
-937|      bs)                     proj="buildspace" ;;
-938|      *)
-939|        echo "usage: cjust dev-up <gpl|polymer|buildspace|bs>" >&2
-940|        exit 1
-941|        ;;
-942|    esac
-943|    echo "==> starting $proj on bee ($BEE) …"
-944|    ssh -o IdentitiesOnly=yes "$BEE" "qd $proj up"
-945|    echo "==> stack up; opening tunnel (Ctrl-C to close) …"
-946|    exec just --justfile "{{ justfile_directory() }}/Justfile" dev-tunnel "$proj"
+# ═══════════════════════════════════════════════════════════════════════════
+# bee remote dev — SSH tunnels (dev access for gpl/polymer/buildspace/hummingbird/storyhub on bee)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Next.js dev servers hard-code localhost (the HMR/dev channel is restricted to
+# localhost via allowedDevOrigins; gpl/polymer auth clients fall back to
+# localhost:3000/3006), so remote dev on bee uses SSH port-forwarding instead
+# of a reverse proxy: the SAME laptop ports you'd use locally are mapped onto
+# bee's offset published ports (which exist only to avoid colliding with the
+# production buzz-relay on bee's :3000/:5000). Browse http://localhost:<port>
+# exactly like local dev — every callback / cookie / HMR URL works unchanged.
+# Ctrl-C closes a tunnel.
+#
+# gpl + polymer + buildspace + hummingbird + storyhub use disjoint port ranges
+# on bee, so they CAN all run there at once — BUT on the laptop several share
+# :3000 (polymer, buildspace, hummingbird) so run one at a time.
+#
+# Override the bee target with BEE=user@host (default crussell@10.10.0.12).
+# Stacks themselves are managed on bee with `qd` (see hosts/bee/dev-quadlets/).
+
+# Open the SSH tunnel for one project (stack must already be running on bee).
+# Blocks the terminal — Ctrl-C to close. Maps the thinkpad-standard localhost
+# ports onto bee's offset published ports:
+#   gpl         localhost:3006                      -> bee:3006
+#   polymer     localhost:3000 + :3001              -> bee:3100 / :3101
+#   buildspace  localhost:3000,3002-3006,3008,3010  -> bee:32xx
+#   hummingbird localhost:3000 + :8000              -> bee:3300 / :3308
+#   storyhub    localhost:3001,8001,9000,9001       -> bee:3301/3309/3390/3391
+[group('bee')]
+dev-tunnel project:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    BEE="${BEE:-crussell@10.10.0.12}"
+    SSH_OPTS=(-o IdentitiesOnly=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -N)
+    case "{{ project }}" in
+      gpl)
+        echo "==> gpl tunnel: http://localhost:3006 -> bee:3006  (Ctrl-C to close)"
+        exec ssh "${SSH_OPTS[@]}" "$BEE" -L 3006:localhost:3006
+        ;;
+      polymer)
+        echo "==> polymer tunnel: http://localhost:3000 + :3001 -> bee:3100/3101  (Ctrl-C to close)"
+        exec ssh "${SSH_OPTS[@]}" "$BEE" -L 3000:localhost:3100 -L 3001:localhost:3101
+        ;;
+      buildspace|bs)
+        echo "==> buildspace tunnel: http://localhost:{3000,3002-3006,3008,3010} -> bee:32xx  (Ctrl-C to close)"
+        exec ssh "${SSH_OPTS[@]}" "$BEE" \
+          -L 3000:localhost:3200 -L 3002:localhost:3202 -L 3003:localhost:3203 -L 3004:localhost:3204 \
+          -L 3005:localhost:3205 -L 3006:localhost:3206 -L 3008:localhost:3208 -L 3010:localhost:3210
+        ;;
+      hummingbird|hb)
+        echo "==> hummingbird tunnel: http://localhost:3000 (web) + :8000 (api) -> bee:3300/3308  (Ctrl-C to close)"
+        exec ssh "${SSH_OPTS[@]}" "$BEE" -L 3000:localhost:3300 -L 8000:localhost:3308
+        ;;
+      storyhub|sh)
+        echo "==> storyhub tunnel: http://localhost:{3001,8001,9000,9001} -> bee:3301/3309/3390/3391  (Ctrl-C to close)"
+        exec ssh "${SSH_OPTS[@]}" "$BEE" \
+          -L 3001:localhost:3301 -L 8001:localhost:3309 -L 9000:localhost:3390 -L 9001:localhost:3391
+        ;;
+      *)
+        echo "usage: cjust dev-tunnel <gpl|polymer|buildspace|bs|hummingbird|hb|storyhub|sh>" >&2
+        echo "  gpl         -> http://localhost:3006" >&2
+        echo "  polymer     -> http://localhost:3000 (polymer) + http://localhost:3001 (admin360)" >&2
+        echo "  buildspace  -> http://localhost:{3000,3002,3003,3004,3005,3006,3008,3010}" >&2
+        echo "  hummingbird -> http://localhost:3000 (web) + http://localhost:8000 (api)" >&2
+        echo "  storyhub    -> http://localhost:3001 (web) + :8001 (worker) + :9000/:9001 (minio)" >&2
+        echo "start the stack on bee first:  ssh -o IdentitiesOnly=yes \"$BEE\" 'qd <project> up'" >&2
+        echo "polymer+buildspace+hummingbird share laptop :3000; gpl+buildspace share :3006." >&2
+        exit 1
+        ;;
+    esac
+
+# One-shot: start the stack on bee (`qd <project> up`), then open the tunnel.
+# `qd up` blocks until the app container is running — on a cold first start that
+# means the in-container pnpm/bun install runs first (can take minutes); watch
+# progress in another terminal with `ssh -o IdentitiesOnly=yes $BEE 'qd <project> logs'`.
+# Then Ctrl-C closes the tunnel (the stack keeps running on bee).
+[group('bee')]
+dev-up project:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    BEE="${BEE:-crussell@10.10.0.12}"
+    case "{{ project }}" in
+      gpl|polymer|buildspace|hummingbird|storyhub) proj="{{ project }}" ;;
+      bs)                     proj="buildspace" ;;
+      hb)                     proj="hummingbird" ;;
+      sh)                     proj="storyhub" ;;
+      *)
+        echo "usage: cjust dev-up <gpl|polymer|buildspace|bs|hummingbird|hb|storyhub|sh>" >&2
+        exit 1
+        ;;
+    esac
+    echo "==> starting $proj on bee ($BEE) …"
+    ssh -o IdentitiesOnly=yes "$BEE" "qd $proj up"
+    echo "==> stack up; opening tunnel (Ctrl-C to close) …"
+    exec just --justfile "{{ justfile_directory() }}/Justfile" dev-tunnel "$proj"
 947|

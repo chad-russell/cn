@@ -1,0 +1,6 @@
+# Persistent MinIO data for the storyhub quadlet stack.
+# Default volume name: systemd-storyhub-dev-minio
+[Unit]
+Description=Storyhub quadlet dev stack — MinIO (S3) data
+
+[Volume]

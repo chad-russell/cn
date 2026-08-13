@@ -1,10 +1,11 @@
-# bee remote dev stacks — podman user-quadlets (gpl, polymer, buildspace)
+# bee remote dev stacks — podman user-quadlets (gpl, polymer, buildspace, hummingbird, storyhub)
 
 This mirrors the **thinkpad's** rootless user-quadlet dev setup onto `bee`, so
-you can use bee as a remote dev machine for the three Gloo/buildspace projects.
-Same container images, same `dev-server.sh` model, same on-demand (no auto-start)
-behavior — delivered **NixOS-declaratively** and reached over **SSH port-forward
-tunnels** so the apps see `localhost` exactly as they do on the thinkpad.
+you can use bee as a remote dev machine for the Gloo/buildspace/Wycliffe
+projects. Same container images, same `dev-server.sh` model, same on-demand (no
+auto-start) behavior — delivered **NixOS-declaratively** and reached over **SSH
+port-forward tunnels** so the apps see `localhost` exactly as they do on the
+thinkpad.
 
 > **Why tunnels, not a reverse proxy.** Next.js dev servers hard-code localhost
 > assumptions: the HMR/dev channel is restricted to localhost origins (Next.js
@@ -17,9 +18,11 @@ tunnels** so the apps see `localhost` exactly as they do on the thinkpad.
 ## Architecture
 
 ```
-~/Gloo/360-gpl, ~/Gloo/360-polymer, ~/buildspace   cloned product repos on bee
-~/.../hosts/bee/dev-quadlets/{gpl,polymer,buildspace}/   THIS — orchestration (tracked)
+~/Gloo/360-gpl, ~/Gloo/360-polymer, ~/Gloo/360-hummingbird, ~/buildspace
+                                              cloned product repos on bee
+~/.../hosts/bee/dev-quadlets/{gpl,polymer,buildspace,hummingbird,storyhub}/
 ├── *.network / *.volume / *.container              quadlet input files
+├── *.build / *.Containerfile                        storyhub custom image build
 ├── dev-server.sh                                   PID 1 of each app container
 hosts/bee/dev-quadlets.nix                          NixOS module that wires it all up
 hosts/thinkpad/Justfile (cjust dev-tunnel / dev-up) laptop-side SSH tunnel recipes
@@ -32,7 +35,7 @@ The NixOS module (`hosts/bee/dev-quadlets.nix`):
 2. Symlinks the `*.container` / `*.volume` / `*.network` files into
    `~/.config/containers/systemd/` (the rootless user-quadlet search path) for
    `crussell`, then `systemctl --user daemon-reload`s.
-3. Ships a `qd` wrapper on bee (one script for all three projects).
+3. Ships a `qd` wrapper on bee (one script for all projects).
 
 So `nix run .#deploy -- bee` registers/updates everything — **no manual install
 step, no `cn` checkout required on bee.** Linger is on for `crussell`, so the
@@ -45,13 +48,47 @@ user manager (and the user podman socket) is always up.
 | gpl | `devcontainers/javascript-node:22` | postgres:15 | minio | `3006` |
 | polymer | `devcontainers/javascript-node:24` | postgres:16 | minio | `3000` (polymer), `3001` (admin360) |
 | buildspace | `oven/bun:1.3.14` | postgres:17 | minio (pinned) | `3000`, `3002`, `3003`, `3004`, `3005`, `3006`, `3008`, `3010` |
+| hummingbird | `devcontainers/javascript-node:24` | postgres:16 | — | `3000` (web), `8000` (api) |
+| storyhub | `localhost/storyhub-dev:latest` (custom build) | postgres:16 | minio | `3001` (web), `8001` (worker), `9000` (minio API), `9001` (minio console) |
 
-All three app containers run as **root (UID 0) inside the container** — in
+All app containers run as **root (UID 0) inside the container** — in
 rootless podman that maps to crussell on the host, so bind-mount artifacts
 (`node_modules`, `.next`, caches) land crussell-owned. The thinkpad units use
 `UserNS=keep-id` for this, but bee's rootless podman + native overlay breaks
 keep-id (recursive-userns permission error), so bee runs `User=0` instead — same
 ownership outcome.
+
+### Hummingbird-specific notes
+
+- **No MinIO.** The Hummingbird API's `aws.ts` controller requires S3/CloudFront
+  env vars at module load (throws on boot without them), but the stack boots fine
+  with dummy values matching `.devcontainer/envs/api.env.devcontainer`. File
+  upload/viewing won't work, but all project management features do.
+- **Two dev servers in one container** (like polymer): Express API on `:8000` +
+  Vite web on `:3000`, launched by `dev-server.sh`.
+- **Prisma + Rev79 codegen** run at every start (the API imports both at boot).
+
+### StoryHub-specific notes
+
+- **Custom image build** (`storyhub-dev.build` → `localhost/storyhub-dev:latest`).
+  The worker needs heavy system deps (vips, libreoffice, imagemagick, ghostscript,
+  ffmpeg, pandoc, markitdown) that no published image has. The `.build` quadlet
+  unit builds from `storyhub-dev.Containerfile` on first start; layer caching
+  makes subsequent builds fast. First build takes ~15-20 minutes (libreoffice +
+  texlive are large).
+- **Two dev servers in one container:** StoryHub web (Next.js `:3001`) + worker
+  (Bun/Hono `:8001`).
+- **Dual S3 endpoints:** the web app uses `S3_ENDPOINT=http://localhost:9000`
+  (presigned URLs the browser must reach), while the worker overrides it inline
+  to `http://storyhub-minio:9000` (server-side file downloads). See
+  `storyhub/dev-server.sh` for details.
+- **MinIO ports published to host** (`3390`/`3391`) and included in the SSH
+  tunnel, because presigned upload URLs embed the S3_ENDPOINT host — the browser
+  needs to reach MinIO at `localhost:9000`.
+- **STORYHUB_STANDALONE=true** by default — StoryHub runs without requiring the
+  Hummingbird API for auth (uses dev session data). To use real HB auth
+  integration, set `HUMMINGBIRD_API_URL` to the Hummingbird container hostname
+  and start the hummingbird stack too.
 
 ## Daily use
 
@@ -64,6 +101,8 @@ qd gpl status          # status of app + db + minio
 qd gpl logs            # journalctl --user -u gpl-dev-app -f
 qd gpl down            # stops app + db + minio (PartOf= cascade)
 # same for:  qd polymer ...   |   qd buildspace ...
+#            qd hummingbird ... (or: qd hb ...)
+#            qd storyhub ...   (or: qd sh ...)
 ```
 
 **2. Open the tunnel from your laptop** and browse `localhost`:
@@ -74,6 +113,8 @@ cjust dev-up gpl          # start gpl on bee AND open the tunnel (one shot)
 cjust dev-tunnel gpl          # then browse http://localhost:3006
 cjust dev-tunnel polymer      # http://localhost:3000 + http://localhost:3001
 cjust dev-tunnel buildspace   # 8 ports: 3000,3002–3006,3008,3010
+cjust dev-tunnel hummingbird  # http://localhost:3000 (web) + http://localhost:8000 (api)
+cjust dev-tunnel storyhub     # http://localhost:3001 (web) + :8001 + :9000 + :9001
 ```
 
 Ctrl-C closes a tunnel. `cjust dev-tunnel <project>` forwards the **same** ports
@@ -84,19 +125,24 @@ the difference from local dev.
 
 bee also runs the production **buzz-relay** (owns bee's `:3000` and `:5000`), so
 the dev stacks publish on **offset host ports** on bee that never collide with
-buzz-relay or each other: gpl `:3006`, polymer `:3100`/`:3101` (container
-`:3000`/`:3001`), buildspace `:32xx` (container `:3000`/`:3002`–`:3010`). The
-`cjust dev-tunnel` (and `cjust dev-up`) re-maps those onto the thinkpad-standard localhost ports
-(`:3000`, `:3006`, …) so nothing in the apps or your muscle memory changes.
-Because the three projects use disjoint host-port ranges on bee, all three *can*
-run simultaneously — see the RAM caveat below.
+buzz-relay or each other: gpl `:3006`, polymer `:3100`/`:3101`, buildspace
+`:32xx`, hummingbird `:3300`/`:3308`, storyhub `:3301`/`:3309`/`:3390`/`:3391`.
+The `cjust dev-tunnel` (and `cjust dev-up`) re-maps those onto the
+thinkpad-standard localhost ports (`:3000`, `:3006`, …) so nothing in the apps or
+your muscle memory changes. Because the five projects use disjoint host-port
+ranges on bee, all five *can* run simultaneously — see the RAM caveat below.
 
 > **RAM is the real limiter, not ports.** The dev compilers are memory-heavy
 > (polymer's Turbopack app alone peaks ~20 GB; buildspace's turbo runs 8+ apps;
 > bee has 27 GB + zram swap). Running polymer + buildspace at once can OOM-kill a
 > dev server (native segfault). For stability, run **one heavy project at a time**
-> (gpl is light; polymer and buildspace are heavy). `qd <project> restart` brings
-> a crashed stack back.
+> (gpl is light; polymer and buildspace are heavy; hummingbird is medium;
+> storyhub is light-medium). `qd <project> restart` brings a crashed stack back.
+
+### Laptop port collisions
+
+On the laptop, several projects share `localhost:3000`: polymer, buildspace, and
+hummingbird. Run one at a time (same rule as local dev on the thinkpad).
 
 ## First run (per project)
 
@@ -107,7 +153,7 @@ run simultaneously — see the RAM caveat below.
 > `qd <project> up`, delete it once so `dev-server.sh` does a fresh in-container
 > install:
 > ```bash
-> rm -rf ~/Gloo/360-gpl/node_modules      # or 360-polymer, or ~/buildspace
+> rm -rf ~/Gloo/360-gpl/node_modules      # or 360-polymer, 360-hummingbird, or ~/buildspace
 > ```
 
 The first `start` installs deps inside the container against the live bind mount
@@ -129,6 +175,17 @@ podman exec polymer-quadlet-app pnpm db:seed
 # buildspace
 podman exec buildspace-quadlet-app bun db:migrate
 podman exec buildspace-quadlet-app bun db:seed   # optional; creates the super_admin below
+
+# hummingbird — restores from .devcontainer/hummingbird_dev_dump.sql (realistic
+# project data: templates, plans, progress, book/goal data), then overlays dev
+# users (admin, collaborator, sfc, fc, etc.) for simplified local login.
+# Login with: admin, sfc, fc, collaborator, vision, uploader, sfc2, reporter, regional
+# Password is the same for all dev users.
+podman exec hummingbird-quadlet-app bash -lc 'cd /workspace && CONN_URL=postgresql://postgres:postgres@hummingbird-db:5432/postgres pnpm --filter api run seed'
+
+# storyhub — runs prisma:generate + prisma:push + seed. Creates a default
+# workspace + admin HummingbirdUser record. Destructive (wipes existing data).
+podman exec storyhub-quadlet-app bash -lc 'cd /workspace && pnpm --filter storyhub-prisma run seed'
 ```
 
 (MinIO buckets are created automatically by each `dev-server.sh`.)
@@ -147,6 +204,15 @@ manager. Start/restart the stack to pick up container-level changes:
 
 ```bash
 qd gpl restart
+```
+
+For storyhub, editing the `Containerfile` requires a rebuild — the `.build`
+quadlet unit handles this automatically on restart, but you can force a clean
+rebuild:
+
+```bash
+podman image rm localhost/storyhub-dev:latest
+qd sh restart
 ```
 
 ## How it behaves (by design)

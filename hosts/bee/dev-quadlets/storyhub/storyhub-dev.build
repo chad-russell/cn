@@ -1,0 +1,22 @@
+# Build unit: builds the custom storyhub dev image with worker system deps.
+#
+# A minimal .build unit needs ImageTag= + (File= or SetWorkingDirectory=).
+# File= is relative to the unit directory (/etc/dev-quadlets/storyhub/).
+# SetWorkingDirectory=unit sets the podman build context to the unit directory.
+#
+# The app container references the built image via Image=storyhub-dev.build.
+# The generated app service depends on storyhub-dev-build.service, so podman
+# builds the image (if needed) before starting the container. Layer caching
+# makes subsequent builds fast — only changed layers are rebuilt.
+[Unit]
+Description=Storyhub quadlet dev stack — build worker image
+
+[Build]
+ImageTag=localhost/storyhub-dev:latest
+File=storyhub-dev.Containerfile
+SetWorkingDirectory=unit
+
+[Service]
+# Building libreoffice + texlive takes time on first build; give it 20 minutes.
+# Subsequent builds use layer cache and finish in seconds.
+TimeoutStartSec=1200
