@@ -266,18 +266,16 @@
       display.show_cost = true;
       # Enable session checkpoints (rollback snapshots for long sessions)
       checkpoints.enabled = true;
-      # MCP servers — GitHub + SQLite (tastytrade portfolio.db).
-      # GitHub: uses gh CLI's OAuth token (gh is authed as crussell).
+      # MCP servers — GitHub tools (26 tools: PRs, issues, code search, etc.)
+      # Uses gh CLI's OAuth token (gh is authed as crussell).
+      # Note: SQLite was considered but removed — sqlite3 via terminal is
+      # more capable than an MCP wrapper, with no persistent subprocess.
       mcp_servers = {
         github = {
           command = "${pkgs.writeShellScript "mcp-github" ''
             export GITHUB_PERSONAL_ACCESS_TOKEN="$(gh auth token)"
             exec ${pkgs.nodejs_22}/bin/npx -y @modelcontextprotocol/server-github
           ''}";
-        };
-        sqlite = {
-          command = "${pkgs.nodejs_22}/bin/npx";
-          args = [ "-y" "mcp-server-sqlite" "/home/crussell/tasty_options/data/portfolio.db" ];
         };
       };
       # Self-hosted SearXNG as the web search backend (free, unlimited,
