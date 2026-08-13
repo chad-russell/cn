@@ -63,10 +63,12 @@ echo "==> running storyhub-prisma migrations ..."
 pnpm --filter storyhub-prisma run prisma:migrate:deploy || \
   echo "WARN: prisma migrate deploy failed (may need first-time seed)"
 
-# Ensure the MinIO storyhub-media-items bucket exists + apply CORS. Uses the
-# repo's own @aws-sdk/client-s3 (a workspace dep of storyhub). Idempotent.
+# Ensure the MinIO storyhub-media-items bucket exists + apply CORS. Uses bun
+# (not node) to run this — bun resolves workspace deps natively, while node
+# with NODE_PATH can't find pnpm-hoisted packages like @aws-sdk/client-s3.
+# Idempotent.
 echo "==> ensuring MinIO bucket storyhub-media-items + CORS ..."
-NODE_PATH=/workspace/node_modules node <<'NODE' || { echo "WARN: bucket setup failed (continuing)" >&2; }
+bun <<'BUN' || { echo "WARN: bucket setup failed (continuing)" >&2; }
 const net = require("net");
 const { S3Client, CreateBucketCommand, PutBucketCorsCommand } = require("@aws-sdk/client-s3");
 
@@ -134,7 +136,7 @@ function waitForPort(host, port, attempts) {
   }
   process.exit(0);
 })();
-NODE
+BUN
 
 # Start the worker (Bun/Hono, :8001). Override S3_ENDPOINT to the internal
 # hostname — the worker downloads files server-side, so it needs to reach MinIO
