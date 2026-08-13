@@ -22,10 +22,16 @@ cd /workspace || { echo "FATAL: /workspace not mounted" >&2; exit 1; }
 # `pnpm` isn't already on PATH.
 command -v pnpm >/dev/null 2>&1 || corepack enable >/dev/null 2>&1 || true
 
-if [ ! -d node_modules ]; then
-  echo "==> first start: installing postgresql-client (for seed psql) ..."
+# Install postgresql-client (needed by the seed script's psql-based dump restore).
+# The devcontainers image doesn't include psql. Run this EVERY start (not just
+# first start) because container restarts start from the image, not from a
+# previous container filesystem — so psql from a prior start is gone.
+if ! command -v psql >/dev/null 2>&1; then
+  echo "==> installing postgresql-client (for seed psql) ..."
   apt-get update -qq && apt-get install -y -qq postgresql-client >/dev/null 2>&1 || true
+fi
 
+if [ ! -d node_modules ]; then
   echo "==> first start: pnpm install"
   # pnpm 11 fails when dependency build scripts aren't on the allowlist. The
   # repo's pnpm-workspace.yaml has allowBuilds for the key deps; this flag is a
