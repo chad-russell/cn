@@ -1,51 +1,51 @@
-1|# cjust — post-install & maintenance tasks for the thinkpad atomic host.
-2|#
-3|# Entry point is the `cjust` shell function (bubblebox/files/.zshrc):
-4|#   cjust            → fuzzy recipe chooser (`just --choose`, needs fzf)
-5|#   cjust <recipe>   → run a recipe directly
-6|#   cjust -l         → list all recipes
-7|#
-8|# thinkpad-only. Recipes assume a Fedora Silverblue/bootc host with `just` and
-9|# `fzf` baked into the host image (host-image/Containerfile). Both are
-10|# host-native on purpose: `cjust` must work before any tool sandbox is set up,
-11|# and the menu must not depend on the thing it bootstraps.
-12|#
-13|# Recipes are cwd-independent: every path into the repo is built from
-14|# `justfile_directory()`, so `cjust` works from any cwd.
-15|#
-16|# To add a new bubblebox tool / user unit / dotfile, edit `bubblebox/profile.toml`
-17|# (the `[[files]]` and `[[units]]` sections) — no recipe changes needed.
-18|
-19|# ═══════════════════════════════════════════════════════════════════════════
-20|# DATA TABLES (single source of truth)
-21|# ═══════════════════════════════════════════════════════════════════════════
-22|
-23|# Path to the bubblebox profile — single source of truth for the root list
-24|# (was: a hand-maintained `bubblebox_tools` string that had to be kept in sync
-25|# with this file's `packages` list). Recipes below read this via a python3
-26|# one-liner at runtime (tomllib is in stdlib since 3.11; the host image ships
-27|# python3). `bubblebox build` gracefully skips any "virtual entrypoint" whose
-28|# `package` field points at another package (e.g. age-keygen → age) — no
-29|# Containerfile of its own to build, no error.
-30|bubblebox_profile := justfile_directory() + "/bubblebox/profile.toml"
-31|
-32|# bubblebox engine dir (the Rust CLI binary + fuse-mount + shared bin/). The
-33|# package source tree (Containerfiles + entrypoints) is a separate repo at
-34|# ~/Code/bubblebox-pkgs, registered via profile.toml below.
-35|# Hardcoded to $HOME/Code/bubblebox (deliberate — this Justfile is thinkpad-
-36|# specific, and the layout matches the rest of the cn repo).
-37|bubblebox_dir := env_var_or_default("HOME", "/tmp") + "/Code/bubblebox"
-38|# The Rust CLI binary (the single entry point; bash scripts are retired).
-39|# Build it with `cargo build --release` at the workspace root (use the dev
-40|# toolbox for the toolchain). Re-run `cjust bubblebox-export` after rebuilding
-41|# to refresh the ~/.local/bin wrappers' baked-in path.
-42|bubblebox_bin := bubblebox_dir + "/target/release/bubblebox"
-43|
-44|# ═══════════════════════════════════════════════════════════════════════════
-45|# setup
-46|# ═══════════════════════════════════════════════════════════════════════════
-47|
-48|# Host-resident dotfiles and systemd user units are now managed by bubblebox
+# cjust — post-install & maintenance tasks for the thinkpad atomic host.
+#
+# Entry point is the `cjust` shell function (bubblebox/files/.zshrc):
+#   cjust            → fuzzy recipe chooser (`just --choose`, needs fzf)
+#   cjust <recipe>   → run a recipe directly
+#   cjust -l         → list all recipes
+#
+# thinkpad-only. Recipes assume a Fedora Silverblue/bootc host with `just` and
+# `fzf` baked into the host image (host-image/Containerfile). Both are
+# host-native on purpose: `cjust` must work before any tool sandbox is set up,
+# and the menu must not depend on the thing it bootstraps.
+#
+# Recipes are cwd-independent: every path into the repo is built from
+# `justfile_directory()`, so `cjust` works from any cwd.
+#
+# To add a new bubblebox tool / user unit / dotfile, edit `bubblebox/profile.toml`
+# (the `[[files]]` and `[[units]]` sections) — no recipe changes needed.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DATA TABLES (single source of truth)
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Path to the bubblebox profile — single source of truth for the root list
+# (was: a hand-maintained `bubblebox_tools` string that had to be kept in sync
+# with this file's `packages` list). Recipes below read this via a python3
+# one-liner at runtime (tomllib is in stdlib since 3.11; the host image ships
+# python3). `bubblebox build` gracefully skips any "virtual entrypoint" whose
+# `package` field points at another package (e.g. age-keygen → age) — no
+# Containerfile of its own to build, no error.
+bubblebox_profile := justfile_directory() + "/bubblebox/profile.toml"
+
+# bubblebox engine dir (the Rust CLI binary + fuse-mount + shared bin/). The
+# package source tree (Containerfiles + entrypoints) is a separate repo at
+# ~/Code/bubblebox-pkgs, registered via profile.toml below.
+# Hardcoded to $HOME/Code/bubblebox (deliberate — this Justfile is thinkpad-
+# specific, and the layout matches the rest of the cn repo).
+bubblebox_dir := env_var_or_default("HOME", "/tmp") + "/Code/bubblebox"
+# The Rust CLI binary (the single entry point; bash scripts are retired).
+# Build it with `cargo build --release` at the workspace root (use the dev
+# toolbox for the toolchain). Re-run `cjust bubblebox-export` after rebuilding
+# to refresh the ~/.local/bin wrappers' baked-in path.
+bubblebox_bin := bubblebox_dir + "/target/release/bubblebox"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# setup
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Host-resident dotfiles and systemd user units are now managed by bubblebox
 # itself (Phase B/C). `cjust bubblebox-apply` handles them alongside packages:
 #   - `[[files]]` in bubblebox/profile.toml → content-addressed store symlinks
 #   - `[[units]]` in bubblebox/profile.toml → systemd user unit symlinks + systemctl
@@ -66,280 +66,280 @@ setup: bubblebox opencode-install
     @echo "      cjust image-build && cjust image-upgrade && systemctl reboot"
 
 # GNOME tweak to allow for mod + <right-click> to resize, like how it works in niri or Cosmic
-134|[group('setup')]
-135|gnome-right-click-resize:
-136|    #!/usr/bin/env bash
-137|    gsettings set org.gnome.desktop.wm.preferences resize-with-right-button "true"
-138|
-139|# Install the Papirus icon theme into the per-user icons dir and make it the
-140|# active icon theme for GNOME and Niri/GTK apps. Idempotent — re-running
-141|# rebuilds from current HEAD and re-applies the settings.
-142|#
-143|# Method: build in a throwaway podman container from git HEAD, then copy only
-144|# the final icon dirs out to ~/.local/share/icons. Containerizing keeps all
-145|# build cruft (git clone, dnf, make) off the host — only the rendered icons
-146|# land on disk. We build from git HEAD because the GitHub *release* tag lags
-147|# ~a year behind master, and active icon updates only land on master.
-148|#
-149|# Kept out of the host image on purpose — icons are easy to iterate on per-user
-150|# and don't deserve an image rebuild + reboot cycle. (Niri has no icon-theme
-151|# knob in config.kdl — it's a cursor compositor, not a theming layer. GTK apps
-152|# under Niri read ~/.config/gtk-{3,4}.0/settings.ini for icon-theme-name; GNOME
-153|# reads org.gnome.desktop.interface via dconf. Both are set here so the theme
-154|# sticks in either session.)
-155|[group('setup')]
-156|icons:
-157|    #!/usr/bin/env bash
-158|    set -euo pipefail
-159|    icons_dir="${HOME}/.local/share/icons"
-160|    image="docker.io/library/fedora:44"
-161|    mkdir -p "${icons_dir}"
-162|    stage="$(mktemp -d)"
-163|    trap 'rm -rf "${stage}"' EXIT
-164|    # Build in a throwaway podman container so the host never sees git/dnf/make
-165|    # artifacts — only the final icon dirs are copied out. `make install` for
-166|    # Papirus is literally a `cp -R` of the pre-rendered Papirus{,-Dark,-Light}
-167|    # dirs into the staging prefix; HEAD tracks active updates that the stale
-168|    # release tag misses.
-169|    echo "==> building Papirus from git HEAD in a podman container..."
-170|    podman run --rm -v "${stage}:/out:Z" "${image}" bash -c '
-171|      set -euo pipefail
-172|      dnf install -y git make >/dev/null 2>&1
-173|      git clone --depth 1 --quiet https://github.com/PapirusDevelopmentTeam/papirus-icon-theme.git /work/p
-174|      make -C /work/p -s install DESTDIR=/out PREFIX=/usr
-175|      echo "  HEAD $(git -C /work/p rev-parse --short HEAD) ($(git -C /work/p log -1 --format=%cd --date=short))"
-176|    '
-177|    src="${stage}/usr/share/icons"
-178|    [ -f "${src}/Papirus/index.theme" ] || { echo "ERROR: ${src}/Papirus/index.theme missing" >&2; exit 1; }
-179|    for v in Papirus Papirus-Dark Papirus-Light; do
-180|      rm -rf "${icons_dir}/${v}"
-181|      cp -r "${src}/${v}" "${icons_dir}/${v}"
-182|    done
-183|    echo "  installed -> ${icons_dir}/{Papirus,Papirus-Dark,Papirus-Light}"
-184|    # GNOME (and GTK apps that read dconf via gsd / xdg-desktop-portal-gnome):
-185|    gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
-186|    echo "  set gsettings org.gnome.desktop.interface icon-theme=Papirus"
-187|    # Niri / GTK3 / GTK4 without a GNOME settings daemon: settings.ini is what
-188|    # GTK actually consults for icon-theme-name in those sessions.
-189|    for v in gtk-3.0 gtk-4.0; do
-190|      ini="${HOME}/.config/${v}/settings.ini"
-191|      mkdir -p "$(dirname "${ini}")"
-192|      touch "${ini}"
-193|      if grep -q '^gtk-icon-theme-name=' "${ini}"; then
-194|        sed -i 's|^gtk-icon-theme-name=.*|gtk-icon-theme-name=Papirus|' "${ini}"
-195|      else
-196|        grep -q '^\[Settings\]' "${ini}" || printf '[Settings]\n' >> "${ini}"
-197|        printf 'gtk-icon-theme-name=Papirus\n' >> "${ini}"
-198|      fi
-199|      echo "  set ${v}/settings.ini gtk-icon-theme-name=Papirus"
-200|    done
-201|    echo "==> Papirus is now the active icon theme (GNOME + Niri/GTK)."
-202|
-203|# Cap Zen Browser's memory via a cgroup v2 soft limit, by overriding its
-204|# flatpak desktop file to launch through the `zen-browser` wrapper script
-205|# (deployed by `bubblebox apply` to ~/.local/bin/). Idempotent — re-running
-206|# re-derives from the current flatpak export (so Zen desktop-file updates
-207|# flow through) and rewrites the override.
-208|#
-209|# Why a wrapper, not `systemd-run --scope -p MemoryHigh=...` in Exec=:
-210|# flatpak calls StartTransientScope itself via its session helper, creating
-211|# `app-flatpak-<appid>-<id>.scope` as a SIBLING under app.slice. An outer
-212|# scope we wrap the launch in is bypassed — the browser escapes with
-213|# MemoryHigh=infinity (verified empirically). The only reliable attachment
-214|# point is flatpak's own scope, which the wrapper polls for and caps with
-215|# `systemctl --user set-property --runtime` once it appears. The wrapper
-216|# also re-caps an already-running instance if the launch forwarded to one.
-217|#
-218|# Why MemoryHigh (not MemoryMax): MemoryHigh is a cgroup v2 *soft* limit.
-219|# When the scope exceeds it, the kernel aggressively reclaims pages inside
-220|# it (swap → zram) and emits PSI memory-pressure events, but never OOM-kills.
-221|# Firefox/Zen's nsAvailableMemoryWatcher reacts to PSI by unloading tabs —
-222|# so the browser self-governs as if the box only has $mem RAM, which is the
-223|# goal: stop it from eating everything before its own unload logic kicks in,
-224|# without ever killing it. MemoryMax would OOM-kill the whole browser;
-225|# MemoryHigh just throttles/reclaims.
-226|#
-227|# The wrapper script (bubblebox/files/.local/bin/zen-browser) is generic — it reads
-228|# the limit from ZEN_MEMHIGH. This recipe generates only the desktop override,
-229|# baking the limit into an `env ZEN_MEMHIGH=$mem` prefix on each Exec= line,
-230|# so `cjust zen-memlimit 12G` regenerates with the new value without touching
-231|# the wrapper. The override is host-local regenerable state (NOT a symlinked
-232|# dotfile) — Zen's desktop file ships hundreds of i18n lines and changes
-233|# across versions, so the source of truth is THIS recipe (version-controlled).
-234|# Clear with `cjust zen-memlimit-clear`.
-235|#
-236|# Default is 16G on a 32G host; pass any systemd size, e.g. `cjust zen-memlimit 12G`.
-237|# NOTE: this recipe generates the override for FUTURE launches. A currently
-238|# running Zen instance keeps whatever MemoryHigh its scope had at attach time
-239|# — cap it live with:
-240|#   scope=$(systemctl --user list-units --type=scope --all --no-legend | \
-241|#           awk '/app-flatpak-app\.zen_browser\.zen-[0-9]+\.scope/{print $1}')
-242|#   systemctl --user set-property --runtime "$scope" MemoryHigh=16G
-243|[group('setup')]
-244|zen-memlimit mem="16G":
-245|    #!/usr/bin/env bash
-246|    set -euo pipefail
-247|    appid="app.zen_browser.zen"
-248|    # Resolve the original desktop file from the flatpak export (system install
-249|    # first, then per-user). Reading from the export — not a prior override —
-250|    # keeps this idempotent and lets Zen desktop-file updates flow through.
-251|    src=""
-252|    for cand in \
-253|      "/var/lib/flatpak/exports/share/applications/${appid}.desktop" \
-254|      "${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share/applications/${appid}.desktop"; do
-255|      if [ -e "$cand" ]; then src="$cand"; break; fi
-256|    done
-257|    if [ -z "$src" ]; then
-258|      echo "ERROR: no ${appid}.desktop in flatpak exports — is Zen installed?" >&2
-259|      exit 1
-260|    fi
-261|    wrapper="${HOME}/.local/bin/zen-browser"
-262|    if [ ! -x "$wrapper" ]; then
-263|      echo "ERROR: ${wrapper} missing or not executable — run 'cjust bubblebox-apply' first." >&2
-264|      exit 1
-265|    fi
-266|    dst_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-267|    dst="${dst_dir}/${appid}.desktop"
-268|    mkdir -p "$dst_dir"
-269|    # Rewrite every Exec= line: drop flatpak's run-prefix + appid, keep the
-270|    # per-action flags + file-forwarding markers, prepend an env ZEN_MEMHIGH
-271|    # + the wrapper path. `.*app\.zen_browser\.zen ` is robust to changes in
-272|    # flatpak's run flags; if the appid token itself ever moves, the line is
-273|    # left untouched (safe — just no limit until the recipe is updated).
-274|    sed -E "s|^Exec=.*app\\.zen_browser\\.zen (.*)$|Exec=env ZEN_MEMHIGH={{ mem }} ${wrapper} \\1|g" "$src" > "$dst"
-275|    update-desktop-database "$dst_dir" 2>/dev/null || true
-276|    echo "Wrote ${dst}"
-277|    echo "  source:     ${src}"
-278|    echo "  wrapper:    ${wrapper}"
-279|    echo "  MemoryHigh: {{ mem }} (cgroup v2 soft limit; no OOM kill)"
-280|    echo
-281|    echo "Future launches from the menu are capped. Verify after relaunch:"
-282|    echo "  systemctl --user show app-flatpak-${appid}-*.scope -p MemoryHigh -p MemoryMax   # MemoryHigh=..., MemoryMax=infinity"
-283|    echo "  grep -E 'some|full' /proc/pressure/memory                                      # PSI rises as Zen grows past {{ mem }}"
-284|
-285|# Remove the Zen memory override; Zen falls back to its stock flatpak desktop
-286|# file (unlimited). Idempotent.
-287|[group('setup')]
-288|zen-memlimit-clear:
-289|    #!/usr/bin/env bash
-290|    set -euo pipefail
-291|    appid="app.zen_browser.zen"
-292|    dst_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-293|    dst="${dst_dir}/${appid}.desktop"
-294|    if [ -e "$dst" ]; then
-295|      rm "$dst"
-296|      update-desktop-database "$dst_dir" 2>/dev/null || true
-297|      echo "Removed ${dst} — Zen now uses the stock flatpak desktop file."
-298|    else
-299|      echo "No override at ${dst} (nothing to do)."
-300|    fi
-301|
-302|# ═══════════════════════════════════════════════════════════════════════════
+[group('setup')]
+gnome-right-click-resize:
+    #!/usr/bin/env bash
+    gsettings set org.gnome.desktop.wm.preferences resize-with-right-button "true"
+
+# Install the Papirus icon theme into the per-user icons dir and make it the
+# active icon theme for GNOME and Niri/GTK apps. Idempotent — re-running
+# rebuilds from current HEAD and re-applies the settings.
+#
+# Method: build in a throwaway podman container from git HEAD, then copy only
+# the final icon dirs out to ~/.local/share/icons. Containerizing keeps all
+# build cruft (git clone, dnf, make) off the host — only the rendered icons
+# land on disk. We build from git HEAD because the GitHub *release* tag lags
+# ~a year behind master, and active icon updates only land on master.
+#
+# Kept out of the host image on purpose — icons are easy to iterate on per-user
+# and don't deserve an image rebuild + reboot cycle. (Niri has no icon-theme
+# knob in config.kdl — it's a cursor compositor, not a theming layer. GTK apps
+# under Niri read ~/.config/gtk-{3,4}.0/settings.ini for icon-theme-name; GNOME
+# reads org.gnome.desktop.interface via dconf. Both are set here so the theme
+# sticks in either session.)
+[group('setup')]
+icons:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    icons_dir="${HOME}/.local/share/icons"
+    image="docker.io/library/fedora:44"
+    mkdir -p "${icons_dir}"
+    stage="$(mktemp -d)"
+    trap 'rm -rf "${stage}"' EXIT
+    # Build in a throwaway podman container so the host never sees git/dnf/make
+    # artifacts — only the final icon dirs are copied out. `make install` for
+    # Papirus is literally a `cp -R` of the pre-rendered Papirus{,-Dark,-Light}
+    # dirs into the staging prefix; HEAD tracks active updates that the stale
+    # release tag misses.
+    echo "==> building Papirus from git HEAD in a podman container..."
+    podman run --rm -v "${stage}:/out:Z" "${image}" bash -c '
+      set -euo pipefail
+      dnf install -y git make >/dev/null 2>&1
+      git clone --depth 1 --quiet https://github.com/PapirusDevelopmentTeam/papirus-icon-theme.git /work/p
+      make -C /work/p -s install DESTDIR=/out PREFIX=/usr
+      echo "  HEAD $(git -C /work/p rev-parse --short HEAD) ($(git -C /work/p log -1 --format=%cd --date=short))"
+    '
+    src="${stage}/usr/share/icons"
+    [ -f "${src}/Papirus/index.theme" ] || { echo "ERROR: ${src}/Papirus/index.theme missing" >&2; exit 1; }
+    for v in Papirus Papirus-Dark Papirus-Light; do
+      rm -rf "${icons_dir}/${v}"
+      cp -r "${src}/${v}" "${icons_dir}/${v}"
+    done
+    echo "  installed -> ${icons_dir}/{Papirus,Papirus-Dark,Papirus-Light}"
+    # GNOME (and GTK apps that read dconf via gsd / xdg-desktop-portal-gnome):
+    gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
+    echo "  set gsettings org.gnome.desktop.interface icon-theme=Papirus"
+    # Niri / GTK3 / GTK4 without a GNOME settings daemon: settings.ini is what
+    # GTK actually consults for icon-theme-name in those sessions.
+    for v in gtk-3.0 gtk-4.0; do
+      ini="${HOME}/.config/${v}/settings.ini"
+      mkdir -p "$(dirname "${ini}")"
+      touch "${ini}"
+      if grep -q '^gtk-icon-theme-name=' "${ini}"; then
+        sed -i 's|^gtk-icon-theme-name=.*|gtk-icon-theme-name=Papirus|' "${ini}"
+      else
+        grep -q '^\[Settings\]' "${ini}" || printf '[Settings]\n' >> "${ini}"
+        printf 'gtk-icon-theme-name=Papirus\n' >> "${ini}"
+      fi
+      echo "  set ${v}/settings.ini gtk-icon-theme-name=Papirus"
+    done
+    echo "==> Papirus is now the active icon theme (GNOME + Niri/GTK)."
+
+# Cap Zen Browser's memory via a cgroup v2 soft limit, by overriding its
+# flatpak desktop file to launch through the `zen-browser` wrapper script
+# (deployed by `bubblebox apply` to ~/.local/bin/). Idempotent — re-running
+# re-derives from the current flatpak export (so Zen desktop-file updates
+# flow through) and rewrites the override.
+#
+# Why a wrapper, not `systemd-run --scope -p MemoryHigh=...` in Exec=:
+# flatpak calls StartTransientScope itself via its session helper, creating
+# `app-flatpak-<appid>-<id>.scope` as a SIBLING under app.slice. An outer
+# scope we wrap the launch in is bypassed — the browser escapes with
+# MemoryHigh=infinity (verified empirically). The only reliable attachment
+# point is flatpak's own scope, which the wrapper polls for and caps with
+# `systemctl --user set-property --runtime` once it appears. The wrapper
+# also re-caps an already-running instance if the launch forwarded to one.
+#
+# Why MemoryHigh (not MemoryMax): MemoryHigh is a cgroup v2 *soft* limit.
+# When the scope exceeds it, the kernel aggressively reclaims pages inside
+# it (swap → zram) and emits PSI memory-pressure events, but never OOM-kills.
+# Firefox/Zen's nsAvailableMemoryWatcher reacts to PSI by unloading tabs —
+# so the browser self-governs as if the box only has $mem RAM, which is the
+# goal: stop it from eating everything before its own unload logic kicks in,
+# without ever killing it. MemoryMax would OOM-kill the whole browser;
+# MemoryHigh just throttles/reclaims.
+#
+# The wrapper script (bubblebox/files/.local/bin/zen-browser) is generic — it reads
+# the limit from ZEN_MEMHIGH. This recipe generates only the desktop override,
+# baking the limit into an `env ZEN_MEMHIGH=$mem` prefix on each Exec= line,
+# so `cjust zen-memlimit 12G` regenerates with the new value without touching
+# the wrapper. The override is host-local regenerable state (NOT a symlinked
+# dotfile) — Zen's desktop file ships hundreds of i18n lines and changes
+# across versions, so the source of truth is THIS recipe (version-controlled).
+# Clear with `cjust zen-memlimit-clear`.
+#
+# Default is 16G on a 32G host; pass any systemd size, e.g. `cjust zen-memlimit 12G`.
+# NOTE: this recipe generates the override for FUTURE launches. A currently
+# running Zen instance keeps whatever MemoryHigh its scope had at attach time
+# — cap it live with:
+#   scope=$(systemctl --user list-units --type=scope --all --no-legend | \
+#           awk '/app-flatpak-app\.zen_browser\.zen-[0-9]+\.scope/{print $1}')
+#   systemctl --user set-property --runtime "$scope" MemoryHigh=16G
+[group('setup')]
+zen-memlimit mem="16G":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    appid="app.zen_browser.zen"
+    # Resolve the original desktop file from the flatpak export (system install
+    # first, then per-user). Reading from the export — not a prior override —
+    # keeps this idempotent and lets Zen desktop-file updates flow through.
+    src=""
+    for cand in \
+      "/var/lib/flatpak/exports/share/applications/${appid}.desktop" \
+      "${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share/applications/${appid}.desktop"; do
+      if [ -e "$cand" ]; then src="$cand"; break; fi
+    done
+    if [ -z "$src" ]; then
+      echo "ERROR: no ${appid}.desktop in flatpak exports — is Zen installed?" >&2
+      exit 1
+    fi
+    wrapper="${HOME}/.local/bin/zen-browser"
+    if [ ! -x "$wrapper" ]; then
+      echo "ERROR: ${wrapper} missing or not executable — run 'cjust bubblebox-apply' first." >&2
+      exit 1
+    fi
+    dst_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    dst="${dst_dir}/${appid}.desktop"
+    mkdir -p "$dst_dir"
+    # Rewrite every Exec= line: drop flatpak's run-prefix + appid, keep the
+    # per-action flags + file-forwarding markers, prepend an env ZEN_MEMHIGH
+    # + the wrapper path. `.*app\.zen_browser\.zen ` is robust to changes in
+    # flatpak's run flags; if the appid token itself ever moves, the line is
+    # left untouched (safe — just no limit until the recipe is updated).
+    sed -E "s|^Exec=.*app\\.zen_browser\\.zen (.*)$|Exec=env ZEN_MEMHIGH={{ mem }} ${wrapper} \\1|g" "$src" > "$dst"
+    update-desktop-database "$dst_dir" 2>/dev/null || true
+    echo "Wrote ${dst}"
+    echo "  source:     ${src}"
+    echo "  wrapper:    ${wrapper}"
+    echo "  MemoryHigh: {{ mem }} (cgroup v2 soft limit; no OOM kill)"
+    echo
+    echo "Future launches from the menu are capped. Verify after relaunch:"
+    echo "  systemctl --user show app-flatpak-${appid}-*.scope -p MemoryHigh -p MemoryMax   # MemoryHigh=..., MemoryMax=infinity"
+    echo "  grep -E 'some|full' /proc/pressure/memory                                      # PSI rises as Zen grows past {{ mem }}"
+
+# Remove the Zen memory override; Zen falls back to its stock flatpak desktop
+# file (unlimited). Idempotent.
+[group('setup')]
+zen-memlimit-clear:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    appid="app.zen_browser.zen"
+    dst_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    dst="${dst_dir}/${appid}.desktop"
+    if [ -e "$dst" ]; then
+      rm "$dst"
+      update-desktop-database "$dst_dir" 2>/dev/null || true
+      echo "Removed ${dst} — Zen now uses the stock flatpak desktop file."
+    else
+      echo "No override at ${dst} (nothing to do)."
+    fi
+
+# ═══════════════════════════════════════════════════════════════════════════
 # cosmic — backup / restore settings (NOT symlinked; cosmic dislikes
 # symlinks for its config tree). Files live at ~/.config/cosmic/ normally;
 # backup copies into bubblebox/files/.config/cosmic/ for git tracking, restore
-306|# copies back.
-307|# ═══════════════════════════════════════════════════════════════════════════
-308|
-309|# Copy settings from ~/.config/cosmic to bubblebox/files/.config/cosmic.
-310|# Run this when you've tweaked something in the COSMIC settings UI and want
-311|# to save the result to the repo.
-312|[group('cosmic')]
-313|cosmic-backup:
-314|    #!/usr/bin/env bash
-315|    set -euo pipefail
-316|    src="${HOME}/.config/cosmic"
-317|    dst="{{ justfile_directory() }}/bubblebox/files/.config/cosmic"
-318|    if [ ! -d "${src}" ]; then
-319|      echo "ERROR: ${src} does not exist — nothing to back up." >&2
-320|      exit 1
-321|    fi
-322|    rm -rf "${dst}"
-323|    cp -r "${src}" "${dst}"
-324|    echo "cosmic settings backed up to ${dst}"
-325|
-326|# Copy settings from bubblebox/files/.config/cosmic to ~/.config/cosmic.
-327|# Run this on a fresh install or to restore a known-good config.
-328|# If ~/.config/cosmic is currently a symlink (from the old setup), it is
-329|# removed first so COSMIC sees real files.
-330|[group('cosmic')]
-331|cosmic-restore:
-332|    #!/usr/bin/env bash
-333|    set -euo pipefail
-334|    src="{{ justfile_directory() }}/bubblebox/files/.config/cosmic"
-335|    dst="${HOME}/.config/cosmic"
-336|    if [ ! -d "${src}" ]; then
-337|      echo "ERROR: no saved cosmic settings at ${src}" >&2
-338|      exit 1
-339|    fi
-340|    # If dst is a symlink (old symlink-based setup), remove it so COSMIC
-341|    # sees real files.
-342|    if [ -L "${dst}" ]; then
-343|      echo "  REMOVE symlink ${dst} (old setup)"
-344|      rm "${dst}"
-345|    fi
-346|    rm -rf "${dst}"
-347|    cp -r "${src}" "${dst}"
-348|    echo "cosmic settings restored to ${dst}"
-349|
-350|# ═══════════════════════════════════════════════════════════════════════════
-351|# bubblebox tools
-352|# ═══════════════════════════════════════════════════════════════════════════
-353|#
-354|# bubblebox auto-mounts each tool on first run (rootless FUSE). The recipes
-355|# below are: init (build FUSE server, one-time), build (per-tool image +
-356|# composefs descriptor), export (per-tool wrapper at ~/.local/bin/).
-357|
-358|# Build the FUSE server binary in a container (no host rust toolchain needed).
-359|# Idempotent — cargo build is incremental.
-360|[group('bubblebox')]
-361|bubblebox-init:
-362|    {{ bubblebox_bin }} init
-363|
-364|# Build each tool's image + composefs descriptor. With no args, builds all
-365|# tools from `bubblebox_tools`; with args, builds only the named tools, e.g.
-366|# `cjust bubblebox-build wezterm`.
-367|#
-368|# Tool source dirs resolve from the registered bubblebox SOURCE (declared in
-369|# bubblebox/profile.toml — profile-authoritative, so no `source add` needed).
-370|[group('bubblebox')]
-371|bubblebox-build *tools:
-372|    #!/usr/bin/env bash
-373|    set -euo pipefail
-374|    tools="{{ tools }}"
-375|    if [ -z "${tools}" ]; then
-376|      tools=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
-377|    fi
-378|    for t in $tools; do
-379|      echo "==> bubblebox-build ${t}"
-380|      {{ bubblebox_bin }} build "$t"
-381|    done
-382|
-383|# Generate one wrapper per tool at ~/.local/bin/<tool>. With no args, exports
-384|# all tools; with args, exports only the named tools.
-385|# Idempotent — overwrites with the current binary path.
-386|[group('bubblebox')]
-387|bubblebox-export *tools:
-388|    #!/usr/bin/env bash
-389|    set -euo pipefail
-390|    tools="{{ tools }}"
-391|    if [ -z "${tools}" ]; then
-392|      tools=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
-393|    fi
-394|    for t in $tools; do
-395|      {{ bubblebox_bin }} export "$t"
-396|    done
-397|    echo
-398|    echo "Wrappers at ~/.local/bin/ (already on PATH via bubblebox/files/.zshenv)."
-399|
-400|# Realize the declarative profile (bubblebox/profile.toml): sync it to
-401|# ~/.config/bubblebox/, then `bubblebox apply` — resolve inputs (local
-402|# descriptors for built tools, or `bubblebox apply --refresh` against a cache),
-403|# write/refresh profile.lock + a generation, self-migrate descriptors to the
-404|# Phase-1 digest-addressed layout, materialize bindings, and sync ~/.local/bin
-405|# wrappers. The declarative counterpart to bubblebox-build + bubblebox-export:
-406|# build (or pull) populates the store; apply declares what's active.
-407|[group('bubblebox')]
+# copies back.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Copy settings from ~/.config/cosmic to bubblebox/files/.config/cosmic.
+# Run this when you've tweaked something in the COSMIC settings UI and want
+# to save the result to the repo.
+[group('cosmic')]
+cosmic-backup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    src="${HOME}/.config/cosmic"
+    dst="{{ justfile_directory() }}/bubblebox/files/.config/cosmic"
+    if [ ! -d "${src}" ]; then
+      echo "ERROR: ${src} does not exist — nothing to back up." >&2
+      exit 1
+    fi
+    rm -rf "${dst}"
+    cp -r "${src}" "${dst}"
+    echo "cosmic settings backed up to ${dst}"
+
+# Copy settings from bubblebox/files/.config/cosmic to ~/.config/cosmic.
+# Run this on a fresh install or to restore a known-good config.
+# If ~/.config/cosmic is currently a symlink (from the old setup), it is
+# removed first so COSMIC sees real files.
+[group('cosmic')]
+cosmic-restore:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    src="{{ justfile_directory() }}/bubblebox/files/.config/cosmic"
+    dst="${HOME}/.config/cosmic"
+    if [ ! -d "${src}" ]; then
+      echo "ERROR: no saved cosmic settings at ${src}" >&2
+      exit 1
+    fi
+    # If dst is a symlink (old symlink-based setup), remove it so COSMIC
+    # sees real files.
+    if [ -L "${dst}" ]; then
+      echo "  REMOVE symlink ${dst} (old setup)"
+      rm "${dst}"
+    fi
+    rm -rf "${dst}"
+    cp -r "${src}" "${dst}"
+    echo "cosmic settings restored to ${dst}"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# bubblebox tools
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# bubblebox auto-mounts each tool on first run (rootless FUSE). The recipes
+# below are: init (build FUSE server, one-time), build (per-tool image +
+# composefs descriptor), export (per-tool wrapper at ~/.local/bin/).
+
+# Build the FUSE server binary in a container (no host rust toolchain needed).
+# Idempotent — cargo build is incremental.
+[group('bubblebox')]
+bubblebox-init:
+    {{ bubblebox_bin }} init
+
+# Build each tool's image + composefs descriptor. With no args, builds all
+# tools from `bubblebox_tools`; with args, builds only the named tools, e.g.
+# `cjust bubblebox-build wezterm`.
+#
+# Tool source dirs resolve from the registered bubblebox SOURCE (declared in
+# bubblebox/profile.toml — profile-authoritative, so no `source add` needed).
+[group('bubblebox')]
+bubblebox-build *tools:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tools="{{ tools }}"
+    if [ -z "${tools}" ]; then
+      tools=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
+    fi
+    for t in $tools; do
+      echo "==> bubblebox-build ${t}"
+      {{ bubblebox_bin }} build "$t"
+    done
+
+# Generate one wrapper per tool at ~/.local/bin/<tool>. With no args, exports
+# all tools; with args, exports only the named tools.
+# Idempotent — overwrites with the current binary path.
+[group('bubblebox')]
+bubblebox-export *tools:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tools="{{ tools }}"
+    if [ -z "${tools}" ]; then
+      tools=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
+    fi
+    for t in $tools; do
+      {{ bubblebox_bin }} export "$t"
+    done
+    echo
+    echo "Wrappers at ~/.local/bin/ (already on PATH via bubblebox/files/.zshenv)."
+
+# Realize the declarative profile (bubblebox/profile.toml): sync it to
+# ~/.config/bubblebox/, then `bubblebox apply` — resolve inputs (local
+# descriptors for built tools, or `bubblebox apply --refresh` against a cache),
+# write/refresh profile.lock + a generation, self-migrate descriptors to the
+# Phase-1 digest-addressed layout, materialize bindings, and sync ~/.local/bin
+# wrappers. The declarative counterpart to bubblebox-build + bubblebox-export:
+# build (or pull) populates the store; apply declares what's active.
+[group('bubblebox')]
 bubblebox-apply:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -354,459 +354,459 @@ bubblebox-apply:
       "{{ justfile_directory() }}/bubblebox/units/" \
       "$HOME/.config/bubblebox/units/"
     {{ bubblebox_bin }} apply
-413|
-414|# Reclaim store bytes no generation/binding/mount references. Dry-run by
-415|# default (reclaims nothing until you prune old generations —
-416|# `{{ bubblebox_bin }} generations --older-than 30d`). Pass `apply` to sweep.
-417|[group('bubblebox')]
-418|bubblebox-gc *args:
-419|    #!/usr/bin/env bash
-420|    set -euo pipefail
-421|    if [ "{{ args }}" = "apply" ]; then
-422|      {{ bubblebox_bin }} gc --apply
-423|    else
-424|      {{ bubblebox_bin }} gc
-425|    fi
-426|
-427|# Init + build + apply in one shot. The thing to run on a fresh install or
-428|# after pulling changes that touch tool configs. (Source registration + wrapper
-429|# export are both handled by `apply` via the declarative profile.)
-430|[group('bubblebox')]
-431|bubblebox: bubblebox-init bubblebox-build bubblebox-apply
-432|    @echo "==> bubblebox: FUSE server built, tools built, profile applied."
-433|
-434|# ═══════════════════════════════════════════════════════════════════════════
-435|# opencode (host install)
-436|# ═══════════════════════════════════════════════════════════════════════════
-437|#
-438|# opencode runs on the host directly (not in bubblebox) because it's the AI
-439|# coding agent — it needs full host control when something breaks, without
-440|# sandbox restrictions getting in the way of recovery. Vendored config lives
-441|# at bubblebox/files/.config/opencode/ (symlinked by `bubblebox apply`); secrets stay
-442|# machine-local at ~/.local/share/opencode/auth.json (gitignored by virtue
-443|# of being outside the vendored tree).
-444|
-445|# Install opencode globally via npm. Silverblue's /usr/local is read-only, so
-446|# npm's prefix is set to ~/.local — opencode lands at ~/.local/bin/opencode
-447|# (already on PATH). Re-run after `cjust image-upgrade` to pick up new versions.
-448|[group('opencode')]
-449|opencode-install:
-450|    #!/usr/bin/env bash
-451|    set -euo pipefail
-452|    if ! command -v npm >/dev/null 2>&1; then
-453|      echo "ERROR: npm not found on host." >&2
-454|      echo "       Rebuild the host image with nodejs+npm, reboot, then re-run." >&2
-455|      exit 1
-456|    fi
-457|    npm config set prefix "$HOME/.local"
-458|    npm install -g opencode-ai
-459|    echo
-460|    echo "opencode installed to ~/.local/bin/opencode"
-461|    # First-time auth (or after wiping ~/.local/share/opencode/auth.json):
-462|    #   opencode auth login
-463|
-464|# ═══════════════════════════════════════════════════════════════════════════
-465|# hermes (host install + off-host desktop build)
-466|# ═══════════════════════════════════════════════════════════════════════════
-467|#
-468|# Like opencode, hermes runs on the host directly (NOT in bubblebox) — it's an
-469|# AI agent and needs full host control to edit files and run tools in the
-470|# user's working directory. See hosts/thinkpad/README.md ("opencode and hermes
-471|# are the exceptions"). The CLI/TUI come from the official installer; the
-472|# desktop GUI is built off-host in a throwaway container (the `cjust icons`
-473|# Papirus pattern), keeping Electron's ~200 MB of build cruft off the host.
-474|#
-475|# Secrets: provider keys live in secrets/hermes-thinkpad-env.age (agenix),
-476|# decrypted into a per-login tmpfs by bubblebox/files/.zshenv. The desktop wrapper at
-477|# bubblebox/files/.local/bin/hermes-desktop sources that cache so compositor-launched
-478|# GUI sees the keys too (shells already get them via .zshenv).
-479|
-480|# Install the hermes CLI/TUI via the official installer. Lays down
-481|# ~/.local/bin/hermes (already on PATH via .zshenv) and self-manages
-482|# ~/.hermes/hermes-agent/ (Python venv + Node + ripgrep + ffmpeg). Re-run after
-483|# `cjust image-upgrade` or any `hermes uninstall` to pick up a fresh install.
-484|# `hermes update` (run by hermes itself) handles in-place upgrades thereafter.
-485|[group('hermes')]
-486|hermes-install:
-487|    #!/usr/bin/env bash
-488|    set -euo pipefail
-489|    if ! command -v curl >/dev/null 2>&1; then
-490|      echo "ERROR: curl not found on host." >&2
-491|      echo "       Rebuild the host image, reboot, then re-run." >&2
-492|      exit 1
-493|    fi
-494|    curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
-495|    echo
-496|    echo "hermes installed to ~/.local/bin/hermes"
-497|    # First-time setup (provider config, model pick): the OPENAI_API_KEY env
-498|    # var is already exported by .zshenv (from secrets/hermes-thinkpad-env.age).
-499|    # To point hermes at the Z.AI coding endpoint (OpenAI-compatible), declare
-500|    # a custom provider in ~/.hermes/config.yaml:
-501|    #   hermes config set custom_providers '[{name:zai-coding,base_url:https://api.z.ai/api/coding/paas/v4,key_env:OPENAI_API_KEY}]'
-502|    #   hermes config set model.provider zai-coding
-503|    #   hermes config set model.default glm-5.2
-504|
-505|# Build the hermes desktop (Electron) app OFF-HOST in a throwaway Fedora+Node
-506|# podman container, then copy only the unpacked app dir onto the host. Mirrors
-507|# `cjust icons` (Papirus): containerizing keeps Electron's build cruft
-508|# (~200 MB node_modules, the Electron download, gcc-c++/make) off the host, so
-509|# no host-image change or reboot is needed. Idempotent; re-run any time, e.g.
-510|# after `hermes update` bumps the source tree.
-511|#
-512|# Output: ~/.local/share/hermes-desktop/ (the unpacked Electron dir). Launch
-513|# via ~/.local/bin/hermes-desktop (wrapper that sources the cn-secrets cache so
-514|# the compositor-launched GUI sees provider keys) or the "Hermes" launcher entry
-515|# (bubblebox/files/.local/share/applications/hermes.desktop, symlinked by `bubblebox apply`).
-516|#
-517|# Why not bubblebox: hermes is an AI coding agent (same category as opencode) —
-518|# its tool backend spawns synchronous subprocesses in arbitrary host cwds with
-519|# I/O capture, which has no precedent in the bubblebox tree and fights the
-520|# sandbox's read-only / content-addressed model. See README for the long version.
-521|[group('hermes')]
-522|hermes-desktop-build:
-523|    #!/usr/bin/env bash
-524|    set -euo pipefail
-525|    if ! command -v hermes >/dev/null 2>&1; then
-526|      echo "ERROR: hermes not found — run 'cjust hermes-install' first." >&2
-527|      exit 1
-528|    fi
-529|    if [ ! -d "$HOME/.hermes/hermes-agent" ]; then
-530|      echo "ERROR: ~/.hermes/hermes-agent missing — run 'cjust hermes-install' first." >&2
-531|      exit 1
-532|    fi
-533|    dest="$HOME/.local/share/hermes-desktop"
-534|    stage="$(mktemp -d)"
-535|    trap 'rm -rf "${stage}"' EXIT
-536|    # Build inside a throwaway container against the host's hermes-agent
-537|    # checkout. We invoke npm directly (the same path `hermes desktop
-538|    # --build-only` runs internally) instead of the hermes CLI: the venv's
-539|    # `hermes` script has a host-absolute shebang and won't resolve inside the
-540|    # container. electron-builder's `--dir` flag emits release/linux-unpacked/
-541|    # (the unpacked Electron app, no installers). Native Node modules need
-542|    # gcc-c++/make (Fedora — NOT build-essential, which is a Debian-ism).
-543|    echo "==> building hermes-desktop in a throwaway podman container..."
-544|    podman run --rm \
-545|      -v "$HOME/.hermes/hermes-agent:/work:Z" \
-546|      -v "${stage}:/out:Z" \
-547|      docker.io/library/fedora:latest \
-548|      bash -c '
-549|        set -euo pipefail
-550|        # Fedora build deps. build-essential does not exist on Fedora (Debian
-551|        # only); gcc-c++ + make are the Fedora equivalents and what npm needs
-552|        # for native modules. python3 is required by node-gyp.
-553|        dnf install -y --quiet nodejs npm gcc-c++ make python3 git
-554|        cd /work
-555|        echo "--- npm install (workspace from repo root) ---"
-556|        npm install --no-fund --no-audit
-557|        # npm sometimes fails to set the exec bit on `bin` script targets when
-558|        # installing on a bind-mounted volume (cross-env, electron-builder, etc.
-559|        # show up as `Permission denied` / exit 126 on invocation). Walk every
-560|        # node_modules/.bin/* symlink and chmod its target. No-op when npm got
-561|        # it right; rescue when it did not.
-562|        for link in node_modules/.bin/*; do
-563|          [ -L "$link" ] || continue
-564|          tgt=$(readlink -f "$link") && [ -f "$tgt" ] && chmod +x "$tgt" 2>/dev/null || true
-565|        done
-566|        echo "--- npm run pack (apps/desktop, electron-builder --dir) ---"
-567|        cd apps/desktop
-568|        npm run pack
-569|        # electron-builder --dir emits release/linux-unpacked/.
-570|        if [ -d release/linux-unpacked ]; then
-571|          cp -a release/linux-unpacked /out/hermes-desktop
-572|        else
-573|          echo "ERROR: release/linux-unpacked/ missing after pack" >&2
-574|          find release -maxdepth 2 -type d >&2 || true
-575|          exit 1
-576|        fi
-577|        echo "  built -> /out/hermes-desktop"
-578|      '
-579|    # Install the built dir onto the host.
-580|    rm -rf "${dest}"
-581|    mkdir -p "$(dirname "${dest}")"
-582|    cp -a "${stage}/hermes-desktop" "${dest}"
-583|    # Locate the Electron binary inside the unpacked dir. electron-builder
-584|    # names the main binary after productName (Hermes), but linux-unpacked/
-585|    # also contains chrome-sandbox, chrome_crashpad_handler, libEGL.so, etc.
-586|    # that are executable but not the app. Same exclusion logic as the
-587|    # ~/.local/bin/hermes-desktop wrapper.
-588|    bin=""
-589|    for cand in "${dest}/hermes" "${dest}/Hermes" "${dest}/hermes-desktop"; do
-590|      if [ -x "$cand" ]; then bin="$cand"; break; fi
-591|    done
-592|    if [ -z "$bin" ]; then
-593|      bin="$(find "${dest}" -maxdepth 1 -type f -executable \
-594|              ! -name 'chrome-sandbox' ! -name '*crashpad*' ! -name 'vulkan_*' ! -name 'lib*' \
-595|              2>/dev/null | head -1 || true)"
-596|    fi
-597|    if [ -z "$bin" ]; then
-598|      echo "WARNING: no main app binary found inside ${dest}." >&2
-599|      echo "         Contents:" >&2
-600|      ls -la "${dest}" >&2
-601|    else
-602|      echo "  main binary: ${bin#${dest}/}"
-603|    fi
-604|    echo "==> hermes-desktop installed to ${dest}"
-605|    echo
-606|    echo "Launch via:"
-607|    echo "  hermes desktop --skip-build      # upstream launcher (uses ~/.hermes)"
-608|    echo "  ~/.local/bin/hermes-desktop      # host wrapper (sources cn-secrets env first)"
-609|    echo "  Launcher → 'Hermes'              # the .desktop entry (run 'cjust bubblebox-apply' to install)"
-610|    # Refresh the launcher icon (Icon=hermes) so a rebuild always leaves a
-611|    # branded icon in place. Idempotent + non-fatal.
-612|    {{ just_executable() }} hermes-icon || echo "  (hermes-icon skipped)"
-613|
-614|# Install the official Hermes launcher icon (Icon=hermes) from the upstream
-615|# hermes-agent repo into the user hicolor theme, so the .desktop entry shows the
-616|# branded Hermes glyph instead of a generic info icon. Idempotent; re-run any
-617|# time, and invoked automatically at the tail of `cjust hermes-desktop-build`.
-618|# Mirrors the `cjust icons` (Papirus) pattern: per-user, off the host image.
-619|#
-620|# IMPORTANT: GNOME/GTK only scan STANDARD hicolor size dirs (16..512, per the
-621|# system /usr/share/icons/hicolor/index.theme). The upstream icon.png is
-622|# 1024x1024 — non-standard, so a copy in 1024x1024/ is INVISIBLE to GNOME (the
-623|# app shows a generic gear). We therefore install downscaled copies at 512x512
-624|# and 256x256. ImageMagick (magick/convert) does a real resize; if absent we
-625|# just copy the source into each dir (GNOME scales the loaded image to the
-626|# requested size regardless of the declared dir size, so that still works — the
-627|# only thing that matters is landing in a standard dir).
-628|[group('hermes')]
-629|hermes-icon:
-630|    #!/usr/bin/env bash
-631|    set -euo pipefail
-632|    tmp="$(mktemp)"; trap 'rm -f "${tmp}"' EXIT
-633|    url="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/apps/desktop/assets/icon.png"
-634|    curl -fsSL "${url}" -o "${tmp}"
-635|    base="${HOME}/.local/share/icons/hicolor"
-636|    for s in 512 256; do
-637|      dir="${base}/${s}x${s}/apps"
-638|      mkdir -p "${dir}"
-639|      if command -v magick >/dev/null 2>&1; then
-640|        magick "${tmp}" -resize ${s}x${s} "${dir}/hermes.png"
-641|      elif command -v convert >/dev/null 2>&1; then
-642|        convert "${tmp}" -resize ${s}x${s} "${dir}/hermes.png"
-643|      else
-644|        cp -f "${tmp}" "${dir}/hermes.png"
-645|      fi
-646|      echo "  ${s}x${s}/apps/hermes.png"
-647|    done
-648|    # Drop a stale non-standard 1024x1024 copy from an older recipe version
-649|    # (GNOME ignores that dir, so it only wastes space).
-650|    rm -rf "${base}/1024x1024"
-651|    gtk-update-icon-cache -f -t "${base}" 2>/dev/null || true
-652|    echo "==> hermes icon installed at standard sizes (512x512, 256x256; Icon=hermes)"
-653|
-654|# ═══════════════════════════════════════════════════════════════════════════
-655|# buzz desktop (host-installed AppImage)
-656|# ═══════════════════════════════════════════════════════════════════════════
-657|#
-658|# Buzz desktop is a Tauri app; upstream publishes a Linux AppImage per release
-659|# (tag pattern desktop-v*). The AppImage is the right artifact for this atomic
-660|# (Silverblue/bootc) host: a single self-contained file under ~/.local/share/,
-661|# no rpm-ostree layering, survives image upgrades — same "host small + state in
-662|# named places" rule as hermes-desktop.
-663|#
-664|# Why not bubblebox: bubblebox is a read-only FUSE sandbox for dev CLI tools.
-665|# Wrapping a 167 MB prebuilt GUI in an OCI image (authored in the separate
-666|# bubblebox-pkgs repo) gives no isolation benefit for your own comms app, needs
-667|# network + relay creds anyway, and turns every update into an image rebuild.
-668|# The off-host-acquire + host-wrapper pattern (hermes-desktop precedent) is the
-669|# simpler, on-repo fit. See hosts/thinkpad/README.md.
-670|#
-671|# This recipe is BOTH install and update: it resolves the latest desktop-v*
-672|# release, downloads the AppImage (+ .sig), extracts the version-matched branded
-673|# icon, and is a no-op when already current. Launch via ~/.local/bin/buzz-desktop
-674|# (wrapper that sources cn-secrets env) or the "Buzz" launcher entry (run
-675|# `cjust bubblebox-apply`). Re-run any time to pull a newer release.
-676|
-677|# Install or update the Buzz desktop AppImage to the latest desktop-v* release.
-678|# Idempotent; safe to re-run. Stores under ~/.local/share/buzz-desktop/.
-679|[group('buzz')]
-680|buzz-desktop-install:
-681|    #!/usr/bin/env bash
-682|    set -euo pipefail
-683|    if ! command -v curl >/dev/null 2>&1; then
-684|      echo "ERROR: curl not found on host." >&2; exit 1
-685|    fi
-686|    api="https://api.github.com/repos/block/buzz/releases/latest"
-687|    # releases/latest on block/buzz points at the desktop-v* line (the desktop
-688|    # app ships there, separate from the relay's :main channel). Fetch the body
-689|    # whole, then parse — piping curl into `grep -m1` makes grep close the pipe
-690|    # early and curl exits 23 (SIGPIPE) under `set -o pipefail`.
-691|    resp="$(curl -fsSL "${api}")"
-692|    tag="$(printf '%s\n' "${resp}" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"desktop-v\([^"]*\)".*/\1/p')"
-693|    if [ -z "${tag}" ]; then
-694|      echo "ERROR: could not resolve latest desktop-v* tag from ${api}" >&2; exit 1
-695|    fi
-696|    dest="${HOME}/.local/share/buzz-desktop"
-697|    mkdir -p "${dest}"
-698|    cur="$(cat "${dest}/version" 2>/dev/null || true)"
-699|    if [ "${cur}" = "${tag}" ] && [ -x "${dest}/Buzz.AppImage" ]; then
-700|      echo "buzz-desktop desktop-v${tag} already installed"; exit 0
-701|    fi
-702|    echo "==> installing Buzz desktop desktop-v${tag}"
-703|    base="https://github.com/block/buzz/releases/download/desktop-v${tag}/Buzz_${tag}_amd64"
-704|    curl -fL "${base}.AppImage" -o "${dest}/Buzz.AppImage.new"
-705|    curl -fsSL "${base}.AppImage.sig" -o "${dest}/Buzz.AppImage.sig" || true
-706|    chmod +x "${dest}/Buzz.AppImage.new"
-707|    # Extract the version-matched branded icon straight from the AppImage
-708|    # (squashfs-root/ holds a <identifier>.png + .DirIcon). This always matches
-709|    # the installed release's branding, like rendering Papirus from git HEAD.
-710|    root="$(mktemp -d)"; trap 'rm -rf "${root}"' EXIT
-711|    ( cd "${root}" && "${dest}/Buzz.AppImage.new" --appimage-extract >/dev/null 2>&1 ) || true
-712|    icon="$(find "${root}/squashfs-root" -maxdepth 1 -type f -name '*.png' 2>/dev/null | head -1 || true)"
-713|    if [ -n "${icon}" ]; then
-714|      # Install at the png's real dimensions (AppImage icons are often 256x256,
-715|      # not 512x512) so the hicolor dir matches the asset and gtk-update-icon-cache
-716|      # doesn't warn about a size mismatch.
-717|      dim="$(file "${icon}" | sed -n 's/.*image data, \([0-9][0-9]*\) x.*/\1/p' | head -1)"
-718|      [ -n "${dim}" ] || dim=512
-719|      icon_dir="${HOME}/.local/share/icons/hicolor/${dim}x${dim}/apps"
-720|      mkdir -p "${icon_dir}"
-721|      cp -f "${icon}" "${icon_dir}/buzz.png"
-722|      echo "  icon <- extracted from AppImage (${dim}x${dim}) -> ${icon_dir}/buzz.png"
-723|    else
-724|      echo "  WARNING: could not extract icon from AppImage; Icon=buzz may be blank." >&2
-725|    fi
-726|    gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
-727|    mv -f "${dest}/Buzz.AppImage.new" "${dest}/Buzz.AppImage"
-728|    echo "${tag}" > "${dest}/version"
-729|    echo "==> buzz-desktop desktop-v${tag} installed -> ${dest}/Buzz.AppImage"
-730|    echo
-731|    echo "Launch via:"
-732|    echo "  ~/.local/bin/buzz-desktop        # host wrapper (sources cn-secrets env first)"
-733|    echo "  Launcher → 'Buzz'                # the .desktop entry (run 'cjust bubblebox-apply' to install)"
-734|
-735|# ═══════════════════════════════════════════════════════════════════════════
-736|# host image (bootc)
-737|# ═══════════════════════════════════════════════════════════════════════════
-738|
-739|# Build the custom Silverblue host image into root podman storage. (sudo)
-740|# See host-image/README.md. First time on a host, follow with `image-switch`.
-741|[group('host image')]
-742|image-build:
-743|    {{ justfile_directory() }}/host-image/build.sh
-744|
-745|# One-time: adopt the custom image as the host's boot image. (sudo)
-746|# Only for first adoption or changing image reference; for routine rebuilds
-747|# use `image-upgrade` instead. Reboot after.
-748|[group('host image')]
-749|image-switch:
-750|    {{ justfile_directory() }}/host-image/switch.sh
-751|
-752|# Routine: apply a freshly rebuilt image to the host. (sudo)
-753|# Re-resolves the :44 tag from local storage and stages a new deployment if the
-754|# digest changed. Reboot after.
-755|[group('host image')]
-756|image-upgrade:
-757|    {{ justfile_directory() }}/host-image/upgrade.sh
-758|
-759|# ═══════════════════════════════════════════════════════════════════════════
-760|# system
-761|# ═══════════════════════════════════════════════════════════════════════════
-762|
-763|# Build + seed + install the Nebula Quadlet (idempotent). See nebula/setup.sh.
-764|[group('system')]
-765|nebula:
-766|    {{ justfile_directory() }}/nebula/setup.sh
-767|
-768|# Build image + seed creds + init S3 repo + install the restic backup Quadlets
-769|# and timers (daily backup + weekly check). S3-only; see backup/README.md.
-770|# Idempotent — re-run after editing backup/excludes or pulling changes.
-771|[group('system')]
-772|backup:
-773|    {{ justfile_directory() }}/backup/setup.sh
-774|
-775|# Pull image + install the on-demand Tailscale Quadlet. NOT enabled at boot
-776|# and NOT started by setup — start it manually when needed:
-777|#   sudo systemctl start tailscale
-778|#   sudo podman exec tailscale tailscale up   # first time only (browser auth)
-779|# See tailscale/README.md. Idempotent.
-780|[group('system')]
-781|tailscale:
-782|    {{ justfile_directory() }}/tailscale/setup.sh
-783|
-784|# Enable inbound SSH on the thinkpad (for remote access over Nebula from bee/
-785|# bees). Idempotent. (sudo)
-786|#
-787|# - Installs an /etc/ssh/sshd_config.d drop-in forcing key-only auth.
-788|# - Authorizes this host's own ed25519 pub key (the SAME keypair lives on bee
-789|#   and bees, so all three hosts can log in here).
-790|# - Enables + starts the system sshd. openssh-server ships in the Silverblue
-791|#   base image (no host-image change), and `systemctl enable` persists in /etc
-792|#   across bootc upgrades, so this survives image rebuilds + reboots.
-793|#
-794|# Why key-only: crussell has a password set, and sshd binds to ALL interfaces
-795|# (Nebula 10.10.0.10 + LAN/WiFi). Disabling password auth avoids opening a new
-796|# LAN brute-force surface and matches the gateway posture. To allow password
-797|# auth again, delete /etc/ssh/sshd_config.d/10-key-only.conf and restart sshd.
-798|#
-799|# Connect from bee/bees over Nebula:
-800|#   ssh -o IdentitiesOnly=yes crussell@10.10.0.10
-801|[group('system')]
-802|ssh:
-803|    #!/usr/bin/env bash
-804|    set -euo pipefail
-805|    # 1. Harden: key-only auth drop-in (read by sshd after sshd_config).
-806|    dropin=/etc/ssh/sshd_config.d/10-key-only.conf
-807|    sudo install -d -m 755 "$(dirname "$dropin")"
-808|    printf '%s\n' \
-809|      '# Managed by `cjust ssh` (hosts/thinkpad/Justfile). Key-only auth.' \
-810|      'PasswordAuthentication no' \
-811|      'KbdInteractiveAuthentication no' \
-812|      'PermitRootLogin no' \
-813|      | sudo tee "$dropin" >/dev/null
-814|    sudo chmod 644 "$dropin"
-815|    echo "  wrote $dropin (PasswordAuthentication no)"
-816|    # 2. Authorize the shared ed25519 key (same keypair on bee/bees/think).
-817|    install -d -m 700 "$HOME/.ssh"
-818|    pub="$HOME/.ssh/id_ed25519.pub"
-819|    auth="$HOME/.ssh/authorized_keys"
-820|    touch "$auth"; chmod 600 "$auth"
-821|    if [ -s "$pub" ]; then
-822|      grep -qF "$(cat "$pub")" "$auth" || cat "$pub" >> "$auth"
-823|      echo "  authorized: $(awk '{print $1, $3}' "$pub")"
-824|    else
-825|      echo "  WARN: $pub missing — no key added (install one manually)" >&2
-826|    fi
-827|    # 3. Enable + start the system sshd.
-828|    sudo systemctl enable --now sshd.service
-829|    echo "==> sshd enabled. Connect over Nebula:"
-830|    echo "    ssh -o IdentitiesOnly=yes crussell@10.10.0.10"
-831|    sudo ss -tlnp 2>/dev/null | grep ':22 ' || true
-832|
-833|# Show the current state of this machine: host-image version, bootc deployment,
-834|# bubblebox mounts + wrappers, opencode install, and linked user units.
-835|# Read-only.
-836|[group('system')]
-837|status:
-838|    #!/usr/bin/env bash
-839|    set -uo pipefail
-840|    echo "=== host image ==="
-841|    cat /usr/lib/host-image-thinkpad-version 2>/dev/null || echo "(no version file)"
-842|    echo
-843|    echo "=== bootc ==="
-844|    bootc status 2>&1 | head -30 || true
-845|    echo
-846|    echo "=== bubblebox mounts ==="
-847|    mount | grep '/bubblebox/' || echo "(none mounted)"
-848|    echo
-849|    echo "=== bubblebox wrappers (~/.local/bin/) ==="
-850|    dst_bin="${HOME}/.local/bin"
-851|    for t in $(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))'); do
-852|      if [ -x "${dst_bin}/${t}" ]; then echo "  ok   ${t}"; else echo "  MISS ${t}"; fi
-853|    done
-854|    echo
-855|    echo "=== opencode (host install) ==="
-856|    if command -v opencode >/dev/null 2>&1; then
-857|      echo "  $(opencode --version 2>&1 | head -1)"
-858|    else
-859|      echo "  (not installed — run: cjust opencode-install)"
-860|    fi
-861|    echo
-862|    echo "=== user units (~/.config/systemd/user/) ==="
-863|    dst_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-864|    if ls -1 "${dst_dir}"/*.service 2>/dev/null; then :; else echo "(none linked)"; fi
-865|
+
+# Reclaim store bytes no generation/binding/mount references. Dry-run by
+# default (reclaims nothing until you prune old generations —
+# `{{ bubblebox_bin }} generations --older-than 30d`). Pass `apply` to sweep.
+[group('bubblebox')]
+bubblebox-gc *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{ args }}" = "apply" ]; then
+      {{ bubblebox_bin }} gc --apply
+    else
+      {{ bubblebox_bin }} gc
+    fi
+
+# Init + build + apply in one shot. The thing to run on a fresh install or
+# after pulling changes that touch tool configs. (Source registration + wrapper
+# export are both handled by `apply` via the declarative profile.)
+[group('bubblebox')]
+bubblebox: bubblebox-init bubblebox-build bubblebox-apply
+    @echo "==> bubblebox: FUSE server built, tools built, profile applied."
+
+# ═══════════════════════════════════════════════════════════════════════════
+# opencode (host install)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# opencode runs on the host directly (not in bubblebox) because it's the AI
+# coding agent — it needs full host control when something breaks, without
+# sandbox restrictions getting in the way of recovery. Vendored config lives
+# at bubblebox/files/.config/opencode/ (symlinked by `bubblebox apply`); secrets stay
+# machine-local at ~/.local/share/opencode/auth.json (gitignored by virtue
+# of being outside the vendored tree).
+
+# Install opencode globally via npm. Silverblue's /usr/local is read-only, so
+# npm's prefix is set to ~/.local — opencode lands at ~/.local/bin/opencode
+# (already on PATH). Re-run after `cjust image-upgrade` to pick up new versions.
+[group('opencode')]
+opencode-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v npm >/dev/null 2>&1; then
+      echo "ERROR: npm not found on host." >&2
+      echo "       Rebuild the host image with nodejs+npm, reboot, then re-run." >&2
+      exit 1
+    fi
+    npm config set prefix "$HOME/.local"
+    npm install -g opencode-ai
+    echo
+    echo "opencode installed to ~/.local/bin/opencode"
+    # First-time auth (or after wiping ~/.local/share/opencode/auth.json):
+    #   opencode auth login
+
+# ═══════════════════════════════════════════════════════════════════════════
+# hermes (host install + off-host desktop build)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Like opencode, hermes runs on the host directly (NOT in bubblebox) — it's an
+# AI agent and needs full host control to edit files and run tools in the
+# user's working directory. See hosts/thinkpad/README.md ("opencode and hermes
+# are the exceptions"). The CLI/TUI come from the official installer; the
+# desktop GUI is built off-host in a throwaway container (the `cjust icons`
+# Papirus pattern), keeping Electron's ~200 MB of build cruft off the host.
+#
+# Secrets: provider keys live in secrets/hermes-thinkpad-env.age (agenix),
+# decrypted into a per-login tmpfs by bubblebox/files/.zshenv. The desktop wrapper at
+# bubblebox/files/.local/bin/hermes-desktop sources that cache so compositor-launched
+# GUI sees the keys too (shells already get them via .zshenv).
+
+# Install the hermes CLI/TUI via the official installer. Lays down
+# ~/.local/bin/hermes (already on PATH via .zshenv) and self-manages
+# ~/.hermes/hermes-agent/ (Python venv + Node + ripgrep + ffmpeg). Re-run after
+# `cjust image-upgrade` or any `hermes uninstall` to pick up a fresh install.
+# `hermes update` (run by hermes itself) handles in-place upgrades thereafter.
+[group('hermes')]
+hermes-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v curl >/dev/null 2>&1; then
+      echo "ERROR: curl not found on host." >&2
+      echo "       Rebuild the host image, reboot, then re-run." >&2
+      exit 1
+    fi
+    curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+    echo
+    echo "hermes installed to ~/.local/bin/hermes"
+    # First-time setup (provider config, model pick): the OPENAI_API_KEY env
+    # var is already exported by .zshenv (from secrets/hermes-thinkpad-env.age).
+    # To point hermes at the Z.AI coding endpoint (OpenAI-compatible), declare
+    # a custom provider in ~/.hermes/config.yaml:
+    #   hermes config set custom_providers '[{name:zai-coding,base_url:https://api.z.ai/api/coding/paas/v4,key_env:OPENAI_API_KEY}]'
+    #   hermes config set model.provider zai-coding
+    #   hermes config set model.default glm-5.2
+
+# Build the hermes desktop (Electron) app OFF-HOST in a throwaway Fedora+Node
+# podman container, then copy only the unpacked app dir onto the host. Mirrors
+# `cjust icons` (Papirus): containerizing keeps Electron's build cruft
+# (~200 MB node_modules, the Electron download, gcc-c++/make) off the host, so
+# no host-image change or reboot is needed. Idempotent; re-run any time, e.g.
+# after `hermes update` bumps the source tree.
+#
+# Output: ~/.local/share/hermes-desktop/ (the unpacked Electron dir). Launch
+# via ~/.local/bin/hermes-desktop (wrapper that sources the cn-secrets cache so
+# the compositor-launched GUI sees provider keys) or the "Hermes" launcher entry
+# (bubblebox/files/.local/share/applications/hermes.desktop, symlinked by `bubblebox apply`).
+#
+# Why not bubblebox: hermes is an AI coding agent (same category as opencode) —
+# its tool backend spawns synchronous subprocesses in arbitrary host cwds with
+# I/O capture, which has no precedent in the bubblebox tree and fights the
+# sandbox's read-only / content-addressed model. See README for the long version.
+[group('hermes')]
+hermes-desktop-build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v hermes >/dev/null 2>&1; then
+      echo "ERROR: hermes not found — run 'cjust hermes-install' first." >&2
+      exit 1
+    fi
+    if [ ! -d "$HOME/.hermes/hermes-agent" ]; then
+      echo "ERROR: ~/.hermes/hermes-agent missing — run 'cjust hermes-install' first." >&2
+      exit 1
+    fi
+    dest="$HOME/.local/share/hermes-desktop"
+    stage="$(mktemp -d)"
+    trap 'rm -rf "${stage}"' EXIT
+    # Build inside a throwaway container against the host's hermes-agent
+    # checkout. We invoke npm directly (the same path `hermes desktop
+    # --build-only` runs internally) instead of the hermes CLI: the venv's
+    # `hermes` script has a host-absolute shebang and won't resolve inside the
+    # container. electron-builder's `--dir` flag emits release/linux-unpacked/
+    # (the unpacked Electron app, no installers). Native Node modules need
+    # gcc-c++/make (Fedora — NOT build-essential, which is a Debian-ism).
+    echo "==> building hermes-desktop in a throwaway podman container..."
+    podman run --rm \
+      -v "$HOME/.hermes/hermes-agent:/work:Z" \
+      -v "${stage}:/out:Z" \
+      docker.io/library/fedora:latest \
+      bash -c '
+        set -euo pipefail
+        # Fedora build deps. build-essential does not exist on Fedora (Debian
+        # only); gcc-c++ + make are the Fedora equivalents and what npm needs
+        # for native modules. python3 is required by node-gyp.
+        dnf install -y --quiet nodejs npm gcc-c++ make python3 git
+        cd /work
+        echo "--- npm install (workspace from repo root) ---"
+        npm install --no-fund --no-audit
+        # npm sometimes fails to set the exec bit on `bin` script targets when
+        # installing on a bind-mounted volume (cross-env, electron-builder, etc.
+        # show up as `Permission denied` / exit 126 on invocation). Walk every
+        # node_modules/.bin/* symlink and chmod its target. No-op when npm got
+        # it right; rescue when it did not.
+        for link in node_modules/.bin/*; do
+          [ -L "$link" ] || continue
+          tgt=$(readlink -f "$link") && [ -f "$tgt" ] && chmod +x "$tgt" 2>/dev/null || true
+        done
+        echo "--- npm run pack (apps/desktop, electron-builder --dir) ---"
+        cd apps/desktop
+        npm run pack
+        # electron-builder --dir emits release/linux-unpacked/.
+        if [ -d release/linux-unpacked ]; then
+          cp -a release/linux-unpacked /out/hermes-desktop
+        else
+          echo "ERROR: release/linux-unpacked/ missing after pack" >&2
+          find release -maxdepth 2 -type d >&2 || true
+          exit 1
+        fi
+        echo "  built -> /out/hermes-desktop"
+      '
+    # Install the built dir onto the host.
+    rm -rf "${dest}"
+    mkdir -p "$(dirname "${dest}")"
+    cp -a "${stage}/hermes-desktop" "${dest}"
+    # Locate the Electron binary inside the unpacked dir. electron-builder
+    # names the main binary after productName (Hermes), but linux-unpacked/
+    # also contains chrome-sandbox, chrome_crashpad_handler, libEGL.so, etc.
+    # that are executable but not the app. Same exclusion logic as the
+    # ~/.local/bin/hermes-desktop wrapper.
+    bin=""
+    for cand in "${dest}/hermes" "${dest}/Hermes" "${dest}/hermes-desktop"; do
+      if [ -x "$cand" ]; then bin="$cand"; break; fi
+    done
+    if [ -z "$bin" ]; then
+      bin="$(find "${dest}" -maxdepth 1 -type f -executable \
+              ! -name 'chrome-sandbox' ! -name '*crashpad*' ! -name 'vulkan_*' ! -name 'lib*' \
+              2>/dev/null | head -1 || true)"
+    fi
+    if [ -z "$bin" ]; then
+      echo "WARNING: no main app binary found inside ${dest}." >&2
+      echo "         Contents:" >&2
+      ls -la "${dest}" >&2
+    else
+      echo "  main binary: ${bin#${dest}/}"
+    fi
+    echo "==> hermes-desktop installed to ${dest}"
+    echo
+    echo "Launch via:"
+    echo "  hermes desktop --skip-build      # upstream launcher (uses ~/.hermes)"
+    echo "  ~/.local/bin/hermes-desktop      # host wrapper (sources cn-secrets env first)"
+    echo "  Launcher → 'Hermes'              # the .desktop entry (run 'cjust bubblebox-apply' to install)"
+    # Refresh the launcher icon (Icon=hermes) so a rebuild always leaves a
+    # branded icon in place. Idempotent + non-fatal.
+    {{ just_executable() }} hermes-icon || echo "  (hermes-icon skipped)"
+
+# Install the official Hermes launcher icon (Icon=hermes) from the upstream
+# hermes-agent repo into the user hicolor theme, so the .desktop entry shows the
+# branded Hermes glyph instead of a generic info icon. Idempotent; re-run any
+# time, and invoked automatically at the tail of `cjust hermes-desktop-build`.
+# Mirrors the `cjust icons` (Papirus) pattern: per-user, off the host image.
+#
+# IMPORTANT: GNOME/GTK only scan STANDARD hicolor size dirs (16..512, per the
+# system /usr/share/icons/hicolor/index.theme). The upstream icon.png is
+# 1024x1024 — non-standard, so a copy in 1024x1024/ is INVISIBLE to GNOME (the
+# app shows a generic gear). We therefore install downscaled copies at 512x512
+# and 256x256. ImageMagick (magick/convert) does a real resize; if absent we
+# just copy the source into each dir (GNOME scales the loaded image to the
+# requested size regardless of the declared dir size, so that still works — the
+# only thing that matters is landing in a standard dir).
+[group('hermes')]
+hermes-icon:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tmp="$(mktemp)"; trap 'rm -f "${tmp}"' EXIT
+    url="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/apps/desktop/assets/icon.png"
+    curl -fsSL "${url}" -o "${tmp}"
+    base="${HOME}/.local/share/icons/hicolor"
+    for s in 512 256; do
+      dir="${base}/${s}x${s}/apps"
+      mkdir -p "${dir}"
+      if command -v magick >/dev/null 2>&1; then
+        magick "${tmp}" -resize ${s}x${s} "${dir}/hermes.png"
+      elif command -v convert >/dev/null 2>&1; then
+        convert "${tmp}" -resize ${s}x${s} "${dir}/hermes.png"
+      else
+        cp -f "${tmp}" "${dir}/hermes.png"
+      fi
+      echo "  ${s}x${s}/apps/hermes.png"
+    done
+    # Drop a stale non-standard 1024x1024 copy from an older recipe version
+    # (GNOME ignores that dir, so it only wastes space).
+    rm -rf "${base}/1024x1024"
+    gtk-update-icon-cache -f -t "${base}" 2>/dev/null || true
+    echo "==> hermes icon installed at standard sizes (512x512, 256x256; Icon=hermes)"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# buzz desktop (host-installed AppImage)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Buzz desktop is a Tauri app; upstream publishes a Linux AppImage per release
+# (tag pattern desktop-v*). The AppImage is the right artifact for this atomic
+# (Silverblue/bootc) host: a single self-contained file under ~/.local/share/,
+# no rpm-ostree layering, survives image upgrades — same "host small + state in
+# named places" rule as hermes-desktop.
+#
+# Why not bubblebox: bubblebox is a read-only FUSE sandbox for dev CLI tools.
+# Wrapping a 167 MB prebuilt GUI in an OCI image (authored in the separate
+# bubblebox-pkgs repo) gives no isolation benefit for your own comms app, needs
+# network + relay creds anyway, and turns every update into an image rebuild.
+# The off-host-acquire + host-wrapper pattern (hermes-desktop precedent) is the
+# simpler, on-repo fit. See hosts/thinkpad/README.md.
+#
+# This recipe is BOTH install and update: it resolves the latest desktop-v*
+# release, downloads the AppImage (+ .sig), extracts the version-matched branded
+# icon, and is a no-op when already current. Launch via ~/.local/bin/buzz-desktop
+# (wrapper that sources cn-secrets env) or the "Buzz" launcher entry (run
+# `cjust bubblebox-apply`). Re-run any time to pull a newer release.
+
+# Install or update the Buzz desktop AppImage to the latest desktop-v* release.
+# Idempotent; safe to re-run. Stores under ~/.local/share/buzz-desktop/.
+[group('buzz')]
+buzz-desktop-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v curl >/dev/null 2>&1; then
+      echo "ERROR: curl not found on host." >&2; exit 1
+    fi
+    api="https://api.github.com/repos/block/buzz/releases/latest"
+    # releases/latest on block/buzz points at the desktop-v* line (the desktop
+    # app ships there, separate from the relay's :main channel). Fetch the body
+    # whole, then parse — piping curl into `grep -m1` makes grep close the pipe
+    # early and curl exits 23 (SIGPIPE) under `set -o pipefail`.
+    resp="$(curl -fsSL "${api}")"
+    tag="$(printf '%s\n' "${resp}" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"desktop-v\([^"]*\)".*/\1/p')"
+    if [ -z "${tag}" ]; then
+      echo "ERROR: could not resolve latest desktop-v* tag from ${api}" >&2; exit 1
+    fi
+    dest="${HOME}/.local/share/buzz-desktop"
+    mkdir -p "${dest}"
+    cur="$(cat "${dest}/version" 2>/dev/null || true)"
+    if [ "${cur}" = "${tag}" ] && [ -x "${dest}/Buzz.AppImage" ]; then
+      echo "buzz-desktop desktop-v${tag} already installed"; exit 0
+    fi
+    echo "==> installing Buzz desktop desktop-v${tag}"
+    base="https://github.com/block/buzz/releases/download/desktop-v${tag}/Buzz_${tag}_amd64"
+    curl -fL "${base}.AppImage" -o "${dest}/Buzz.AppImage.new"
+    curl -fsSL "${base}.AppImage.sig" -o "${dest}/Buzz.AppImage.sig" || true
+    chmod +x "${dest}/Buzz.AppImage.new"
+    # Extract the version-matched branded icon straight from the AppImage
+    # (squashfs-root/ holds a <identifier>.png + .DirIcon). This always matches
+    # the installed release's branding, like rendering Papirus from git HEAD.
+    root="$(mktemp -d)"; trap 'rm -rf "${root}"' EXIT
+    ( cd "${root}" && "${dest}/Buzz.AppImage.new" --appimage-extract >/dev/null 2>&1 ) || true
+    icon="$(find "${root}/squashfs-root" -maxdepth 1 -type f -name '*.png' 2>/dev/null | head -1 || true)"
+    if [ -n "${icon}" ]; then
+      # Install at the png's real dimensions (AppImage icons are often 256x256,
+      # not 512x512) so the hicolor dir matches the asset and gtk-update-icon-cache
+      # doesn't warn about a size mismatch.
+      dim="$(file "${icon}" | sed -n 's/.*image data, \([0-9][0-9]*\) x.*/\1/p' | head -1)"
+      [ -n "${dim}" ] || dim=512
+      icon_dir="${HOME}/.local/share/icons/hicolor/${dim}x${dim}/apps"
+      mkdir -p "${icon_dir}"
+      cp -f "${icon}" "${icon_dir}/buzz.png"
+      echo "  icon <- extracted from AppImage (${dim}x${dim}) -> ${icon_dir}/buzz.png"
+    else
+      echo "  WARNING: could not extract icon from AppImage; Icon=buzz may be blank." >&2
+    fi
+    gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+    mv -f "${dest}/Buzz.AppImage.new" "${dest}/Buzz.AppImage"
+    echo "${tag}" > "${dest}/version"
+    echo "==> buzz-desktop desktop-v${tag} installed -> ${dest}/Buzz.AppImage"
+    echo
+    echo "Launch via:"
+    echo "  ~/.local/bin/buzz-desktop        # host wrapper (sources cn-secrets env first)"
+    echo "  Launcher → 'Buzz'                # the .desktop entry (run 'cjust bubblebox-apply' to install)"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# host image (bootc)
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Build the custom Silverblue host image into root podman storage. (sudo)
+# See host-image/README.md. First time on a host, follow with `image-switch`.
+[group('host image')]
+image-build:
+    {{ justfile_directory() }}/host-image/build.sh
+
+# One-time: adopt the custom image as the host's boot image. (sudo)
+# Only for first adoption or changing image reference; for routine rebuilds
+# use `image-upgrade` instead. Reboot after.
+[group('host image')]
+image-switch:
+    {{ justfile_directory() }}/host-image/switch.sh
+
+# Routine: apply a freshly rebuilt image to the host. (sudo)
+# Re-resolves the :44 tag from local storage and stages a new deployment if the
+# digest changed. Reboot after.
+[group('host image')]
+image-upgrade:
+    {{ justfile_directory() }}/host-image/upgrade.sh
+
+# ═══════════════════════════════════════════════════════════════════════════
+# system
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Build + seed + install the Nebula Quadlet (idempotent). See nebula/setup.sh.
+[group('system')]
+nebula:
+    {{ justfile_directory() }}/nebula/setup.sh
+
+# Build image + seed creds + init S3 repo + install the restic backup Quadlets
+# and timers (daily backup + weekly check). S3-only; see backup/README.md.
+# Idempotent — re-run after editing backup/excludes or pulling changes.
+[group('system')]
+backup:
+    {{ justfile_directory() }}/backup/setup.sh
+
+# Pull image + install the on-demand Tailscale Quadlet. NOT enabled at boot
+# and NOT started by setup — start it manually when needed:
+#   sudo systemctl start tailscale
+#   sudo podman exec tailscale tailscale up   # first time only (browser auth)
+# See tailscale/README.md. Idempotent.
+[group('system')]
+tailscale:
+    {{ justfile_directory() }}/tailscale/setup.sh
+
+# Enable inbound SSH on the thinkpad (for remote access over Nebula from bee/
+# bees). Idempotent. (sudo)
+#
+# - Installs an /etc/ssh/sshd_config.d drop-in forcing key-only auth.
+# - Authorizes this host's own ed25519 pub key (the SAME keypair lives on bee
+#   and bees, so all three hosts can log in here).
+# - Enables + starts the system sshd. openssh-server ships in the Silverblue
+#   base image (no host-image change), and `systemctl enable` persists in /etc
+#   across bootc upgrades, so this survives image rebuilds + reboots.
+#
+# Why key-only: crussell has a password set, and sshd binds to ALL interfaces
+# (Nebula 10.10.0.10 + LAN/WiFi). Disabling password auth avoids opening a new
+# LAN brute-force surface and matches the gateway posture. To allow password
+# auth again, delete /etc/ssh/sshd_config.d/10-key-only.conf and restart sshd.
+#
+# Connect from bee/bees over Nebula:
+#   ssh -o IdentitiesOnly=yes crussell@10.10.0.10
+[group('system')]
+ssh:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # 1. Harden: key-only auth drop-in (read by sshd after sshd_config).
+    dropin=/etc/ssh/sshd_config.d/10-key-only.conf
+    sudo install -d -m 755 "$(dirname "$dropin")"
+    printf '%s\n' \
+      '# Managed by `cjust ssh` (hosts/thinkpad/Justfile). Key-only auth.' \
+      'PasswordAuthentication no' \
+      'KbdInteractiveAuthentication no' \
+      'PermitRootLogin no' \
+      | sudo tee "$dropin" >/dev/null
+    sudo chmod 644 "$dropin"
+    echo "  wrote $dropin (PasswordAuthentication no)"
+    # 2. Authorize the shared ed25519 key (same keypair on bee/bees/think).
+    install -d -m 700 "$HOME/.ssh"
+    pub="$HOME/.ssh/id_ed25519.pub"
+    auth="$HOME/.ssh/authorized_keys"
+    touch "$auth"; chmod 600 "$auth"
+    if [ -s "$pub" ]; then
+      grep -qF "$(cat "$pub")" "$auth" || cat "$pub" >> "$auth"
+      echo "  authorized: $(awk '{print $1, $3}' "$pub")"
+    else
+      echo "  WARN: $pub missing — no key added (install one manually)" >&2
+    fi
+    # 3. Enable + start the system sshd.
+    sudo systemctl enable --now sshd.service
+    echo "==> sshd enabled. Connect over Nebula:"
+    echo "    ssh -o IdentitiesOnly=yes crussell@10.10.0.10"
+    sudo ss -tlnp 2>/dev/null | grep ':22 ' || true
+
+# Show the current state of this machine: host-image version, bootc deployment,
+# bubblebox mounts + wrappers, opencode install, and linked user units.
+# Read-only.
+[group('system')]
+status:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    echo "=== host image ==="
+    cat /usr/lib/host-image-thinkpad-version 2>/dev/null || echo "(no version file)"
+    echo
+    echo "=== bootc ==="
+    bootc status 2>&1 | head -30 || true
+    echo
+    echo "=== bubblebox mounts ==="
+    mount | grep '/bubblebox/' || echo "(none mounted)"
+    echo
+    echo "=== bubblebox wrappers (~/.local/bin/) ==="
+    dst_bin="${HOME}/.local/bin"
+    for t in $(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))'); do
+      if [ -x "${dst_bin}/${t}" ]; then echo "  ok   ${t}"; else echo "  MISS ${t}"; fi
+    done
+    echo
+    echo "=== opencode (host install) ==="
+    if command -v opencode >/dev/null 2>&1; then
+      echo "  $(opencode --version 2>&1 | head -1)"
+    else
+      echo "  (not installed — run: cjust opencode-install)"
+    fi
+    echo
+    echo "=== user units (~/.config/systemd/user/) ==="
+    dst_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    if ls -1 "${dst_dir}"/*.service 2>/dev/null; then :; else echo "(none linked)"; fi
+
 # ═══════════════════════════════════════════════════════════════════════════
 # bee remote dev — SSH tunnels (dev access for gpl/polymer/buildspace/hummingbird/storyhub on bee)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -902,4 +902,3 @@ dev-up project:
     ssh -o IdentitiesOnly=yes "$BEE" "qd $proj up"
     echo "==> stack up; opening tunnel (Ctrl-C to close) …"
     exec just --justfile "{{ justfile_directory() }}/Justfile" dev-tunnel "$proj"
-947|
