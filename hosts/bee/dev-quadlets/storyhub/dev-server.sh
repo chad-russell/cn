@@ -66,9 +66,10 @@ pnpm --filter storyhub-prisma run prisma:migrate:deploy || \
 # Ensure the MinIO storyhub-media-items bucket exists + apply CORS. Uses bun
 # (not node) to run this — bun resolves workspace deps natively, while node
 # with NODE_PATH can't find pnpm-hoisted packages like @aws-sdk/client-s3.
+# Run from /workspace/storyhub where @aws-sdk/client-s3 is resolvable.
 # Idempotent.
 echo "==> ensuring MinIO bucket storyhub-media-items + CORS ..."
-bun <<'BUN' || { echo "WARN: bucket setup failed (continuing)" >&2; }
+cd /workspace/storyhub && bun <<'BUN' || { echo "WARN: bucket setup failed (continuing)" >&2; }
 const net = require("net");
 const { S3Client, CreateBucketCommand, PutBucketCorsCommand } = require("@aws-sdk/client-s3");
 
