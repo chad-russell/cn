@@ -18,7 +18,7 @@
 #     agents.bumble = {
 #       privateKeySecret = "buzz-agent-bumble-env";
 #       provider = "openai";
-#       model = "glm-5.2";
+#       model = "glm-5.3";
 #       extraEnv = {
 #         OPENAI_COMPAT_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
 #         OPENAI_COMPAT_API = "chat";
@@ -70,7 +70,7 @@ let
 
       model = lib.mkOption {
         type = lib.types.str;
-        default = "glm-5.2";
+        default = "glm-5.3";
         description = ''
           For buzz-agent: model id. With provider=openai this is
           OPENAI_COMPAT_MODEL; with openrouter, OPENROUTER_MODEL.

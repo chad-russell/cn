@@ -249,7 +249,7 @@
       providers.zai.enabled = false;
       model = {
         provider = "zai-coding";
-        default = "glm-5.2";
+        default = "glm-5.3";
       };
       # Use a fast, cheap OpenRouter model for context compression
       # (summarization). $0.03/M input tokens, 1M context window.

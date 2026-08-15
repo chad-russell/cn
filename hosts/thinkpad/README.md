@@ -200,7 +200,7 @@ Z.AI coding endpoint by declaring a custom OpenAI-compatible provider in
 ```bash
 hermes config set custom_providers '[{name:zai-coding,base_url:https://api.z.ai/api/coding/paas/v4,key_env:OPENAI_API_KEY}]'
 hermes config set model.provider zai-coding
-hermes config set model.default glm-5.2
+hermes config set model.default glm-5.3
 hermes doctor   # verify deps + provider config
 ```
 
