@@ -19,6 +19,32 @@ in {
   options.services.opencode = {
     enable = lib.mkEnableOption "opencode AI coding agent";
 
+    # Declarative system-managed opencode.json (/etc/opencode/opencode.json —
+    # lowest precedence, merged with ~/.config/opencode). Default OFF so hosts
+    # with a hand-managed user config (bees: work/gloo) are untouched.
+    manageConfig = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Write a system-managed /etc/opencode/opencode.json with a pinned
+        personal default model and a hard provider whitelist
+        (enabled_providers). Leave off for hosts whose opencode is
+        hand-configured per-user (e.g. bees work setup).
+      '';
+    };
+
+    defaultModel = lib.mkOption {
+      type = lib.types.str;
+      default = "zhipuai-coding-plan/glm-5.3";
+      description = "Default model (provider/model) in the managed config.";
+    };
+
+    smallModel = lib.mkOption {
+      type = lib.types.str;
+      default = "zhipuai-coding-plan/glm-5-turbo";
+      description = "Small model for titles/summaries in the managed config.";
+    };
+
     web = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -56,6 +82,31 @@ in {
       # ZHIPU_API_KEY for the zhipuai-coding-plan provider (Zhipu AI / Z.AI coding plan).
       age.secrets.openrouter-api-key.file = ../secrets/openrouter-api-key.age;
       age.secrets.zai-api-key.file = ../secrets/zai-api-key.age;
+
+      # ── Declarative opencode.json ─────────────────────────────────
+      # Only when manageConfig is set. /etc/opencode is opencode's
+      # system-managed config location (lowest precedence — user global in
+      # ~/.config/opencode overrides). Personal default: glm-5.3 on the
+      # Z.AI coding plan. The picker is locked via enabled_providers
+      # (a hard whitelist — everything else from models.dev is ignored):
+      #   zhipuai-coding-plan  personal coding (Z.AI sub, glm-5.3)
+      #   openai               work Codex sub (OAuth, gpt-5.3-codex)
+      #   openrouter           fallback + gap-filling (pay-per-token)
+      # Work sessions (Gloo models) use hermes' direct gloo provider or
+      # bees' own opencode. Override per task with
+      #   opencode run --model openai/gpt-5.3-codex '...'
+      environment.etc."opencode/opencode.json" = lib.mkIf cfg.manageConfig {
+        text = builtins.toJSON {
+          "$schema" = "https://opencode.ai/config.json";
+          model = cfg.defaultModel;
+          small_model = cfg.smallModel;
+          enabled_providers = [
+            "zhipuai-coding-plan"
+            "openai"
+            "openrouter"
+          ];
+        };
+      };
 
       # ── Package ────────────────────────────────────────────────────
       environment.systemPackages = [ unstable.opencode ];

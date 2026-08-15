@@ -7,6 +7,41 @@
 { config, lib, pkgs, ... }:
 
 let
+  # Secrets → shell env, mirroring the thinkpad .zshenv pattern
+  # (hosts/thinkpad/bubblebox/files/.zshenv): decrypt age secrets with the
+  # identity at ~/.config/age/key.txt into a per-login tmpfs cache under
+  # $XDG_RUNTIME_DIR, then export. Silent + non-fatal when repo/identity/
+  # age binary are absent; idempotent (existing vars left untouched).
+  secretsEnv = pkgs.writeShellScript "cn-secrets-env" ''
+    set -eu
+    _vars_missing() {
+      [ -z "''${ZHIPU_API_KEY:-}" ] || [ -z "''${OPENROUTER_API_KEY:-}" ] || [ -z "''${GLOO_API_KEY:-}" ]
+    }
+    if _vars_missing; then
+      _cache="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/cn-secrets.env"
+      if [ ! -f "$_cache" ] \
+         && [ -f "$HOME/.config/age/key.txt" ] \
+         && [ -f "$HOME/Code/cn/secrets/zai-api-key.age" ] \
+         && command -v age >/dev/null 2>&1; then
+        : >"$_cache".tmp
+        chmod 600 "$_cache".tmp
+        for _src in \
+            "$HOME/Code/cn/secrets/zai-api-key.age" \
+            "$HOME/Code/cn/secrets/openrouter-api-key.age" \
+            "$HOME/Code/cn/secrets/gloo-api-key.age"; do
+          [ -f "$_src" ] || continue
+          age -d -i "$HOME/.config/age/key.txt" "$_src" 2>/dev/null >>"$_cache".tmp || :
+        done
+        if [ -s "$_cache".tmp ]; then
+          mv "$_cache".tmp "$_cache"
+        else
+          rm -f "$_cache".tmp
+        fi
+      fi
+      [ -f "$_cache" ] && . "$_cache"
+    fi
+  '';
+
   ohMyPoshConfig = pkgs.writeText "oh-my-posh-config.json" ''
     {
       "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
@@ -126,8 +161,20 @@ in {
 
   users.users.crussell.shell = pkgs.zsh;
 
+  # Decrypt age secrets (ZHIPU/OPENROUTER/GLOO API keys) into every login
+  # shell, so interactive opencode/hermes/CLI sessions inherit them.
+  # Mirrors hosts/thinkpad/bubblebox/files/.zshenv — see the pattern docs
+  # there (tmpfs-cached, once per login, non-fatal when absent).
+  environment.etc."zshenv".text = ''
+    if [ "$USER" = "crussell" ] && [ -z "''${__CN_SECRETS_ENV_LOADED:-}" ]; then
+      export __CN_SECRETS_ENV_LOADED=1
+      . ${secretsEnv}
+    fi
+  '';
+
   # ── CLI packages ─────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
+    age
     oh-my-posh
     fzf
     eza

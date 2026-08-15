@@ -167,6 +167,9 @@
 
   # ── opencode AI coding agent ────────────────────────────────────
   # (enable + web defaults live in modules/opencode.nix)
+  # Managed config: pins glm-5.3 default + provider whitelist — bee is
+  # the personal coding host. bees keeps its hand-managed work config.
+  services.opencode.manageConfig = true;
 
   # ── Buzz agent harness (buzz-acp) ───────────────────────────────
   # Disabled — replaced by Hermes Agent gateway (see below). Kept as a
@@ -212,6 +215,10 @@
           base_url = "https://api.z.ai/api/coding/paas/v4";
           key_env = "ZAI_CODING_KEY";
         }
+        # Work-only provider (employer-paid). Direct to Gloo's platform —
+        # the self-hosted gloo proxy on bees is retired. Model IDs carry
+        # the gloo- prefix on the platform API. Never use for personal
+        # tasks; Z.AI (zai-coding) is the personal default.
         {
           name = "gloo";
           base_url = "https://platform.ai.gloo.com/ai/v2";

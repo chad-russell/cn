@@ -14,7 +14,6 @@
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
-    ./gloo-proxy.nix
     ./media-services.nix
     ./immich.nix
     ./immich-backup.nix
@@ -131,9 +130,6 @@
 
   # ── opencode AI coding agent ────────────────────────────────────
   # (enable + web defaults live in modules/opencode.nix)
-
-  # ── Gloo AI Proxy ──────────────────────────────────────────────────
-  services.gloo-proxy.enable = true;
 
   # ── Firewall: disabled (router handles it) ───────────────────────
   networking.firewall.enable = false;

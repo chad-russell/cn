@@ -17,8 +17,11 @@ in {
   "restic-password-bee.age".publicKeys = [ crussell ];
   "restic-password-think.age".publicKeys = [ crussell ];
 
-  # ── Gloo AI proxy credentials ─────────────────────────────────
-  "gloo-credentials.age".publicKeys = [ crussell ];
+  # ── Gloo AI platform direct access ──────────────────────────────
+  # GLOO_API_KEY for direct-to-platform work sessions (opencode on bees,
+  # after the self-hosted gloo proxy was retired). Same key value as the
+  # GLOO_API_KEY line inside hermes-bee-env.age on bee.
+  "gloo-api-key.age".publicKeys = [ crussell ];
 
   # ── Beszel monitoring ──────────────────────────────────────────
   # Env file (KEY=<hub public key>, TOKEN=<universal token>) shared by
