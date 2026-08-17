@@ -39,6 +39,11 @@
     after = [ "network-online.target" "zot.service" ];
     wants = [ "network-online.target" ];
     # oneshot: a build already in flight must not be raced by a second one
+    #
+    # path is REQUIRED: systemd units don't inherit the login PATH, so the
+    # script's `#!/usr/bin/env bash` can't resolve bash without it (NixOS has
+    # no /bin/bash). This also provides git/podman/coreutils for the script.
+    path = [ pkgs.bash pkgs.coreutils pkgs.git pkgs.podman ];
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${config.environment.etc."thinkpad-image-build.sh".source}";
