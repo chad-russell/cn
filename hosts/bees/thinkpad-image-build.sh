@@ -23,19 +23,23 @@ REGISTRY="10.10.0.6:5000"
 IMAGE="${REGISTRY}/cn/thinkpad-host:${FEDORA_MAJOR_VERSION}"
 
 # ---- repo sync (ff-only; the build must reflect a real origin/main state) --
+# git runs AS crussell (repo owner) via runuser: root's git would trip
+# "dubious ownership" on the crussell-owned repo, and a root `reset --hard`
+# would leave root-owned files in the tree (breaking later crussell pulls).
 cd "${REPO}"
-if ! git diff --quiet || ! git diff --cached --quiet; then
+git_as() { runuser -u crussell -- git -C "${REPO}" "$@"; }
+if ! git_as diff --quiet || ! git_as diff --cached --quiet; then
   echo "ERROR: ${REPO} has uncommitted changes — commit/stash first." >&2
   exit 1
 fi
-git fetch origin
-git reset --hard origin/main
-echo "==> building from $(git rev-parse --short HEAD) $(git log -1 --format=%cd --date=short)"
+git_as fetch origin
+git_as reset --hard origin/main
+echo "==> building from $(git_as rev-parse --short HEAD) $(git_as log -1 --format=%cd --date=short)"
 
 # ---- version stamp: sha + UTC timestamp (unique per build, same scheme as
 # the thinkpad-local build.sh; --dirty flag if the tree wasn't clean — cannot
 # happen after the reset above, kept as a belt-and-suspenders guard)
-GIT_SHA="$(git rev-parse --short HEAD)"
+GIT_SHA="$(git_as rev-parse --short HEAD)"
 if ! git diff --quiet; then GIT_SHA="${GIT_SHA}-dirty"; fi
 IMAGE_VERSION="${FEDORA_MAJOR_VERSION}-${GIT_SHA}-$(date -u +%Y%m%d-%H%M%S)"
 VERSION_TAG="${REGISTRY}/cn/thinkpad-host:${IMAGE_VERSION}"
