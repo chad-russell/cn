@@ -44,10 +44,13 @@
     # script's `#!/usr/bin/env bash` can't resolve bash without it (NixOS has
     # no /bin/bash). This also provides git/podman/coreutils for the script.
     # util-linux: runuser (git runs as crussell, the repo owner)
+    # openssh: git fetch/push over SSH (origin is git@github.com), exec'd by
+    # git from PATH as crussell (uses their ~/.ssh key)
     path = [
       pkgs.bash
       pkgs.coreutils
       pkgs.git
+      pkgs.openssh
       pkgs.podman
       pkgs.util-linux
     ];
