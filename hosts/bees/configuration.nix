@@ -24,6 +24,7 @@
     ./llama-server.nix
     ./backup.nix
     ./beszel.nix
+    ./thinkpad-registry.nix
   ];
 
   networking.hostName = "bees";

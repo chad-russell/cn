@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-# Build the custom Silverblue image.
+# Build the custom Silverblue host image.
+#
+# BREAK-GLASS / LOCAL PATH: builds on the thinkpad itself into root podman
+# storage. The NORMAL flow is remote — bees builds + publishes daily to its
+# zot registry (hosts/bees/thinkpad-registry.nix) and `cjust image-rebuild`
+# triggers that build on demand. Use this script only while bees/Nebula is
+# unreachable, or to test image changes before they hit the registry build.
 #
 # IMPORTANT: runs podman as ROOT (sudo). The image must land in root's
 # containers-storage (/var/lib/containers/storage) because `bootc switch

@@ -1,0 +1,22 @@
+[Unit]
+Description=zot OCI registry (thinkpad host images; Nebula-only)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/project-zot/zot-linux-amd64:v2.1.20
+ContainerName=zot
+# Bind to bees's Nebula address only — the registry is reachable from the
+# overlay (think, bee, ...) but NOT from the LAN or the internet. bees runs
+# with networking.firewall.enable=false, so the bind address IS the access
+# control. No TLS: transport security is the Nebula WireGuard tunnel itself.
+PublishPort=10.10.0.6:5000:5000
+Volume=/var/lib/zot:/var/lib/zot:Z
+Volume=/etc/zot/config.json:/etc/zot/config.json:ro
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

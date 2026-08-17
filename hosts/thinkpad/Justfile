@@ -679,26 +679,50 @@ buzz-desktop-install:
 # ═══════════════════════════════════════════════════════════════════════════
 # host image (bootc)
 # ═══════════════════════════════════════════════════════════════════════════
+#
+# The NORMAL flow is registry-driven, built on bees:
+#   bees builds + publishes 10.10.0.6:5000/cn/thinkpad-host:44 daily
+#   (thinkpad-image-build.timer, hosts/bees/thinkpad-registry.nix), keeping
+#   the last 3 immutable tags. `cjust image-rebuild` triggers a build NOW;
+#   `cjust image-upgrade` pulls the diff and stages it; reboot applies.
+#
+# The LOCAL flow (build.sh into root podman storage) remains as break-glass
+# while bees/Nebula is down, or for testing image changes pre-registry.
 
-# Build the custom Silverblue host image into root podman storage. (sudo)
-# See host-image/README.md. First time on a host, follow with `image-switch`.
+# Trigger a build on bees NOW and wait for it, then pull + stage the result.
+# The "I pushed to origin/main and want it on the laptop today" command.
+# Requires: SSH key to bees (same ed25519 as elsewhere) + Nebula up.
+# The build pulls origin/main on bees (your local commits must be pushed
+# first) and pushes :44 + an immutable 44-<sha>-<ts> tag to zot.
 [group('host image')]
-image-build:
-    {{ justfile_directory() }}/host-image/build.sh
+image-rebuild:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "==> triggering build on bees (this pulls origin/main there) ..."
+    ssh -o IdentitiesOnly=yes crussell@10.10.0.6 \
+      'sudo systemctl start --no-block thinkpad-image-build.service && sudo journalctl -u thinkpad-image-build.service -f -n 0 -o cat'
+    echo
+    echo "==> build published; pulling + staging on this host"
+    {{ just_executable() }} --justfile "{{ justfile_directory() }}/Justfile" image-upgrade
 
-# One-time: adopt the custom image as the host's boot image. (sudo)
-# Only for first adoption or changing image reference; for routine rebuilds
-# use `image-upgrade` instead. Reboot after.
+# One-time: adopt the bees registry image as the host's boot image. (sudo)
+# Only for first adoption or changing image reference; for routine updates
+# use `image-upgrade`. Reboot after. See host-image/switch.sh.
 [group('host image')]
 image-switch:
     {{ justfile_directory() }}/host-image/switch.sh
 
-# Routine: apply a freshly rebuilt image to the host. (sudo)
-# Re-resolves the :44 tag from local storage and stages a new deployment if the
-# digest changed. Reboot after.
+# Routine: pull the latest :44 from bees's registry + stage a new deployment.
+# (sudo) Downloads only changed layers. Reboot to go live.
 [group('host image')]
 image-upgrade:
     {{ justfile_directory() }}/host-image/upgrade.sh
+
+# BREAK-GLASS: build the image locally on this host (sudo). The normal flow
+# builds on bees. First time on a fresh host, follow with `image-switch`.
+[group('host image')]
+image-build:
+    {{ justfile_directory() }}/host-image/build.sh
 
 # ═══════════════════════════════════════════════════════════════════════════
 # system

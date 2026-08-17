@@ -1,41 +1,38 @@
 #!/usr/bin/env bash
-# Apply a freshly rebuilt image to the host — the ROUTINE "I rebuilt :44, now
-# boot it" command. Uses `bootc upgrade`, NOT `switch`.
+# Apply the latest bees-built image to the host — the ROUTINE command.
 #
-# WHY UPGRADE, NOT SWITCH:
-#   `bootc switch` compares the image REFERENCE (transport + name + tag), not
-#   the image content. Pointing it at the same `...:44` you're already booted
-#   on is a no-op BY DESIGN — it prints "Image specification is unchanged"
-#   even though you just rebuilt :44 with new content. `switch` is for changing
-#   the reference (adopting the image the first time, or pointing at a different
-#   tag/image); `bootc upgrade` is for applying NEW CONTENT of the SAME
-#   reference.
+# Resolves the current bootc image reference (registry or containers-storage)
+# and applies NEW CONTENT of that SAME reference:
+#   - registry reference (the normal path since switch.sh adopted it):
+#       bootc upgrade → pulls only the changed layers of
+#       10.10.0.6:5000/cn/thinkpad-host:44 from bees's zot registry over
+#       Nebula and stages the new deployment. Diff-only: a version-stamp-only
+#       rebuild is a few MB; a Fedora-update rebuild is typically tens-hundreds.
+#   - containers-storage reference (break-glass local flow, still works):
+#       bootc upgrade → re-resolves localhost/host-image-thinkpad:44 from
+#       root podman storage (no network) exactly like the old script.
 #
-#   `bootc upgrade` re-resolves :44 from local podman storage (no network) and
-#   compares the image's MANIFEST/CONFIG DIGEST against what's booted. Because
-#   build.sh stamps every image with a unique OCI label, the manifest digest
-#   differs on every rebuild, so `upgrade` stages a fresh deployment each time.
-#   (Without that label, a cache-rebuilt image has an identical digest and
-#   `upgrade` would print "No update available.")
-#
-#   bootc upgrade
-#
-# Prereqs: (1) run ./build.sh first; (2) have adopted the image ONCE via
-# ./switch.sh. bootc is shipped on Fedora Silverblue 44+. No --transport flag is
-# needed — upgrade operates on the reference you're already booted on.
+# Prereqs: Nebula up (registry path). bootc ships on Silverblue 44+.
 set -euo pipefail
 
-FEDORA_MAJOR_VERSION="44"
-IMAGE="localhost/host-image-thinkpad:${FEDORA_MAJOR_VERSION}"
+REGISTRY="10.10.0.6:5000"
 
-# Sanity: the image must exist in root podman storage.
-if ! sudo podman image exists "${IMAGE}"; then
-  echo "Image ${IMAGE} not found in root podman storage." >&2
-  echo "Run ./build.sh first." >&2
-  exit 1
+# If we're on the registry reference, pre-flight the registry so a Nebula
+# outage produces a clear error instead of a deep containers-stack failure.
+# (Grepping the address works for both bootc status output formats.)
+if sudo bootc status 2>/dev/null | grep -q "${REGISTRY}"; then
+  echo "==> on the registry reference — pre-flighting ${REGISTRY}"
+  curl -fsSL --max-time 10 "http://${REGISTRY}/v2/" >/dev/null || {
+    echo "ERROR: cannot reach ${REGISTRY} — is Nebula up on this host?" >&2
+    echo "       (break-glass while offline: cjust image-build && cjust image-switch)" >&2
+    exit 1
+  }
+else
+  echo "==> not on the registry reference yet (local containers-storage flow)"
+  echo "    one-time adopt of the registry flow:  cjust image-switch"
 fi
 
-echo "==> bootc upgrade  (re-resolves ${IMAGE} from local storage, compares digest)"
+echo "==> bootc upgrade"
 sudo bootc upgrade
 
 cat <<EOF

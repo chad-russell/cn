@@ -59,17 +59,15 @@ let
         --cache-type-k q8_0 --cache-type-v q8_0 \
         --alias "$MODEL"
   '';
-in
-{
+in {
   # Model storage on local NVMe (1.7 TB free — never use NFS for model loading)
   system.activationScripts.llama-models-dir = lib.stringAfter [ "users" ] ''
     mkdir -p /var/lib/llama/models
   '';
 
   # HF Hub CLI for downloading GGUF models
-  environment.systemPackages = [
-    (pkgs.python3.withPackages (ps: [ ps.huggingface-hub ]))
-  ];
+  environment.systemPackages =
+    [ (pkgs.python3.withPackages (ps: [ ps.huggingface-hub ])) ];
 
   # Systemd template service: sudo systemctl start llama-server@<model-name>
   # %i resolves to the model basename (without .gguf extension).

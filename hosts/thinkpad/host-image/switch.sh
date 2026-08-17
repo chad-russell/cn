@@ -1,36 +1,44 @@
 #!/usr/bin/env bash
-# Adopt the custom image as the host's boot image — the ONE-TIME command to
-# start booting from `containers-storage:localhost/host-image-thinkpad:44`
-# (or to later re-point the host at a different image/tag). Uses the modern
-# bootc front-end (not rpm-ostree).
+# Adopt the bees-built registry image as the host's boot image — the ONE-TIME
+# command to move the thinkpad onto registry-driven updates:
 #
-#   bootc switch --transport containers-storage localhost/host-image-thinkpad:44
+#   bootc switch --transport registry --insecure 10.10.0.6:5000/cn/thinkpad-host:44
 #
-# Prereq: run ./build.sh first. bootc is shipped on Fedora Silverblue 44+.
+# After this, `bootc upgrade` (cjust image-upgrade) re-resolves :44 from the
+# registry over Nebula and pulls only changed layers. The local build.sh flow
+# remains the break-glass path while bees or Nebula is down.
 #
-# IMPORTANT — switch vs upgrade (don't get bitten by this):
+# Prereq: bees's thinkpad-image-build.service has run at least once (it runs
+# daily at ~05:10, or trigger it: `cjust image-rebuild`). Verify the image is
+# there first — this script checks.
+#
+# IMPORTANT — switch vs upgrade (unchanged semantics from the local flow):
 #   `bootc switch` compares the image REFERENCE (transport + name + tag), NOT
-#   the image content. Pointing it at the same `...:44` you're already booted
-#   on is a no-op BY DESIGN ("Image specification is unchanged") — even if you
-#   just rebuilt :44 with new content. So switch is for the FIRST adopt (or
-#   changing to a different image/tag); it is NOT the routine rebuild command.
-#   To apply a rebuilt image you're already booted on, use ./upgrade.sh, which
-#   compares the image's manifest DIGEST and so detects content changes.
+#   the image content. It's for the first adopt (or re-pointing at a different
+#   image/tag); routine content updates use ./upgrade.sh (`bootc upgrade`),
+#   which compares the manifest DIGEST and detects every rebuild because every
+#   build stamps a unique OCI label.
 set -euo pipefail
 
 FEDORA_MAJOR_VERSION="44"
-IMAGE="localhost/host-image-thinkpad:${FEDORA_MAJOR_VERSION}"
+REGISTRY="10.10.0.6:5000"
+IMAGE="${REGISTRY}/cn/thinkpad-host:${FEDORA_MAJOR_VERSION}"
 
-# Sanity: the image must exist in root podman storage.
-if ! sudo podman image exists "${IMAGE}"; then
-  echo "Image ${IMAGE} not found in root podman storage." >&2
-  echo "Run ./build.sh first." >&2
+# Sanity: the image must exist in the registry (and Nebula must be up).
+echo "==> checking ${IMAGE} in the registry ..."
+curl -fsSL --max-time 10 "http://${REGISTRY}/v2/" >/dev/null || {
+  echo "ERROR: cannot reach ${REGISTRY} — is Nebula up on this host?" >&2
   exit 1
-fi
+}
+curl -fsSL "http://${REGISTRY}/v2/cn/thinkpad-host/tags/list" \
+  | grep -q "\"${FEDORA_MAJOR_VERSION}\"" || {
+  echo "ERROR: tag :${FEDORA_MAJOR_VERSION} not in the registry yet." >&2
+  echo "       Trigger a build first:  cjust image-rebuild   (or wait for the daily timer)" >&2
+  exit 1
+}
 
-echo "==> bootc switch --transport containers-storage ${IMAGE}"
-echo "    (one-time adopt; for routine rebuilds use ./upgrade.sh)"
-sudo bootc switch --transport containers-storage "${IMAGE}"
+echo "==> bootc switch --transport registry --insecure ${IMAGE}"
+sudo bootc switch --transport registry --insecure "${IMAGE}"
 
 cat <<EOF
 
@@ -38,16 +46,12 @@ New deployment staged. It is NOT active until you reboot:
 
   systemctl reboot
 
-(Or re-run with --apply to reboot automatically:
-  sudo bootc switch --apply --transport containers-storage ${IMAGE})
-
 After reboot, verify which build you're on:
   cat /usr/lib/host-image-thinkpad-version
-  bootc status
+  bootc status     # image reference should show registry transport
 
-Next time you rebuild the image, DON'T re-run switch.sh (it will say
-"Image specification is unchanged" because the reference is the same) — run:
-  ./build.sh && ./upgrade.sh     # then: systemctl reboot
+From now on, routine updates are:
+  cjust image-upgrade      # pull :44 diff from bees + stage (reboot to apply)
 
 If the new image is broken, the previous deployment is still there — roll back:
   bootc rollback     # then: systemctl reboot

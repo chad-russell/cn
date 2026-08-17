@@ -1,0 +1,36 @@
+{
+  "distSpecVersion": "1.1.1",
+  "storage": {
+    "rootDirectory": "/var/lib/zot",
+    "dedupe": true,
+    "gc": true,
+    "gcDelay": "2h",
+    "gcInterval": "1h",
+    "retention": {
+      "dryRun": false,
+      "delay": "24h",
+      "policies": [
+        {
+          "repositories": ["cn/*"],
+          "deleteUntagged": true,
+          "keepTags": [
+            {
+              "patterns": ["44"]
+            },
+            {
+              "patterns": ["44-*"],
+              "mostRecentlyPushedCount": 3
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "http": {
+    "address": "0.0.0.0",
+    "port": "5000"
+  },
+  "log": {
+    "level": "info"
+  }
+}

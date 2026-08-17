@@ -21,8 +21,9 @@
 #   future-facing front-end (per bootc-status(8): "bootc and rpm-ostree share
 #   the same code").
 #
-# Built and switched entirely locally — no registry, no GitHub Actions. See
-# build.sh / switch.sh.
+# Built ON BEES (daily timer + on-demand `cjust image-rebuild`) and published
+# to the homelab zot registry; the thinkpad pulls from there. Local
+# build.sh/switch.sh remain as the break-glass path. See README.md.
 #
 # Base image: the same one ublue/bluefin/finpilot derive from.
 
@@ -131,6 +132,20 @@ RUN sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config && \
 RUN mkdir -p /usr/lib/bootc/kargs.d && \
     printf 'kargs = ["usbcore.autosuspend=-1"]\nmatch-architectures = ["x86_64"]\n' \
     > /usr/lib/bootc/kargs.d/10-usb-autosuspend.toml
+
+# ---- 3.6. insecure-registry drop-in for the homelab zot registry --------
+# The host's boot image pulls from bees's zot registry at 10.10.0.6:5000 —
+# plain HTTP inside the Nebula WireGuard tunnel (Nebula IS the transport
+# security; the registry is bound to the overlay address only). This drop-in
+# teaches container tools in the image (skopeo/bootc container previews,
+# `podman pull 10.10.0.6:5000/...` if you ever want to inspect the image
+# without switching) that the registry is intentionally insecure-HTTP.
+# `bootc upgrade` itself does NOT consult registries.conf (it pulls via its
+# own container-stack integration), so the one-time `switch.sh` passes
+# `--insecure` to cover the initial adopt.
+RUN mkdir -p /etc/containers/registries.conf.d && \
+    printf '[registries.insecure]\nregistries = ["10.10.0.6:5000"]\n' \
+    > /etc/containers/registries.conf.d/10-homelab-registry.conf
 
 # ---- 4. build identity (lets `bootc upgrade` detect a rebuild) ----------
 # Each build injects a unique IMAGE_VERSION (git SHA + timestamp; see

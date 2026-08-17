@@ -100,11 +100,7 @@ in {
           "$schema" = "https://opencode.ai/config.json";
           model = cfg.defaultModel;
           small_model = cfg.smallModel;
-          enabled_providers = [
-            "zhipuai-coding-plan"
-            "openai"
-            "openrouter"
-          ];
+          enabled_providers = [ "zhipuai-coding-plan" "openai" "openrouter" ];
         };
       };
 

@@ -28,12 +28,7 @@
       };
 
       # Enable JSON output format — required for Hermes API access
-      search = {
-        formats = [
-          "html"
-          "json"
-        ];
-      };
+      search = { formats = [ "html" "json" ]; };
 
       general = {
         instance_name = "bee-search";
