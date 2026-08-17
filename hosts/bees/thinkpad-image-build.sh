@@ -40,7 +40,7 @@ echo "==> building from $(git_as rev-parse --short HEAD) $(git_as log -1 --forma
 # the thinkpad-local build.sh; --dirty flag if the tree wasn't clean — cannot
 # happen after the reset above, kept as a belt-and-suspenders guard)
 GIT_SHA="$(git_as rev-parse --short HEAD)"
-if ! git diff --quiet; then GIT_SHA="${GIT_SHA}-dirty"; fi
+if ! git_as diff --quiet; then GIT_SHA="${GIT_SHA}-dirty"; fi
 IMAGE_VERSION="${FEDORA_MAJOR_VERSION}-${GIT_SHA}-$(date -u +%Y%m%d-%H%M%S)"
 VERSION_TAG="${REGISTRY}/cn/thinkpad-host:${IMAGE_VERSION}"
 
