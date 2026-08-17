@@ -38,7 +38,6 @@ Last validated via SSH: **2026-08-10**.
 │   │   ├── disk-config.nix
 │   │   ├── caddy.nix + caddy/ (Caddyfile, routes, caddy.container)
 │   │   │   └── routes/internal/ (services.caddy, media.caddy, beszel.caddy)
-│   │   ├── gloo-proxy.nix + gloo-proxy/ (Gloo AI proxy: module + package)
 │   │   ├── media-services.nix
 │   │   ├── immich.nix + immich-backup.nix
 │   │   ├── beszel.nix         # Beszel monitoring hub
@@ -252,7 +251,6 @@ Source files:
 - `hosts/bees/beszel.nix` — Beszel monitoring hub
 - `hosts/bees/ntfy.nix`, `datenight.nix`
 - `hosts/bees/services.nix` + `*.container` — linkding, papra
-- `hosts/bees/gloo-proxy.nix` + `gloo-proxy/` — Gloo AI proxy
 - `hosts/bees/backup.nix` — Restic backup to S3
 - `*.container` files — jellyfin, jellyseerr, sonarr, radarr, prowlarr, qbittorrent, linkding, papra
 
@@ -413,7 +411,6 @@ Public routes (gateway Caddy → backend over Nebula):
 | `jellyfin.crussell.io`      | `10.10.0.6:8096`                                                                         |
 | `photos.crussell.io`        | `10.10.0.6:2283`                                                                         |
 | `datenight.crussell.io`     | `10.10.0.6:7890`                                                                         |
-| `glooai.crussell.io`        | `10.10.0.6:4637`                                                                         |
 
 > To add/change a public route, edit `hosts/gateway/caddy.nix` and `nix run .#deploy -- gateway`. Adding a new hostname requires it to resolve to the gateway (covered by the `*.crussell.io` wildcard) and Caddy auto-issues its cert on first request via HTTP-01.
 
