@@ -249,6 +249,7 @@ Source files:
 - `hosts/bees/media-services.nix` — Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr
 - `hosts/bees/immich.nix` + `hosts/bees/immich-backup.nix` — Immich server + ML
 - `hosts/bees/beszel.nix` — Beszel monitoring hub
+- `hosts/bees/thinkpad-registry.nix` + `zot.container` — zot OCI registry (thinkpad host images) + daily build/publish service
 - `hosts/bees/ntfy.nix`, `datenight.nix`
 - `hosts/bees/services.nix` + `*.container` — linkding, papra
 - `hosts/bees/backup.nix` — Restic backup to S3
