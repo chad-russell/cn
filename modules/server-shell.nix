@@ -12,8 +12,11 @@ let
   # identity at ~/.config/age/key.txt into a per-login tmpfs cache under
   # $XDG_RUNTIME_DIR, then export. Silent + non-fatal when repo/identity/
   # age binary are absent; idempotent (existing vars left untouched).
+  # NOTE: this script is SOURCED from /etc/zshenv into the user's login
+  # shell. Never `set -eu` here — shell options leak into the caller and
+  # `nounset` aborts NixOS's generated /etc/zshrc at its unguarded
+  # $__ETC_ZSHRC_SOURCED check (bare prompt on every SSH login).
   secretsEnv = pkgs.writeShellScript "cn-secrets-env" ''
-    set -eu
     _vars_missing() {
       [ -z "''${ZHIPU_API_KEY:-}" ] || [ -z "''${OPENROUTER_API_KEY:-}" ] || [ -z "''${GLOO_API_KEY:-}" ]
     }
@@ -38,8 +41,15 @@ let
           rm -f "$_cache".tmp
         fi
       fi
-      [ -f "$_cache" ] && . "$_cache"
+      # Cache holds plain KEY=... lines; set -a exports them (children like
+      # opencode/hermes need them in the environment). Thinkpad pattern.
+      if [ -f "$_cache" ]; then
+        set -a
+        . "$_cache"
+        set +a
+      fi
     fi
+    unset _cache _src _vars_missing
   '';
 
   ohMyPoshConfig = pkgs.writeText "oh-my-posh-config.json" ''
