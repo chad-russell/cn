@@ -34,10 +34,17 @@
     # doesn't ship. The module builds its own package internally.
     hermes-agent = { url = "github:NousResearch/hermes-agent"; };
 
+    # ── Hermes WebUI (community web frontend for Hermes Agent) ────────
+    # https://github.com/nesquena/hermes-webui — runs the agent in-process
+    # against HERMES_HOME. Like hermes-agent, does NOT follow our nixpkgs;
+    # the NixOS module derives the agent interpreter from
+    # services.hermes-agent.package's passthru.hermesVenv.
+    hermes-webui = { url = "github:nesquena/hermes-webui"; };
+
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, disko, agenix
-    , rust-overlay, hermes-agent, ... }:
+    , rust-overlay, hermes-agent, hermes-webui, ... }:
     let
       lib = nixpkgs.lib;
       username = "crussell";
@@ -110,7 +117,10 @@
       # ── NixOS Configurations ─────────────────────────────────────
       nixosConfigurations.bee = mkHost {
         hostname = "bee";
-        extraModules = [ hermes-agent.nixosModules.default ];
+        extraModules = [
+          hermes-agent.nixosModules.default
+          hermes-webui.nixosModules.default
+        ];
       };
       nixosConfigurations.bees = mkHost { hostname = "bees"; };
       nixosConfigurations.nas = mkHost { hostname = "nas"; };

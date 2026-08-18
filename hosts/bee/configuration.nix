@@ -17,6 +17,7 @@
     ../../modules/beszel-agent.nix
     ./dev-quadlets.nix
     ./searxng.nix
+    ./hermes-webui.nix
     ./backup.nix
     ./tailscale.nix
   ];

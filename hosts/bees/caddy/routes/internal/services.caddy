@@ -14,3 +14,8 @@ handle @papra {
 handle @ntfy {
     reverse_proxy 127.0.0.1:8090
 }
+
+@hermes host hermes.internal.crussell.io
+handle @hermes {
+    reverse_proxy 10.10.0.12:8787
+}

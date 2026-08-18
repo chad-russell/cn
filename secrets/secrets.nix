@@ -46,6 +46,11 @@ in {
   # (Z.AI key remapped for Hermes' OpenAI-compatible provider).
   "hermes-bee-env.age".publicKeys = [ crussell ];
 
+  # ── Hermes WebUI on bee ─────────────────────────────────────────
+  # HERMES_WEBUI_PASSWORD for the web login gate at
+  # https://hermes.internal.crussell.io (routed by bees Caddy to bee).
+  "hermes-webui-env.age".publicKeys = [ crussell ];
+
   # ── Hermes Agent CLI/TUI/Desktop on thinkpad ───────────────────
   # OPENAI_API_KEY=<Z.AI coding key> so Hermes' OpenAI-compatible provider
   # resolver finds it. Same key value as zai-api-key.age (which exports it
