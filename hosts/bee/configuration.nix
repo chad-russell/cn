@@ -155,6 +155,9 @@
     # (infra/storyhub-worker terraform, SSO login for deploy access).
     # SSO config lives in ~/.aws (cli cache + sso cache present).
     pkgs.awscli2
+    # Vercel CLI — storyhub deploy management (login token lands in
+    # ~/.vercel/auth.json; enables REST/MCP deploy visibility).
+    pkgs.nodePackages.vercel
   ];
 
   # crussell needs membership in the `hermes` group to read/write the
