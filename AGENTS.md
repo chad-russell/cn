@@ -306,7 +306,7 @@ clients reach bees directly over the overlay, bypassing the gateway.
 
 Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
-- `services.caddy` — linkding, papra, ntfy
+- `services.caddy` — linkding, papra, ntfy, hermes (webui on bee over Nebula)
 - `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
 - `beszel.caddy` — Beszel hub (`beszel.internal.crussell.io` → `127.0.0.1:8091`, incl. WebSocket)
 
@@ -367,6 +367,8 @@ Running services:
 - `nebula@homelab.service` — `10.10.0.12`
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
 - `hermes-agent.service` — Hermes Agent gateway (replaces buzz-acp; see `hosts/bee/configuration.nix`). Runs as `crussell` with full host access. Connects to the Buzz relay via NIP-42 auth, uses the `buzz` CLI for outbound message delivery.
+- `hermes-serve.service` — Hermes JSON-RPC/WebSocket API on Nebula `10.10.0.12:9119` (desktop/mobile clients; basic-auth plugin)
+- `hermes-webui.service` — Hermes WebUI (community `nesquena/hermes-webui` via `hosts/bee/hermes-webui.nix`) on Nebula `10.10.0.12:8787`. Runs the agent in-process against `/var/lib/hermes/.hermes` as `crussell:hermes` (co-located with the gateway). Fronted by bees Caddy at `https://hermes.internal.crussell.io`; login password in `secrets/hermes-webui-env.age` (plaintext copy at `~/.hermes-webui-password` on bee until saved to 1Password).
 - `buzz-relay-pod.service` — self-hosted Buzz relay (podman pod: relay, postgres, redis, minio, pair-relay)
 - Dev stacks (`dev-quadlets/`) — gpl, polymer, buildspace (podman quadlets, reached via SSH tunnels; see `hosts/bee/dev-quadlets/README.md` and `cjust dev-tunnel`)
 - Restic backup (daily S3 backup via `hosts/bee/backup.nix`)
