@@ -140,11 +140,11 @@ RUN mkdir -p /usr/lib/bootc/kargs.d && \
 # teaches container tools in the image (skopeo/bootc container previews,
 # `podman pull 10.10.0.6:5000/...` if you ever want to inspect the image
 # without switching) that the registry is intentionally insecure-HTTP.
-# `bootc upgrade` itself does NOT consult registries.conf (it pulls via its
-# own container-stack integration), so the one-time `switch.sh` passes
-# `--insecure` to cover the initial adopt.
+# NOTE: bootc itself reads these drop-ins too (same containers-image stack)
+# — trust for 10.10.0.6:5000 must exist on the HOST at switch/upgrade time;
+# switch.sh bootstraps it for the running host.
 RUN mkdir -p /etc/containers/registries.conf.d && \
-    printf '[registries.insecure]\nregistries = ["10.10.0.6:5000"]\n' \
+    printf '[[registry]]\nlocation = "10.10.0.6:5000"\ninsecure = true\n' \
     > /etc/containers/registries.conf.d/10-homelab-registry.conf
 
 # ---- 4. build identity (lets `bootc upgrade` detect a rebuild) ----------

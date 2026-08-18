@@ -2,7 +2,7 @@
 # Adopt the bees-built registry image as the host's boot image — the ONE-TIME
 # command to move the thinkpad onto registry-driven updates:
 #
-#   bootc switch --transport registry --insecure 10.10.0.6:5000/cn/thinkpad-host:44
+#   bootc switch --transport registry 10.10.0.6:5000/cn/thinkpad-host:44
 #
 # After this, `bootc upgrade` (cjust image-upgrade) re-resolves :44 from the
 # registry over Nebula and pulls only changed layers. The local build.sh flow
@@ -37,8 +37,22 @@ curl -fsSL "http://${REGISTRY}/v2/cn/thinkpad-host/tags/list" \
   exit 1
 }
 
-echo "==> bootc switch --transport registry --insecure ${IMAGE}"
-sudo bootc switch --transport registry --insecure "${IMAGE}"
+# Bootstrapping trust (chicken-and-egg): the running host predates the
+# registry image, so /etc/containers/registries.conf.d doesn't know about
+# 10.10.0.6:5000 yet, and bootc (no --insecure flag; it reads the same
+# registries.conf.d stack as podman/skopeo) would refuse plain HTTP. Write
+# the drop-in ourselves — the new image ships an identical file baked in,
+# so after the first reboot this host copy is redundant (kept; harmless).
+DROPIN=/etc/containers/registries.conf.d/10-homelab-registry.conf
+if [ ! -f "${DROPIN}" ]; then
+  echo "==> bootstrapping ${DROPIN} (one-time, pre-registry host)"
+  sudo mkdir -p "$(dirname "${DROPIN}")"
+  printf '# bootstrapped by switch.sh — the registry image ships this too\n[[registry]]\nlocation = "10.10.0.6:5000"\ninsecure = true\n' \
+    | sudo tee "${DROPIN}" >/dev/null
+fi
+
+echo "==> bootc switch --transport registry ${IMAGE}"
+sudo bootc switch --transport registry "${IMAGE}"
 
 cat <<EOF
 

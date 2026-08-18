@@ -106,8 +106,11 @@ Both stamp the booted system with:
 
 - Registry transport security is Nebula itself (WireGuard); zot is bound to
   bees's overlay IP only, and bees runs no host firewall on the LAN side of
-  that address. The image bakes an `/etc/containers/registries.conf.d`
-  insecure-registry drop-in so `podman`/`skopeo` can talk to it too.
+  that address. The image and the host each carry an
+  `/etc/containers/registries.conf.d` insecure-registry drop-in
+  (`[[registry]] insecure = true`) so podman/skopeo/bootc can talk to it —
+  switch.sh bootstraps the host copy on first run (bootc has no `--insecure`
+  flag; it reads the same drop-ins).
 - `bootc switch` is for first adoption or changing image references.
 - `bootc upgrade` is the routine command after rebuilding the same reference.
 - Rebuilds are detected by a unique OCI label per build (see build.sh), so
