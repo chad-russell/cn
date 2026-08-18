@@ -151,6 +151,10 @@
     # Node.js for agent-browser's .js launcher shim (the native Rust binary
     # is self-contained, but Hermes calls agent-browser via node_modules/.bin).
     pkgs.nodejs_22
+    # AWS CLI v2 — GitHub OIDC → IAM role migration for storyhub-worker
+    # (infra/storyhub-worker terraform, SSO login for deploy access).
+    # SSO config lives in ~/.aws (cli cache + sso cache present).
+    pkgs.awscli2
   ];
 
   # crussell needs membership in the `hermes` group to read/write the
