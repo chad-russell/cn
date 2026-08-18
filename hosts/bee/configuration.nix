@@ -299,10 +299,12 @@
           auth = "oauth";
         };
         # Vercel official remote MCP — deployment management for storyhub.
+        # NOTE: endpoint is the BARE domain (no /mcp path — that 404s with an
+        # HTML page, which the MCP client surfaces as "Session terminated").
         # OAuth tokens are acquired via `hermes mcp login vercel` (one-time,
         # interactive browser flow; token cache lives in Hermes auth store).
         vercel = {
-          url = "https://mcp.vercel.com/mcp";
+          url = "https://mcp.vercel.com";
           auth = "oauth";
         };
       };
