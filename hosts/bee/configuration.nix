@@ -298,6 +298,13 @@
           url = "https://mcp.linear.app/mcp/readonly";
           auth = "oauth";
         };
+        # Vercel official remote MCP — deployment management for storyhub.
+        # OAuth tokens are acquired via `hermes mcp login vercel` (one-time,
+        # interactive browser flow; token cache lives in Hermes auth store).
+        vercel = {
+          url = "https://mcp.vercel.com/mcp";
+          auth = "oauth";
+        };
       };
       # Self-hosted SearXNG as the web search backend (free, unlimited,
       # no API key). SEARXNG_URL is set in the environment block below.
