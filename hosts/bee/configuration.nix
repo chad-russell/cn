@@ -232,28 +232,34 @@
           base_url = "https://platform.ai.gloo.com/ai/v2";
           key_env = "GLOO_API_KEY";
           discover_models = false;
-          models = [
-            "gloo-anthropic-claude-opus-4.8"
-            "gloo-anthropic-claude-sonnet-4.6"
-            "gloo-anthropic-claude-haiku-4.5"
-            "gloo-openai-gpt-5.5"
-            "gloo-openai-gpt-5.4"
-            "gloo-openai-gpt-5.2"
-            "gloo-openai-gpt-5.1"
-            "gloo-openai-gpt-5.3-codex"
-            "gloo-google-gemini-3.5-flash"
-            "gloo-google-gemini-3.1-pro"
-            "gloo-google-gemini-2.5-pro"
-            "gloo-deepseek-v4-pro"
-            "gloo-deepseek-v4-flash"
-            "gloo-xai-grok-4.5"
-            "gloo-qwen-3.7-max"
-            "gloo-qwen-3-coder"
-            "gloo-kimi-k3"
-            "gloo-z-ai-glm-5.2"
-            "gloo-minimax-m3"
-            "gloo-mistral-large-3"
-          ];
+          # Dict form with per-model vision flags. agent/image_routing.py
+          # (branch 2b) reads custom_providers[].models.<model>.supports_vision:
+          # when a multimodal gloo model is the main model, images attach to
+          # it natively instead of detouring through the auxiliary vision
+          # pipeline. Vision capability verified against Gloo's platform
+          # 2026-08-19 (gloo-google-gemini-3.5-flash image test passed).
+          models = {
+            "gloo-anthropic-claude-opus-4.8" = { supports_vision = true; };
+            "gloo-anthropic-claude-sonnet-4.6" = { supports_vision = true; };
+            "gloo-anthropic-claude-haiku-4.5" = { supports_vision = true; };
+            "gloo-openai-gpt-5.5" = { supports_vision = true; };
+            "gloo-openai-gpt-5.4" = { supports_vision = true; };
+            "gloo-openai-gpt-5.2" = { supports_vision = true; };
+            "gloo-openai-gpt-5.1" = { supports_vision = true; };
+            "gloo-openai-gpt-5.3-codex" = { };
+            "gloo-google-gemini-3.5-flash" = { supports_vision = true; };
+            "gloo-google-gemini-3.1-pro" = { supports_vision = true; };
+            "gloo-google-gemini-2.5-pro" = { supports_vision = true; };
+            "gloo-deepseek-v4-pro" = { };
+            "gloo-deepseek-v4-flash" = { };
+            "gloo-xai-grok-4.5" = { supports_vision = true; };
+            "gloo-qwen-3.7-max" = { };
+            "gloo-qwen-3-coder" = { };
+            "gloo-kimi-k3" = { };
+            "gloo-z-ai-glm-5.2" = { };
+            "gloo-minimax-m3" = { };
+            "gloo-mistral-large-3" = { };
+          };
         }
       ];
       # Disable the built-in zai provider so it doesn't shadow the zai-coding
@@ -271,6 +277,20 @@
       auxiliary.compression = {
         provider = "openrouter";
         model = "qwen/qwen3.7-flash";
+      };
+      # Auxiliary vision model: fallback for image analysis whenever the
+      # main model lacks vision (e.g. glm-5.3 on zai-coding is text-only).
+      # Vision-capable main models (any multimodal gloo model) receive
+      # images natively via the supports_vision flags below — no detour.
+      # Gloo gemini-3.5-flash preferred over OpenRouter: newest flash
+      # tier, vision-capable, verified working 2026-08-19, and free to us
+      # (employer platform, but vision fallback only triggers when the
+      # main model is personal — keep personal image chats on gloo
+      # gemini, personal spend stays near zero).
+      auxiliary.vision = {
+        provider = "custom:gloo";
+        model = "gloo-google-gemini-3.5-flash";
+        reasoning_effort = "none";
       };
       # Fallback to OpenRouter if Z.AI is down (rate limit, overload, etc.)
       model.fallback = [{
