@@ -49,6 +49,12 @@ in {
     ../../modules/opencode.nix
     ../../modules/buzz-harness.nix
     ../../modules/dsh.nix
+    {
+      # DeepSeek Harness web UI — loopback on bee, exposed at
+      # https://dsh.internal.crussell.io via bees Caddy (route in
+      # hosts/bees/caddy/routes/internal/services.caddy).
+      services.dsh.enable = true;
+    }
     ./buzz-relay.nix
     ../../modules/beszel-agent.nix
     ./dev-quadlets.nix
