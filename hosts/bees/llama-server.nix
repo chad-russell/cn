@@ -44,8 +44,9 @@ let
   llama-run = pkgs.writeShellScriptBin "llama-run" ''
     set -euo pipefail
     MODEL="''${1:?usage: llama-run <model-name>}"
+    # Probe on the HOST path; pass the CONTAINER path (--ro mount maps it).
     MMPROJ_ARGS=""
-    if [ -f "/models/$MODEL.mmproj.gguf" ]; then
+    if [ -f "/var/lib/llama/models/$MODEL.mmproj.gguf" ]; then
       MMPROJ_ARGS="--mmproj /models/$MODEL.mmproj.gguf"
     fi
     exec ${pkgs.podman}/bin/podman run --rm \
