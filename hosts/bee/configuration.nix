@@ -5,7 +5,42 @@
 
 { config, lib, pkgs, unstable, buzz, ... }:
 
-{
+let
+  # Nix-declared Hermes settings, serialized for the config-drift check
+  # (see homelab.freshnessChecks.hermes-config-drift further below).
+  hermesDeclaredSettings = pkgs.writeText "hermes-declared-settings.json"
+    (builtins.toJSON config.services.hermes-agent.settings);
+  # Subset-compare: every key path declared in Nix must match the live
+  # config.yaml. User-owned keys (terminal.cwd, onboarding.seen, ...) are
+  # invisible to the check unless declared, so imperative state survives.
+  hermesDriftCheckPy = pkgs.writeText "hermes-config-drift-check.py" ''
+    import json, sys, yaml
+
+    declared = json.load(open(sys.argv[1]))
+    live = yaml.safe_load(open(sys.argv[2])) or {}
+
+    def flatten(d, prefix=""):
+        out = {}
+        for k, v in d.items():
+            key = f"{prefix}.{k}" if prefix else str(k)
+            if isinstance(v, dict) and v:
+                out.update(flatten(v, key))
+            else:
+                out[key] = v
+        return out
+
+    dflat, lflat = flatten(declared), flatten(live)
+    drift = [
+        f"{k}: declared={dflat[k]!r} live={lflat.get(k, '<missing>')!r}"
+        for k in sorted(dflat)
+        if lflat.get(k, "<missing>") != dflat[k]
+    ]
+    if drift:
+        print("Hermes config drift: " + "; ".join(drift))
+        sys.exit(1)
+    print(f"OK: live config.yaml matches all {len(dflat)} declared settings")
+  '';
+in {
   imports = [
     ../../modules/base-server.nix
     ../../modules/freshness-checks.nix
@@ -338,6 +373,13 @@
       # gpl, buildspace) is a primary use case. The browser.* tools block
       # private URLs by default (SSRF guard); this lifts it for localhost.
       browser.allow_private_urls = true;
+      # Approval prompt window: 15 minutes (default 300s repeatedly timed
+      # out in desktop/WebUI sessions Aug 17-19 — a Beszel password reset,
+      # a PR typecheck, and a research detour were each degraded or skipped
+      # because the approval card expired before Chad saw it). Single knob:
+      # CLI, gateway, and WebUI approval cards all read this from the
+      # shared config.yaml.
+      approvals.timeout = 900;
       display.platforms.buzz = {
         interim_assistant_messages = false;
         tool_progress = "off";
@@ -397,10 +439,12 @@
 
   # The Hermes NixOS module deep-merges declarative settings into the existing
   # mutable config.yaml so user-owned keys survive. That means removing a nested
-  # key from Nix does not delete a previously merged key on disk. Prune the old
-  # sqlite MCP explicitly so the live managed config matches our intended MCP
-  # set (GitHub + read-only Linear).
-  system.activationScripts."hermes-prune-stale-mcps" =
+  # key from Nix does not delete a previously merged key on disk — stale values
+  # persist until explicitly pruned (root cause of both the Aug 12 web_extract
+  # saga and the Aug 11–19 auxiliary.vision drift). Prune known-stale keys
+  # here on every switch; the freshness-hermes-config-drift timer below
+  # alerts on any divergence between live config.yaml and declared settings.
+  system.activationScripts."hermes-prune-stale-config" =
     lib.stringAfter [ "hermes-agent-setup" ] ''
       ${pkgs.python3.withPackages (ps: [ ps.pyyaml ])}/bin/python3 - <<'PY'
       from pathlib import Path
@@ -408,14 +452,39 @@
 
       path = Path("/var/lib/hermes/.hermes/config.yaml")
       config = yaml.safe_load(path.read_text()) or {}
+
+      prunes = []
       mcp_servers = config.get("mcp_servers")
       if isinstance(mcp_servers, dict) and "sqlite" in mcp_servers:
           del mcp_servers["sqlite"]
+          prunes.append("mcp_servers.sqlite")
+      web = config.get("web")
+      if isinstance(web, dict) and "extract_backend" in web:
+          # Retired 2026-08-12: SearXNG cannot extract, and a stale
+          # searxng value here broke @url extraction silently.
+          del web["extract_backend"]
+          prunes.append("web.extract_backend")
+
+      if prunes:
           path.write_text(yaml.dump(config, default_flow_style=False, sort_keys=False))
+          print(f"hermes-prune-stale-config: pruned {', '.join(prunes)}")
       PY
       chown crussell:hermes /var/lib/hermes/.hermes/config.yaml
       chmod 0660 /var/lib/hermes/.hermes/config.yaml
     '';
+
+  # ── Hermes config drift alarm ────────────────────────────────────
+  # The WebUI settings panels and imperative `hermes config set` can write
+  # values the declarative config never asked for — the auxiliary.vision
+  # corruption (Aug 11–19) ran undetected because nothing compared live
+  # state against Nix between deploys. Hourly subset-compare via the shared
+  # freshness-check module; divergence pages the homelab-alerts ntfy topic.
+  homelab.freshnessChecks.hermes-config-drift = {
+    description = "Hermes live config.yaml matches Nix-declared settings";
+    checkCommand =
+      "${pkgs.python3.withPackages (ps: [ ps.pyyaml ])}/bin/python3 ${hermesDriftCheckPy} ${hermesDeclaredSettings} /var/lib/hermes/.hermes/config.yaml";
+    onCalendar = "hourly";
+  };
 
   # ── Hermes gateway: run as crussell with NO filesystem sandbox ──────
   # The upstream NixOS module hardcodes ProtectSystem=strict and
