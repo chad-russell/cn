@@ -25,6 +25,7 @@
     ./backup.nix
     ./beszel.nix
     ./thinkpad-registry.nix
+    ./e610-watchdog.nix
   ];
 
   networking.hostName = "bees";
