@@ -34,7 +34,7 @@ buildNpmPackage rec {
     cp ${./package-lock.json} package-lock.json
   '';
 
-  npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  npmDepsHash = "sha256-iGfbvMoG71r+zXZ9cvesqmHvAP1dV7ionxPk3GK3xbI=";
 
   # Prebuilt distribution — no compile, no scripts to run.
   npmInstallFlags = [ "--ignore-scripts" ];
