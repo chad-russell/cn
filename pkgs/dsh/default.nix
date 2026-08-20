@@ -36,8 +36,9 @@ buildNpmPackage rec {
 
   npmDepsHash = "sha256-iGfbvMoG71r+zXZ9cvesqmHvAP1dV7ionxPk3GK3xbI=";
 
-  # Prebuilt distribution — no compile, no scripts to run.
+  # Prebuilt distribution — no compile step, no scripts to run.
   npmInstallFlags = [ "--ignore-scripts" ];
+  dontNpmBuild = true;
 
   postInstall = ''
     # bin already points at lib/bin.js; ensure executable
