@@ -29,6 +29,11 @@ buildNpmPackage rec {
   };
 
   # Generated via npm install --package-lock-only (see header comment).
+  # The npm tarball ships no lockfile; inject ours in postPatch.
+  postPatch = ''
+    cp ${./package-lock.json} package-lock.json
+  '';
+
   npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
   # Prebuilt distribution — no compile, no scripts to run.
