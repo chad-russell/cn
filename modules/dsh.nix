@@ -52,6 +52,12 @@ let
         displayName = "bees llama.cpp";
         api = "openai-completions";
         baseURL = llamaBaseUrl;
+        # llama-server is keyless, but pi-ai has no anonymous mode: a
+        # request without any credential fails MISSING_CREDENTIAL. The
+        # dummy value comes from the dsh-web unit environment (see
+        # environment.BEES_LLAMACPP_API_KEY below); llama-server ignores
+        # Authorization headers, so the wire is unchanged.
+        apiKeyEnv = "BEES_LLAMACPP_API_KEY";
         defaultInput = [ "text" "image" ];
         compat = {
           supportsDeveloperRole = false;
@@ -124,6 +130,10 @@ in {
         RestartSec = "5";
       };
       environment.DSH_HOME = "/var/lib/dsh";
+      # Credential for the keyless bees llama.cpp route (see apiKeyEnv in
+      # the seed): non-empty placeholder so pi-ai's credential resolution
+      # succeeds; llama-server never checks it.
+      environment.BEES_LLAMACPP_API_KEY = "keyless-llamacpp";
     };
 
     # ── Nebula exposure via systemd socket proxy ───────────────────
