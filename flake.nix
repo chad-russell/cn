@@ -66,6 +66,17 @@
         inherit lib;
       };
 
+      # ── DeepSeek Harness (dsh) ────────────────────────────────────
+      # Official npm dist, packaged via buildNpmPackage. Imported by
+      # modules/dsh.nix (services.dsh on bee).
+      dshPkg = pkgs.callPackage ./pkgs/dsh { };
+
+      # System pkgs for callPackage above.
+      pkgs = import nixpkgs {
+        system = "x86_64-linux";
+        config.allowUnfree = true;
+      };
+
       # Bash case bodies, generated from hostMeta so the deploy/install
       # scripts never drift from lib/host-meta.nix.
       deployCase = lib.concatStringsSep "\n" (lib.mapAttrsToList
@@ -85,6 +96,7 @@
           config.allowUnfree = true;
         };
         buzz = buzzPkg;
+        dsh = dshPkg;
       };
 
       # ── Helper to build a NixOS configuration ────────────────────
@@ -128,6 +140,7 @@
 
       # ── Packages ─────────────────────────────────────────────────
       packages.x86_64-linux.buzz = buzzPkg;
+      packages.x86_64-linux.dsh = dshPkg;
 
       # ── Eval gate (nix flake check) ──────────────────────────────
       # Eval the full system toplevel for each NixOS host. Catches syntax

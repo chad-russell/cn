@@ -48,6 +48,7 @@ in {
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
     ../../modules/buzz-harness.nix
+    ../../modules/dsh.nix
     ./buzz-relay.nix
     ../../modules/beszel-agent.nix
     ./dev-quadlets.nix
