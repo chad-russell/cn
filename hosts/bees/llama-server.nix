@@ -38,9 +38,16 @@ let
 
   # Wrapper: takes a model basename, runs the llama-server container.
   # The model file must exist at /var/lib/llama/models/<name>.gguf
+  # Vision: if a sidecar projector exists at <name>.mmproj.gguf (usually a
+  # symlink to the family's mmproj-*.gguf), it is passed via --mmproj.
+  # Text-only models simply have no sidecar.
   llama-run = pkgs.writeShellScriptBin "llama-run" ''
     set -euo pipefail
     MODEL="''${1:?usage: llama-run <model-name>}"
+    MMPROJ_ARGS=""
+    if [ -f "/models/$MODEL.mmproj.gguf" ]; then
+      MMPROJ_ARGS="--mmproj /models/$MODEL.mmproj.gguf"
+    fi
     exec ${pkgs.podman}/bin/podman run --rm \
       --name "llama-server-$MODEL" \
       --device /dev/dri \
@@ -51,6 +58,7 @@ let
       ${llamaImage} \
       llama-server \
         -m "/models/$MODEL.gguf" \
+        $MMPROJ_ARGS \
         --host 0.0.0.0 --port 8080 \
         -c ${toString contextSize} \
         -ngl 999 \
