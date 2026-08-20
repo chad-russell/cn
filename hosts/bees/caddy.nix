@@ -27,4 +27,20 @@
     ${pkgs.podman}/bin/podman volume create caddy_data 2>/dev/null || true
     ${pkgs.podman}/bin/podman volume create caddy_config 2>/dev/null || true
   '';
+
+  # The caddy quadlet reads /etc/caddy only at container start. A NixOS
+  # switch swaps the /etc symlinks but nothing restarts the container,
+  # so config/route changes silently don't apply — Caddy keeps serving
+  # the old routes and new hostnames fall through to empty 200s (seen
+  # with dsh.internal.crussell.io). Restart caddy only when the
+  # resolved store paths of the Caddyfile or routes dir actually change.
+  system.activationScripts.caddy-restart-on-config-change =
+    lib.stringAfter [ "etc" ] ''
+      MARKER=/var/lib/caddy-config-generation
+      CURRENT="$(readlink -f /etc/caddy/Caddyfile) $(readlink -f /etc/caddy/routes)"
+      if [ -n "$CURRENT" ] && [ "$CURRENT" != "$(cat "$MARKER" 2>/dev/null)" ]; then
+        ${pkgs.systemd}/bin/systemctl try-restart caddy.service || true
+        printf '%s' "$CURRENT" > "$MARKER"
+      fi
+    '';
 }
