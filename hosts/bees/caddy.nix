@@ -29,15 +29,18 @@
   '';
 
   # The caddy quadlet reads /etc/caddy only at container start. A NixOS
-  # switch swaps the /etc symlinks but nothing restarts the container,
+  # switch swaps the /etc content but nothing restarts the container,
   # so config/route changes silently don't apply — Caddy keeps serving
   # the old routes and new hostnames fall through to empty 200s (seen
-  # with dsh.internal.crussell.io). Restart caddy only when the
-  # resolved store paths of the Caddyfile or routes dir actually change.
+  # with dsh.internal.crussell.io). Restart caddy only when the routes
+  # store path or Caddyfile content actually changes. (The Caddyfile is
+  # COPIED into /etc by setup-etc — mode is set — so its path never
+  # changes; hash its content. The routes dir is a store symlink, so
+  # its resolved path already covers all route files.)
   system.activationScripts.caddy-restart-on-config-change =
     lib.stringAfter [ "etc" ] ''
       MARKER=/var/lib/caddy-config-generation
-      CURRENT="$(readlink -f /etc/caddy/Caddyfile) $(readlink -f /etc/caddy/routes)"
+      CURRENT="$(readlink -f /etc/caddy/routes) $(sha256sum /etc/caddy/Caddyfile | cut -d' ' -f1)"
       if [ -n "$CURRENT" ] && [ "$CURRENT" != "$(cat "$MARKER" 2>/dev/null)" ]; then
         ${pkgs.systemd}/bin/systemctl try-restart caddy.service || true
         printf '%s' "$CURRENT" > "$MARKER"
