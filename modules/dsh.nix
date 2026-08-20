@@ -60,6 +60,9 @@ let
         models = [{
           id = llamaModel;
           contextWindow = 65536;
+          # Canonical form per providers.md: per-model input, not just
+          # the route-level defaultInput fallback.
+          input = [ "text" "image" ];
         }];
       };
     };
