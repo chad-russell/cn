@@ -28,7 +28,7 @@
 # to the running UI (dsh rewrites it when models change in Settings →
 # Models) — do not edit while the service is running.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, dsh, ... }:
 
 let
   cfg = config.services.dsh;
@@ -75,7 +75,13 @@ let
 in {
   options.services.dsh = {
     enable = lib.mkEnableOption "DeepSeek Harness web UI";
-    package = lib.mkPackageOption pkgs "dsh" { };
+    # dsh arrives as a specialArg from flake.nix (dshPkg), like `buzz`
+    # in buzz-harness.nix — the package is not in nixpkgs.
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = dsh;
+      description = "dsh package (flake pkgs/dsh via specialArg).";
+    };
   };
 
   config = lib.mkIf cfg.enable {
