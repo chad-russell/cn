@@ -15,6 +15,8 @@
 { lib
 , buildNpmPackage
 , fetchurl
+, makeWrapper
+, nodejs
 }:
 
 buildNpmPackage rec {
@@ -43,6 +45,16 @@ buildNpmPackage rec {
   postInstall = ''
     # bin already points at lib/bin.js; ensure executable
     chmod +x $out/lib/node_modules/${packageName}/lib/bin.js
+  '';
+
+  # `dsh web` requires Node's --expose-internals flag (the Cordis HMR
+  # plugin inspects V8 internals). Node refuses that flag in
+  # NODE_OPTIONS, so the only reliable injection point is argv: replace
+  # npm's bin symlink with a wrapper that execs node with the flag.
+  postFixup = ''
+    rm "$out/bin/dsh"
+    makeWrapper "${nodejs}/bin/node" "$out/bin/dsh" \
+      --add-flags "--expose-internals $out/lib/node_modules/${packageName}/lib/bin.js"
   '';
 
   meta = with lib; {
