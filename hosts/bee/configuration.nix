@@ -442,6 +442,15 @@ in {
           del web["extract_backend"]
           prunes.append("web.extract_backend")
 
+      # Retired 2026-08-20: buzz relay/harness removal. Nix no longer
+      # declares gateway.platforms.buzz / display.platforms.buzz, so the
+      # deep-merge would keep the stale keys on disk forever.
+      for section in ("gateway", "display"):
+          platforms = (config.get(section) or {}).get("platforms")
+          if isinstance(platforms, dict) and "buzz" in platforms:
+              del platforms["buzz"]
+              prunes.append(f"{section}.platforms.buzz")
+
       if prunes:
           path.write_text(yaml.dump(config, default_flow_style=False, sort_keys=False))
           print(f"hermes-prune-stale-config: pruned {', '.join(prunes)}")
