@@ -844,3 +844,79 @@ dev-up project:
     ssh -o IdentitiesOnly=yes "$BEE" "qd $proj up"
     echo "==> stack up; opening tunnel (Ctrl-C to close) …"
     exec just --justfile "{{ justfile_directory() }}/Justfile" dev-tunnel "$proj"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# bees remote ops — llama.cpp LLM server (on-demand, OpenAI API on :8888)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# bees serves local LLMs via a systemd TEMPLATE service (llama-server@<model>):
+# the instance name is the GGUF basename in /var/lib/llama/models/ minus the
+# .gguf extension. Only ONE model runs at a time (single :8888). Full ops
+# guide: strix-halo-llm-serving skill; module: hosts/bees/llama-server.nix.
+#
+#   cjust llama           # start default model (Qwen3.8-27B), wait for :8888
+#   cjust llama stop      # stop default model (frees VRAM immediately)
+#   cjust llama status    # which model is running + systemd status
+#   cjust llama models    # list GGUFs on bees (valid instance names)
+#   cjust llama start L3.3-MS-Nevoria-70b-Q4_K_M    # start a different model
+#
+# Override the target with BEES=user@host (default crussell@10.10.0.6).
+
+# Start/stop/restart/status the on-demand llama-server on bees over SSH.
+# `start` refuses if a DIFFERENT model is already loaded (only one fits :8888)
+# and then polls /v1/models until the server answers — loading the GGUF into
+# VRAM takes ~30-60s for the 27B, so expect a short wait.
+[group('bees')]
+llama action="start" model="Qwen3.8-27B-UD-Q6_K_XL":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    BEES="${BEES:-crussell@10.10.0.6}"
+    host="${BEES#*@}"
+    act="{{ action }}"
+    model="{{ model }}"
+    case "$act" in
+      models)
+        echo "GGUFs on bees (/var/lib/llama/models/) — instance name = basename minus .gguf:"
+        ssh -o IdentitiesOnly=yes "$BEES" 'ls -lh /var/lib/llama/models/'
+        exit 0
+        ;;
+      status)
+        ssh -o IdentitiesOnly=yes "$BEES" \
+          "systemctl list-units --type=service --state=active --no-legend 'llama-server@*'; \
+           systemctl status 'llama-server@${model}.service' --no-pager" || true
+        exit 0
+        ;;
+      start|stop|restart) ;;
+      *)
+        echo "usage: cjust llama [start|stop|restart|status|models] [model]" >&2
+        exit 1
+        ;;
+    esac
+    # Which instance is currently active? (quote the @ pattern — remote zsh globs)
+    running="$(ssh -o IdentitiesOnly=yes "$BEES" \
+      "systemctl list-units --type=service --state=active --no-legend 'llama-server@*' \
+       | awk '{print \$1}'")"
+    running="${running%.service}"; running="${running#llama-server@}"
+    if [ "$act" = start ] && [ -n "$running" ]; then
+      if [ "$running" = "$model" ]; then
+        echo "==> ${model} already running — checking health"
+      else
+        echo "ERROR: ${running} is loaded and only one model fits :8888." >&2
+        echo "       Stop it first:  cjust llama stop ${running}" >&2
+        exit 1
+      fi
+    fi
+    ssh -o IdentitiesOnly=yes "$BEES" "sudo systemctl ${act} 'llama-server@${model}.service'"
+    [ "$act" = start ] || exit 0
+    echo "==> waiting for ${model} to load into VRAM ..."
+    for _ in $(seq 1 60); do
+      if curl -sf "http://${host}:8888/v1/models" >/dev/null 2>&1; then
+        echo "==> serving on http://${host}:8888/v1 :"
+        curl -sf "http://${host}:8888/v1/models"; echo
+        exit 0
+      fi
+      sleep 2
+    done
+    echo "ERROR: :8888 not answering after 120s — check with:" >&2
+    echo "  ssh $BEES 'journalctl -u llama-server@${model} -n 50'" >&2
+    exit 1
