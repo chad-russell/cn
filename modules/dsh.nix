@@ -135,7 +135,7 @@ in {
       # the bwrap sandbox probe fails ENOENT and landlock-run's exec of the
       # command fails ENOENT → "no sandbox backend is usable". Point PATH at
       # the system profile (bash, bwrap, git, and everything else on bee).
-      environment.PATH = "/run/current-system/sw/bin";
+      environment.PATH = lib.mkForce "/run/current-system/sw/bin";
       # Credential for the keyless bees llama.cpp route (see apiKeyEnv in
       # the seed): non-empty placeholder so pi-ai's credential resolution
       # succeeds; llama-server never checks it.
