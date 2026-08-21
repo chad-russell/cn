@@ -37,7 +37,7 @@ User=0
 WorkingDir=/workspace
 
 # Browser-facing ports published to the host. On bee these are OFFSET from the
-# in-container ports to avoid colliding with buzz-relay (:3000/:5000) and the
+# in-container ports to avoid colliding with other dev stacks (formerly buzz-relay: :3000/:5000) and the
 # other dev stacks. The SSH tunnel (cjust dev-tunnel hummingbird) re-maps these
 # onto the standard localhost ports:
 #   web  localhost:3000 -> bee:3300 (container :3000)

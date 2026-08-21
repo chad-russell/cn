@@ -81,9 +81,6 @@ dst = ".local/bin/zen-browser"
 dst = ".local/bin/hermes-desktop"
 
 [[files]]
-dst = ".local/bin/buzz-desktop"
-
-[[files]]
 dst = ".local/share/applications/wezterm.desktop"
 
 [[files]]
@@ -91,9 +88,6 @@ dst = ".local/share/applications/ghostty.desktop"
 
 [[files]]
 dst = ".local/share/applications/hermes.desktop"
-
-[[files]]
-dst = ".local/share/applications/buzz.desktop"
 
 # ── Systemd user units (Phase C) ─────────────────────────────────────────────
 # Source files live in `units/` next to this profile.toml. Replaces the old

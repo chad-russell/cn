@@ -123,9 +123,9 @@ the difference from local dev.
 
 ### Port scheme
 
-bee also runs the production **buzz-relay** (owns bee's `:3000` and `:5000`), so
+bee also runs the former buzz-relay (which used to own bee's `:3000` and `:5000`; removed 2026-08-20), so
 the dev stacks publish on **offset host ports** on bee that never collide with
-buzz-relay or each other: gpl `:3006`, polymer `:3100`/`:3101`, buildspace
+each other (the buzz-relay is gone): gpl `:3006`, polymer `:3100`/`:3101`, buildspace
 `:32xx`, hummingbird `:3300`/`:3308`, storyhub `:3301`/`:3309`/`:3390`/`:3391`.
 The `cjust dev-tunnel` (and `cjust dev-up`) re-maps those onto the
 thinkpad-standard localhost ports (`:3000`, `:3006`, …) so nothing in the apps or
@@ -223,7 +223,7 @@ qd sh restart
   container stops so you can read the logs and `restart` it — no restart loop.
 - **DB + MinIO data persist** in the `systemd-<project>-dev-db` /
   `systemd-<project>-dev-minio` volumes across stop/start.
-- **Coexists with the rootful `buzz-relay` system quadlets** on bee — completely
+- **Coexists with the former buzz-relay quadlets** on bee (removed 2026-08-20; the port-offset scheme remains) — completely
   separate podman stores (root vs crussell).
 
 ## Differences from the thinkpad setup

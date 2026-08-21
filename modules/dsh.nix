@@ -81,8 +81,8 @@ let
 in {
   options.services.dsh = {
     enable = lib.mkEnableOption "DeepSeek Harness web UI";
-    # dsh arrives as a specialArg from flake.nix (dshPkg), like `buzz`
-    # in buzz-harness.nix — the package is not in nixpkgs.
+    # dsh arrives as a specialArg from flake.nix (dshPkg); the package
+    # is not in nixpkgs.
     package = lib.mkOption {
       type = lib.types.package;
       default = dsh;

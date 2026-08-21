@@ -3,7 +3,7 @@
 # NixOS install on Crucial P3 Plus 1TB NVMe, 32GB RAM.
 # General-purpose server — services to be added incrementally.
 
-{ config, lib, pkgs, unstable, buzz, ... }:
+{ config, lib, pkgs, unstable, ... }:
 
 let
   # Nix-declared Hermes settings, serialized for the config-drift check
@@ -47,7 +47,6 @@ in {
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/opencode.nix
-    ../../modules/buzz-harness.nix
     ../../modules/dsh.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
@@ -55,7 +54,6 @@ in {
       # hosts/bees/caddy/routes/internal/services.caddy).
       services.dsh.enable = true;
     }
-    ./buzz-relay.nix
     ../../modules/beszel-agent.nix
     ./dev-quadlets.nix
     ./searxng.nix
@@ -221,20 +219,12 @@ in {
   # the personal coding host. bees keeps its hand-managed work config.
   services.opencode.manageConfig = true;
 
-  # ── Buzz agent harness (buzz-acp) ───────────────────────────────
-  # Disabled — replaced by Hermes Agent gateway (see below). Kept as a
-  # fallback: re-enable by setting enable = true and disabling hermes-agent.
-  services.buzz-harness.enable = false;
-
   # ── Age secrets ─────────────────────────────────────────────────
   age.secrets.hermes-bee-env.file = ../../secrets/hermes-bee-env.age;
 
-  # ── Hermes Agent gateway (replaces buzz-acp for Bee) ────────────
-  # Runs Hermes' native Buzz platform adapter: connects directly to the
-  # relay via NIP-42-authenticated WebSocket, detects @mentions by message
-  # content (not just p-tags), and uses the `buzz` CLI for outbound.
-  # This solves the desktop v0.5.4 autocomplete filter that prevented
-  # @-mentioning Bee (external agents without managed-list membership).
+  # ── Hermes Agent gateway ────────────────────────────────────────
+  # Telegram is the delivery platform (forum topics for per-subject
+  # separation). The legacy Buzz relay/harness was removed 2026-08-20.
   services.hermes-agent = {
     enable = true;
 
@@ -387,24 +377,9 @@ in {
       # CLI, gateway, and WebUI approval cards all read this from the
       # shared config.yaml.
       approvals.timeout = 900;
-      display.platforms.buzz = {
-        interim_assistant_messages = false;
-        tool_progress = "off";
-      };
-      gateway.platforms.buzz = {
-        # Paused 2026-08-11 — migrated personal delivery to Telegram forum
-        # topics. Re-enable here (and redeploy) to revive buzz delivery.
-        enabled = false;
-        extra = {
-          relay_url = "https://buzz.crussell.io";
-          require_mention = true;
-          allow_all_users = true;
-        };
-      };
       # Telegram bot (crussell_hermes_bot). Token lives in .env
       # (TELEGRAM_BOT_TOKEN), read by the gateway at startup. Forum
-      # topics in a single super-group give the per-topic separation
-      # that buzz channels provided (bible / tastytrade / general).
+      # topics in a single super-group give per-subject separation.
       gateway.platforms.telegram = {
         enabled = true;
         extra.require_mention = true;
@@ -412,8 +387,6 @@ in {
     };
 
     environment = {
-      BUZZ_RELAY_URL = "https://buzz.crussell.io";
-      BUZZ_ALLOW_ALL_USERS = "true";
       ZAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
       # SearXNG self-hosted search (see hosts/bee/searxng.nix). Powers
       # Hermes' web_search toolset — no API key needed, localhost-only.
@@ -422,9 +395,9 @@ in {
       # in systemPackages below). NixOS chromium has all shared libs;
       # agent-browser's own Chrome download lacks them on NixOS.
       AGENT_BROWSER_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
-      # ZAI_CODING_KEY, OPENROUTER_API_KEY, GLOO_API_KEY,
-      # BUZZ_AUTH_TAG (NIP-42 relay auth event), and TELEGRAM_BOT_TOKEN
-      # are in hermes-bee-env.age.
+      # ZAI_CODING_KEY, OPENROUTER_API_KEY, GLOO_API_KEY, and
+      # TELEGRAM_BOT_TOKEN are in hermes-bee-env.age. (Legacy BUZZ_*
+      # keys may linger in that file; they are unused.)
       # Telegram: bee has direct IPv4 to api.telegram.org, so skip the
       # fallback-IP transport (which hangs during PTB initialize on this host).
       HERMES_TELEGRAM_DISABLE_FALLBACK_IPS = "true";
@@ -433,9 +406,6 @@ in {
     };
 
     environmentFiles = [ config.age.secrets.hermes-bee-env.path ];
-
-    # buzz CLI for outbound message delivery
-    extraPackages = [ buzz ];
   };
 
   # Inject secrets directly into the systemd service environment so the
@@ -512,7 +482,7 @@ in {
       # (reparented to PID 1, surviving systemd's stop/start cycle), it holds
       # the gateway lock and every systemd restart exits "Gateway already
       # running" → crash loop, and the orphan (which may have come up without
-      # the buzz platform loaded) is the only thing "running". Two flags fix it:
+      # all platform adapters loaded) is the only thing "running". Two flags:
       #   --replace              kill any existing gateway instance holding the
       #                          lock so systemd's instance always wins at start
       #   --external-supervisor  declare systemd owns this gateway; in-chat
@@ -528,8 +498,8 @@ in {
   };
 
   # ── hermes-serve: HTTP/JSON-RPC API for remote clients over Nebula ────
-  # `hermes-agent.service` above runs `hermes gateway` — the Buzz platform
-  # adapter that makes OUTBOUND WebSocket connections to the relay and accepts
+  # `hermes-agent.service` above runs `hermes gateway` — the messaging
+  # platform adapters (Telegram) that make OUTBOUND connections and accept
   # no inbound API. This is the complementary `hermes serve` backend: the
   # JSON-RPC/WebSocket surface the desktop app and mobile clients attach to.
   # Bound to the Nebula IP only (10.10.0.12:9119) → reachable from the

@@ -28,22 +28,10 @@ in {
   # every beszel-agent. Created after first booting the hub.
   "beszel-agent-env.age".publicKeys = [ crussell ];
 
-  # ── Buzz self-hosted relay (podman pod on bee) ────────────────
-  # One env file for all containers in the buzz-relay pod: relay identity,
-  # owner pubkey, HMAC secret, and inlined PG/Redis/MinIO connection strings.
-  # See hosts/bee/buzz-relay.nix.
-  "buzz-relay-env.age".publicKeys = [ crussell ];
-
-  # ── Buzz agent harness (buzz-acp on bee) ──────────────────────
-  # Per-agent env file: BUZZ_PRIVATE_KEY=<nsec-or-hex> for each agent
-  # identity that runs server-side. Mint a fresh keypair per agent
-  # (e.g. `buzz-admin generate-key`) — do NOT reuse laptop agents.
-  "buzz-agent-bumble-env.age".publicKeys = [ crussell ];
-  "buzz-agent-oracle-env.age".publicKeys = [ crussell ];
-
-  # ── Hermes Agent gateway on bee (replaces buzz-acp) ────────────
-  # Combined env: BUZZ_PRIVATE_KEY (Bee's identity) + OPENAI_API_KEY
-  # (Z.AI key remapped for Hermes' OpenAI-compatible provider).
+  # ── Hermes Agent gateway on bee ───────────────────────────────
+  # Combined env: OPENAI_API_KEY (Z.AI key remapped for Hermes'
+  # OpenAI-compatible provider) + TELEGRAM_BOT_TOKEN + dashboard-auth
+  # secrets. (Legacy BUZZ_* keys may linger inside; they are unused.)
   "hermes-bee-env.age".publicKeys = [ crussell ];
 
   # ── Hermes WebUI on bee ─────────────────────────────────────────

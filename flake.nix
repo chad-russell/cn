@@ -23,13 +23,7 @@
       inputs.home-manager.follows = "home-manager";
     };
 
-    # ── Rust toolchain overlay (pins exact rustc for the buzz package) ──
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # ── Hermes Agent (replaces buzz-acp for Bee) ──────────────────────
+    # ── Hermes Agent (gateway on bee) ─────────────────────────────
     # Does NOT follow our nixpkgs: Hermes needs nodejs_26 which nixos-25.11
     # doesn't ship. The module builds its own package internally.
     hermes-agent = { url = "github:NousResearch/hermes-agent"; };
@@ -44,7 +38,7 @@
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, disko, agenix
-    , rust-overlay, hermes-agent, hermes-webui, ... }:
+    , hermes-agent, hermes-webui, ... }:
     let
       lib = nixpkgs.lib;
       username = "crussell";
@@ -52,19 +46,6 @@
       # ── Host metadata (single source of truth) ───────────────────
       hostMeta = import ./lib/host-meta.nix;
       deployable = lib.filterAttrs (_: h: h ? deployUser) hostMeta;
-
-      # ── Buzz CLI stack (buzz-acp + buzz-cli + buzz-agent + buzz-admin) ─
-      # Built against a pinned 1.95.0 toolchain (newer than nixos-25.11 ships).
-      buzzPkg = let
-        pkgs' = import nixpkgs {
-          system = "x86_64-linux";
-          overlays = [ rust-overlay.overlays.default ];
-        };
-      in import ./pkgs/buzz {
-        pkgs = pkgs';
-        rustToolchain = pkgs'.rust-bin.stable."1.95.0".default;
-        inherit lib;
-      };
 
       # ── DeepSeek Harness (dsh) ────────────────────────────────────
       # Official npm dist, packaged via buildNpmPackage. Imported by
@@ -95,7 +76,6 @@
           system = "x86_64-linux";
           config.allowUnfree = true;
         };
-        buzz = buzzPkg;
         dsh = dshPkg;
       };
 
@@ -139,7 +119,6 @@
       nixosConfigurations.gateway = mkHost { hostname = "gateway"; };
 
       # ── Packages ─────────────────────────────────────────────────
-      packages.x86_64-linux.buzz = buzzPkg;
       packages.x86_64-linux.dsh = dshPkg;
 
       # ── Eval gate (nix flake check) ──────────────────────────────

@@ -42,7 +42,7 @@ User=0
 WorkingDir=/workspace
 
 # Browser-facing ports published to the host. On bee these are OFFSET (+100)
-# from the in-container ports to avoid colliding with buzz-relay, which owns
+# from the in-container ports to avoid colliding with other dev stacks (formerly buzz-relay owned)
 # :3000 and :5000 on bee (the thinkpad units publish raw 3000/3001, which works
 # there). The Caddy routes (polymer.internal -> :3100, admin360.internal -> :3101)
 # point at these host ports; the apps still listen on 3000/3001 inside the

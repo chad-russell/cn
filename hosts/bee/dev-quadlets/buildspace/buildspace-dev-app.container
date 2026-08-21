@@ -37,7 +37,7 @@ WorkingDir=/workspace
 # without any userns flag.
 
 # Browser/API-facing ports published to the host. On bee these are OFFSET (+200)
-# from the in-container ports to avoid colliding with buzz-relay (owns bee's
+# from the in-container ports to avoid colliding with other dev stacks (formerly buzz-relay owned bee's
 # :3000 and :5000) AND with the other dev stacks (gpl :3006, polymer :31xx) — so
 # buildspace, gpl, and polymer can all run on bee SIMULTANEOUSLY. The Caddy
 # routes (bs-*.internal -> :32xx) point at these host ports; the apps still

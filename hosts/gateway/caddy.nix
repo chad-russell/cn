@@ -48,22 +48,5 @@
     virtualHosts."datenight.crussell.io".extraConfig = ''
       reverse_proxy 10.10.0.6:7890
     '';
-
-    # Buzz self-hosted relay (bee). WS upgrade + long-lived connections:
-    # Caddy's reverse_proxy handles Upgrade transparently; flush immediately
-    # so streamed events aren't buffered.
-    virtualHosts."buzz.crussell.io".extraConfig = ''
-      handle /pair* {
-        reverse_proxy 10.10.0.12:5000 {
-          flush_interval -1
-        }
-      }
-
-      handle {
-        reverse_proxy 10.10.0.12:3000 {
-          flush_interval -1
-        }
-      }
-    '';
   };
 }
