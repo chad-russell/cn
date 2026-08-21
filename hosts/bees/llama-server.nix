@@ -32,9 +32,10 @@ let
   # Host port for the OpenAI-compatible API (Nebula: 10.10.0.6:8888)
   hostPort = 8888;
 
-  # Context window (tokens). 64K meets Hermes Agent's minimum requirement
-  # and is generous for story-writing. KV cache at Q8 uses ~10 GB VRAM.
-  contextSize = 65536;
+  # Context window (tokens). 128K for long-doc sessions; Qwen3.8-27B is
+  # hybrid attention (16/64 full-attn layers), so Q8 KV is only ~16 KB/token
+  # — 128K costs a few GB, well within VRAM. Native max is 262K (n_ctx_train).
+  contextSize = 131072;
 
   # Wrapper: takes a model basename, runs the llama-server container.
   # The model file must exist at /var/lib/llama/models/<name>.gguf
