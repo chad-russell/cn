@@ -65,7 +65,7 @@ let
         };
         models = [{
           id = llamaModel;
-          contextWindow = 65536;
+          contextWindow = 131072; # match bees llama-server -c (128K)
           # Canonical form per providers.md: per-model input, not just
           # the route-level defaultInput fallback.
           input = [ "text" "image" ];
