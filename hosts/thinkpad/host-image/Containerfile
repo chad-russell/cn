@@ -62,12 +62,16 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # is installed in the same transaction, so the subcommand is available to the
 # very next `&&` in this RUN. The cache mounts keep COPR downloads fast across
 # rebuilds, matching step 1.
+# bibata-cursor-themes now comes from FEDORA PROPER (packaged since F42), not
+# the peterwu/rendezvous COPR: that COPR's published RPM is signed with a key
+# the repo no longer serves (pubkey.gpg 404s), so dnf5 signature verification
+# fails ("OpenPGP check ... Problem occurred when opening the package").
+# Fedora's copy is signed with the key already in the base image. (2026-08-22)
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install dnf5-plugins \
     && dnf5 -y copr enable yalter/niri \
     && dnf5 -y copr enable ryanabx/cosmic-epoch \
-    && dnf5 -y copr enable peterwu/rendezvous \
     && dnf5 -y install niri xwayland-satellite cosmic-desktop bibata-cursor-themes
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
