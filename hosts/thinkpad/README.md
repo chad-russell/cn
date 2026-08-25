@@ -132,11 +132,13 @@ Current tools (defined in `~/Code/bubblebox-pkgs/`):
   GPU + `/sys` + D-Bus access via their entrypoints.
 - `yazi`, `zoxide` — file manager and `cd` replacement.
 
-`opencode` and `hermes` are intentionally NOT bubblebox tools — they're AI
-agents and need full host control (spawning subprocesses in arbitrary cwds
-with synchronous I/O capture has no precedent in the bubblebox tree and fights
-the sandbox's read-only / content-addressed model). They're installed directly
-on the host via `cjust opencode-install` / `cjust hermes-install`. See below.
+`opencode` is intentionally NOT a bubblebox tool — it's an AI agent and needs
+full host control (spawning subprocesses in arbitrary cwds with synchronous
+I/O capture has no precedent in the bubblebox tree and fights the sandbox's
+read-only / content-addressed model). It's installed directly on the host via
+`cjust opencode-install`. (Hermes used to be in the same category; its agent
+now lives on bee and only the desktop GUI runs here — see the `hermes/`
+section below.)
 
 Typical workflow:
 
@@ -150,25 +152,31 @@ To add a new bubblebox tool: drop a `<name>/` subdir with a `Containerfile`
 add the name to `bubblebox/profile.toml`'s `packages` list, and re-run
 `cjust bubblebox`.
 
-### `hermes/` (host-installed CLI/TUI/Desktop)
+### `hermes/` (desktop-only; agent lives on bee)
 
 [Hermes Agent](https://hermes-agent.nousresearch.com/) (Nous Research) — the AI
-agent with a CLI, TUI (`hermes --tui`), and Electron desktop app. Same category
-as opencode (AI coding agent needing full host control), so it's host-installed
-by the official installer, NOT a bubblebox tool. The desktop app's *build* is
-off-host (see below), but the running agent lives on the host.
+agent with a CLI, TUI (`hermes --tui`), and Electron desktop app. The AGENT is
+not installed on this host — it runs on bee as a NixOS service (deployed from
+this flake), and this laptop is a thin client: the desktop app connects to bee
+over SSH and spawns `hermes serve` there. All state (config, sessions, skills,
+memory) lives on bee.
 
 ```bash
-cjust hermes-install           # curl|bash installer -> ~/.local/bin/hermes
-hermes --tui                   # TUI launches; installer self-manages Python+Node
 cjust hermes-desktop-build     # build the Electron app off-host, extract to host
-hermes desktop --skip-build    # launch via the upstream launcher
-~/.local/bin/hermes-desktop    # …or the host wrapper (sources cn-secrets first)
+cjust hermes-desktop-build main  # …or build a specific rev (default: latest release tag)
+~/.local/bin/hermes-desktop    # launch via the host wrapper
 ```
 
-The three surfaces (CLI, TUI, Desktop) are the same `hermes` binary driving
-the same agent — all share state at `~/.hermes/` (config, sessions, skills,
-memory, `.env`).
+No local `hermes` install is needed. `~/.hermes/` on this host is still used
+by the desktop app itself (logs, plugins, desktop-plugins) — don't delete it,
+but it holds no agent state that matters.
+
+**How updates work.** The build maintains its own source checkout at
+`~/.local/share/hermes-desktop-src` (a git clone of upstream). Each run
+fetches and checks out the latest release tag by default. Upstream ships no
+prebuilt desktop binaries — build-from-source is the only channel. Keep the
+desktop roughly in step with bee's hermes version (the desktop warns when the
+remote backend is older/newer than itself).
 
 **Why the desktop is built off-host.** `hermes desktop` builds the Electron
 app from source via npm, which needs `gcc-c++ make` + ~200 MB of `node_modules`
@@ -176,40 +184,23 @@ app from source via npm, which needs `gcc-c++ make` + ~200 MB of `node_modules`
 `/usr` host image (it would force a rebuild + reboot, and the host would carry
 build cruft forever). Instead, `cjust hermes-desktop-build` follows the
 `cjust icons` (Papirus) pattern: build inside a throwaway Fedora+Node podman
-container via `hermes desktop --build-only`, then copy only the unpacked app
-dir to `~/.local/share/hermes-desktop/`. No host-image change, no reboot.
+container, then copy only the unpacked app dir to
+`~/.local/share/hermes-desktop/`. No host-image change, no reboot.
 
 **Why not bubblebox for the GUI.** The *rendering* of an Electron window fits
 bubblebox fine (same surface as wezterm/ghostty: `writable_run` + `/dev`
-dev-bind + mesa). What doesn't fit is the *agent backend*: it spawns
+dev-bind + mesa). What doesn't fit is a local *agent backend*: it spawns
 synchronous subprocesses in arbitrary host working directories dozens of times
-per task, capturing stdout/stderr/exit. The only host-escape primitives in the
-bubblebox tree are `bubblebox-host-shell` (interactive `--pty`) and
-`vicinae-launch` (fire-and-forget, no `--wait`) — neither is the right shape
-for programmatic subprocess exec, and the read-only rootfs fights
-`hermes update`. The clean split is: agent backend on host (like opencode),
-desktop GUI host-built.
+per task, capturing stdout/stderr/exit. Since the agent lives on bee, that
+concern is moot here — but the build also runs on the host (git + podman
+only), and the app dir is per-user state, so bubblebox has nothing to manage.
 
-**Secrets.** Provider keys live in `secrets/hermes-thinkpad-env.age` (agenix),
-which exports `OPENAI_API_KEY` (the Z.AI coding key, remapped for hermes'
-OpenAI-compatible provider resolver — same key value as `zai-api-key.age`).
-`bubblebox/files/.zshenv` decrypts it alongside `zai-api-key.age` into
-per-login tmpfs, so every shell (and any CLI/TUI invocation) sees the key. The
-desktop wrapper (`bubblebox/files/.local/bin/hermes-desktop`) sources the same
-cache before exec'ing the Electron app, so compositor-launched GUI sees it too
-(`.zshenv` alone wouldn't — GUI apps read the systemd session env, not the
-shell env).
-
-First-time provider config (after `cjust hermes-install`): point hermes at the
-Z.AI coding endpoint by declaring a custom OpenAI-compatible provider in
-`~/.hermes/config.yaml`:
-
-```bash
-hermes config set custom_providers '[{name:zai-coding,base_url:https://api.z.ai/api/coding/paas/v4,key_env:OPENAI_API_KEY}]'
-hermes config set model.provider zai-coding
-hermes config set model.default glm-5.3
-hermes doctor   # verify deps + provider config
-```
+**Secrets.** None needed locally — the desktop talks to bee over SSH and the
+provider keys live on bee. Legacy: `secrets/hermes-thinkpad-env.age` fed a
+former local agent install via `bubblebox/files/.zshenv`; the desktop wrapper
+(`bubblebox/files/.local/bin/hermes-desktop`) still sources that cache before
+exec'ing the Electron app, so a local agent could be re-added without a
+wrapper change.
 
 ### Host-resident dotfiles (`bubblebox/files/` + `[[files]]`)
 
@@ -327,10 +318,10 @@ Examples:
   it, plus the small set of host-resident tools (just, fzf, oh-my-posh,
   nodejs/npm for opencode).
 - Dev tools live in bubblebox sandboxes, not on the host image.
-- opencode and hermes are the exceptions: they're installed on the host
-  because they're AI coding agents and need full host control when something
-  breaks. opencode lands via `cjust opencode-install` (npm global); hermes
-  lands via `cjust hermes-install` (official installer) + `cjust
-  hermes-desktop-build` (off-host Electron build). Hermes's desktop build
-  stays off the host image on purpose — it's per-user, iterates on its own
-  update channel, and doesn't deserve an image rebuild + reboot cycle.
+- opencode is the exception: it's installed on the host because it's an AI
+  coding agent and needs full host control when something breaks (npm global
+  via `cjust opencode-install`). The hermes agent is NOT installed here — it
+  lives on bee, and this host runs only the desktop GUI, built off-host by
+  `cjust hermes-desktop-build` from our own source checkout (~/.local/share/
+  hermes-desktop-src). It's per-user, iterates on its own update channel, and
+  doesn't deserve an image rebuild + reboot cycle.

@@ -406,87 +406,87 @@ opencode-install:
     #   opencode auth login
 
 # ═══════════════════════════════════════════════════════════════════════════
-# hermes (host install + off-host desktop build)
+# hermes (desktop-only on this host)
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# Like opencode, hermes runs on the host directly (NOT in bubblebox) — it's an
-# AI agent and needs full host control to edit files and run tools in the
-# user's working directory. See hosts/thinkpad/README.md ("opencode and hermes
-# are the exceptions"). The CLI/TUI come from the official installer; the
-# desktop GUI is built off-host in a throwaway container (the `cjust icons`
-# Papirus pattern), keeping Electron's ~200 MB of build cruft off the host.
+# The hermes AGENT lives on bee (NixOS service, deployed from this flake).
+# This host runs only the desktop GUI, which connects to bee over SSH and
+# spawns `hermes serve` there — no local agent install is needed or wanted.
+# (It was briefly removed once; the desktop app kept working, confirming the
+# agent isn't a local dependency. ~/.hermes/ is still used by the desktop app
+# itself for logs/plugins/desktop-plugins — leave it in place.)
 #
-# Secrets: provider keys live in secrets/hermes-thinkpad-env.age (agenix),
-# decrypted into a per-login tmpfs by bubblebox/files/.zshenv. The desktop wrapper at
-# bubblebox/files/.local/bin/hermes-desktop sources that cache so compositor-launched
-# GUI sees the keys too (shells already get them via .zshenv).
-
-# Install the hermes CLI/TUI via the official installer. Lays down
-# ~/.local/bin/hermes (already on PATH via .zshenv) and self-manages
-# ~/.hermes/hermes-agent/ (Python venv + Node + ripgrep + ffmpeg). Re-run after
-# `cjust image-upgrade` or any `hermes uninstall` to pick up a fresh install.
-# `hermes update` (run by hermes itself) handles in-place upgrades thereafter.
-[group('hermes')]
-hermes-install:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if ! command -v curl >/dev/null 2>&1; then
-      echo "ERROR: curl not found on host." >&2
-      echo "       Rebuild the host image, reboot, then re-run." >&2
-      exit 1
-    fi
-    curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
-    echo
-    echo "hermes installed to ~/.local/bin/hermes"
-    # First-time setup (provider config, model pick): the OPENAI_API_KEY env
-    # var is already exported by .zshenv (from secrets/hermes-thinkpad-env.age).
-    # To point hermes at the Z.AI coding endpoint (OpenAI-compatible), declare
-    # a custom provider in ~/.hermes/config.yaml:
-    #   hermes config set custom_providers '[{name:zai-coding,base_url:https://api.z.ai/api/coding/paas/v4,key_env:OPENAI_API_KEY}]'
-    #   hermes config set model.provider zai-coding
-    #   hermes config set model.default glm-5.3
+# The desktop (Electron) app is built OFF-HOST in a throwaway Fedora+Node
+# podman container (the `cjust icons` Papirus pattern) from our own source
+# checkout — it does NOT depend on an on-host `hermes` install or
+# ~/.hermes/hermes-agent/. Upstream ships no prebuilt desktop assets, so
+# build-from-source is the only distribution channel.
+#
+# Secrets: the desktop talks to bee over plain SSH (no provider keys needed
+# locally). Legacy: secrets/hermes-thinkpad-env.age previously fed a local
+# agent install via bubblebox/files/.zshenv; the wrapper at
+# bubblebox/files/.local/bin/hermes-desktop still sources that cache first so
+# a local agent could be re-added without a wrapper change.
 
 # Build the hermes desktop (Electron) app OFF-HOST in a throwaway Fedora+Node
-# podman container, then copy only the unpacked app dir onto the host. Mirrors
-# `cjust icons` (Papirus): containerizing keeps Electron's build cruft
-# (~200 MB node_modules, the Electron download, gcc-c++/make) off the host, so
-# no host-image change or reboot is needed. Idempotent; re-run any time, e.g.
-# after `hermes update` bumps the source tree.
+# podman container from our own source checkout, then copy only the unpacked
+# app dir onto the host. Mirrors `cjust icons` (Papirus): containerizing keeps
+# Electron's build cruft (~200 MB node_modules, the Electron download,
+# gcc-c++/make) off the host, so no host-image change or reboot is needed.
+# Idempotent; re-run any time to move to a newer release.
+#
+# Source of truth for the build is ~/.local/share/hermes-desktop-src (a git
+# clone of NousResearch/hermes-agent, fetched on each run). By default we
+# build the latest RELEASE TAG (stable, matches what `hermes update` puts on
+# bee) rather than main — pass a rev to build edge, e.g.
+#   cjust hermes-desktop-build main
 #
 # Output: ~/.local/share/hermes-desktop/ (the unpacked Electron dir). Launch
-# via ~/.local/bin/hermes-desktop (wrapper that sources the cn-secrets cache so
-# the compositor-launched GUI sees provider keys) or the "Hermes" launcher entry
-# (bubblebox/files/.local/share/applications/hermes.desktop, symlinked by `bubblebox apply`).
+# via ~/.local/bin/hermes-desktop (wrapper) or the "Hermes" launcher entry
+# (bubblebox/files/.local/share/applications/hermes.desktop, symlinked by
+# `bubblebox apply`).
 #
 # Why not bubblebox: hermes is an AI coding agent (same category as opencode) —
 # its tool backend spawns synchronous subprocesses in arbitrary host cwds with
 # I/O capture, which has no precedent in the bubblebox tree and fights the
 # sandbox's read-only / content-addressed model. See README for the long version.
 [group('hermes')]
-hermes-desktop-build:
+hermes-desktop-build ref='':
     #!/usr/bin/env bash
     set -euo pipefail
-    if ! command -v hermes >/dev/null 2>&1; then
-      echo "ERROR: hermes not found — run 'cjust hermes-install' first." >&2
+    # Source checkout: our own clone of upstream — independent of any on-host
+    # hermes install (the agent lives on bee; this host runs only the GUI).
+    src="$HOME/.local/share/hermes-desktop-src"
+    if [ ! -d "${src}/.git" ]; then
+      echo "==> cloning hermes-agent source to ${src} ..."
+      git clone --quiet https://github.com/NousResearch/hermes-agent "${src}"
+    fi
+    git -C "${src}" fetch --quiet --tags --prune origin
+    # Default ref: the latest upstream release tag (vYYYY.M.D) so the desktop
+    # tracks stable releases. Override: cjust hermes-desktop-build main
+    target="{{ref}}"
+    if [ -z "${target}" ]; then
+      target="$(git -C "${src}" tag --list 'v2*' | sort -V | tail -1)"
+    fi
+    if [ -z "${target}" ]; then
+      echo "ERROR: no release tags found in ${src}." >&2
+      echo "       Pass an explicit ref: cjust hermes-desktop-build main" >&2
       exit 1
     fi
-    if [ ! -d "$HOME/.hermes/hermes-agent" ]; then
-      echo "ERROR: ~/.hermes/hermes-agent missing — run 'cjust hermes-install' first." >&2
-      exit 1
-    fi
+    git -C "${src}" checkout --quiet --force "${target}"
+    echo "==> source at ${target} ($(git -C "${src}" rev-parse --short HEAD))"
     dest="$HOME/.local/share/hermes-desktop"
     stage="$(mktemp -d)"
     trap 'rm -rf "${stage}"' EXIT
-    # Build inside a throwaway container against the host's hermes-agent
-    # checkout. We invoke npm directly (the same path `hermes desktop
-    # --build-only` runs internally) instead of the hermes CLI: the venv's
-    # `hermes` script has a host-absolute shebang and won't resolve inside the
-    # container. electron-builder's `--dir` flag emits release/linux-unpacked/
-    # (the unpacked Electron app, no installers). Native Node modules need
-    # gcc-c++/make (Fedora — NOT build-essential, which is a Debian-ism).
+    # Build inside a throwaway container against the source checkout. We
+    # invoke npm directly (the same path `hermes desktop --build-only` runs
+    # internally) — no hermes CLI needed on the host. electron-builder's
+    # `--dir` flag emits release/linux-unpacked/ (the unpacked Electron app,
+    # no installers). Native Node modules need gcc-c++/make (Fedora — NOT
+    # build-essential, which is a Debian-ism).
     echo "==> building hermes-desktop in a throwaway podman container..."
     podman run --rm \
-      -v "$HOME/.hermes/hermes-agent:/work:Z" \
+      -v "${src}:/work:Z" \
       -v "${stage}:/out:Z" \
       docker.io/library/fedora:latest \
       bash -c '
@@ -548,8 +548,7 @@ hermes-desktop-build:
     echo "==> hermes-desktop installed to ${dest}"
     echo
     echo "Launch via:"
-    echo "  hermes desktop --skip-build      # upstream launcher (uses ~/.hermes)"
-    echo "  ~/.local/bin/hermes-desktop      # host wrapper (sources cn-secrets env first)"
+    echo "  ~/.local/bin/hermes-desktop      # host wrapper"
     echo "  Launcher → 'Hermes'              # the .desktop entry (run 'cjust bubblebox-apply' to install)"
     # Refresh the launcher icon (Icon=hermes) so a rebuild always leaves a
     # branded icon in place. Idempotent + non-fatal.
