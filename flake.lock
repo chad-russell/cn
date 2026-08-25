@@ -91,6 +91,7 @@
     "hermes-agent": {
       "inputs": {
         "flake-parts": "flake-parts",
+        "home-manager": "home-manager",
         "nixpkgs": "nixpkgs",
         "npm-lockfile-fix": "npm-lockfile-fix",
         "pyproject-build-systems": "pyproject-build-systems",
@@ -98,11 +99,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1786312947,
-        "narHash": "sha256-DhVyPLmXQQC/tGN1uTqhEHESBOTtSoa2Sven3Q05ZKU=",
+        "lastModified": 1787696655,
+        "narHash": "sha256-u7XvFwV49lkVmUekQLgDXYeqWIlNyQ+4j1GtAn0nfmk=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "497c90f317f7bf55fad0daa7791253f85654adda",
+        "rev": "62b2d78025c349996e753c6f7c748de035eb8048",
         "type": "github"
       },
       "original": {
@@ -116,11 +117,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1787058667,
-        "narHash": "sha256-gDfaxIyq5B67ROyuH0Q1eu2tYEH+g0CvVaa+ZDC5BVg=",
+        "lastModified": 1787565227,
+        "narHash": "sha256-PLaP2jKX/3AhTaC0KVwkakAz14wfWA8BEirMzsr4HmE=",
         "owner": "nesquena",
         "repo": "hermes-webui",
-        "rev": "59023b784ce065c837ca68e438b2b9bba7100f9d",
+        "rev": "3b9c632a1fa339abcfd457973dcf10810640e760",
         "type": "github"
       },
       "original": {
@@ -130,6 +131,27 @@
       }
     },
     "home-manager": {
+      "inputs": {
+        "nixpkgs": [
+          "hermes-agent",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786487128,
+        "narHash": "sha256-ad60hrRVhH/bo3Jl1YLzO+QcS3mUNZr9LNJdzhMO2P4=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "f404edbfa4117810c96b97048299242fc50e5362",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
+    "home-manager_2": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
@@ -291,7 +313,7 @@
         "disko": "disko",
         "hermes-agent": "hermes-agent",
         "hermes-webui": "hermes-webui",
-        "home-manager": "home-manager",
+        "home-manager": "home-manager_2",
         "nixpkgs": "nixpkgs_3",
         "nixpkgs-unstable": "nixpkgs-unstable"
       }
