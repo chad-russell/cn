@@ -18,15 +18,22 @@
 #   validates the Host header authority, so dsh must be told to trust
 #   `dsh.internal.crussell.io` via --trusted-host.
 #
-# Model backend: bees' llama.cpp server (Qwen3.8-27B-UD-Q6_K_XL with
-# vision) over Nebula at http://10.10.0.6:8888/v1 — keyless custom
-# provider `bees-llamacpp`. Compat flags are llama.cpp specifics from
-# dsh's provider guide: no `developer` role, use `max_tokens`.
+# Model backends (mirrors the Hermes model set in
+# hosts/bee/configuration.nix):
+#   bees-llamacpp  local Qwen3.8-27B on bees over Nebula (default)
+#   gloo           employer-paid platform, WORK ONLY — hand-declared
+#                  catalog (the platform 403s /models), no compat
+#                  overrides: developer role + max_completion_tokens
+#                  + tool calls all verified accepted 2026-08-25
+#   openrouter     catalog route — inherits pi-ai's full OpenRouter
+#                  model catalog; personal fallback provider
 #
 # Settings lifecycle: DSH_HOME=/var/lib/dsh is seeded ONCE with
-# settings.yaml (provider + default model). Thereafter the file belongs
+# settings.yaml (providers + default model). Thereafter the file belongs
 # to the running UI (dsh rewrites it when models change in Settings →
-# Models) — do not edit while the service is running.
+# Models) — do not edit while the service is running. Re-seeding after a
+# catalog change means: stop dsh-web + dsh-seed, remove settings.yaml,
+# activate (dsh-seed's ConditionPathExists gate re-opens).
 
 { config, lib, pkgs, dsh, ... }:
 
@@ -46,30 +53,86 @@ let
   llamaBaseUrl = "http://10.10.0.6:8888/v1";
   llamaModel = "Qwen3.8-27B-UD-Q6_K_XL";
 
+  # Gloo platform (employer-paid, WORK ONLY — never for personal tasks).
+  # Direct to platform.ai.gloo.com; the self-hosted proxy on bees is
+  # retired. /models is forbidden, so the catalog is hand-declared —
+  # same model set as Hermes' gloo provider (hosts/bee/configuration.nix),
+  # minus supports_vision flags (pi-ai pricing/modalities ride the
+  # installed entry or are absent — no harness consumer).
+  glooBase = "https://platform.ai.gloo.com/ai/v2";
+  # contextWindow/maxTokens per model, sourced from pi-ai's pinned
+  # OpenRouter catalog (same upstream vendor models) where an exact-id
+  # match exists; sensible defaults otherwise. These are advisory
+  # sizing, not hard caps.
+  glooModels = [
+    { id = "gloo-anthropic-claude-opus-5";    contextWindow = 1000000; maxTokens = 128000; }
+    { id = "gloo-anthropic-claude-opus-4.8";  contextWindow = 1000000; maxTokens = 128000; }
+    { id = "gloo-anthropic-claude-sonnet-4.6"; contextWindow = 1000000; maxTokens = 128000; }
+    { id = "gloo-anthropic-claude-haiku-4.5"; contextWindow = 200000;  maxTokens = 64000; }
+    { id = "gloo-openai-gpt-5.5";             contextWindow = 1050000; maxTokens = 128000; }
+    { id = "gloo-openai-gpt-5.4";             contextWindow = 1050000; maxTokens = 128000; }
+    { id = "gloo-openai-gpt-5.2";             contextWindow = 400000;  maxTokens = 128000; }
+    { id = "gloo-openai-gpt-5.1";             contextWindow = 400000;  maxTokens = 128000; }
+    { id = "gloo-openai-gpt-5.3-codex";       contextWindow = 400000;  maxTokens = 128000; }
+    { id = "gloo-google-gemini-3.5-flash";    contextWindow = 1048576; maxTokens = 65536; }
+    { id = "gloo-google-gemini-3.1-pro";      contextWindow = 1048576; maxTokens = 65536; }
+    { id = "gloo-google-gemini-2.5-pro";      contextWindow = 1048576; maxTokens = 65536; }
+    { id = "gloo-deepseek-v4-pro";            contextWindow = 1048576; maxTokens = 384000; }
+    { id = "gloo-deepseek-v4-flash";          contextWindow = 1048575; maxTokens = 4096; }
+    { id = "gloo-xai-grok-4.5";               contextWindow = 500000;  maxTokens = 4096; }
+    { id = "gloo-qwen-3.7-max";               contextWindow = 1000000; maxTokens = 65536; }
+    { id = "gloo-qwen-3-coder";               contextWindow = 262144;  maxTokens = 65536; }
+    { id = "gloo-kimi-k3";                    contextWindow = 1048576; maxTokens = 131072; }
+    { id = "gloo-z-ai-glm-5.2";               contextWindow = 1048576; maxTokens = 131072; }
+    { id = "gloo-minimax-m3";                 contextWindow = 524288;  maxTokens = 512000; }
+    { id = "gloo-mistral-large-3";            contextWindow = 262144;  maxTokens = 4096; }
+  ];
+
   seedSettings = (pkgs.formats.yaml { }).generate "settings.yaml" {
     llm-pi-ai = {
-      providers.bees-llamacpp = {
-        displayName = "bees llama.cpp";
-        api = "openai-completions";
-        baseURL = llamaBaseUrl;
-        # llama-server is keyless, but pi-ai has no anonymous mode: a
-        # request without any credential fails MISSING_CREDENTIAL. The
-        # dummy value comes from the dsh-web unit environment (see
-        # environment.BEES_LLAMACPP_API_KEY below); llama-server ignores
-        # Authorization headers, so the wire is unchanged.
-        apiKeyEnv = "BEES_LLAMACPP_API_KEY";
-        defaultInput = [ "text" "image" ];
-        compat = {
-          supportsDeveloperRole = false;
-          maxTokensField = "max_tokens";
+      providers = {
+        bees-llamacpp = {
+          displayName = "bees llama.cpp";
+          api = "openai-completions";
+          baseURL = llamaBaseUrl;
+          # llama-server is keyless, but pi-ai has no anonymous mode: a
+          # request without any credential fails MISSING_CREDENTIAL. The
+          # dummy value comes from the dsh-web unit environment (see
+          # environment.BEES_LLAMACPP_API_KEY below); llama-server ignores
+          # Authorization headers, so the wire is unchanged.
+          apiKeyEnv = "BEES_LLAMACPP_API_KEY";
+          defaultInput = [ "text" "image" ];
+          compat = {
+            supportsDeveloperRole = false;
+            maxTokensField = "max_tokens";
+          };
+          models = [{
+            id = llamaModel;
+            contextWindow = 131072; # match bees llama-server -c (128K)
+            # Canonical form per providers.md: per-model input, not just
+            # the route-level defaultInput fallback.
+            input = [ "text" "image" ];
+          }];
         };
-        models = [{
-          id = llamaModel;
-          contextWindow = 131072; # match bees llama-server -c (128K)
-          # Canonical form per providers.md: per-model input, not just
-          # the route-level defaultInput fallback.
-          input = [ "text" "image" ];
-        }];
+        # Hand-declared Gloo route (pi-ai ships nothing under "gloo").
+        # No compat overrides: the platform accepts the developer role,
+        # max_completion_tokens, and tool calls (verified 2026-08-25).
+        # Credential via EnvironmentFile gloo-api-key (see below) —
+        # WORK ONLY, employer-paid.
+        gloo = {
+          displayName = "Gloo (work)";
+          api = "openai-completions";
+          baseURL = glooBase;
+          apiKeyEnv = "GLOO_API_KEY";
+          models = glooModels;
+        };
+        # Catalog route: pi-ai ships a full OpenRouter provider (276
+        # models), so only the credential reference is needed — the
+        # endpoint, wire protocol, and model catalog all come from
+        # pi-ai's installed catalog.
+        openrouter = {
+          apiKeyEnv = "OPENROUTER_API_KEY";
+        };
       };
     };
     agent-default-model = {
@@ -93,6 +156,13 @@ in {
   config = lib.mkIf cfg.enable {
     # dsh's local sandbox probes PATH for bwrap at tool-run time.
     environment.systemPackages = [ cfg.package pkgs.bubblewrap ];
+
+    # Provider credentials (same .age files opencode.nix uses; equal
+    # definitions from both modules merge cleanly). gloo-api-key's
+    # first NixOS consumer is here; login shells read the same value
+    # via the server-shell zshenv pattern.
+    age.secrets.gloo-api-key.file = ../secrets/gloo-api-key.age;
+    age.secrets.openrouter-api-key.file = ../secrets/openrouter-api-key.age;
 
     # ── State + seed ───────────────────────────────────────────────
     systemd.tmpfiles.rules = [ "d /var/lib/dsh 0700 crussell users -" ];
@@ -126,6 +196,14 @@ in {
         Group = "users";
         WorkingDirectory = "/home/crussell";
         ExecStart = "${cfg.package}/bin/dsh web --port ${toString port} --no-open --trusted-host ${hostname}";
+        # GLOO_API_KEY (gloo route) + OPENROUTER_API_KEY (openrouter
+        # route), resolved per request via the settings.yaml apiKeyEnv
+        # references. Same .age sources as the zshenv login-shell
+        # pattern (modules/server-shell.nix).
+        EnvironmentFile = [
+          config.age.secrets.gloo-api-key.path
+          config.age.secrets.openrouter-api-key.path
+        ];
         Restart = "on-failure";
         RestartSec = "5";
       };
