@@ -271,6 +271,7 @@ in {
           # pipeline. Vision capability verified against Gloo's platform
           # 2026-08-19 (gloo-google-gemini-3.5-flash image test passed).
           models = {
+            "gloo-anthropic-claude-opus-5" = { supports_vision = true; };
             "gloo-anthropic-claude-opus-4.8" = { supports_vision = true; };
             "gloo-anthropic-claude-sonnet-4.6" = { supports_vision = true; };
             "gloo-anthropic-claude-haiku-4.5" = { supports_vision = true; };
