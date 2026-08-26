@@ -416,7 +416,12 @@ bubblebox-publish *pkgs:
       pkgs=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
     fi
     pkgs_dir="${HOME}/Code/bubblebox-pkgs"
-    stage="$(mktemp -d)"
+    # Stage under BUBBLEBOX_DATA_DIR — same filesystem as the content store,
+    # so `push --stage-dir` HARDLINKS blobs instead of copying ~3 GB into
+    # /tmp (staging becomes near-instant; only the rsync to bees moves bytes).
+    stage_base="${BUBBLEBOX_DATA_DIR:-$HOME/.local/share/bubblebox}"
+    mkdir -p "${stage_base}"
+    stage="$(mktemp -d "${stage_base}/publish-stage.XXXXXX")"
     trap 'rm -rf "${stage}"' EXIT
     for t in ${pkgs}; do
       ep=""

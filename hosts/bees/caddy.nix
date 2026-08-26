@@ -53,6 +53,13 @@
       MARKER=/var/lib/caddy-config-generation
       CURRENT="$(readlink -f /etc/caddy/routes) $(sha256sum /etc/caddy/Caddyfile | cut -d' ' -f1)"
       if [ -n "$CURRENT" ] && [ "$CURRENT" != "$(cat "$MARKER" 2>/dev/null)" ]; then
+        # daemon-reload FIRST: route/Caddyfile edits only need a restart, but
+        # QUADLET unit changes (e.g. a new Volume= in caddy.container) are
+        # invisible to a restart until systemd re-reads the unit — without
+        # this the container keeps its old mounts until a manual
+        # daemon-reload + restart (seen when adding the bubblebox-cache
+        # volume: the mount silently didn't land).
+        ${pkgs.systemd}/bin/systemctl daemon-reload || true
         ${pkgs.systemd}/bin/systemctl try-restart caddy.service || true
         printf '%s' "$CURRENT" > "$MARKER"
       fi
