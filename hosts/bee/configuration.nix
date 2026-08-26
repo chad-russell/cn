@@ -3,7 +3,7 @@
 # NixOS install on Crucial P3 Plus 1TB NVMe, 32GB RAM.
 # General-purpose server — services to be added incrementally.
 
-{ config, lib, pkgs, unstable, ... }:
+{ config, lib, pkgs, unstable, hermes-agent, ... }:
 
 let
   # Nix-declared Hermes settings, serialized for the config-drift check
@@ -248,7 +248,22 @@ in {
     # shares /var/lib/hermes/.hermes with the long-running gateway service.
     addToSystemPackages = true;
 
+    # mem0 memory backend: bake the provider SDK into the sealed venv via the
+    # upstream package's extraDependencyGroups surface (upstream defines a
+    # `mem0 = ["mem0ai==2.0.10"]` optional-dependency extra; uv.lock pins the
+    # full closure incl. qdrant-client 1.18.0). This beats the lazy pip-install
+    # path (HERMES_LAZY_INSTALL_TARGET) — no runtime PyPI fetch, no drift from
+    # the uv.lock, and the webui's agent.package follows this same package.
+    package =
+      hermes-agent.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
+        extraDependencyGroups = [ "mem0" ];
+      };
+
     settings = {
+      # mem0 memory backend (OSS mode: local qdrant + Z.AI extraction +
+      # OpenRouter embeddings; behavioral config in $HERMES_HOME/mem0.json).
+      # The built-in MEMORY.md/USER.md stays active alongside it.
+      memory.provider = "mem0";
       custom_providers = [
         {
           name = "zai-coding";
@@ -468,8 +483,9 @@ in {
   # freshness-check module; divergence pages the homelab-alerts ntfy topic.
   homelab.freshnessChecks.hermes-config-drift = {
     description = "Hermes live config.yaml matches Nix-declared settings";
-    checkCommand =
-      "${pkgs.python3.withPackages (ps: [ ps.pyyaml ])}/bin/python3 ${hermesDriftCheckPy} ${hermesDeclaredSettings} /var/lib/hermes/.hermes/config.yaml";
+    checkCommand = "${
+        pkgs.python3.withPackages (ps: [ ps.pyyaml ])
+      }/bin/python3 ${hermesDriftCheckPy} ${hermesDeclaredSettings} /var/lib/hermes/.hermes/config.yaml";
     onCalendar = "hourly";
   };
 
