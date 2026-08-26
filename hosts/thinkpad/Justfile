@@ -424,7 +424,8 @@ bubblebox-publish *pkgs:
       echo "==> push ${t} ${ep}"
       {{ bubblebox_bin }} push "${t}" --stage-dir "${stage}" ${ep}
     done
-    rsync -a "${stage}/" bees:/var/lib/bubblebox-cache/
+    BEES="${BEES:-crussell@10.10.0.6}"
+    rsync -a -e "ssh -o IdentitiesOnly=yes" "${stage}/" "${BEES}:/var/lib/bubblebox-cache/"
     echo "==> published $(echo ${pkgs} | wc -w) package(s) -> https://bubblebox.internal.crussell.io"
 
 # Init + build + apply in one shot. The thing to run on a fresh install or
