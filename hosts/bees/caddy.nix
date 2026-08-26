@@ -28,6 +28,17 @@
     ${pkgs.podman}/bin/podman volume create caddy_config 2>/dev/null || true
   '';
 
+  # bubblebox binary cache dir (served by the caddy route in
+  # routes/internal/bubblebox.caddy; written by `cjust bubblebox-publish`
+  # on the thinkpad over ssh/rsync as crussell).
+  systemd.tmpfiles.settings."bubblebox-cache" = {
+    "/var/lib/bubblebox-cache".d = {
+      mode = "0755";
+      user = "crussell";
+      group = "users";
+    };
+  };
+
   # The caddy quadlet reads /etc/caddy only at container start. A NixOS
   # switch swaps the /etc content but nothing restarts the container,
   # so config/route changes silently don't apply — Caddy keeps serving

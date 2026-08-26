@@ -60,7 +60,7 @@ bubblebox_bin := bubblebox_dir + "/target/release/bubblebox"
 # host image in mid-2026). If you're on an older image, that step fails
 # harmlessly — complete the host-image rebuild + reboot, then re-run setup.
 [group('setup')]
-setup: bubblebox opencode-install
+setup: bubblebox-doctor bubblebox opencode-install
     @echo "==> Setup complete."
     @echo "    If host-image deps changed (just/fzf/nodejs/npm), rebuild & reboot:"
     @echo "      cjust image-build && cjust image-upgrade && systemctl reboot"
@@ -290,6 +290,13 @@ cosmic-restore:
 # below are: init (build FUSE server, one-time), build (per-tool image +
 # composefs descriptor), export (per-tool wrapper at ~/.local/bin/).
 
+# Pre-flight the host: every runtime dep (bwrap, fuse3, composefs, userns,
+# FUSE server, git/podman for builds) with per-distro install hints. Non-zero
+# exit when a required piece is missing — that's why `setup` runs it first.
+[group('bubblebox')]
+bubblebox-doctor:
+    {{ bubblebox_bin }} doctor
+
 # Build the FUSE server binary in a container (no host rust toolchain needed).
 # Idempotent — cargo build is incremental.
 [group('bubblebox')]
@@ -354,6 +361,11 @@ bubblebox-apply:
       "{{ justfile_directory() }}/bubblebox/units/" \
       "$HOME/.config/bubblebox/units/"
     {{ bubblebox_bin }} apply
+    # Copy the realized lock back into the repo (the flake.lock analog): it
+    # only changes when the closure actually changes, so commit it alongside
+    # profile.toml edits and a fresh host applies a byte-identical set.
+    cp -f "$HOME/.config/bubblebox/profile.lock" \
+      "{{ justfile_directory() }}/bubblebox/profile.lock"
 
 # Reclaim store bytes no generation/binding/mount references. Dry-run by
 # default (reclaims nothing until you prune old generations —
@@ -367,6 +379,53 @@ bubblebox-gc *args:
     else
       {{ bubblebox_bin }} gc
     fi
+
+# Rebase day: rebuild every package against the CURRENT pinned base in one
+# sitting (lockstep is what keeps cross-package blob sharing high — same-vintage
+# rpms are byte-identical and dedup), then apply, prune old generations, and
+# sweep. Run this after bumping the fedora:NN pin in bubblebox-pkgs, or
+# quarterly as hygiene. `bubblebox list` prints the deduplicated footprint
+# before/after so the win is visible.
+[group('bubblebox')]
+bubblebox-rebuild:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "--- before:"
+    {{ bubblebox_bin }} list | tail -1
+    {{ just_executable() }} --justfile "{{ justfile_directory() }}/Justfile" bubblebox-build
+    {{ just_executable() }} --justfile "{{ justfile_directory() }}/Justfile" bubblebox-apply
+    {{ bubblebox_bin }} generations keep-last 3
+    {{ bubblebox_bin }} gc --apply
+    echo "--- after:"
+    {{ bubblebox_bin }} list | tail -1
+
+# Publish built packages to the bees binary cache (stage-dir push + rsync;
+# served by caddy at bubblebox.internal.crussell.io — see
+# hosts/bees/caddy/routes/internal/bubblebox.caddy). With no args, publishes
+# every profile package; pass names to publish a subset.
+#
+# ORDER MATTERS: publish AFTER local builds (the cache's index becomes what
+# other hosts resolve; a stale cache would roll a freshly-built host back on
+# its next `apply --refresh`).
+[group('bubblebox')]
+bubblebox-publish *pkgs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pkgs="{{ pkgs }}"
+    if [ -z "${pkgs}" ]; then
+      pkgs=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
+    fi
+    pkgs_dir="${HOME}/Code/bubblebox-pkgs"
+    stage="$(mktemp -d)"
+    trap 'rm -rf "${stage}"' EXIT
+    for t in ${pkgs}; do
+      ep=""
+      [ -f "${pkgs_dir}/${t}/entrypoint.toml" ] && ep="--entrypoint ${pkgs_dir}/${t}/entrypoint.toml"
+      echo "==> push ${t} ${ep}"
+      {{ bubblebox_bin }} push "${t}" --stage-dir "${stage}" ${ep}
+    done
+    rsync -a "${stage}/" bees:/var/lib/bubblebox-cache/
+    echo "==> published $(echo ${pkgs} | wc -w) package(s) -> https://bubblebox.internal.crussell.io"
 
 # Init + build + apply in one shot. The thing to run on a fresh install or
 # after pulling changes that touch tool configs. (Source registration + wrapper
@@ -730,6 +789,9 @@ status:
     echo
     echo "=== bubblebox mounts ==="
     mount | grep '/bubblebox/' || echo "(none mounted)"
+    echo
+    echo "=== bubblebox generation + footprint ==="
+    {{ bubblebox_bin }} list
     echo
     echo "=== bubblebox wrappers (~/.local/bin/) ==="
     dst_bin="${HOME}/.local/bin"

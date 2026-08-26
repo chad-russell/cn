@@ -1,0 +1,472 @@
+id = "dc74c11cf9d785430f3dff216eba821369e2139750bf32eceb44e947524ff7f7"
+created_at = 1787757680
+roots = [
+    "age",
+    "age-keygen",
+    "aws",
+    "bat",
+    "dust",
+    "eza",
+    "fastfetch",
+    "fd",
+    "gh",
+    "htop",
+    "noctalia",
+    "nvim",
+    "oh-my-posh",
+    "psql",
+    "rg",
+    "rust-dev",
+    "sops",
+    "slack",
+    "terraform",
+    "tokei",
+    "vicinae",
+    "witr",
+    "ghostty",
+    "wezterm",
+    "yazi",
+    "zoxide",
+]
+
+[[package]]
+name = "age"
+digest = "c85cbe506ae76cd36218ca1d7898129ce0fb8782ddad1f968fc80993c4d8d10f"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "aws"
+digest = "84f923cf7b94bd4635781e568d36c57c2cd45b17ac31eb3bc676135f1c92bc41"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "bat"
+digest = "40bc9db6e36d64b1a096d44f52eba925848970822c8574dbbb6a2cd55da74532"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "dust"
+digest = "270a2c49b66f453a1e274defab94c57aa2fe14e62b954120e73e74e1f0f9f893"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "eza"
+digest = "7169db44d8d1c6dbcc9a89062971ee89059cc0d416725abbab8bba5842ff73f2"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "fastfetch"
+digest = "7bdf599f3ad970d68cb3988469f414b6e8a6a478479e11216e4febf9fa5d189d"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "fd"
+digest = "5b2f9e027d36c15fa1788657ab476f3a2fcbe144de107e8c03737f3c5791b730"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "gh"
+digest = "711bc7278c097169d17f3304cd0e4d392d58843465ec64296d23f3030b8083b7"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "htop"
+digest = "f2833f8a0162465de58a0dce1b21a1326366a75f83f1232b6cd361c120a9b24e"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "noctalia"
+digest = "bb32ed082802b90cccc4edcc5c3ea12ca0053dda027c274243fda85848f1531a"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "nvim"
+digest = "2fd83cc39c93c367678df3d2edcf7acdeca33a5cb9dec696c5d53abee3ad3a61"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "rg"
+digest = "65a3ab2e019669ce987416b1c34317b7e1b3f14a0846f257ffafe5a4616729aa"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "oh-my-posh"
+digest = "d2b0c7b55906107769eb487b7cab2d83a6f154b59f9b471880ab51c243e86e9c"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "psql"
+digest = "68e6730eadbc4260c6f5a68ce52ef2ef011f5e60baa49efe91a85e447ef0fcdf"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "rust-dev"
+digest = "0f19ea7941eecc6b86c2b412ad2dd5851c3449362af64256346efd33077e8cf8"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "sops"
+digest = "0509daf634db48407087b063511db4d880c4382dbeb963cdbac9ec64c2c538d8"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "slack"
+digest = "8d6e73c6a5b110ae6e71f1af934a340f6522299732896598610b564b8f0f5e28"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "terraform"
+digest = "04f89e4e4faff80f13028859ddc2c4bc439120d902d38ec00455a0846963eba9"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "tokei"
+digest = "ad6266cbe7133e17ca22cf0adeb83abdb29f94e3e19811a0165c509d01cce92d"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "vicinae"
+digest = "68fd25915c5af02a89affc0a4a800a30d6f0f7f4ab27622c8cbd6bef90719f95"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "witr"
+digest = "584803dc5608cfab0ba89788aa267687b0b2e3373a95a2c4825c12629e1b05c1"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "ghostty"
+digest = "de42ee10dcce7dd4d8ca4d1103a908227cef2d20e1626346381064d190e6169c"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "wezterm"
+digest = "292eae709ffca586b4be04be11675290a7b8f2e30df5eadf1b8ad528ec7b03ff"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "yazi"
+digest = "3fbe3335211984bffde0bde14f184bf32cf5157d64d95e153d22bc1e7b9239ca"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[package]]
+name = "zoxide"
+digest = "4a909fe19d235e1b76532544daa39f7b94044ccfee6128c230545aee9d24fc80"
+
+[package.origin]
+kind = "cache"
+url = "(local)"
+
+[[file]]
+dst = ".zshrc"
+blob = "f059e048c0cac9e212987deaf551b6ed1b42841f04f12d0aba13437bd3caa0c3"
+
+[[file]]
+dst = ".zshenv"
+blob = "ed9d3dd8ba131e1692362cc0b860a60ce3f7b8d00a4bc0d526f65abff27f46c3"
+
+[[file]]
+dst = ".aws/config"
+blob = "bf267d56bc1f95e351c0c8790cc5277662163bcb14858f16c889af444fdea17e"
+
+[[file]]
+dst = ".config/oh-my-posh.json"
+blob = "7ab5ce0b24b5d6ca132a11b823d8d46e4b80608d51e5b017bef37846b313fdd3"
+
+[[file]]
+dst = ".config/environment.d/10-bubblebox.conf"
+blob = "c58fb85589f40bbfaa1ee3c1d990c1951980c9f0eace40b370ff3d5999879f42"
+
+[[file]]
+dst = ".config/niri/config.kdl"
+blob = "ca62396dec4be477fa607aa551ec8e7b397dac819cec71fd4d0b688cf90202fe"
+
+[[file]]
+dst = ".config/ghostty/config"
+blob = "a347ec306961a12244f31f87d448e1ea5ffcb021ef5d442b454de193daf2c69e"
+
+[[file]]
+dst = ".config/vicinae/settings.json"
+blob = "17ad3d1609fc9625d5d0b6642ac08736d3b15c901660456159241ff1ab4d7d0c"
+
+[[file]]
+dst = ".config/wezterm/wezterm.lua"
+blob = "ca657f4fc50b9f3b4fdedfd408db616000518120fb35355d952d9470fefda91a"
+
+[[file]]
+dst = ".config/nvim/lua/config/autocmds.lua"
+blob = "1124ea8f0c7521156a0f6dac15df02156cb5a3a86ea2c89841340dbbeee4a444"
+
+[[file]]
+dst = ".config/nvim/lua/config/keymaps.lua"
+blob = "0b6aa3c93ed6308cd1373f08c00a855f714fd8baf2055498935d39af68c1d6c2"
+
+[[file]]
+dst = ".config/nvim/lua/config/lsp.lua"
+blob = "8cccc6f76e0ce78c762623d42568a69ebd3ef2bb37a5becaee925f3ca3ec30eb"
+
+[[file]]
+dst = ".config/nvim/lua/config/options.lua"
+blob = "3c2ec5f5bb18ce23f0ed306d8f0a3d973ac6fcab9a5d7d41a65a6270f426b21e"
+
+[[file]]
+dst = ".config/nvim/lua/config/treesitter.lua"
+blob = "a767f49014a786e4032a27e0da3fd8db505a160e5f18db8b9b57a9ff99d16d7f"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/aerial.lua"
+blob = "11920ae885500ac56f8047d87eb4ae93ff9da0a80881890a4eff30e2129c211c"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/colorscheme.lua"
+blob = "045077d0ffa42b6bd7b37e4c59a7e3456e12240045ee96292ac246dd3872dd2e"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/comment.lua"
+blob = "1fab1cdfaa24608dc1175940df1d39e9f8b1150ad9c99f8df27832231615179a"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/conform.lua"
+blob = "559a9a196dacd0a81ffc1059fcca6567e7aa0bec2005297182b80168a062deea"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/flash.lua"
+blob = "b11c08d69584859f1a76875cdcdd20cb7f3ae4e26f923b50c9a22482dc14e9ae"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/gitsigns.lua"
+blob = "df5cfb6b868f6f79e0fb9e464eadc38130ed14dac5e9ae99293eb5802f16d00e"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/neo-tree.lua"
+blob = "30d9c546f7892a4b0559c34632ea178b3218fb74b25dda1501871bbe8f88effe"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/persistence.lua"
+blob = "45b93514c706c19e974dbba2263ed1ad1d3a971e9d936c4ca79726302a3d743d"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/telescope.lua"
+blob = "f968160968cf12d2ead5eebd7bd7397f29b8f606eebb8943725674e0eb353446"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/treesitter.lua"
+blob = "5c55b587b53d34981e31be16926552b9a5cc137e5e1162d5490e4929f0ebb8ba"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/trouble.lua"
+blob = "ffd4e13f02956ff9325752b95e2fc458d6918adb0964d012fa545a65dea55de8"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/ui.lua"
+blob = "aa8254dd8223640aecee4059faad2c473fb56a38f007c6dc4292264e96558981"
+
+[[file]]
+dst = ".config/nvim/lua/plugins/which-key.lua"
+blob = "3cffbe7e14542bfd1987edab91a1c5fed1792305108691d28e2e562b5d8c0c40"
+
+[[file]]
+dst = ".config/nvim/queries/markdown/highlights.scm"
+blob = "7d662ce4f3e05739344f796b23c3433fe185e08672e31f3dc57982c3a9cc1ffe"
+
+[[file]]
+dst = ".config/nvim/init.lua"
+blob = "459ed76d78079013aabf39db05e0c568aee7409049cf50a53c9b45b5e1f581c6"
+
+[[file]]
+dst = ".config/nvim/lazy-lock.json"
+blob = "138ad75ac7bfb5a00a450f8b944d95fce9c453737042ef4ba691abea61b31b3d"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/analyze-db-mongo.md"
+blob = "52e4470b5893563d6a02411a005d8434e0d7668a0c53e188f8b542bc8f4bcfac"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/analyze-db-mysql.md"
+blob = "281e01c4cac538c7aa0ed90b3e5e0517fb5fa95d9ec8be0db03befdc7232a799"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/analyze-db-postgres.md"
+blob = "8c71a39dac66ea434b11b315b1df1363f07927768bbf5c5298387aab231f44ff"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/analyze-db-redis.md"
+blob = "5cc56fbf787b8c1a87641c72f4fd48f1c513d38726dc501aaa3575496afcffc0"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/analyze-db.md"
+blob = "ff1766aa33128ecbc7d33ad799c3d86c26ad557089d3c0d8b914d04a266f3af1"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/configure.md"
+blob = "15ff780bd042347cf50c499922c7d4b838082b0b283152e3ea40ff388b797942"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/deploy.md"
+blob = "68b0720072e6d6e3f0ddfa54c38801264c8e8c82a367229f51290c82df8ff922"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/feature-flags.md"
+blob = "c891ac3dde2235e995ec35e252bdf67ac27013371eaa173e5853cc9134b6686c"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/iac.md"
+blob = "07e322b6e1e0cea746af5e400a6427b6f785e3bb1c946460dc5fe2d1eaf905d2"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/operate.md"
+blob = "bc9f9c48fe4c6ff65542d2918e23c910fab65467cd1fbee7fa245705a3fa8c58"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/request.md"
+blob = "96ad40ee51c5abd1f1c1c8448b9626f139340a7ad603055dbde669f48ccb6e8b"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/sandbox.md"
+blob = "4d82223eccddcc85bbe8027c1088d2928fdcb384124f09f394d5414641b9f004"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/references/setup.md"
+blob = "402dde04c447c3938baea1fc832e4dc45bf85d7eda4cb64d92cd8f3525f775ed"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/scripts/analyze-mongo.py"
+blob = "0ad9ded1dae89afc32959c13861234881a2df47199d3ad12a940ce2018b6088a"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/scripts/analyze-mysql.py"
+blob = "daf7c87434326c3e3c9af644a76a3d3602bb8cef24a51da3e957763ee4b1e2b6"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/scripts/analyze-postgres.py"
+blob = "4fca72278e9e6135b79cbc58d7d4b2ff1e1c57c0fb31ba1e8cc5954d280fd97f"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/scripts/analyze-redis.py"
+blob = "42a24cef643539a6dc5815d28e84d20dfd6439015d0f086dfd7aafc4786a71cc"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/scripts/dal.py"
+blob = "fe74d383242446c04c8b60bd3ca89441f2d9fe56ee5ceb8493d5c0b5cc30e640"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/scripts/enable-pg-stats.py"
+blob = "eea271c4eb7e794920cfee2a5ba98c892ae75b9d126522d9b79f315d1e7058cd"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/scripts/pg-extensions.py"
+blob = "443b34c6fe7418090e426a8830062106f4f89309a754c684d7b9e720e443fc9d"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/scripts/railway-api.sh"
+blob = "45e9f397ed733f6f3a0e55476d0824eff86b30371be2699c55ffbefb3b28b9b0"
+
+[[file]]
+dst = ".config/opencode/skills/use-railway/SKILL.md"
+blob = "a9d1277e6b5984a47fc3d93d48bf8582e1d129e334bdd8f67812e009c8cfc360"
+
+[[file]]
+dst = ".config/opencode/opencode.json"
+blob = "412efb97ebecde3a5ebf84635308566aae0a8353255226b15aed5acf48b7b5d6"
+
+[[file]]
+dst = ".local/bin/zen-browser"
+blob = "e154842cd6b489d757daeeea9df58ea0ccc041c57d7eb411b8556e608382bece"
+
+[[file]]
+dst = ".local/bin/hermes-desktop"
+blob = "d6b5710bbfcacb64c021a990b2c592febc641d4b178b4fee2261a79e63ce8555"
+
+[[file]]
+dst = ".local/share/applications/wezterm.desktop"
+blob = "3e05eb7fae2aafa8633757fbb4a89acad85c8d7a266e66d7cd24795a83db9cc6"
+
+[[file]]
+dst = ".local/share/applications/ghostty.desktop"
+blob = "1512d2a7df17ca87693d33175e35648dae817ffaf30b00831447fa376b34eca7"
+
+[[file]]
+dst = ".local/share/applications/hermes.desktop"
+blob = "0a774bcb4d38d69cccc7adc6994a85b8bf924ebe4d16f4fc2095626a6ca3b6aa"
+
+[[unit]]
+name = "opencode-web"
+enabled = true
+blob = "da0c4fc9a9c5a33e9e133428894e0cd511fc1e314436186fa0d01aa27baa9323"
+
+[[unit]]
+name = "vicinae"
+enabled = true
+blob = "8857fc11670ea0765d9e67c0a851771d97d4150625760172a2781e3416bfa8ab"

@@ -33,7 +33,12 @@ bindkey '^R' fzf-history-widget
 
 # ---- oh-my-posh --------------------------------------------------------
 if command -v oh-my-posh >/dev/null 2>&1; then
-  eval "$(oh-my-posh init zsh --config "${XDG_CONFIG_HOME:-$HOME/.config}/oh-my-posh.json")"
+  # --strict: resolve the executable through PATH at prompt time. oh-my-posh is
+  # a bubblebox package, and `init` runs INSIDE its sandbox — without --strict
+  # it bakes the sandbox-internal path (/usr/bin/oh-my-posh) into the init
+  # script, which doesn't exist on the host. --strict emits a bare
+  # PATH-resolvable name instead (the ~/.local/bin wrapper), ~22ms/prompt cost.
+  eval "$(oh-my-posh init zsh --strict --config "${XDG_CONFIG_HOME:-$HOME/.config}/oh-my-posh.json")"
 fi
 
 # ---- zoxide (smart cd) -------------------------------------------------

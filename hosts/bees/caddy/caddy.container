@@ -8,6 +8,7 @@ Image=localhost/caddy-route53:latest
 Network=host
 Volume=/etc/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
 Volume=/etc/caddy/routes:/etc/caddy/imports/routes:ro
+Volume=/var/lib/bubblebox-cache:/srv/bubblebox-cache:ro
 Volume=caddy_data:/data
 Volume=caddy_config:/config
 EnvironmentFile=/run/agenix/aws-env

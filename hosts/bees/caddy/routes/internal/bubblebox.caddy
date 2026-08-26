@@ -1,0 +1,11 @@
+# bubblebox binary cache (thinkpad-built packages, static files, internal only).
+#
+# Content is pushed by `cjust bubblebox-publish` on the thinkpad
+# (bubblebox push --stage-dir + rsync into /var/lib/bubblebox-cache on bees).
+# Layout is the bubblebox cache protocol: index/<pkg>, <digest>.cfs,
+# blobs/<XX>/<rest>, entrypoints/<pkg>.toml — plain GETs, no listing needed.
+@bubblebox host bubblebox.internal.crussell.io
+handle @bubblebox {
+	root * /srv/bubblebox-cache
+	file_server
+}

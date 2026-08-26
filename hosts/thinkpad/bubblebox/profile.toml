@@ -16,8 +16,8 @@
 # must precede the [[source]]/[[cache]] table headers — standard TOML.)
 packages = [
   "age", "age-keygen", "aws", "bat", "dust", "eza", "fastfetch", "fd", "gh", "htop",
-  "noctalia", "nvim", "psql", "rg", "sops", "slack", "terraform", "tokei", "vicinae", "witr",
-  "ghostty", "wezterm", "yazi", "zoxide",
+  "noctalia", "nvim", "oh-my-posh", "psql", "rg", "rust-dev", "sops", "slack", "terraform",
+  "tokei", "vicinae", "witr", "ghostty", "wezterm", "yazi", "zoxide",
 ]
 
 # Registries: when present, apply is PROFILE-AUTHORITATIVE — it resolves using
@@ -30,6 +30,15 @@ packages = [
 name = "personal"
 kind = "local"
 path = "~/Code/bubblebox-pkgs"
+
+# Binary cache: thinkpad-built packages published to bees (`cjust
+# bubblebox-publish`), served by caddy at the internal wildcard above. With
+# this declared, `apply --refresh` resolves against it AND devshell
+# pull-on-entry can fetch off-host. Local descriptors win whenever the cache
+# is unreachable or lacks a package (mixed local+cache setups keep working).
+[[cache]]
+name = "bees"
+url = "https://bubblebox.internal.crussell.io"
 
 # ── Host-resident files (Phase B) ────────────────────────────────────────────
 # Source files live in `files/` next to this profile.toml, mirroring $HOME.
@@ -70,6 +79,11 @@ dst = ".config/wezterm/wezterm.lua"
 dst = ".config/nvim"
 kind = "dir"
 
+# opencode: manage the authored config + skills only. opencode ALSO treats
+# this dir as an npm workspace (node_modules/, package.json, package-lock.json
+# appear when it installs skills) — that tool-owned state is deliberately NOT
+# managed here, same rule as nvim's plugin trees: authored config yes,
+# package-manager state no.
 [[files]]
 dst = ".config/opencode"
 kind = "dir"
