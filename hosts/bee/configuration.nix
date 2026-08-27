@@ -249,14 +249,36 @@ in {
     addToSystemPackages = true;
 
     # mem0 memory backend: bake the provider SDK into the sealed venv via the
-    # upstream package's extraDependencyGroups surface (upstream defines a
-    # `mem0 = ["mem0ai==2.0.10"]` optional-dependency extra; uv.lock pins the
-    # full closure incl. qdrant-client 1.18.0). This beats the lazy pip-install
-    # path (HERMES_LAZY_INSTALL_TARGET) — no runtime PyPI fetch, no drift from
-    # the uv.lock, and the webui's agent.package follows this same package.
+    # upstream package's extraDependencyGroups surface. NOTE: .override
+    # REPLACES the group list — upstream's default package is `full`
+    # (nix/packages.nix: messaging, voice, edge-tts, matrix, ...), so
+    # overriding with only [ "mem0" ] silently dropped Telegram support
+    # (2026-08-26). Mirror upstream `full` here + mem0, and re-sync this list
+    # on hermes-agent bumps.
     package =
       hermes-agent.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
-        extraDependencyGroups = [ "mem0" ];
+        extraDependencyGroups = [
+          "anthropic"
+          "azure-identity"
+          "bedrock"
+          "daytona"
+          "dingtalk"
+          "edge-tts"
+          "exa"
+          "fal"
+          "feishu"
+          "firecrawl"
+          "hindsight"
+          "honcho"
+          "messaging"
+          "modal"
+          "parallel-web"
+          "tts-premium"
+          "vercel"
+          "voice"
+          "matrix"
+          "mem0"
+        ];
       };
 
     settings = {
