@@ -1,5 +1,5 @@
-id = "dc74c11cf9d785430f3dff216eba821369e2139750bf32eceb44e947524ff7f7"
-created_at = 1787757680
+id = "8bcb3fbf6fc6e48dadde1dc34adcb6f42e0ba42cd24b2bb08d9abf40d7df7cfc"
+created_at = 1787800304
 roots = [
     "age",
     "age-keygen",
@@ -35,7 +35,7 @@ digest = "c85cbe506ae76cd36218ca1d7898129ce0fb8782ddad1f968fc80993c4d8d10f"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "aws"
@@ -43,7 +43,7 @@ digest = "84f923cf7b94bd4635781e568d36c57c2cd45b17ac31eb3bc676135f1c92bc41"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "bat"
@@ -51,7 +51,7 @@ digest = "40bc9db6e36d64b1a096d44f52eba925848970822c8574dbbb6a2cd55da74532"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "dust"
@@ -59,15 +59,15 @@ digest = "270a2c49b66f453a1e274defab94c57aa2fe14e62b954120e73e74e1f0f9f893"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "eza"
-digest = "7169db44d8d1c6dbcc9a89062971ee89059cc0d416725abbab8bba5842ff73f2"
+digest = "15a05c45658feb9ada26810250b6c0d98e5d5df03d8e84dcc244f36bbbea6c40"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "fastfetch"
@@ -75,7 +75,7 @@ digest = "7bdf599f3ad970d68cb3988469f414b6e8a6a478479e11216e4febf9fa5d189d"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "fd"
@@ -83,7 +83,7 @@ digest = "5b2f9e027d36c15fa1788657ab476f3a2fcbe144de107e8c03737f3c5791b730"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "gh"
@@ -91,7 +91,7 @@ digest = "711bc7278c097169d17f3304cd0e4d392d58843465ec64296d23f3030b8083b7"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "htop"
@@ -99,7 +99,7 @@ digest = "f2833f8a0162465de58a0dce1b21a1326366a75f83f1232b6cd361c120a9b24e"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "noctalia"
@@ -107,7 +107,7 @@ digest = "bb32ed082802b90cccc4edcc5c3ea12ca0053dda027c274243fda85848f1531a"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "nvim"
@@ -115,7 +115,7 @@ digest = "2fd83cc39c93c367678df3d2edcf7acdeca33a5cb9dec696c5d53abee3ad3a61"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "rg"
@@ -123,7 +123,7 @@ digest = "65a3ab2e019669ce987416b1c34317b7e1b3f14a0846f257ffafe5a4616729aa"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "oh-my-posh"
@@ -131,7 +131,7 @@ digest = "d2b0c7b55906107769eb487b7cab2d83a6f154b59f9b471880ab51c243e86e9c"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "psql"
@@ -139,7 +139,7 @@ digest = "68e6730eadbc4260c6f5a68ce52ef2ef011f5e60baa49efe91a85e447ef0fcdf"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "rust-dev"
@@ -147,7 +147,7 @@ digest = "0f19ea7941eecc6b86c2b412ad2dd5851c3449362af64256346efd33077e8cf8"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "sops"
@@ -155,7 +155,7 @@ digest = "0509daf634db48407087b063511db4d880c4382dbeb963cdbac9ec64c2c538d8"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "slack"
@@ -163,7 +163,7 @@ digest = "8d6e73c6a5b110ae6e71f1af934a340f6522299732896598610b564b8f0f5e28"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "terraform"
@@ -171,7 +171,7 @@ digest = "04f89e4e4faff80f13028859ddc2c4bc439120d902d38ec00455a0846963eba9"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "tokei"
@@ -179,7 +179,7 @@ digest = "ad6266cbe7133e17ca22cf0adeb83abdb29f94e3e19811a0165c509d01cce92d"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "vicinae"
@@ -187,7 +187,7 @@ digest = "68fd25915c5af02a89affc0a4a800a30d6f0f7f4ab27622c8cbd6bef90719f95"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "witr"
@@ -195,7 +195,7 @@ digest = "584803dc5608cfab0ba89788aa267687b0b2e3373a95a2c4825c12629e1b05c1"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "ghostty"
@@ -203,23 +203,23 @@ digest = "de42ee10dcce7dd4d8ca4d1103a908227cef2d20e1626346381064d190e6169c"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "wezterm"
-digest = "292eae709ffca586b4be04be11675290a7b8f2e30df5eadf1b8ad528ec7b03ff"
+digest = "61efd386b4cec0b4f391c02e812357f6e8fda8465429a995ea5fe21310ac88ea"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "yazi"
-digest = "3fbe3335211984bffde0bde14f184bf32cf5157d64d95e153d22bc1e7b9239ca"
+digest = "316890b10e323321efa313433687975e1b384b3e3ddd3e6d1523020268103dc3"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "zoxide"
@@ -227,7 +227,7 @@ digest = "4a909fe19d235e1b76532544daa39f7b94044ccfee6128c230545aee9d24fc80"
 
 [package.origin]
 kind = "cache"
-url = "(local)"
+url = "https://bubblebox.internal.crussell.io"
 
 [[file]]
 dst = ".zshrc"
@@ -470,3 +470,13 @@ blob = "da0c4fc9a9c5a33e9e133428894e0cd511fc1e314436186fa0d01aa27baa9323"
 name = "vicinae"
 enabled = true
 blob = "8857fc11670ea0765d9e67c0a851771d97d4150625760172a2781e3416bfa8ab"
+
+[[unit]]
+name = "bubblebox-pkgs-nightly.service"
+enabled = false
+blob = "f369cb047fd757e32f5d75b026aa51f01cb6ad63c0e4c6137ec0237fbdd28c2e"
+
+[[unit]]
+name = "bubblebox-pkgs-nightly.timer"
+enabled = true
+blob = "47e23897113685406d6b8fd636c33d9821783994e448291c14e8f3aa98e88004"

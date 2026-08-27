@@ -346,6 +346,13 @@ bubblebox-export *tools:
 # Phase-1 digest-addressed layout, materialize bindings, and sync ~/.local/bin
 # wrappers. The declarative counterpart to bubblebox-build + bubblebox-export:
 # build (or pull) populates the store; apply declares what's active.
+#
+# ORDERING TRAP (hit 2026-08-26): plain `apply` realizes the CURRENT LOCK, so
+# running this between `bubblebox-build` and `bubblebox-publish` ROLLS freshly
+# built packages back to their locked (old) digests — and a publish afterwards
+# then re-seeds the cache with the old descriptors. After local rebuilds the
+# correct order is: `bubblebox-publish` FIRST, then `apply --refresh` (which
+# re-resolves floats against the just-updated cache index).
 [group('bubblebox')]
 bubblebox-apply:
     #!/usr/bin/env bash
