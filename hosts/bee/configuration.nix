@@ -159,6 +159,11 @@ in {
     "Z /etc/nebula-lh/ca.crt  0440 root nebula-lighthouse -"
     "Z /etc/nebula-lh/host.crt 0440 root nebula-lighthouse -"
     "Z /etc/nebula-lh/host.key 0440 root nebula-lighthouse -"
+    # qdrant (DynamicUser) storage parent, setgid hermes so the mkdir'd tree
+    # inherits group ownership (restic's hermes backup covers it). Must exist
+    # BEFORE the service starts — ReadWritePaths bind-mounts this path and
+    # systemd fails the unit with 226/NAMESPACE if it's missing.
+    "d /var/lib/hermes/mem0_qdrant_server 2770 crussell hermes -"
   ];
 
   # ── Firewall: disabled (router handles it) ───────────────────────
