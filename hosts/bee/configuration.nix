@@ -451,24 +451,62 @@ in {
         provider = "zai-coding";
         default = "glm-5.3";
       };
-      # Use a fast, cheap OpenRouter model for context compression
-      # (summarization). $0.03/M input tokens, 1M context window.
+      # Context compression (summarization). glm-5.3-flash on the Z.AI
+      # coding subscription: free, 1M context, thinking disabled for speed.
+      # Replaced openrouter/qwen3.7-flash 2026-08-27 — zero personal spend.
       auxiliary.compression = {
-        provider = "openrouter";
-        model = "qwen/qwen3.7-flash";
+        provider = "zai-coding";
+        model = "glm-5.3-flash";
+        reasoning_effort = "none";
       };
       # Auxiliary vision model: fallback for image analysis whenever the
       # main model lacks vision (e.g. glm-5.3 on zai-coding is text-only).
-      # Vision-capable main models (any multimodal gloo model) receive
-      # images natively via the supports_vision flags below — no detour.
-      # Gloo gemini-3.5-flash preferred over OpenRouter: newest flash
-      # tier, vision-capable, verified working 2026-08-19, and free to us
-      # (employer platform, but vision fallback only triggers when the
-      # main model is personal — keep personal image chats on gloo
-      # gemini, personal spend stays near zero).
+      # glm-5.3-flash is natively multimodal and the coding endpoint
+      # accepts images on it (verified 2026-08-27: correct descriptions of
+      # a red-circle/blue-square test image, ~1.6s, with and without
+      # thinking). Replaced gloo-google-gemini-3.5-flash — vision is now
+      # fully on the personal subscription, no employer-platform usage.
       auxiliary.vision = {
-        provider = "custom:gloo";
-        model = "gloo-google-gemini-3.5-flash";
+        provider = "zai-coding";
+        model = "glm-5.3-flash";
+        reasoning_effort = "none";
+      };
+      # Title generation: trivial text task, fires every session — cheap
+      # slot on the subscription, thinking off.
+      auxiliary.title_generation = {
+        provider = "zai-coding";
+        model = "glm-5.3-flash";
+        reasoning_effort = "none";
+      };
+      # Fast aux slots on the subscription (thinking off):
+      #   web_extract  — long-context extraction/summarization
+      #   approval     — dangerous-command classifier (reliability matters)
+      #   skills_hub   — skill matching
+      #   mcp          — tool dispatch
+      #   memory_query_rewrite — 8s timeout demands a fast model
+      auxiliary.web_extract = {
+        provider = "zai-coding";
+        model = "glm-5.3-flash";
+        reasoning_effort = "none";
+      };
+      auxiliary.approval = {
+        provider = "zai-coding";
+        model = "glm-5.3-flash";
+        reasoning_effort = "none";
+      };
+      auxiliary.skills_hub = {
+        provider = "zai-coding";
+        model = "glm-5.3-flash";
+        reasoning_effort = "none";
+      };
+      auxiliary.mcp = {
+        provider = "zai-coding";
+        model = "glm-5.3-flash";
+        reasoning_effort = "none";
+      };
+      auxiliary.memory_query_rewrite = {
+        provider = "zai-coding";
+        model = "glm-5.3-flash";
         reasoning_effort = "none";
       };
       # Fallback to OpenRouter if Z.AI is down (rate limit, overload, etc.)
