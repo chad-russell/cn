@@ -312,13 +312,19 @@ in {
       storage.snapshot_mode = "filesystem";
     };
   };
-  # The nixpkgs qdrant module runs as a DynamicUser (no static uid/gid), but
-  # the storage_path above lives under /var/lib/hermes (2770 crussell:hermes,
-  # setgid) so restic's existing hermes backup covers it. Without the hermes
-  # supplemental group the dynamic user gets EACCES on the setgid dir and the
-  # service crash-loops (hit 2026-08-27). qdrant mkdir's its storage_path on
-  # first start; the setgid bit makes the tree inherit hermes group ownership.
-  systemd.services.qdrant.serviceConfig.SupplementaryGroups = [ "hermes" ];
+  # The nixpkgs qdrant module runs as a DynamicUser (no static uid/gid) with
+  # ProtectSystem hardening, but the storage_path above lives under
+  # /var/lib/hermes (2770 crussell:hermes, setgid) so restic's existing hermes
+  # backup covers it. Two things the dynamic user needs for that path (hit
+  # both 2026-08-27): the hermes supplemental group (EACCES on the setgid
+  # dir) and an explicit ReadWritePaths carve-out (EROFS from ProtectSystem —
+  # only the module's own StateDirectory is writable by default). qdrant
+  # mkdir's its storage_path on first start; the setgid bit makes the tree
+  # inherit hermes group ownership.
+  systemd.services.qdrant.serviceConfig = {
+    SupplementaryGroups = [ "hermes" ];
+    ReadWritePaths = [ "/var/lib/hermes/mem0_qdrant_server" ];
+  };
 
   # ── Hermes Agent gateway ────────────────────────────────────────
   # Telegram is the delivery platform (forum topics for per-subject
