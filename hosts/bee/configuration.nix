@@ -230,8 +230,15 @@ in {
       "%h/.local/share/bubblebox-ci/bin/bubblebox"
     ];
     # Everything the engine + script shell out to, pinned here rather than
-    # trusting the user-manager PATH.
+    # trusting the user-manager PATH (whose default is systemd's compiled-in
+    # /usr/bin:/bin fallback — no bash, no coreutils on NixOS).
     path = [
+      pkgs.bash
+      pkgs.coreutils
+      pkgs.gnugrep
+      pkgs.gawk
+      pkgs.gnused
+      pkgs.findutils
       pkgs.composefs
       pkgs.podman
       pkgs.git
