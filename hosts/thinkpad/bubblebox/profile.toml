@@ -105,11 +105,24 @@ dst = ".local/share/applications/hermes.desktop"
 
 # ── Systemd user units (Phase C) ─────────────────────────────────────────────
 # Source files live in `units/` next to this profile.toml. Replaces the old
-# Justfile `user_units` string + `cjust units`.
+# Justfile `user_units` string + `cjust units`. A declared name carrying its
+# own suffix (e.g. "nightly.timer") is used verbatim; bare names get the
+# implicit ".service".
 [[units]]
 name = "opencode-web"
 enable = true
 
 [[units]]
 name = "vicinae"
+enable = true
+
+# Nightly bubblebox-pkgs verification (DESIGN-ecosystem.md §3.3, Phase E0):
+# whole-repo lint+build+smoke+footprint in an isolated store. Only the TIMER
+# is enabled (starting the timer never starts the service); the service is
+# linked + daemon-reloaded but triggered solely by the timer.
+[[units]]
+name = "bubblebox-pkgs-nightly.service"
+
+[[units]]
+name = "bubblebox-pkgs-nightly.timer"
 enable = true
