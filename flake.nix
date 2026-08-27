@@ -70,6 +70,20 @@
         (n: h: "          ${n}) SSH_USER=\"${h.installUser}\" ;;") deployable);
       availableHosts = lib.concatStringsSep " " (lib.attrNames deployable);
 
+      # ── Thinkpad /etc/hosts fragment (generated, drift-guarded) ────
+      # The thinkpad isn't NixOS but should resolve the same Nebula overlay
+      # hostnames every server gets via modules/nebula-hosts.nix. Rendered
+      # here from the SAME source + rule (lib/host-meta.nix), so fleet and
+      # laptop can never drift. The rendered copy is committed at
+      # hosts/thinkpad/host-image/nebula-hosts (inside the image build
+      # context); `nix flake check` fails if it goes stale. Regenerate:
+      #   nix run .#render-thinkpad-hosts
+      thinkpadHostsHeader =
+        "# --- Nebula overlay hosts (generated from lib/host-meta.nix — do not edit) ---";
+      thinkpadHostsText = thinkpadHostsHeader + "\n" + lib.concatLines
+        (lib.mapAttrsToList (name: h: "${h.nebula}	${h.hostsName or name}")
+          hostMeta);
+
       # ── Shared args passed to all NixOS hosts ────────────────────
       specialArgs = {
         unstable = import nixpkgs-unstable {
@@ -123,15 +137,38 @@
 
       # ── Packages ─────────────────────────────────────────────────
       packages.x86_64-linux.dsh = dshPkg;
+      # Rendered /etc/hosts fragment for the thinkpad host image (inspection:
+      # nix build .#thinkpad-nebula-hosts && cat result).
+      packages.x86_64-linux.thinkpad-nebula-hosts =
+        pkgs.writeText "nebula-hosts" thinkpadHostsText;
 
       # ── Eval gate (nix flake check) ──────────────────────────────
       # Eval the full system toplevel for each NixOS host. Catches syntax
       # errors, option typos, and type mismatches without deploying.
       # Run with: nix flake check (or nix build .#checks.x86_64-linux.<host>)
-      checks.x86_64-linux = builtins.listToAttrs (builtins.map (host: {
+      checks.x86_64-linux = (builtins.listToAttrs (builtins.map (host: {
         name = host;
         value = self.nixosConfigurations.${host}.config.system.build.toplevel;
-      }) (builtins.attrNames self.nixosConfigurations));
+      }) (builtins.attrNames self.nixosConfigurations))) // {
+        # Drift guard: the committed thinkpad hosts fragment must match the
+        # rendering of lib/host-meta.nix byte-for-byte. Fails with a diff
+        # and the fix command when host-meta.nix is edited without
+        # regenerating (see apps.render-thinkpad-hosts).
+        thinkpad-nebula-hosts =
+          if builtins.readFile ./hosts/thinkpad/host-image/nebula-hosts
+          == thinkpadHostsText then
+            pkgs.runCommand "thinkpad-nebula-hosts" { } "touch $out"
+          else
+            pkgs.runCommand "thinkpad-nebula-hosts" { } ''
+              echo "ERROR: hosts/thinkpad/host-image/nebula-hosts is stale against lib/host-meta.nix." >&2
+              echo "Fix: nix run .#render-thinkpad-hosts && commit the result" >&2
+              echo "--- committed (left) vs expected (right) ---" >&2
+              diff ${./hosts/thinkpad/host-image/nebula-hosts} ${
+                pkgs.writeText "expected" thinkpadHostsText
+              } >&2 || true
+              exit 1
+            '';
+      };
 
       # ── Deploy script (nix run .#deploy) ─────────────────────────
       apps.x86_64-linux.deploy = {
@@ -237,6 +274,33 @@
               nix run github:nix-community/nixos-anywhere -- --flake .#$HOST $SSH_USER@$IP
             ''
           }/bin/install";
+      };
+
+      # ── Thinkpad hosts codegen ─────────────────────────────────────
+      # Regenerate hosts/thinkpad/host-image/nebula-hosts from
+      # lib/host-meta.nix. Run from a repo checkout (it writes into the
+      # working tree — a flake fetched from a registry is read-only), then
+      # commit the result; `nix flake check` enforces freshness.
+      # NOTE: the target is a RELATIVE path (the app runs in the caller's
+      # cwd, and `nix run .#…` implies the cwd is the repo root);
+      # self.outPath can't be used — in a dirty tree it's the read-only
+      # store copy.
+      apps.x86_64-linux.render-thinkpad-hosts = {
+        type = "app";
+        program = "${
+            pkgs.writeShellScriptBin "render-thinkpad-hosts" ''
+              set -euo pipefail
+              target="hosts/thinkpad/host-image/nebula-hosts"
+              if [ ! -f flake.nix ] || [ ! -f lib/host-meta.nix ]; then
+                echo "ERROR: run from the cn repo root (this writes into the working tree)." >&2
+                exit 1
+              fi
+              cp -f ${pkgs.writeText "nebula-hosts" thinkpadHostsText} "$target"
+              chmod 644 "$target"
+              echo "rendered ''${target}:"
+              cat "$target"
+            ''
+          }/bin/render-thinkpad-hosts";
       };
     };
 }

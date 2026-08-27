@@ -69,6 +69,29 @@ the next reboot. Local `./build.sh` remains as the break-glass path. See
 ### `nebula/`
 Rootful Podman/Quadlet-based Nebula VPN setup.
 
+### Nebula overlay hostnames
+
+Every NixOS host resolves overlay names (`bees`, `bee`, `nas`, …) through
+`modules/nebula-hosts.nix` ← `lib/host-meta.nix`. The thinkpad gets the same
+entries by baking the rendered fragment into the **host image**
+(`host-image/Containerfile` step 3.7 → `/usr/etc/hosts`): ostree 3-way merges
+image defaults into the live `/etc/hosts` on every upgrade, so `ping bees`
+works and future `host-meta.nix` edits flow in automatically — as long as the
+live `/etc/hosts` is never hand-edited (a modified copy stops tracking the
+image).
+
+```bash
+# after editing lib/host-meta.nix (anywhere the flake runs):
+nix run .#render-thinkpad-hosts   # regenerate hosts/thinkpad/host-image/nebula-hosts
+# `nix flake check` fails if the committed fragment is stale.
+
+# on the thinkpad, before the next image upgrade + reboot (sudo):
+cjust hosts-sync                  # append the same fragment to /etc/hosts now
+```
+
+`hosts-sync` is idempotent and appends the exact bytes the image will later
+ship, so the eventual ostree merge stays clean.
+
 ### `wycliffe-vpn/`
 On-demand Wycliffe GlobalProtect container workflow. See
 `wycliffe-vpn/README.md`.

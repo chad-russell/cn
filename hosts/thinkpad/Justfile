@@ -787,6 +787,51 @@ ssh:
     echo "    ssh -o IdentitiesOnly=yes crussell@10.10.0.10"
     sudo ss -tlnp 2>/dev/null | grep ':22 ' || true
 
+# Sync the Nebula overlay hostnames into the live /etc/hosts NOW, without
+# waiting for the next image upgrade + reboot. (sudo)
+#
+# The host image already bakes these entries into /usr/etc/hosts (Containerfile
+# step 3.7), and ostree flows image defaults into /etc on upgrade — this recipe
+# is the stopgap for a host that hasn't rebooted onto a hosts-carrying image
+# yet. It appends the EXACT same fragment (hosts/thinkpad/host-image/
+# nebula-hosts, generated from lib/host-meta.nix by
+# `nix run .#render-thinkpad-hosts`), so when the image later ships the same
+# bytes there is no conflict — ostree's 3-way merge stays clean and /etc/hosts
+# keeps tracking the image default.
+#
+# Idempotent: no-ops when the file already ends with the current fragment;
+# refreshes (marker-block replace) if host-meta.nix changed since the last sync.
+# Do NOT hand-edit /etc/hosts afterwards — a modified file stops cleanly
+# tracking image updates.
+[group('system')]
+hosts-sync:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    frag="{{ justfile_directory() }}/host-image/nebula-hosts"
+    hosts=/etc/hosts
+    [ -f "$frag" ] || { echo "ERROR: $frag missing (run from the cn repo)." >&2; exit 1; }
+    # Already synced (file ends with exactly this fragment)? Untouched no-op —
+    # important on an image-managed host: rewriting would mark /etc/hosts
+    # user-modified and stop clean ostree merges.
+    if tail -n "$(wc -l < "$frag")" "$hosts" | diff -q - "$frag" >/dev/null 2>&1; then
+        echo "==> /etc/hosts already ends with the current fragment — nothing to do."
+        getent hosts bees || true
+        exit 0
+    fi
+    # Drop any previously synced block (marker line through EOF), then append
+    # the fresh fragment. Safe: our block is always the file's tail.
+    if grep -q '^# --- Nebula overlay hosts' "$hosts"; then
+        echo "  replacing previously synced block (host-meta changed?)"
+        sudo sed -i '\|^# --- Nebula overlay hosts|,$d' "$hosts"
+    fi
+    # Ensure the file ends with a newline before appending.
+    [ -n "$(tail -c 1 "$hosts")" ] && printf '\n' | sudo tee -a "$hosts" >/dev/null
+    sudo tee -a "$hosts" < "$frag" >/dev/null
+    echo "==> appended Nebula overlay hosts to /etc/hosts:"
+    tail -n +1 "$frag" | sed 's/^/    /'
+    echo "==> resolution check:"
+    getent hosts bees bee nas nebula-hetzner nebula-lh homeassistant
+
 # Show the current state of this machine: host-image version, bootc deployment,
 # bubblebox mounts + wrappers, opencode install, and linked user units.
 # Read-only.

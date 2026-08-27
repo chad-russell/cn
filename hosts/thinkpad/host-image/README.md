@@ -28,6 +28,13 @@ Currently:
     Host-native because it runs on every prompt render and can't pay a
     per-invocation sandbox spawn
 - disables SELinux for this personal-laptop setup
+- bakes the Nebula overlay hostnames into `/usr/etc/hosts` (step 3.7):
+  the same fragment generated from `lib/host-meta.nix` that
+  `modules/nebula-hosts.nix` gives the NixOS fleet (see
+  `hosts/thinkpad/README.md` → "Nebula overlay hostnames"). Regenerate with
+  `nix run .#render-thinkpad-hosts`; `nix flake check` guards against drift.
+  ostree merges the image default into the live `/etc/hosts` on upgrade —
+  never hand-edit the live copy.
 - bakes a bootc static karg (`usbcore.autosuspend=-1`) into the image via
   `/usr/lib/bootc/kargs.d/10-usb-autosuspend.toml`. This is the real fix for
   the Dell P3225QE external monitor flapping DP-1 every ~3s over USB-C on this
