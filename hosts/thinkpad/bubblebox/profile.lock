@@ -1,5 +1,5 @@
-id = "8bcb3fbf6fc6e48dadde1dc34adcb6f42e0ba42cd24b2bb08d9abf40d7df7cfc"
-created_at = 1787800304
+id = "389ef6c7fa8e1326d484be61bdfd67d9ceeea1438d1c35e9c7b75741d1ce8dca"
+created_at = 1787802337
 roots = [
     "age",
     "age-keygen",
@@ -470,13 +470,3 @@ blob = "da0c4fc9a9c5a33e9e133428894e0cd511fc1e314436186fa0d01aa27baa9323"
 name = "vicinae"
 enabled = true
 blob = "8857fc11670ea0765d9e67c0a851771d97d4150625760172a2781e3416bfa8ab"
-
-[[unit]]
-name = "bubblebox-pkgs-nightly.service"
-enabled = false
-blob = "f369cb047fd757e32f5d75b026aa51f01cb6ad63c0e4c6137ec0237fbdd28c2e"
-
-[[unit]]
-name = "bubblebox-pkgs-nightly.timer"
-enabled = true
-blob = "47e23897113685406d6b8fd636c33d9821783994e448291c14e8f3aa98e88004"
