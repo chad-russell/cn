@@ -198,7 +198,73 @@ in {
     # Vercel CLI — storyhub deploy management (login token lands in
     # ~/.vercel/auth.json; enables REST/MCP deploy visibility).
     pkgs.nodePackages.vercel
+    # composefs tools (mkcomposefs + composefs-info) — the bubblebox engine's
+    # store/descriptor primitives, needed by the nightly pkgs CI below.
+    pkgs.composefs
   ];
+
+  # ── bubblebox-pkgs nightly CI ────────────────────────────────────
+  # The DESIGN-ecosystem.md §3.3 quality bar: every package in
+  # ~/src/bubblebox-pkgs gets lint + build + smoke-run + footprint gate
+  # nightly, in a fully ISOLATED bubblebox store (never publishes, never
+  # touches real host state). Moved here from thinkpad (2026-08-26) — CI
+  # belongs on an always-on server, not the laptop.
+  #
+  # Non-nix pieces this unit depends on (imperative, refreshed by hand):
+  #   ~/.local/share/bubblebox-ci/bin/{bubblebox,bubblebox-fuse}
+  #     plain release builds (FHS binaries — run under nix-ld above);
+  #     re-copy from a thinkpad release build after engine changes.
+  #   ~/src/bubblebox-pkgs
+  #     the package source checkout; rsync'd from the thinkpad checkout for
+  #     now (bubblebox-pkgs has no git remote yet) — re-rsync to update.
+  # Linger keeps crussell's user manager (and thus this timer) alive without
+  # an SSH session.
+  users.users.crussell.linger = true;
+
+  systemd.user.services."bubblebox-pkgs-nightly" = {
+    description = "bubblebox-pkgs nightly verification (isolated store; never publishes)";
+    # Skip cleanly instead of failing every night if the imperative pieces
+    # move (pre-stage host, engine not yet copied, etc).
+    unitConfig.ConditionPathExists = [
+      "%h/src/bubblebox-pkgs/tools/nightly.sh"
+      "%h/.local/share/bubblebox-ci/bin/bubblebox"
+    ];
+    # Everything the engine + script shell out to, pinned here rather than
+    # trusting the user-manager PATH.
+    path = [
+      pkgs.composefs
+      pkgs.podman
+      pkgs.git
+      pkgs.python3
+      pkgs.bubblewrap
+      pkgs.fuse3
+      pkgs.util-linux
+    ];
+    environment = {
+      PKGS_REPO = "%h/src/bubblebox-pkgs";
+      ENGINE_BIN = "%h/.local/share/bubblebox-ci/bin/bubblebox";
+      BUBBLEBOX_FUSE_BIN = "%h/.local/share/bubblebox-ci/bin/bubblebox-fuse";
+      RUN_HOME = "%h/.local/state/bubblebox-nightly";
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      # A cold full verify (26 pkgs incl. podman builds + cargo) takes ~1h.
+      TimeoutStartSec = "2h";
+      Nice = 10;
+      IOSchedulingClass = "idle";
+      ExecStart = "%h/src/bubblebox-pkgs/tools/nightly.sh";
+    };
+  };
+
+  systemd.user.timers."bubblebox-pkgs-nightly" = {
+    description = "Nightly bubblebox-pkgs verification run";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "*-*-* 04:17:00";
+      RandomizedDelaySec = "30m";
+      Persistent = true;
+    };
+  };
 
   # crussell needs membership in the `hermes` group to read/write the
   # gateway's state dir (/var/lib/hermes/.hermes, mode 2770 hermes:hermes) when
