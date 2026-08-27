@@ -239,6 +239,7 @@ in {
       pkgs.gawk
       pkgs.gnused
       pkgs.findutils
+      pkgs.gnutar
       pkgs.composefs
       pkgs.podman
       pkgs.git
