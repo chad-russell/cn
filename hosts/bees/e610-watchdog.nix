@@ -23,12 +23,11 @@
 
 {
   systemd.services.e610-link-watchdog = {
-    description = "E610 NIC link watchdog: bounce link / reboot on network death";
+    description =
+      "E610 NIC link watchdog: bounce link / reboot on network death";
     # Best-effort: never block shutdown/reboot
     wantedBy = [ ];
-    serviceConfig = {
-      Type = "oneshot";
-    };
+    serviceConfig = { Type = "oneshot"; };
     path = with pkgs; [ iputils iproute2 coreutils systemd ];
     script = ''
       IFACE="enp196s0f1"

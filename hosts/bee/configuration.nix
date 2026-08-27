@@ -227,7 +227,8 @@ in {
   users.users.crussell.linger = true;
 
   systemd.user.services."bubblebox-pkgs-nightly" = {
-    description = "bubblebox-pkgs nightly verification (isolated store; never publishes)";
+    description =
+      "bubblebox-pkgs nightly verification (isolated store; never publishes)";
     # Skip cleanly instead of failing every night if the imperative pieces
     # move (pre-stage host, engine not yet copied, etc).
     unitConfig.ConditionPathExists = [

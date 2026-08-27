@@ -65,27 +65,111 @@ let
   # match exists; sensible defaults otherwise. These are advisory
   # sizing, not hard caps.
   glooModels = [
-    { id = "gloo-anthropic-claude-opus-5";    contextWindow = 1000000; maxTokens = 128000; }
-    { id = "gloo-anthropic-claude-opus-4.8";  contextWindow = 1000000; maxTokens = 128000; }
-    { id = "gloo-anthropic-claude-sonnet-4.6"; contextWindow = 1000000; maxTokens = 128000; }
-    { id = "gloo-anthropic-claude-haiku-4.5"; contextWindow = 200000;  maxTokens = 64000; }
-    { id = "gloo-openai-gpt-5.5";             contextWindow = 1050000; maxTokens = 128000; }
-    { id = "gloo-openai-gpt-5.4";             contextWindow = 1050000; maxTokens = 128000; }
-    { id = "gloo-openai-gpt-5.2";             contextWindow = 400000;  maxTokens = 128000; }
-    { id = "gloo-openai-gpt-5.1";             contextWindow = 400000;  maxTokens = 128000; }
-    { id = "gloo-openai-gpt-5.3-codex";       contextWindow = 400000;  maxTokens = 128000; }
-    { id = "gloo-google-gemini-3.5-flash";    contextWindow = 1048576; maxTokens = 65536; }
-    { id = "gloo-google-gemini-3.1-pro";      contextWindow = 1048576; maxTokens = 65536; }
-    { id = "gloo-google-gemini-2.5-pro";      contextWindow = 1048576; maxTokens = 65536; }
-    { id = "gloo-deepseek-v4-pro";            contextWindow = 1048576; maxTokens = 384000; }
-    { id = "gloo-deepseek-v4-flash";          contextWindow = 1048575; maxTokens = 4096; }
-    { id = "gloo-xai-grok-4.5";               contextWindow = 500000;  maxTokens = 4096; }
-    { id = "gloo-qwen-3.7-max";               contextWindow = 1000000; maxTokens = 65536; }
-    { id = "gloo-qwen-3-coder";               contextWindow = 262144;  maxTokens = 65536; }
-    { id = "gloo-kimi-k3";                    contextWindow = 1048576; maxTokens = 131072; }
-    { id = "gloo-z-ai-glm-5.2";               contextWindow = 1048576; maxTokens = 131072; }
-    { id = "gloo-minimax-m3";                 contextWindow = 524288;  maxTokens = 512000; }
-    { id = "gloo-mistral-large-3";            contextWindow = 262144;  maxTokens = 4096; }
+    {
+      id = "gloo-anthropic-claude-opus-5";
+      contextWindow = 1000000;
+      maxTokens = 128000;
+    }
+    {
+      id = "gloo-anthropic-claude-opus-4.8";
+      contextWindow = 1000000;
+      maxTokens = 128000;
+    }
+    {
+      id = "gloo-anthropic-claude-sonnet-4.6";
+      contextWindow = 1000000;
+      maxTokens = 128000;
+    }
+    {
+      id = "gloo-anthropic-claude-haiku-4.5";
+      contextWindow = 200000;
+      maxTokens = 64000;
+    }
+    {
+      id = "gloo-openai-gpt-5.5";
+      contextWindow = 1050000;
+      maxTokens = 128000;
+    }
+    {
+      id = "gloo-openai-gpt-5.4";
+      contextWindow = 1050000;
+      maxTokens = 128000;
+    }
+    {
+      id = "gloo-openai-gpt-5.2";
+      contextWindow = 400000;
+      maxTokens = 128000;
+    }
+    {
+      id = "gloo-openai-gpt-5.1";
+      contextWindow = 400000;
+      maxTokens = 128000;
+    }
+    {
+      id = "gloo-openai-gpt-5.3-codex";
+      contextWindow = 400000;
+      maxTokens = 128000;
+    }
+    {
+      id = "gloo-google-gemini-3.5-flash";
+      contextWindow = 1048576;
+      maxTokens = 65536;
+    }
+    {
+      id = "gloo-google-gemini-3.1-pro";
+      contextWindow = 1048576;
+      maxTokens = 65536;
+    }
+    {
+      id = "gloo-google-gemini-2.5-pro";
+      contextWindow = 1048576;
+      maxTokens = 65536;
+    }
+    {
+      id = "gloo-deepseek-v4-pro";
+      contextWindow = 1048576;
+      maxTokens = 384000;
+    }
+    {
+      id = "gloo-deepseek-v4-flash";
+      contextWindow = 1048575;
+      maxTokens = 4096;
+    }
+    {
+      id = "gloo-xai-grok-4.5";
+      contextWindow = 500000;
+      maxTokens = 4096;
+    }
+    {
+      id = "gloo-qwen-3.7-max";
+      contextWindow = 1000000;
+      maxTokens = 65536;
+    }
+    {
+      id = "gloo-qwen-3-coder";
+      contextWindow = 262144;
+      maxTokens = 65536;
+    }
+    {
+      id = "gloo-kimi-k3";
+      contextWindow = 1048576;
+      maxTokens = 131072;
+    }
+    {
+      id = "gloo-z-ai-glm-5.2";
+      contextWindow = 1048576;
+      maxTokens = 131072;
+    }
+    {
+      id = "gloo-minimax-m3";
+      contextWindow = 524288;
+      maxTokens = 512000;
+    }
+    {
+      id = "gloo-mistral-large-3";
+      contextWindow = 262144;
+      maxTokens = 4096;
+    }
   ];
 
   seedSettings = (pkgs.formats.yaml { }).generate "settings.yaml" {
@@ -130,9 +214,7 @@ let
         # models), so only the credential reference is needed — the
         # endpoint, wire protocol, and model catalog all come from
         # pi-ai's installed catalog.
-        openrouter = {
-          apiKeyEnv = "OPENROUTER_API_KEY";
-        };
+        openrouter = { apiKeyEnv = "OPENROUTER_API_KEY"; };
       };
     };
     agent-default-model = {
@@ -195,7 +277,9 @@ in {
         User = "crussell";
         Group = "users";
         WorkingDirectory = "/home/crussell";
-        ExecStart = "${cfg.package}/bin/dsh web --port ${toString port} --no-open --trusted-host ${hostname}";
+        ExecStart = "${cfg.package}/bin/dsh web --port ${
+            toString port
+          } --no-open --trusted-host ${hostname}";
         # GLOO_API_KEY (gloo route) + OPENROUTER_API_KEY (openrouter
         # route), resolved per request via the settings.yaml apiKeyEnv
         # references. Same .age sources as the zshenv login-shell
@@ -235,14 +319,17 @@ in {
     };
 
     systemd.services."dsh-web-proxy" = {
-      description = "Socket proxy: Nebula ${nebulaIp}:${toString port} → dsh loopback";
+      description =
+        "Socket proxy: Nebula ${nebulaIp}:${toString port} → dsh loopback";
       requires = [ "dsh-web.service" ];
       after = [ "dsh-web.service" ];
       serviceConfig = {
         TriggerLimitIntervalSec = "1s";
         TriggerLimitBurst = "10000";
         ExecStart =
-          "${config.systemd.package}/lib/systemd/systemd-socket-proxyd 127.0.0.1:${toString port}";
+          "${config.systemd.package}/lib/systemd/systemd-socket-proxyd 127.0.0.1:${
+            toString port
+          }";
       };
     };
   };

@@ -12,12 +12,7 @@
 #   npx npm@10 install --package-lock-only --ignore-scripts
 # in the tarball dir, commit both together.
 
-{ lib
-, buildNpmPackage
-, fetchurl
-, makeWrapper
-, nodejs
-}:
+{ lib, buildNpmPackage, fetchurl, makeWrapper, nodejs }:
 
 buildNpmPackage rec {
   pname = "dsh";
@@ -58,7 +53,8 @@ buildNpmPackage rec {
   '';
 
   meta = with lib; {
-    description = "DeepSeek Harness: open-source agent harness (everything is a plugin)";
+    description =
+      "DeepSeek Harness: open-source agent harness (everything is a plugin)";
     homepage = "https://github.com/deepseek-ai/deepseek-harness";
     license = licenses.mit;
     mainProgram = "dsh";
