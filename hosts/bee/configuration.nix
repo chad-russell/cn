@@ -222,6 +222,23 @@ in {
   # ── Age secrets ─────────────────────────────────────────────────
   age.secrets.hermes-bee-env.file = ../../secrets/hermes-bee-env.age;
 
+  # ── Qdrant: vector store for Hermes' mem0 memory backend ─────────
+  # mem0 OSS in qdrant local-file mode holds an exclusive lock — only ONE
+  # process can open the folder. bee runs three hermes processes against
+  # the shared HERMES_HOME (gateway + hermes-serve + webui), so local-file
+  # mode deadlocks them against each other (2026-08-26). A real qdrant
+  # server on loopback allows concurrent access. Loopback-only; storage
+  # under /var/lib/hermes so the existing restic backup covers it.
+  services.qdrant = {
+    enable = true;
+    settings = {
+      host = "127.0.0.1";
+      service.http_port = 6333;
+      storage.storage_path = "/var/lib/hermes/mem0_qdrant_server/storage";
+      storage.snapshot_mode = "filesystem";
+    };
+  };
+
   # ── Hermes Agent gateway ────────────────────────────────────────
   # Telegram is the delivery platform (forum topics for per-subject
   # separation). The legacy Buzz relay/harness was removed 2026-08-20.
