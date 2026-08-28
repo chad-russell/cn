@@ -22,6 +22,7 @@
     ./caddy.nix
     ./services.nix
     ./llama-server.nix
+    ./comfyui.nix
     ./backup.nix
     ./beszel.nix
     ./thinkpad-registry.nix
