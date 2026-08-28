@@ -107,10 +107,11 @@ in {
       ExecStartPre = "-${pkgs.podman}/bin/podman rm -f comfyui";
       ExecStart = "${comfy-run}/bin/comfy-run";
       # Graceful stop attempt; ComfyUI ignores SIGTERM until podman escalates
-      # to SIGKILL (exit 137) — treat signal exits as success so the unit
-      # doesn't land in `systemctl --failed` after a normal stop.
+      # to SIGKILL — `podman run` then exits with propagated code 137. Treat
+      # 137 (and signal deaths) as success so a normal stop doesn't land in
+      # `systemctl --failed`.
       ExecStop = "-${pkgs.podman}/bin/podman stop --time 30 comfyui";
-      SuccessExitStatus = [ "SIGTERM" "SIGKILL" ];
+      SuccessExitStatus = [ "SIGTERM" "SIGKILL" 137 ];
       TimeoutStartSec = 1800; # first start pulls a ~5.4 GB image
       TimeoutStopSec = 90;
     };
