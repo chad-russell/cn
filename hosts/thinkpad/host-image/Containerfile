@@ -147,27 +147,27 @@ RUN mkdir -p /etc/containers/registries.conf.d && \
     printf '[[registry]]\nlocation = "10.10.0.6:5000"\ninsecure = true\n' \
     > /etc/containers/registries.conf.d/10-homelab-registry.conf
 
-# ---- 3.7. Nebula overlay hostnames (/usr/etc/hosts) --------------------
+# ---- 3.7. Nebula overlay hostnames (/etc/hosts) --------------------
 # The fleet's NixOS hosts get these /etc/hosts entries via
 # modules/nebula-hosts.nix, rendered from lib/host-meta.nix (the single
-# source of truth). The thinkpad bakes the SAME rendered fragment into the
-# image's default hosts file: ostree copies /usr/etc/hosts to /etc/hosts on
-# deploy and 3-way merges on every upgrade, so overlay names (bee, bees,
-# nas, nebula-hetzner, ...) resolve everywhere — and future host-meta
-# changes flow to this host with each image upgrade, as long as the live
-# /etc/hosts stays unmodified (it ships unmodified today).
+# source of truth). The thinkpad bakes the SAME rendered entries into the
+# image's /etc/hosts. At deploy time bootc migrates the image's /etc into
+# the deployment's /usr/etc defaults, and ostree 3-way merges those into
+# the live /etc/hosts on every upgrade — so overlay names (bee, bees, nas,
+# nebula-hetzner, ...) resolve everywhere, and future host-meta changes
+# flow to this host with each image upgrade, as long as the live /etc/hosts
+# stays unmodified (it ships unmodified today).
 #
-# The fragment is GENERATED: after editing lib/host-meta.nix run
-#   nix run .#render-thinkpad-hosts
-# and commit the result — `nix flake check` fails if it drifts.
-#
-# NOTE: append to /usr/etc/hosts (the image default), never /etc/hosts —
-# inside the build container /etc/hosts is runtime-injected throwaway
-# state that never becomes part of the image.
-COPY nebula-hosts /tmp/nebula-hosts
-RUN cat /tmp/nebula-hosts >> /usr/etc/hosts && rm /tmp/nebula-hosts \
-    && grep -q 'Nebula overlay hosts' /usr/etc/hosts \
-    && grep -Eq '^10\.10\.0\.6[[:space:]]+bees' /usr/etc/hosts
+# MECHANISM — COPY, not RUN: buildah RUN-time-masks /etc/hosts (like
+# resolv.conf / hostname): every RUN container gets a freshly generated
+# /etc/hosts, so `RUN cat >> /etc/hosts` writes the throwaway runtime copy
+# and NEVER commits to the layer (verified live: a separate-RUN grep
+# assertion failed, 2026-08-27). COPY writes the layer tarball directly —
+# no masking. etc-hosts is the COMPLETE file (stock Fedora loopback block +
+# the generated fragment), rendered by `nix run .#render-thinkpad-hosts`;
+# the identical fragment (hosts-sync on the laptop) is also committed as
+# nebula-hosts. `nix flake check` fails if either goes stale.
+COPY etc-hosts /etc/hosts
 
 # ---- 4. build identity (lets `bootc upgrade` detect a rebuild) ----------
 # Each build injects a unique IMAGE_VERSION (git SHA + timestamp; see

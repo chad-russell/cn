@@ -63,6 +63,24 @@ podman push --tls-verify=false "${IMAGE}"
 echo "==> push ${VERSION_TAG}"
 podman push --tls-verify=false "${VERSION_TAG}"
 
+# ---- post-build gate: the baked /etc/hosts MUST be in the published image ----
+# COPY of /etc/hosts is the one step whose failure mode is silent (a runtime
+# mask would no-op it), so verify the artifact itself: mount the built image
+# and grep its actual layer content. Fails the build loudly instead of
+# publishing a hosts-less image.
+echo "==> verifying baked /etc/hosts in the built image"
+VERIFY_MNT="$(podman image mount "${IMAGE}")" || {
+  echo "ERROR: cannot mount ${IMAGE} for hosts verification" >&2; exit 1; }
+if ! grep -q 'Nebula overlay hosts' "${VERIFY_MNT}/etc/hosts" \
+   || ! grep -Eq '^10\.10\.0\.6[[:space:]]+bees' "${VERIFY_MNT}/etc/hosts"; then
+  echo "ERROR: /etc/hosts in ${IMAGE} lacks the Nebula overlay entries" >&2
+  echo "  Containerfile step 3.7 (COPY etc-hosts /etc/hosts) did not land" >&2
+  podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
+  exit 1
+fi
+echo "    /etc/hosts entries verified in image layer"
+podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
+
 # ---- local housekeeping: drop the build-only copies (registry is the store)
 echo "==> pruning local build images"
 podman rmi "${IMAGE}" "${VERSION_TAG}" >/dev/null 2>&1 || true

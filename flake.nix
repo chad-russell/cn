@@ -83,6 +83,17 @@
       thinkpadHostsText = thinkpadHostsHeader + "\n" + lib.concatLines
         (lib.mapAttrsToList (name: h: "${h.nebula}	${h.hostsName or name}")
           hostMeta);
+      # Complete /etc/hosts for the image: the stock Fedora loopback block +
+      # the fragment. The image gets this via COPY (RUN can't write /etc/hosts
+      # — buildah runtime-masks it, so RUN appends never commit to the layer;
+      # COPY writes the layer tarball directly). At deploy time bootc turns
+      # the image's /etc into /usr/etc defaults and ostree 3-way merges them
+      # into the live /etc/hosts on upgrade.
+      thinkpadEtcHostsText = ''
+        127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+        ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+      '' + thinkpadHostsText;
 
       # ── Shared args passed to all NixOS hosts ────────────────────
       specialArgs = {
@@ -156,15 +167,20 @@
         # regenerating (see apps.render-thinkpad-hosts).
         thinkpad-nebula-hosts =
           if builtins.readFile ./hosts/thinkpad/host-image/nebula-hosts
-          == thinkpadHostsText then
+          == thinkpadHostsText
+          && builtins.readFile ./hosts/thinkpad/host-image/etc-hosts
+          == thinkpadEtcHostsText then
             pkgs.runCommand "thinkpad-nebula-hosts" { } "touch $out"
           else
             pkgs.runCommand "thinkpad-nebula-hosts" { } ''
-              echo "ERROR: hosts/thinkpad/host-image/nebula-hosts is stale against lib/host-meta.nix." >&2
+              echo "ERROR: thinkpad hosts files are stale against lib/host-meta.nix." >&2
               echo "Fix: nix run .#render-thinkpad-hosts && commit the result" >&2
               echo "--- committed (left) vs expected (right) ---" >&2
               diff ${./hosts/thinkpad/host-image/nebula-hosts} ${
-                pkgs.writeText "expected" thinkpadHostsText
+                pkgs.writeText "expected-frag" thinkpadHostsText
+              } >&2 || true
+              diff ${./hosts/thinkpad/host-image/etc-hosts} ${
+                pkgs.writeText "expected-full" thinkpadEtcHostsText
               } >&2 || true
               exit 1
             '';
@@ -291,14 +307,18 @@
             pkgs.writeShellScriptBin "render-thinkpad-hosts" ''
               set -euo pipefail
               target="hosts/thinkpad/host-image/nebula-hosts"
+              target_full="hosts/thinkpad/host-image/etc-hosts"
               if [ ! -f flake.nix ] || [ ! -f lib/host-meta.nix ]; then
                 echo "ERROR: run from the cn repo root (this writes into the working tree)." >&2
                 exit 1
               fi
               cp -f ${pkgs.writeText "nebula-hosts" thinkpadHostsText} "$target"
-              chmod 644 "$target"
-              echo "rendered ''${target}:"
-              cat "$target"
+              cp -f ${
+                pkgs.writeText "etc-hosts" thinkpadEtcHostsText
+              } "$target_full"
+              chmod 644 "$target" "$target_full"
+              echo "rendered ''${target} + ''${target_full}:"
+              cat "$target_full"
             ''
           }/bin/render-thinkpad-hosts";
       };

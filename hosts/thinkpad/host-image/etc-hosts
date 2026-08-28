@@ -1,0 +1,12 @@
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+# --- Nebula overlay hosts (generated from lib/host-meta.nix — do not edit) ---
+10.10.0.12	bee
+10.10.0.6	bees
+10.10.0.2	nebula-hetzner
+10.10.0.51	homeassistant
+10.10.0.3	nas
+10.10.0.1	nebula-lh
+10.10.0.11	phone
+10.10.0.10	think
