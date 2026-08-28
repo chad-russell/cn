@@ -106,8 +106,11 @@ in {
       # Clean up any stale container with the same name before starting
       ExecStartPre = "-${pkgs.podman}/bin/podman rm -f comfyui";
       ExecStart = "${comfy-run}/bin/comfy-run";
-      # Graceful stop: let in-flight generations finish
+      # Graceful stop attempt; ComfyUI ignores SIGTERM until podman escalates
+      # to SIGKILL (exit 137) — treat signal exits as success so the unit
+      # doesn't land in `systemctl --failed` after a normal stop.
       ExecStop = "-${pkgs.podman}/bin/podman stop --time 30 comfyui";
+      SuccessExitStatus = [ "SIGTERM" "SIGKILL" ];
       TimeoutStartSec = 1800; # first start pulls a ~5.4 GB image
       TimeoutStopSec = 90;
     };
