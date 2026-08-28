@@ -63,7 +63,7 @@ bubblebox_bin := bubblebox_dir + "/target/release/bubblebox"
 setup: bubblebox-doctor bubblebox opencode-install
     @echo "==> Setup complete."
     @echo "    If host-image deps changed (just/fzf/nodejs/npm), rebuild & reboot:"
-    @echo "      cjust image-build && cjust image-upgrade && systemctl reboot"
+    @echo "      cjust image-rebuild && systemctl reboot"
 
 # GNOME tweak to allow for mod + <right-click> to resize, like how it works in niri or Cosmic
 [group('setup')]
@@ -675,14 +675,16 @@ hermes-icon:
 #   the last 3 immutable tags. `cjust image-rebuild` triggers a build NOW;
 #   `cjust image-upgrade` pulls the diff and stages it; reboot applies.
 #
-# The LOCAL flow (build.sh into root podman storage) remains as break-glass
-# while bees/Nebula is down, or for testing image changes pre-registry.
+# BREAK-GLASS (bees/Nebula down only): build locally from host-image/ —
+#   cd hosts/thinkpad/host-image && ./build.sh && ./switch.sh && reboot
+# A local build lands on a DIFFERENT bootc reference (containers-storage:),
+# so moving back to the registry flow later is another switch. See
+# host-image/README.md. Deliberately NOT cjust recipes: the menu should
+# point at the normal flow, and a mis-fired break-glass is costly.
 
-# Trigger a build on bees NOW and wait for it, then pull + stage the result.
-# The "I pushed to origin/main and want it on the laptop today" command.
+# Build on bees NOW (pulls origin/main there), wait, then pull + stage here.
 # Requires: SSH key to bees (same ed25519 as elsewhere) + Nebula up.
-# The build pulls origin/main on bees (your local commits must be pushed
-# first) and pushes :44 + an immutable 44-<sha>-<ts> tag to zot.
+# "I pushed to origin/main and want it on the laptop today" — builds + stages in one shot.
 [group('host image')]
 image-rebuild:
     #!/usr/bin/env bash
@@ -706,12 +708,6 @@ image-switch:
 [group('host image')]
 image-upgrade:
     {{ justfile_directory() }}/host-image/upgrade.sh
-
-# BREAK-GLASS: build the image locally on this host (sudo). The normal flow
-# builds on bees. First time on a fresh host, follow with `image-switch`.
-[group('host image')]
-image-build:
-    {{ justfile_directory() }}/host-image/build.sh
 
 # ═══════════════════════════════════════════════════════════════════════════
 # system

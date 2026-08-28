@@ -24,7 +24,7 @@ if sudo bootc status 2>/dev/null | grep -q "${REGISTRY}"; then
   echo "==> on the registry reference — pre-flighting ${REGISTRY}"
   curl -fsSL --max-time 10 "http://${REGISTRY}/v2/" >/dev/null || {
     echo "ERROR: cannot reach ${REGISTRY} — is Nebula up on this host?" >&2
-    echo "       (break-glass while offline: cjust image-build && cjust image-switch)" >&2
+    echo "       (break-glass while offline: cd host-image && ./build.sh, then ./switch.sh)" >&2
     exit 1
   }
 else
