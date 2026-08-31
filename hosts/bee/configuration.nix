@@ -607,6 +607,8 @@ in {
       HERMES_TELEGRAM_DISABLE_FALLBACK_IPS = "true";
       # Allow Chad's Telegram account (user ID 8307124200).
       TELEGRAM_ALLOWED_USERS = "8307124200";
+      # Allow Chad's Discord account (user ID) on the lane server.
+      DISCORD_ALLOWED_USERS = "588760941076676676";
     };
 
     environmentFiles = [ config.age.secrets.hermes-bee-env.path ];
