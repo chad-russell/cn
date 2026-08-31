@@ -58,6 +58,7 @@ in {
     ./dev-quadlets.nix
     ./searxng.nix
     ./hermes-webui.nix
+    ./trades-site.nix
     ./backup.nix
     ./tailscale.nix
   ];
