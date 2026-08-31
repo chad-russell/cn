@@ -564,25 +564,20 @@ in {
       # CLI, gateway, and WebUI approval cards all read this from the
       # shared config.yaml.
       approvals.timeout = 900;
-      # Telegram bot (crussell_hermes_bot). Token lives in .env
-      # (TELEGRAM_BOT_TOKEN), read by the gateway at startup. Forum
-      # topics in a single super-group give per-subject separation.
-      gateway.platforms.telegram = {
-        enabled = true;
-        extra.require_mention = true;
-      };
+      # Discord bot — see gateway.platforms.discord below for the full
+      # lane-model rationale. Sole messaging platform since 2026-08-31
+      # (Telegram decommissioned).
       # Discord bot (2026-08-31): the "lane model" — one private server,
       # one channel per project lane (#gloo-work, #infra, #rmt,
-      # #fantasy-football, #trading), replacing Telegram forum topics as
-      # the primary mobile surface. Each channel is its own gateway
-      # session namespace, so lanes get transcript isolation for free
-      # while memory/skills stay unified (cross-lane work like "deploy a
-      # demo site for the fantasy draft" keeps working with full homelab
-      # knowledge — the reason we did NOT split this into profiles).
+      # #fantasy-football, #trading, #bible-reading). Each channel is its
+      # own gateway session namespace, so lanes get transcript isolation
+      # for free while memory/skills stay unified (cross-lane work like
+      # "deploy a demo site for the fantasy draft" keeps working with full
+      # homelab knowledge — the reason we did NOT split this into profiles).
       # require_mention=false: single-user server, so every channel is
       # free-response — type and it answers, no @mention ceremony.
-      # Per-lane system prompts land in extra.channel_overrides once
-      # channel IDs exist (phase 2). Token: DISCORD_BOT_TOKEN in
+      # Telegram was decommissioned the same day (see prune script below);
+      # Discord is the sole messaging platform. Token: DISCORD_BOT_TOKEN in
       # hermes-bee-env.age; allowlist: DISCORD_ALLOWED_USERS below.
       gateway.platforms.discord = {
         enabled = true;
@@ -618,13 +613,8 @@ in {
       # agent-browser's own Chrome download lacks them on NixOS.
       AGENT_BROWSER_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
       # ZAI_CODING_KEY, OPENROUTER_API_KEY, GLOO_API_KEY, and
-      # TELEGRAM_BOT_TOKEN are in hermes-bee-env.age. (Legacy BUZZ_*
-      # keys may linger in that file; they are unused.)
-      # Telegram: bee has direct IPv4 to api.telegram.org, so skip the
-      # fallback-IP transport (which hangs during PTB initialize on this host).
-      HERMES_TELEGRAM_DISABLE_FALLBACK_IPS = "true";
-      # Allow Chad's Telegram account (user ID 8307124200).
-      TELEGRAM_ALLOWED_USERS = "8307124200";
+      # DISCORD_BOT_TOKEN are in hermes-bee-env.age. (Telegram env vars
+      # were removed with the platform 2026-08-31.)
       # Allow Chad's Discord account (user ID) on the lane server.
       DISCORD_ALLOWED_USERS = "588760941076676676";
     };
@@ -666,14 +656,17 @@ in {
           del web["extract_backend"]
           prunes.append("web.extract_backend")
 
-      # Retired 2026-08-20: buzz relay/harness removal. Nix no longer
-      # declares gateway.platforms.buzz / display.platforms.buzz, so the
-      # deep-merge would keep the stale keys on disk forever.
+      # Retired 2026-08-31: Telegram decommissioned (Discord lane model is
+      # the sole messaging platform). Nix no longer declares
+      # gateway.platforms.telegram, so the deep-merge would keep the stale
+      # key on disk forever.
       for section in ("gateway", "display"):
           platforms = (config.get(section) or {}).get("platforms")
-          if isinstance(platforms, dict) and "buzz" in platforms:
-              del platforms["buzz"]
-              prunes.append(f"{section}.platforms.buzz")
+          if isinstance(platforms, dict):
+              for stale in ("buzz", "telegram"):
+                  if stale in platforms:
+                      del platforms[stale]
+                      prunes.append(f"{section}.platforms.{stale}")
 
       if prunes:
           path.write_text(yaml.dump(config, default_flow_style=False, sort_keys=False))
