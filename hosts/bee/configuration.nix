@@ -571,6 +571,23 @@ in {
         enabled = true;
         extra.require_mention = true;
       };
+      # Discord bot (2026-08-31): the "lane model" — one private server,
+      # one channel per project lane (#gloo-work, #infra, #rmt,
+      # #fantasy-football, #trading), replacing Telegram forum topics as
+      # the primary mobile surface. Each channel is its own gateway
+      # session namespace, so lanes get transcript isolation for free
+      # while memory/skills stay unified (cross-lane work like "deploy a
+      # demo site for the fantasy draft" keeps working with full homelab
+      # knowledge — the reason we did NOT split this into profiles).
+      # require_mention=false: single-user server, so every channel is
+      # free-response — type and it answers, no @mention ceremony.
+      # Per-lane system prompts land in extra.channel_overrides once
+      # channel IDs exist (phase 2). Token: DISCORD_BOT_TOKEN in
+      # hermes-bee-env.age; allowlist: DISCORD_ALLOWED_USERS below.
+      gateway.platforms.discord = {
+        enabled = true;
+        extra.require_mention = false;
+      };
     };
 
     environment = {
