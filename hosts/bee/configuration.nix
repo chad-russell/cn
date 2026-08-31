@@ -587,6 +587,24 @@ in {
       gateway.platforms.discord = {
         enabled = true;
         extra.require_mention = false;
+        # ── Lane config (server "Glen", guild 1544084775499735070) ──
+        # Per-channel ephemeral prompts: the lane's project context.
+        # Gateway sessions always run at terminal.cwd (/home/crussell),
+        # so lane context files can't auto-load — these prompts carry it.
+        extra.channel_prompts = {
+          "1544085937577918535" = "Gloo work lane. Work repos live under ~/Gloo (360-gpl, 360-polymer, 360-hummingbird). Work code routes to the gloo provider or Codex — never personal providers for work traffic. RFCs in ~/Gloo/TangoGroup/360-acceleration-rfcs.";
+          "1544085981236432906" = "Homelab/infra lane. Nix repo ~/Code/cn; AGENTS.md is authoritative; deploys run from bees over Nebula (nix run .#deploy -- <host>). Verify live state over SSH before concluding anything.";
+          "1544086006771220562" = "Math research lane: random matrix theory / CUE critical-point bimodality. Workspace ~/rmt (plan.md curriculum, corpus.md notes). Tutor posture: derive why, never decree. Numerics: use Arb-precision approaches for high-degree work.";
+          "1544086070436565123" = "Fantasy football lane. Yahoo league 66096, team 10. Roster fetch needs prior-season ycookie parse from /f1/66096/10 raw. Wire-only league: no trades, no FAAB.";
+          "1544086089005006888" = "Options trading lane. tastytrade 3-account advisor workflow; scanner at ~/tasty_options; recommendations at https://trades.internal.crussell.io.";
+        };
+        # Auto-loaded skills per channel (exact id match, threads inherit).
+        extra.channel_skill_bindings = [
+          { id = "1544085981236432906"; skills = [ "cn-homelab-infra" ]; }
+          { id = "1544086006771220562"; skills = [ "tutoring" "math-tutoring" ]; }
+          { id = "1544086070436565123"; skills = [ "fantasy-football-league-management" ]; }
+          { id = "1544086089005006888"; skills = [ "tastytrade-portfolio-advisor" ]; }
+        ];
       };
     };
 
