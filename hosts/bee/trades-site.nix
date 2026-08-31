@@ -29,6 +29,7 @@ in
     description = "Trades recommendation site (read-only portfolio.db view)";
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
 
     serviceConfig = {
       Type = "simple";
