@@ -367,7 +367,7 @@ Running services:
 - `nebula@homelab.service` — `10.10.0.12`
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
 - `hermes-agent.service` — Hermes Agent gateway (replaces buzz-acp; see `hosts/bee/configuration.nix`). Runs as `crussell` with full host access. Connects to the Buzz relay via NIP-42 auth, uses the `buzz` CLI for outbound message delivery. Memory backend: **mem0 (OSS mode)** — mem0ai baked into the sealed venv via the package override in `hosts/bee/configuration.nix`; behavioral config (Z.AI extraction LLM + OpenRouter embeddings + local qdrant at `$HERMES_HOME/mem0_qdrant`) in `/var/lib/hermes/.hermes/mem0.json`.
-# - `hermes-serve.service` — Hermes JSON-RPC/WebSocket API on Nebula `10.10.0.12:9119` (desktop/mobile remote clients; basic-auth plugin). The WebUI (`hermes-webui.service`, port 8787, `https://hermes.internal.crussell.io`) was retired 2026-09-01 — desktop + Discord are the only chat surfaces.
+- `hermes-serve.service` — Hermes JSON-RPC/WebSocket API on Nebula `10.10.0.12:9119` (desktop/mobile remote clients; basic-auth plugin). The WebUI (`hermes-webui.service`, port 8787, `https://hermes.internal.crussell.io`) was retired 2026-09-01 — desktop + Discord are the only chat surfaces.
 - `buzz-relay-pod.service` — self-hosted Buzz relay (podman pod: relay, postgres, redis, minio, pair-relay)
 - Dev stacks (`dev-quadlets/`) — gpl, polymer, buildspace (podman quadlets, reached via SSH tunnels; see `hosts/bee/dev-quadlets/README.md` and `cjust dev-tunnel`)
 - Restic backup (daily S3 backup via `hosts/bee/backup.nix`)
