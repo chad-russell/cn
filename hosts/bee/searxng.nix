@@ -30,6 +30,45 @@
       # Enable JSON output format — required for Hermes API access
       search = { formats = [ "html" "json" ]; };
 
+      # Engine overrides. Upstream defaults enable exactly four real web
+      # engines for general queries — google, duckduckgo, brave, startpage —
+      # and ALL FOUR have flagged this residential IP (46.110.141.184,
+      # Metronet) as of ≥2026-08-19: google 403, ddg CAPTCHA, startpage
+      # CAPTCHA, brave rate-limit (see `journalctl -u searx.service`).
+      # Auto-suspension then made every default query return 0 results,
+      # silently breaking Hermes' web_search tool.
+      #
+      # Disable the blocked four (re-enable if the blocks ever lift) and
+      # enable bing + yahoo, verified working from this IP 2026-09-01.
+      # Note: `engines=<name>` query param bypasses `disabled`, which is
+      # why manual engine probes kept working while default queries died.
+      engines = [
+        {
+          name = "google";
+          disabled = true;
+        }
+        {
+          name = "duckduckgo";
+          disabled = true;
+        }
+        {
+          name = "brave";
+          disabled = true;
+        }
+        {
+          name = "startpage";
+          disabled = true;
+        }
+        {
+          name = "bing";
+          disabled = false;
+        }
+        {
+          name = "yahoo";
+          disabled = false;
+        }
+      ];
+
       general = {
         instance_name = "bee-search";
         debug = false;
