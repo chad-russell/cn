@@ -535,11 +535,12 @@ in {
           ''}";
         };
         linear = {
-          # Write resource: enables issue comments + status updates. The
-          # readonly resource (/mcp/readonly) cannot post — scope=read only.
-          # One interactive `hermes mcp login linear` (from bee, browser via
-          # SSH tunnel) authorizes this resource.
-          url = "https://mcp.linear.app/mcp/write";
+          # Single endpoint for both scopes — read vs write is chosen at
+          # OAuth authorization time (scopes_supported: read,write), NOT by
+          # URL path (/mcp/write and /mcp/readonly 404). Requires an
+          # interactive `hermes mcp login linear` that authorizes
+          # scope=read+write (deploy config first, then login).
+          url = "https://mcp.linear.app/mcp";
           auth = "oauth";
         };
         # Vercel official remote MCP — deployment management for storyhub.
