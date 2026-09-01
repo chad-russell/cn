@@ -2,9 +2,9 @@
 #
 # A thin layer over stock Silverblue. The active host-level changes:
 #   - drop `toolbox` (ships IN the base image) and add `distrobox`.
-#   - install the compositors (niri + COSMIC) from COPR. (desktoppak, the old
-#     per-user bwrap payload layer, is being phased out; compositors now live
-#     natively in the host image.)
+#   - install the compositors (niri + Hyprland) from COPR. (desktoppak, the
+#     old per-user bwrap payload layer, was retired 2026-09-01 — the normal
+#     bootc/image path won; see host-image/README.md.)
 #
 # This image uses the modern bootc-native build model, matching current
 # Bluefin/finpilot (projectbluefin/finpilot):
@@ -53,22 +53,34 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install distrobox zsh just fzf nodejs npm
 
-# ---- 2. Compositors: niri + COSMIC (from COPR) -------------------------
-# desktoppak is being phased out; compositors now ship directly in the host
-# image. niri comes from the upstream maintainer's COPR (yalter/niri), which
-# tracks newer than Fedora's package; COSMIC from ryanabx/cosmic-epoch.
+# ---- 2. Compositors: niri + Hyprland (from COPR) ------------------------
+# niri comes from the upstream maintainer's COPR (yalter/niri), which tracks
+# newer than Fedora's package. Hyprland from mineiro/hyprland (F44 chroot;
+# solopasha's is rawhide-only) — it exists to host the Caelestia-shell trial
+# (gmanka/caelestia COPR: caelestia-shell 1.6.2 + caelestia-cli + font/dep
+# set; community-maintained, upstream is Arch/Nix-first).
 # xwayland-satellite provides niri's X11 app support (niri has no native
 # XWayland). dnf5-plugins supplies the `dnf5 copr` subcommand used below; it
 # is installed in the same transaction, so the subcommand is available to the
 # very next `&&` in this RUN. The cache mounts keep COPR downloads fast across
 # rebuilds, matching step 1.
+#
+# COSMIC soft-removed 2026-09-01: not in active use; revisit in a few months
+# to check epoch progress. To restore, un-comment the cosmic lines below and
+# rebuild (`cjust image-rebuild`). Settings are already backed up in-repo
+# (cjust cosmic-backup → bubblebox/files/.config/cosmic/).
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install dnf5-plugins \
     && dnf5 -y copr enable yalter/niri \
-    && dnf5 -y copr enable ryanabx/cosmic-epoch \
+    # && dnf5 -y copr enable ryanabx/cosmic-epoch \
+    && dnf5 -y copr enable mineiro/hyprland \
+    && dnf5 -y copr enable gmanka/caelestia \
     && dnf5 -y copr enable peterwu/rendezvous \
-    && dnf5 -y install niri xwayland-satellite cosmic-desktop bibata-cursor-themes
+    && dnf5 -y install niri xwayland-satellite bibata-cursor-themes \
+                       hyprland xdg-desktop-portal-hyprland \
+                       caelestia-shell caelestia-cli
+    # && dnf5 -y install cosmic-desktop
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/

@@ -66,6 +66,12 @@ dst = ".config/environment.d/10-bubblebox.conf"
 [[files]]
 dst = ".config/niri/config.kdl"
 
+# Hyprland config for the Caelestia-shell trial (2026-09-01). Minimal by
+# design — see the file header. Drop this entry + the file if the trial is
+# retired without graduating to the full caelestia dots.
+[[files]]
+dst = ".config/hypr/hyprland.conf"
+
 [[files]]
 dst = ".config/ghostty/config"
 

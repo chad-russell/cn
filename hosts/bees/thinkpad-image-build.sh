@@ -79,6 +79,29 @@ if ! grep -q 'Nebula overlay hosts' "${VERIFY_MNT}/etc/hosts" \
   exit 1
 fi
 echo "    /etc/hosts entries verified in image layer"
+
+# ---- post-build gate: session .desktop files must match the intended set ---
+# The GDM session list is the user-visible surface of this image; a missing
+# COPR or a fat-fingered package name would silently drop a session. Assert
+# the expected files exist in the layer (COSMIC is soft-removed — its absence
+# is expected until re-enabled). Same mounted image, so this rides the mount
+# already held open above.
+echo "==> verifying wayland sessions in the built image"
+for session in niri hyprland; do
+  if [ ! -f "${VERIFY_MNT}/usr/share/wayland-sessions/${session}.desktop" ]; then
+    echo "ERROR: ${session}.desktop missing from ${IMAGE}" >&2
+    echo "  expected sessions: niri, hyprland (GNOME ships in the base image)" >&2
+    podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
+    exit 1
+  fi
+done
+echo "    wayland sessions verified: niri, hyprland (+ GNOME from base)"
+if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/cosmic.desktop" ]; then
+  echo "ERROR: cosmic.desktop present but COSMIC is soft-removed" >&2
+  echo "  un-comment the cosmic lines in the Containerfile or drop this check" >&2
+  podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
+  exit 1
+fi
 podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
 
 # ---- local housekeeping: drop the build-only copies (registry is the store)

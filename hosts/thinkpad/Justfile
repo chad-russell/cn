@@ -235,10 +235,49 @@ zen-memlimit-clear:
     fi
 
 # ═══════════════════════════════════════════════════════════════════════════
+# desktoppak — RETIRED 2026-09-01. The bwrap-payload experiment lost to the
+# normal bootc/image path; compositors ship in the host image (see
+# host-image/Containerfile). One final cleanup recipe remains for the live
+# host's /usr/local leftovers; once it has run once, this whole section can
+# be deleted. It is kept only so the removal is a discoverable cjust verb
+# instead of tribal knowledge.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# One-time removal of the retired desktoppak artifacts from the live host:
+# the wrapper scripts and the ghost GDM session entries they created (the
+# "COSMIC (desktoppak)" / "Niri (bubblewrap)" entries in the login screen).
+# These files were never image-managed — they were hand-placed in /usr/local
+# — so deleting them once is permanent. Idempotent; safe to re-run.
+[group('desktoppak')]
+desktoppak-purge:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    removed=0
+    for f in \
+      /usr/local/bin/desktoppak \
+      /usr/local/bin/niri-bwrap-session \
+      /usr/local/share/wayland-sessions/desktoppak-cosmic.desktop \
+      /usr/local/share/wayland-sessions/desktoppak-niri.desktop; do
+        if [ -e "$f" ]; then
+            sudo rm -f "$f"
+            echo "removed: $f"
+            removed=1
+        fi
+    done
+    if [ "$removed" = 0 ]; then
+        echo "Nothing to purge — desktoppak artifacts already gone."
+    else
+        update-desktop-database /usr/local/share/wayland-sessions 2>/dev/null || true
+        echo "Done. Ghost GDM entries disappear at next logout/login."
+    fi
+
+# ═══════════════════════════════════════════════════════════════════════════
 # cosmic — backup / restore settings (NOT symlinked; cosmic dislikes
 # symlinks for its config tree). Files live at ~/.config/cosmic/ normally;
 # backup copies into bubblebox/files/.config/cosmic/ for git tracking, restore
-# copies back.
+# copies back. COSMIC itself is soft-removed from the image (2026-09-01);
+# these recipes + the backed-up settings are what make re-adding it later a
+# one-line Containerfile change + `cjust cosmic-restore`.
 # ═══════════════════════════════════════════════════════════════════════════
 
 # Copy settings from ~/.config/cosmic to bubblebox/files/.config/cosmic.

@@ -5,8 +5,10 @@ Minimal bootc-based Fedora host image for this machine.
 ## Purpose
 
 `host-image/` is for host-level choices that should truly be part of the base
-OS image — including the compositors (`niri` and COSMIC), which ship directly
-here rather than in a separate payload layer.
+OS image — including the compositors (`niri` and Hyprland), which ship directly
+here rather than in a separate payload layer. (The old desktoppak
+per-user-bwrap payload approach was retired 2026-09-01; `cjust
+desktoppak-purge` removes its live-host leftovers.)
 
 ## What it changes
 
@@ -16,7 +18,13 @@ Currently:
 - installs `distrobox`
 - installs compositors from COPR:
   - `niri` + `xwayland-satellite` (from `yalter/niri`)
-  - `cosmic-desktop` (from `ryanabx/cosmic-epoch`)
+  - `hyprland` + `xdg-desktop-portal-hyprland` (from `mineiro/hyprland`) —
+    host for the Caelestia-shell trial (`caelestia-shell` + `caelestia-cli`
+    from `gmanka/caelestia`, community COPR; upstream is Arch/Nix-first)
+  - COSMIC: **soft-removed** 2026-09-01 (not in active use; revisit in a few
+    months). Restore = un-comment the cosmic lines in the Containerfile +
+    `cjust image-rebuild` + `cjust cosmic-restore`. Settings stay backed up
+    in-repo under `bubblebox/files/.config/cosmic/`.
 - installs small host convenience packages:
   - `just` + `fzf` — back the `cjust` task menu (see `hosts/thinkpad/Justfile`);
     host-native because `cjust` must work before any sandbox is set up

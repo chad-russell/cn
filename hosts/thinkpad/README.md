@@ -337,7 +337,7 @@ Examples:
 
 ## Notes
 
-- `host-image/` is intentionally lean; the compositors (niri + COSMIC) ship in
+- `host-image/` is intentionally lean; the compositors (niri + Hyprland) ship in
   it, plus the small set of host-resident tools (just, fzf, oh-my-posh,
   nodejs/npm for opencode).
 - Dev tools live in bubblebox sandboxes, not on the host image.
