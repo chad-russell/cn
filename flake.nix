@@ -33,12 +33,12 @@
     # against HERMES_HOME. Like hermes-agent, does NOT follow our nixpkgs;
     # the NixOS module derives the agent interpreter from
     # services.hermes-agent.package's passthru.hermesVenv.
-    hermes-webui = { url = "github:nesquena/hermes-webui"; };
+    # hermes-webui = { url = "github:nesquena/hermes-webui"; };  # retired 2026-09-01
 
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, disko, agenix
-    , hermes-agent, hermes-webui, ... }:
+    , hermes-agent, ... }:
     let
       lib = nixpkgs.lib;
       username = "crussell";
@@ -139,7 +139,7 @@
         extraSpecialArgs = { inherit hermes-agent; };
         extraModules = [
           hermes-agent.nixosModules.default
-          hermes-webui.nixosModules.default
+          # hermes-webui.nixosModules.default  # retired 2026-09-01
         ];
       };
       nixosConfigurations.bees = mkHost { hostname = "bees"; };

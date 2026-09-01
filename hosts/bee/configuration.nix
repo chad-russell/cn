@@ -57,7 +57,8 @@ in {
     ../../modules/beszel-agent.nix
     ./dev-quadlets.nix
     ./searxng.nix
-    ./hermes-webui.nix
+    # ./hermes-webui.nix  # retired 2026-09-01 — desktop + Discord are the
+    #                      # only chat surfaces now; webui state dir was 210 MB
     ./trades-site.nix
     ./backup.nix
     ./tailscale.nix
@@ -596,7 +597,7 @@ in {
         # Auto-loaded skills per channel (exact id match, threads inherit).
         extra.channel_skill_bindings = [
           { id = "1544085981236432906"; skills = [ "cn-homelab-infra" ]; }
-          { id = "1544086006771220562"; skills = [ "tutoring" "math-tutoring" ]; }
+          { id = "1544086006771220562"; skills = [ "tutoring" ]; }
           { id = "1544086070436565123"; skills = [ "fantasy-football-league-management" ]; }
           { id = "1544086089005006888"; skills = [ "tastytrade-portfolio-advisor" ]; }
         ];
@@ -635,6 +636,22 @@ in {
   # saga and the Aug 11–19 auxiliary.vision drift). Prune known-stale keys
   # here on every switch; the freshness-hermes-config-drift timer below
   # alerts on any divergence between live config.yaml and declared settings.
+  # ── Log rotation for Hermes' file logs (added 2026-09-01) ──────────
+  # The Python processes hold their fds open, so copytruncate (copy then
+  # zero the live file) instead of move-and-recreate. mcp-stderr.log has
+  # NO built-in rotation; agent.log/gateway.log self-rotate at ~5 MB but
+  # keep .1/.2/.3 tails. This caps the whole logs/ dir at ~1 week.
+  services.logrotate.settings.hermes-logs = {
+    files = [ "/var/lib/hermes/.hermes/logs/*.log" ];
+    frequency = "weekly";
+    rotate = 2;
+    copytruncate = true;
+    compress = true;
+    notifempty = true;
+    missingok = true;
+    su = "crussell hermes";
+  };
+  #
   system.activationScripts."hermes-prune-stale-config" =
     lib.stringAfter [ "hermes-agent-setup" ] ''
       ${pkgs.python3.withPackages (ps: [ ps.pyyaml ])}/bin/python3 - <<'PY'

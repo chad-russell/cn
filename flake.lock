@@ -99,34 +99,16 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1787769886,
-        "narHash": "sha256-udo2NcRD4IoHeoBwQH+eUGe+54nf0sn/XgrSoXtmjaw=",
+        "lastModified": 1788273165,
+        "narHash": "sha256-UkG0u7qNnfKIWLrnOxtJDF6U1ziGwWmn/Ag5v4sQHfQ=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "f0187332d13679e2ace74d1f0eb399eb91a90571",
+        "rev": "f709bd88b6cc62b23f40e878c1d5960604302ee2",
         "type": "github"
       },
       "original": {
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "type": "github"
-      }
-    },
-    "hermes-webui": {
-      "inputs": {
-        "nixpkgs": "nixpkgs_2"
-      },
-      "locked": {
-        "lastModified": 1787706206,
-        "narHash": "sha256-Z/q6tPa+FdTxB7rricc9voqcfjsTHsPiNQcwpMJ/SZ4=",
-        "owner": "nesquena",
-        "repo": "hermes-webui",
-        "rev": "e168b67e4278df618d1cab61fdb3a8dc55b29a81",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nesquena",
-        "repo": "hermes-webui",
         "type": "github"
       }
     },
@@ -205,22 +187,6 @@
       }
     },
     "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1782723713,
-        "narHash": "sha256-oPXCU/SSUokcGaJREHibG1CBX3+s/W7orDWQOZDsEeQ=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "b5aa0fbd538984f6e3d201be0005b4463d8b09f8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_3": {
       "locked": {
         "lastModified": 1778003029,
         "narHash": "sha256-q/nkKLDtHIyLjZpKhWk3cSK5IYsFqtMd6UtXF3ddjgA=",
@@ -312,9 +278,8 @@
         "agenix": "agenix",
         "disko": "disko",
         "hermes-agent": "hermes-agent",
-        "hermes-webui": "hermes-webui",
         "home-manager": "home-manager_2",
-        "nixpkgs": "nixpkgs_3",
+        "nixpkgs": "nixpkgs_2",
         "nixpkgs-unstable": "nixpkgs-unstable"
       }
     },

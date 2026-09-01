@@ -37,7 +37,8 @@ in {
   # ── Hermes WebUI on bee ─────────────────────────────────────────
   # HERMES_WEBUI_PASSWORD for the web login gate at
   # https://hermes.internal.crussell.io (routed by bees Caddy to bee).
-  "hermes-webui-env.age".publicKeys = [ crussell ];
+  # Retired 2026-09-01: hermes webui (desktop + Discord are the only surfaces).
+  # "hermes-webui-env.age".publicKeys = [ crussell ];
 
   # ── Hermes Agent CLI/TUI/Desktop on thinkpad ───────────────────
   # OPENAI_API_KEY=<Z.AI coding key> so Hermes' OpenAI-compatible provider
