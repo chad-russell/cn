@@ -33,6 +33,10 @@
     source = ./thinkpad-image-build.sh;
     mode = "0755";
   };
+  environment.etc."thinkpad-build-storage.conf" = {
+    source = ./thinkpad-build-storage.conf;
+    mode = "0644";
+  };
 
   systemd.services.thinkpad-image-build = {
     description = "Build + publish thinkpad host image to zot registry";
@@ -62,6 +66,11 @@
       # errors and root-owned files landing in the crussell-owned tree).
       User = "root";
       Nice = 10;
+      # Dedicated btrfs-driver build store (see thinkpad-build-storage.conf):
+      # native subvolume snapshot layer commits instead of the FUSE fallback
+      # the shared overlay-on-btrfs store suffers from. The push to zot goes
+      # over HTTP to 10.10.0.6:5000 and doesn't read this store at all.
+      Environment = [ "CONTAINERS_STORAGE_CONF=/etc/thinkpad-build-storage.conf" ];
     };
     onFailure = [ "ntfy-failure@thinkpad-image-build.service" ];
   };
