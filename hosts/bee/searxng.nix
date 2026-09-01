@@ -28,7 +28,13 @@
       };
 
       # Enable JSON output format — required for Hermes API access
-      search = { formats = [ "html" "json" ]; };
+      search = {
+        formats = [ "html" "json" ];
+        # API callers (hermes web_search, curl) send no Accept-Language
+        # header, so bing guessed the wrong market and returned
+        # French-localized results. Pin the default explicitly.
+        default_lang = "en-US";
+      };
 
       # Engine overrides. Upstream defaults enable exactly four real web
       # engines for general queries — google, duckduckgo, brave, startpage —
