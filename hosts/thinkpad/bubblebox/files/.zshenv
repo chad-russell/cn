@@ -39,7 +39,9 @@ export GIO_EXTRA_MODULES=
 # file to the decrypt step (cache filename is generic on purpose).
 #
 # Currently sourced secrets:
-#   secrets/zai-api-key.age           → ZHIPU_API_KEY   (opencode)
+#   secrets/zai-api-key.age           → ZHIPU_API_KEY   (dsh login shells;
+#                                                      agent lanes read it
+#                                                      from agenix env files)
 #   secrets/hermes-thinkpad-env.age   → OPENAI_API_KEY  (hermes; same Z.AI
 #                                                      key value as above,
 #                                                      remapped for hermes'

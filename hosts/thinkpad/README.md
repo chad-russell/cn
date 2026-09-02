@@ -39,10 +39,10 @@ the host image so it works before any sandbox is set up.
 
 ```bash
 cjust                  # fuzzy recipe chooser (just --choose)
-cjust setup            # full first-run: bubblebox (tools + dotfiles + units) + opencode
+cjust setup            # full first-run: bubblebox (tools + dotfiles + units)
 cjust bubblebox        # build FUSE server + all tool images + apply profile
 cjust bubblebox-apply  # (re)apply the profile: dotfiles + units + package wrappers
-cjust status           # show host-image / bootc / bubblebox / opencode state
+cjust status           # show host-image / bootc / bubblebox state
 cjust -l               # list all recipes
 ```
 
@@ -57,7 +57,7 @@ single source of truth.
 A minimal bootc-managed host image. It is intentionally small: host-level
 choices that truly belong in the base OS (convenience packages, disabling
 SELinux, removing `toolbox`, adding `distrobox`, the compositors, and
-`nodejs`/`npm` so `cjust opencode-install` works). See `host-image/README.md`.
+`nodejs`/`npm` for the hermes desktop build). See `host-image/README.md`.
 
 The image is built **on bees** (daily `thinkpad-image-build.timer` + on-demand
 `cjust image-rebuild`) and published to bees's zot registry
@@ -157,13 +157,10 @@ Current tools (defined in `~/Code/bubblebox-pkgs/`):
   `host-image/README.md`).
 - `yazi`, `zoxide` — file manager and `cd` replacement.
 
-`opencode` is intentionally NOT a bubblebox tool — it's an AI agent and needs
-full host control (spawning subprocesses in arbitrary cwds with synchronous
-I/O capture has no precedent in the bubblebox tree and fights the sandbox's
-read-only / content-addressed model). It's installed directly on the host via
-`cjust opencode-install`. (Hermes used to be in the same category; its agent
-now lives on bee and only the desktop GUI runs here — see the `hermes/`
-section below.)
+(AI coding agents are not bubblebox tools — opencode was retired 2026-09-02.
+The hermes agent lives on bee and only the desktop GUI runs here; dsh is a
+web UI at `https://dsh.internal.crussell.io`. See the `hermes/` section
+below.)
 
 Typical workflow:
 
@@ -240,17 +237,12 @@ host-resident regardless:
 
 - **oh-my-posh** — renders the prompt on every command, can't pay a
   per-invocation sandbox spawn
-- **opencode** config — the agent runs on the host directly (see `cjust
-  opencode-install`), so its config lives with the rest of the host dotfiles;
-  auth stays at the default `~/.local/share/opencode/auth.json` (machine-local,
-  gitignored by virtue of being outside this tree)
 
 This is declarative, not live-edit: change the source file under
 `bubblebox/files/` and re-run `cjust bubblebox-apply` to re-link. No
 templating, no secrets, no dotfiles manager. (For `kind = "dir"` entries like
 `.config/nvim`, `bubblebox apply` walks the tree into per-file store symlinks;
-user-owned files inside managed dirs — e.g. opencode's `auth.json` — are never
-touched.)
+user-owned files inside managed dirs are never touched.)
 
 ```bash
 # set up / refresh all host-native dotfiles (idempotent, part of the profile)
@@ -303,10 +295,6 @@ apply` symlinks each unit into `~/.config/systemd/user/`, daemon-reloads, and
 enables lingering; units with `enable = true` in the profile are also started.
 Current units:
 
-- `opencode-web.service` — runs the opencode web frontend. opencode is
-  host-installed (via `cjust opencode-install`), so the unit just calls
-  `opencode web --port 4096` directly — no sandbox or composefs mount
-  dependency.
 - `vicinae.service` — starts the bubblebox-wrapped vicinae launcher daemon
   (`vicinae server --replace`), bound to `graphical-session.target` so it
   auto-starts under any compositor (niri, COSMIC, ...) — replacing niri's
@@ -316,7 +304,6 @@ Current units:
 ```bash
 cjust bubblebox-apply
 # then enable/start a specific unit (if not auto-enabled via `enable = true`):
-systemctl --user enable --now opencode-web
 systemctl --user enable --now vicinae
 ```
 
@@ -335,19 +322,16 @@ Examples:
 - bubblebox storage: `~/.local/share/bubblebox/` (descriptors, content store,
   per-tool persistent state like nvim's plugins/parsers) and
   `/run/user/$UID/bubblebox/` (FUSE mountpoints, ephemeral per-session)
-- `~/.local/share/opencode/` for opencode runtime state (auth, db, logs)
 
 ## Notes
 
 - `host-image/` ships the desktop stack: niri (compositor) + our
   niri-caelestia-shell fork (desktop shell, built at a pinned commit), plus
   the small set of host-resident tools (just, fzf, oh-my-posh, nodejs/npm for
-  opencode).
+  the hermes desktop build).
 - Dev tools live in bubblebox sandboxes, not on the host image.
-- opencode is the exception: it's installed on the host because it's an AI
-  coding agent and needs full host control when something breaks (npm global
-  via `cjust opencode-install`). The hermes agent is NOT installed here — it
-  lives on bee, and this host runs only the desktop GUI, built off-host by
+- AI coding agents don't run on this host: the hermes agent lives on bee
+  (this host runs only the desktop GUI, built off-host by
   `cjust hermes-desktop-build` from our own source checkout (~/.local/share/
-  hermes-desktop-src). It's per-user, iterates on its own update channel, and
-  doesn't deserve an image rebuild + reboot cycle.
+  hermes-desktop-src), per-user on its own update channel), and dsh is a
+  server-side web UI. (opencode was retired 2026-09-02.)

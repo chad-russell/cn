@@ -91,15 +91,6 @@ dst = ".config/wezterm/wezterm.lua"
 dst = ".config/nvim"
 kind = "dir"
 
-# opencode: manage the authored config + skills only. opencode ALSO treats
-# this dir as an npm workspace (node_modules/, package.json, package-lock.json
-# appear when it installs skills) — that tool-owned state is deliberately NOT
-# managed here, same rule as nvim's plugin trees: authored config yes,
-# package-manager state no.
-[[files]]
-dst = ".config/opencode"
-kind = "dir"
-
 [[files]]
 dst = ".local/bin/zen-browser"
 
@@ -122,10 +113,6 @@ dst = ".local/share/applications/hermes.desktop"
 # implicit ".service".
 # (The bubblebox-pkgs nightly CI moved to bee — NixOS, always-on; see
 # hosts/bee. Don't run CI on the laptop.)
-[[units]]
-name = "opencode-web"
-enable = true
-
 [[units]]
 name = "vicinae"
 enable = true

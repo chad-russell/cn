@@ -52,15 +52,14 @@ bubblebox_bin := bubblebox_dir + "/target/release/bubblebox"
 # The old `cjust link` and `cjust units` recipes are retired — the declarative
 # profile is the single source of truth.
 
-# Full first-run setup: all bubblebox tools + opencode. Run this on a fresh
+# Full first-run setup: all bubblebox tools. Run this on a fresh
 # install (after the host image is booted). Idempotent. The bubblebox SOURCE
 # is declared in bubblebox/profile.toml (profile-authoritative) — no separate
 # `source add` step. Dotfiles and units are applied by `bubblebox-apply`.
-# Note: `opencode-install` requires nodejs/npm on the host (added to the
-# host image in mid-2026). If you're on an older image, that step fails
-# harmlessly — complete the host-image rebuild + reboot, then re-run setup.
+# (opencode retired 2026-09-02 — coding goes through the hermes desktop app
+#  or dsh at https://dsh.internal.crussell.io.)
 [group('setup')]
-setup: bubblebox-doctor bubblebox opencode-install
+setup: bubblebox-doctor bubblebox
     @echo "==> Setup complete."
     @echo "    If host-image deps changed (just/fzf/nodejs/npm), rebuild & reboot:"
     @echo "      cjust image-rebuild && systemctl reboot"
@@ -487,36 +486,6 @@ bubblebox: bubblebox-init bubblebox-build bubblebox-apply
     @echo "==> bubblebox: FUSE server built, tools built, profile applied."
 
 # ═══════════════════════════════════════════════════════════════════════════
-# opencode (host install)
-# ═══════════════════════════════════════════════════════════════════════════
-#
-# opencode runs on the host directly (not in bubblebox) because it's the AI
-# coding agent — it needs full host control when something breaks, without
-# sandbox restrictions getting in the way of recovery. Vendored config lives
-# at bubblebox/files/.config/opencode/ (symlinked by `bubblebox apply`); secrets stay
-# machine-local at ~/.local/share/opencode/auth.json (gitignored by virtue
-# of being outside the vendored tree).
-
-# Install opencode globally via npm. Silverblue's /usr/local is read-only, so
-# npm's prefix is set to ~/.local — opencode lands at ~/.local/bin/opencode
-# (already on PATH). Re-run after `cjust image-upgrade` to pick up new versions.
-[group('opencode')]
-opencode-install:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if ! command -v npm >/dev/null 2>&1; then
-      echo "ERROR: npm not found on host." >&2
-      echo "       Rebuild the host image with nodejs+npm, reboot, then re-run." >&2
-      exit 1
-    fi
-    npm config set prefix "$HOME/.local"
-    npm install -g opencode-ai
-    echo
-    echo "opencode installed to ~/.local/bin/opencode"
-    # First-time auth (or after wiping ~/.local/share/opencode/auth.json):
-    #   opencode auth login
-
-# ═══════════════════════════════════════════════════════════════════════════
 # hermes (desktop-only on this host)
 # ═══════════════════════════════════════════════════════════════════════════
 #
@@ -557,10 +526,10 @@ opencode-install:
 # (bubblebox/files/.local/share/applications/hermes.desktop, symlinked by
 # `bubblebox apply`).
 #
-# Why not bubblebox: hermes is an AI coding agent (same category as opencode) —
-# its tool backend spawns synchronous subprocesses in arbitrary host cwds with
-# I/O capture, which has no precedent in the bubblebox tree and fights the
-# sandbox's read-only / content-addressed model. See README for the long version.
+# Why not bubblebox: hermes is an AI coding agent — its tool backend spawns
+# synchronous subprocesses in arbitrary host cwds with I/O capture, which has
+# no precedent in the bubblebox tree and fights the sandbox's read-only /
+# content-addressed model. See README for the long version.
 [group('hermes')]
 hermes-desktop-build ref='':
     #!/usr/bin/env bash
@@ -868,7 +837,7 @@ hosts-sync:
     getent hosts bees bee nas nebula-hetzner nebula-lh homeassistant
 
 # Show the current state of this machine: host-image version, bootc deployment,
-# bubblebox mounts + wrappers, opencode install, and linked user units.
+# bubblebox mounts + wrappers, and linked user units.
 # Read-only.
 [group('system')]
 status:
@@ -891,13 +860,6 @@ status:
     for t in $(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))'); do
       if [ -x "${dst_bin}/${t}" ]; then echo "  ok   ${t}"; else echo "  MISS ${t}"; fi
     done
-    echo
-    echo "=== opencode (host install) ==="
-    if command -v opencode >/dev/null 2>&1; then
-      echo "  $(opencode --version 2>&1 | head -1)"
-    else
-      echo "  (not installed — run: cjust opencode-install)"
-    fi
     echo
     echo "=== user units (~/.config/systemd/user/) ==="
     dst_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
