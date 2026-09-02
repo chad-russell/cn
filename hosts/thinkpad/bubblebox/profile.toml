@@ -16,9 +16,12 @@
 # must precede the [[source]]/[[cache]] table headers — standard TOML.)
 packages = [
   "age", "age-keygen", "aws", "bat", "dust", "eza", "fastfetch", "fd", "gh", "htop",
-  "noctalia", "nvim", "oh-my-posh", "psql", "rg", "rust-dev", "sops", "slack", "terraform",
+  "nvim", "oh-my-posh", "psql", "rg", "rust-dev", "sops", "slack", "terraform",
   "tokei", "vicinae", "witr", "ghostty", "wezterm", "yazi", "zoxide",
 ]
+# noctalia removed 2026-09-02 — replaced by the niri-caelestia-shell fork
+# (built into the host image, Containerfile step 2.5; notifications, panels,
+# lock, brightness/volume all come from the fork now).
 
 # Registries: when present, apply is PROFILE-AUTHORITATIVE — it resolves using
 # ONLY these (no separate `source add`/`cache add` step needed). Empty → fall
@@ -66,16 +69,9 @@ dst = ".config/environment.d/10-bubblebox.conf"
 [[files]]
 dst = ".config/niri/config.kdl"
 
-# Hyprland config for the Caelestia-shell trial (2026-09-01). Lua format —
-# hyprlang .conf is removed in Hyprland 0.57. See the file header for the
-# session-target bridge and niri-parity notes. Drop this entry + the file if
-# the trial is retired without graduating to the full caelestia dots.
-[[files]]
-dst = ".config/hypr/hyprland.lua"
-
-# satty (screenshot editor) theme/config — see Mod+P bind in hyprland.lua
-[[files]]
-dst = ".config/satty/config.toml"
+# Hyprland trial (2026-09-01 → 2026-09-02) retired: hyprland.lua and the
+# session-bridge target removed with it. The niri session is now paired with
+# our niri-caelestia-shell fork (built into the image, Containerfile 2.5).
 
 [[files]]
 dst = ".config/ghostty/config"
@@ -128,10 +124,3 @@ enable = true
 [[units]]
 name = "vicinae"
 enable = true
-
-# Bridge target started by Hyprland at session start (see hyprland.lua) —
-# dependency-starts graphical-session.target, which Fedora's start-hyprland
-# wrapper doesn't do (niri/GNOME do it themselves). enable stays false:
-# systemd enable is wrong for a compositor-started target.
-[[units]]
-name = "hyprland-session.target"

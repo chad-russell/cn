@@ -87,21 +87,48 @@ echo "    /etc/hosts entries verified in image layer"
 # is expected until re-enabled). Same mounted image, so this rides the mount
 # already held open above.
 echo "==> verifying wayland sessions in the built image"
-for session in niri hyprland; do
+for session in niri; do
   if [ ! -f "${VERIFY_MNT}/usr/share/wayland-sessions/${session}.desktop" ]; then
     echo "ERROR: ${session}.desktop missing from ${IMAGE}" >&2
-    echo "  expected sessions: niri, hyprland (GNOME ships in the base image)" >&2
+    echo "  expected sessions: niri (GNOME ships in the base image)" >&2
     podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
     exit 1
   fi
 done
-echo "    wayland sessions verified: niri, hyprland (+ GNOME from base)"
+echo "    wayland sessions verified: niri (+ GNOME from base)"
 if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/cosmic.desktop" ]; then
   echo "ERROR: cosmic.desktop present but COSMIC is soft-removed" >&2
   echo "  un-comment the cosmic lines in the Containerfile or drop this check" >&2
   podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
   exit 1
 fi
+if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/hyprland.desktop" ]; then
+  echo "ERROR: hyprland.desktop present but Hyprland was removed 2026-09-02" >&2
+  echo "  the mineiro/hyprland COPR line should be gone from the Containerfile" >&2
+  podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
+  exit 1
+fi
+
+# ---- post-build gate: niri-caelestia-shell fork artifacts -------------------
+# Containerfile step 2.5 installs the fork system-wide; assert the load-bearing
+# artifacts landed so a silent CMake/install failure can't publish an image
+# whose shell is missing at next login.
+echo "==> verifying niri-caelestia-shell artifacts in the built image"
+for artifact in \
+  "${VERIFY_MNT}/usr/lib/qt6/qml/Caelestia/qmldir" \
+  "${VERIFY_MNT}/usr/lib/qt6/qml/Caelestia/Internal/qmldir" \
+  "${VERIFY_MNT}/usr/lib/qt6/qml/Caelestia/Services/qmldir" \
+  "${VERIFY_MNT}/usr/lib/caelestia/version" \
+  "${VERIFY_MNT}/etc/xdg/quickshell/caelestia/shell.qml"
+do
+  if [ ! -f "${artifact}" ]; then
+    echo "ERROR: ${artifact} missing from ${IMAGE}" >&2
+    echo "  the niri-caelestia-shell build (Containerfile step 2.5) did not land" >&2
+    podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
+    exit 1
+  fi
+done
+echo "    niri-caelestia-shell artifacts verified"
 podman image unmount "${IMAGE}" >/dev/null 2>&1 || true
 
 # ---- local housekeeping: drop the build-only copies (registry is the store)

@@ -53,17 +53,42 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install distrobox zsh just fzf nodejs npm
 
-# ---- 2. Compositors: niri + Hyprland (from COPR) ------------------------
+# ---- 2. Desktop stack: niri + our niri-caelestia-shell fork --------------
 # niri comes from the upstream maintainer's COPR (yalter/niri), which tracks
-# newer than Fedora's package. Hyprland from mineiro/hyprland (F44 chroot;
-# solopasha's is rawhide-only) — it exists to host the Caelestia-shell trial
-# (gmanka/caelestia COPR: caelestia-shell 1.6.2 + caelestia-cli + font/dep
-# set; community-maintained, upstream is Arch/Nix-first).
-# xwayland-satellite provides niri's X11 app support (niri has no native
-# XWayland). dnf5-plugins supplies the `dnf5 copr` subcommand used below; it
-# is installed in the same transaction, so the subcommand is available to the
-# very next `&&` in this RUN. The cache mounts keep COPR downloads fast across
-# rebuilds, matching step 1.
+# newer than Fedora's package. xwayland-satellite provides niri's X11 app
+# support (niri has no native XWayland). dnf5-plugins supplies the `dnf5 copr`
+# subcommand used below; it is installed in the same transaction, so the
+# subcommand is available to the very next `&&` in this RUN. The cache mounts
+# keep COPR downloads fast across rebuilds, matching step 1.
+#
+# Hyprland + Caelestia-shell were REMOVED 2026-09-02 (trial concluded; the
+# keeper is niri + our own fork of niri-caelestia-shell, see below). satty,
+# dart-sass, and the mineiro/hyprland + peterwu/rendezvous COPRs were
+# Hyprland-trial baggage and leave with it.
+#
+# The shell stack for niri (fork: github.com/chad-russell/niri-caelestia-shell,
+# our maintenance fork of AyushKr2003's archived port of Caelestia to niri):
+#   - `quickshell` from errornointernet/quickshell (F44 release build 0.3.x —
+#     the QML runtime the fork's shell runs on).
+#   - fonts + materialyoucolor from gmanka/caelestia — the ONE thing we keep
+#     that COPR for (material-symbols-fonts, cascadia-code-nerd-fonts,
+#     python3-materialyoucolor); caelestia-shell itself is NOT installed.
+#   - `app2unit` from celestelove/app2unit (the fork's app-launcher helper:
+#     launches apps as transient user units, scoped to the graphical session).
+#   - `libcava` (+ devel, tiny) from celestelove/libcava — the audio-
+#     visualizer lib the shell's C++ plugin links for the audio visualizer
+#     widget (plugin built in step 2.5 below).
+#
+# Runtime deps for the fork (each verified available on F44):
+#   matugen (Fedora proper — the Material-You color pipeline), nmcli via
+#   NetworkManager (base image), kdialog + kf6-kirigami + kf6-syntax-
+#   highlighting + plasma-integration (Qt dialogs/theme), swappy +
+#   tesseract-langpack-eng + wf-recorder (screenshot annotate/OCR/record),
+#   ydotool/wtype (virtual input), translate-shell, cava (CLI visualizer),
+#   libqalculate + qalculate (launcher calc mode), pavucontrol, lm_sensors,
+#   geoclue2 (weather location), fish (launcher calc mode), jq/bc/rsync/
+#   xdg-user-dirs/xdg-utils (shell scripts), networkmanager-applet (tray
+#   NM state). Portals: the niri-friendly set (gnome screen-share + gtk).
 #
 # COSMIC soft-removed 2026-09-01: not in active use; revisit in a few months
 # to check epoch progress. To restore, un-comment the cosmic lines below and
@@ -74,13 +99,58 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     dnf5 -y install dnf5-plugins \
     && dnf5 -y copr enable yalter/niri \
     # && dnf5 -y copr enable ryanabx/cosmic-epoch \
-    && dnf5 -y copr enable mineiro/hyprland \
+    && dnf5 -y copr enable errornointernet/quickshell \
     && dnf5 -y copr enable gmanka/caelestia \
-    && dnf5 -y copr enable peterwu/rendezvous \
+    && dnf5 -y copr enable celestelove/libcava \
+    && dnf5 -y copr enable celestelove/app2unit \
     && dnf5 -y install niri xwayland-satellite bibata-cursor-themes \
-                       hyprland xdg-desktop-portal-hyprland hyprland-guiutils \
-                       caelestia-shell caelestia-cli dart-sass satty
+                       quickshell app2unit libcava libcava-devel \
+                       material-symbols-fonts cascadia-code-nerd-fonts \
+                       python3-materialyoucolor matugen \
+                       kf6-kirigami kf6-syntax-highlighting kdialog plasma-integration \
+                       qt6-qt5compat qt6-qtmultimedia qt6-qtquicktimeline \
+                       wl-clipboard cliphist grim slurp swappy \
+                       tesseract tesseract-langpack-eng wf-recorder \
+                       ydotool wtype translate-shell cava \
+                       libqalculate qalculate pavucontrol lm_sensors \
+                       geoclue2 system-settings dolphin \
+                       xdg-desktop-portal-gnome xdg-desktop-portal-gtk \
+                       fish jq bc curl wget ripgrep rsync \
+                       xdg-user-dirs xdg-utils libnotify brightnessctl \
+                       ddcutil playerctl upower networkmanager-applet \
+                       breeze-icon-theme
     # && dnf5 -y install cosmic-desktop
+
+# ---- 2.5. Build + install our niri-caelestia-shell fork ------------------
+# The shell is a Quickshell config (pure QML) + a small C++ Quickshell plugin
+# (libcaelestia: qalculate wrapper, image analysis, niri IPC, cava/audio
+# providers) + `caelestia` version helper. We build it from OUR fork
+# (chad-russell/niri-caelestia-shell — maintenance fork of AyushKr2003's
+# archived niri port of Caelestia) at a pinned commit, same model as a
+# distro package: system-wide install to /usr (/usr/lib/qt6/qml/Caelestia,
+# /usr/lib/caelestia, /etc/xdg/quickshell/caelestia), no user-clone needed
+# to run it. Iterating on the shell happens in a user clone that overrides
+# via qs -c / XDG paths; the image copy is the stable baseline.
+#
+# Pin is deliberate: bump on purpose, not by drift. Rebuilds are cached
+# by the dnf layer below this one; this layer recompiles only when the pin
+# moves (~2-3 min). The toolchain + *-devel packages stay in the image on
+# purpose: this is the machine we iterate on the shell from, so building
+# the C++ plugin on-host is a feature, not bloat.
+ADD https://github.com/chad-russell/niri-caelestia-shell/archive/68c02988d7aa64af9c17fb375dd1a394da1223c8.tar.gz /tmp/ncs.tar.gz
+RUN tar -xzf /tmp/ncs.tar.gz -C /tmp \
+    && dnf5 -y install cmake ninja-build gcc-c++ \
+                       qt6-qtbase-devel qt6-qtdeclarative-devel \
+                       qt6-qt5compat-devel qt6-qtmultimedia-devel \
+                       fftw-devel libqalculate-devel pipewire-devel \
+                       aubio-devel \
+    && cmake -S /tmp/niri-caelestia-shell-68c02988d7aa64af9c17fb375dd1a394da1223c8 \
+           -B /tmp/ncs-build \
+           -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+           -DDISTRIBUTOR="cn image build" \
+    && cmake --build /tmp/ncs-build \
+    && cmake --install /tmp/ncs-build \
+    && rm -rf /tmp/ncs.tar.gz /tmp/niri-caelestia-shell-68c02988d7aa64af9c17fb375dd1a394da1223c8 /tmp/ncs-build
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/

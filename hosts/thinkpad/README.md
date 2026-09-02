@@ -151,8 +151,10 @@ Current tools (defined in `~/Code/bubblebox-pkgs/`):
 - `wezterm`, `ghostty` — GUI terminals; spawn the host shell via
   `systemd-run --user` so the shell inside the terminal has full host access
   (PATH, `/dev/fuse`, host tools, etc.).
-- `noctalia`, `vicinae` — desktop shell + launcher; daemon+client model with
-  GPU + `/sys` + D-Bus access via their entrypoints.
+- `vicinae` — launcher daemon; bubblebox wrapper with GPU + D-Bus access via
+  its entrypoint. Fallback launcher — the primary desktop shell is our
+  niri-caelestia-shell fork, which ships in the host image (see
+  `host-image/README.md`).
 - `yazi`, `zoxide` — file manager and `cd` replacement.
 
 `opencode` is intentionally NOT a bubblebox tool — it's an AI agent and needs
@@ -337,9 +339,10 @@ Examples:
 
 ## Notes
 
-- `host-image/` is intentionally lean; the compositors (niri + Hyprland) ship in
-  it, plus the small set of host-resident tools (just, fzf, oh-my-posh,
-  nodejs/npm for opencode).
+- `host-image/` ships the desktop stack: niri (compositor) + our
+  niri-caelestia-shell fork (desktop shell, built at a pinned commit), plus
+  the small set of host-resident tools (just, fzf, oh-my-posh, nodejs/npm for
+  opencode).
 - Dev tools live in bubblebox sandboxes, not on the host image.
 - opencode is the exception: it's installed on the host because it's an AI
   coding agent and needs full host control when something breaks (npm global

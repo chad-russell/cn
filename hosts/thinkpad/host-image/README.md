@@ -16,11 +16,20 @@ Currently:
 
 - removes `toolbox`
 - installs `distrobox`
-- installs compositors from COPR:
-  - `niri` + `xwayland-satellite` (from `yalter/niri`)
-  - `hyprland` + `xdg-desktop-portal-hyprland` (from `mineiro/hyprland`) —
-    host for the Caelestia-shell trial (`caelestia-shell` + `caelestia-cli`
-    from `gmanka/caelestia`, community COPR; upstream is Arch/Nix-first)
+- installs the desktop stack:
+  - `niri` + `xwayland-satellite` (from `yalter/niri`) — the compositor
+  - our **niri-caelestia-shell** fork (built from source at a pinned commit,
+    step 2.5) — the desktop shell (bar, launcher, notifications, lock,
+    clipboard, quick toggles, dashboard). Fork:
+    `github.com/chad-russell/niri-caelestia-shell` (maintenance fork of
+    AyushKr2003's archived port of Caelestia to niri). Quickshell runtime +
+    runtime deps (matugen, app2unit, libcava, fonts, swappy, tesseract, …)
+    come from Fedora proper + three COPRs (`errornointernet/quickshell`,
+    `celestelove/{libcava,app2unit}`, and `gmanka/caelestia` for fonts +
+    materialyoucolor only — caelestia-shell itself is NOT installed).
+  - Hyprland + Caelestia-shell **removed** 2026-09-02 — the trial concluded;
+    niri + our fork won. `mineiro/hyprland` and `peterwu/rendezvous` COPRs
+    dropped, satty/dart-sass dropped with them.
   - COSMIC: **soft-removed** 2026-09-01 (not in active use; revisit in a few
     months). Restore = un-comment the cosmic lines in the Containerfile +
     `cjust image-rebuild` + `cjust cosmic-restore`. Settings stay backed up
