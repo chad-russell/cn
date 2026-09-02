@@ -118,7 +118,11 @@ hl.bind(mainMod .. " + V", hl.dsp.window.float())
 hl.bind(mainMod .. " + X", hl.dsp.window.fullscreen({ mode = "maximized" }))
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "fullscreen" }))
 hl.bind(mainMod .. " + W", hl.dsp.group.toggle())
-hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("caelestia screenshot"))
+-- ---- screenshots (niri Mod+P parity): shell-side AreaPicker =========
+-- click-drag region select. Freeze mode freezes the screen while picking.
+-- (The CLI `caelestia screenshot` is the full-screen, non-interactive one.)
+hl.bind(mainMod .. " + P", hl.dsp.global("caelestia:screenshot"), { locked = true })
+hl.bind(mainMod .. " + SHIFT + P", hl.dsp.global("caelestia:screenshotFreeze"), { locked = true })
 
 -- ---- overview (niri Mod+O) / launcher (niri Mod+Space) ----------------------
 hl.bind(mainMod .. " + O", hl.dsp.exec_cmd("caelestia toggle dashboard"))
