@@ -18,8 +18,8 @@
 #
 # Apps started (from apps/*/package.json + services/code-review, via turbo):
 #   marketplace :3000 | runtime :3002      | login :3003        | docs :3004
-#   studio :3005     | super-admin :3006   | code-review :3007  | registry :3008
-#   jobs :3010
+#   studio :3005     | super-admin :3006   | funnel :3007       | registry :3008
+#   code-review :3009 | connectors :3011  | jobs :3010
 #
 # bee/Caddy note: buildspace has no known URL/origin env at the compose level
 # (apps bind 0.0.0.0 and use relative URLs), so unlike gpl/polymer no per-app
@@ -39,8 +39,10 @@ cd /workspace || { echo "FATAL: /workspace not mounted" >&2; exit 1; }
 mkdir -p "${HOME:-/tmp/buildspace-home}" "${BUN_INSTALL:-/tmp/buildspace-home/.bun}"
 
 if [ ! -d node_modules ]; then
-  echo "==> first start: bun install (this can take a few minutes on a big monorepo)"
-  bun install || { echo "FATAL: bun install failed" >&2; exit 1; }
+  echo "==> first start: bun install --linker hoisted (Turbopack/Next dev resolves"
+  echo "    transitive deps of serverExternalPackages (pg) by walking up from"
+  echo "    .next/dev — bun's default isolated linker breaks that; hoisted works)"
+  bun install --linker hoisted || { echo "FATAL: bun install failed" >&2; exit 1; }
 fi
 
 # Wait for Postgres. The oven/bun image is Debian-based and has bash with
@@ -128,7 +130,7 @@ NODE_PATH=/workspace/node_modules bun /tmp/ensure-bucket.cjs \
 echo "==> starting turbo dev (loose env) — all apps"
 echo "    marketplace :3000 | runtime :3002 | login :3003 | docs :3004"
 echo "    studio :3005 | super-admin :3006 | registry :3008 | jobs :3010"
-echo "    (code-review :3007 is internal, used by jobs)"
+echo "    funnel :3007 | code-review :3009 (internal, used by jobs) | connectors :3011"
 bunx turbo run dev --env-mode=loose &
 PID_DEV=$!
 

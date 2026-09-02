@@ -44,8 +44,8 @@ WorkingDir=/workspace
 # listen on their repo-defined ports inside the container.
 #   3200 marketplace | 3202 runtime  | 3203 login   | 3204 docs
 #   3205 studio      | 3206 super-admin | 3208 registry | 3210 jobs
-# code-review (3007) is NOT published — it is reached by `jobs` over the shared
-# container loopback at http://localhost:3007 (see CODE_REVIEW_SVC_URL below),
+# code-review (3009) is NOT published — it is reached by `jobs` over the shared
+# container loopback at http://localhost:3009 (see CODE_REVIEW_SVC_URL below),
 # mirroring how docker-compose.local.yml keeps it internal.
 PublishPort=3200:3000
 PublishPort=3202:3002
@@ -83,7 +83,7 @@ Environment=BUILDSPACE_INTERNAL_R2_BUCKET=buildspace-internal
 Environment=NEXT_TELEMETRY_DISABLED=1
 Environment=CODE_REVIEW_GITHUB_TOKEN=local-dev-placeholder-token
 Environment=CODE_REVIEW_SVC_TOKEN=local-dev-code-review-token
-Environment=CODE_REVIEW_SVC_URL=http://localhost:3007
+Environment=CODE_REVIEW_SVC_URL=http://localhost:3009
 # runtime constructs `new ResendProvider(process.env.RESEND_API_KEY ?? "")`
 # unconditionally at boot; the Resend SDK throws "Missing API key" on a falsy
 # value. A non-empty placeholder satisfies the constructor — only real email
