@@ -66,6 +66,11 @@ dst = ".config/oh-my-posh.json"
 [[files]]
 dst = ".config/environment.d/10-bubblebox.conf"
 
+# niri-caelestia-shell color-script venv pointer (see the file header for
+# how the venv is built/maintained)
+[[files]]
+dst = ".config/environment.d/caelestia.conf"
+
 [[files]]
 dst = ".config/niri/config.kdl"
 
