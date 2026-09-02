@@ -111,8 +111,12 @@ for i = 1, 9 do
 end
 
 -- ---- window cycling: Alt+Tab (Caelestia upstream default) ================
-hl.bind("ALT + TAB", hl.dsp.window.cycle_next(), { repeating = true })
-hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }), { repeating = true })
+-- NOTE: plain bind (NOT {repeating=true}): with repeating, 0.56 Lua binds
+-- register as binde and don't fire on the initial keypress — Alt+Tab was
+-- dead until this was changed. Hold-TAB-to-cycle still works via repeat
+-- events reaching the same bind.
+hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
+hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
 
 -- ---- resize (niri: Mod+Minus/Equal width, +Shift height) --------------------
 -- Caelestia upstream resize helper: percentage of the window's own size.
@@ -153,6 +157,10 @@ hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("vicinae toggle"))
 -- ---- monitors: focus Mod+Shift+{arrows}, move +Ctrl ======================
 -- Deliberate split from upstream (which uses SUPER+SHIFT+dir for window
 -- moves): ARROWS = monitors, VIM KEYS = windows, at every modifier level.
+-- NOTE: monitor-move directions that don't exist in the current layout
+-- (e.g. "left" when monitors are stacked vertically) error at dispatch
+-- time — hence NO vim-key aliases here; arrows only, so the error surface
+-- matches the physical desk.
 hl.bind(mainMod .. " + SHIFT + Left",  hl.dsp.focus({ monitor = "left" }))
 hl.bind(mainMod .. " + SHIFT + Right", hl.dsp.focus({ monitor = "right" }))
 hl.bind(mainMod .. " + SHIFT + Up",    hl.dsp.focus({ monitor = "up" }))
@@ -161,8 +169,6 @@ hl.bind(mainMod .. " + SHIFT + CTRL + Left",  hl.dsp.window.move({ monitor = "le
 hl.bind(mainMod .. " + SHIFT + CTRL + Right", hl.dsp.window.move({ monitor = "right" }))
 hl.bind(mainMod .. " + SHIFT + CTRL + Up",    hl.dsp.window.move({ monitor = "up" }))
 hl.bind(mainMod .. " + SHIFT + CTRL + Down",  hl.dsp.window.move({ monitor = "down" }))
-hl.bind(mainMod .. " + SHIFT + CTRL + H",     hl.dsp.window.move({ monitor = "left" }))
-hl.bind(mainMod .. " + SHIFT + CTRL + L",     hl.dsp.window.move({ monitor = "right" }))
 
 -- ---- lock (niri Super+Alt+L) -> caelestia lock ------------------------------
 hl.bind(mainMod .. " + ALT + L", hl.dsp.global("caelestia:lock"))
