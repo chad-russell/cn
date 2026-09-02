@@ -79,36 +79,40 @@ hl.bind(mainMod .. " + L",     focus("right"))
 hl.bind(mainMod .. " + K",     focus("up"))
 hl.bind(mainMod .. " + J",     focus("down"))
 
--- ---- move window within layout (niri: Mod+Ctrl+Left/Right, Ctrl+H/L) ------
+-- ---- move window within layout: Mod+Shift+{h,j,k,l} ======================
+-- Upstream Caelestia scheme (SUPER+SHIFT+dir). Arrows are NOT bound here —
+-- Mod+Shift+arrows is monitor focus (see below); vim keys move windows.
 local function moveWin(dir)
     return hl.dsp.window.move({ direction = dir })
 end
-hl.bind(mainMod .. " + CTRL + Left",  moveWin("left"))
-hl.bind(mainMod .. " + CTRL + Right", moveWin("right"))
-hl.bind(mainMod .. " + CTRL + H",     moveWin("left"))
-hl.bind(mainMod .. " + CTRL + L",     moveWin("right"))
--- niri: Mod+Ctrl+Up/Down + Ctrl+J/K = move window to prev/next workspace
-hl.bind(mainMod .. " + CTRL + Up",   hl.dsp.window.move({ workspace = "e-1" }))
-hl.bind(mainMod .. " + CTRL + Down", hl.dsp.window.move({ workspace = "e+1" }))
-hl.bind(mainMod .. " + CTRL + K",    hl.dsp.window.move({ workspace = "e-1" }))
-hl.bind(mainMod .. " + CTRL + J",    hl.dsp.window.move({ workspace = "e+1" }))
+hl.bind(mainMod .. " + SHIFT + H", moveWin("left"))
+hl.bind(mainMod .. " + SHIFT + L", moveWin("right"))
+hl.bind(mainMod .. " + SHIFT + K", moveWin("up"))
+hl.bind(mainMod .. " + SHIFT + J", moveWin("down"))
 
--- ---- workspace nav (niri: Mod+Shift+J/K) ---------------------------------
--- e±1 = existing-relative per-monitor strip (wraps, never creates, never
--- crosses monitors — the niri-semantics equivalent on Hyprland; verified
--- live: +1/-1 are GLOBAL workspace numbers and cross monitors, m±1 stall
--- at strip ends).
-hl.bind(mainMod .. " + SHIFT + J", hl.dsp.focus({ workspace = "e+1" }))
-hl.bind(mainMod .. " + SHIFT + K", hl.dsp.focus({ workspace = "e-1" }))
-hl.bind(mainMod .. " + CTRL + J", hl.dsp.window.move({ workspace = "e+1" }))
-hl.bind(mainMod .. " + CTRL + K", hl.dsp.window.move({ workspace = "e-1" }))
--- Alt+Tab window cycling — Caelestia upstream default, currently unbound here
+-- ---- workspaces: walk the sequence Mod+Ctrl+{Left,Right,H,L} =============
+-- Upstream CTRL+SUPER+arrows (+1/-1: global workspace sequence — matches
+-- the horizontal slide animation; stepping past the end creates the next
+-- workspace on the focused monitor).
+hl.bind(mainMod .. " + CTRL + Right", hl.dsp.focus({ workspace = "+1" }))
+hl.bind(mainMod .. " + CTRL + Left",  hl.dsp.focus({ workspace = "-1" }))
+hl.bind(mainMod .. " + CTRL + L",      hl.dsp.focus({ workspace = "+1" }))
+hl.bind(mainMod .. " + CTRL + H",      hl.dsp.focus({ workspace = "-1" }))
+
+-- ---- move window between workspaces ======================================
+-- prev/next: Mod+Ctrl+Shift+{Left,Right} (upstream CTRL+SUPER+SHIFT+dirs)
+hl.bind(mainMod .. " + CTRL + SHIFT + Right", hl.dsp.window.move({ workspace = "+1" }))
+hl.bind(mainMod .. " + CTRL + SHIFT + Left",  hl.dsp.window.move({ workspace = "-1" }))
+-- to workspace N: Mod+Alt+{1..9} (upstream kbMoveWinToWs = SUPER+ALT+num)
+-- go to workspace N: Mod+{1..9}   (upstream kbGoToWs = SUPER+num)
+for i = 1, 9 do
+    hl.bind(mainMod .. " + ALT + " .. i, hl.dsp.window.move({ workspace = i }))
+    hl.bind(mainMod .. " + " .. i,       hl.dsp.focus({ workspace = i }))
+end
+
+-- ---- window cycling: Alt+Tab (Caelestia upstream default) ================
 hl.bind("ALT + TAB", hl.dsp.window.cycle_next(), { repeating = true })
 hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }), { repeating = true })
--- numeric workspaces too (additive; niri has none)
-for i = 1, 9 do
-    hl.bind(mainMod .. " + " .. i, hl.dsp.focus({ workspace = i }))
-end
 
 -- ---- resize (niri: Mod+Minus/Equal width, +Shift height) --------------------
 -- Caelestia upstream resize helper: percentage of the window's own size.
@@ -146,13 +150,13 @@ hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("slurp -d | grim -g - - | satty -f -"
 hl.bind(mainMod .. " + O", hl.dsp.exec_cmd("caelestia toggle dashboard"))
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("vicinae toggle"))
 
--- ---- monitors: focus (niri Mod+Shift+arrows/H/L), move (+Ctrl) --------------
+-- ---- monitors: focus Mod+Shift+{arrows}, move +Ctrl ======================
+-- Deliberate split from upstream (which uses SUPER+SHIFT+dir for window
+-- moves): ARROWS = monitors, VIM KEYS = windows, at every modifier level.
 hl.bind(mainMod .. " + SHIFT + Left",  hl.dsp.focus({ monitor = "left" }))
 hl.bind(mainMod .. " + SHIFT + Right", hl.dsp.focus({ monitor = "right" }))
 hl.bind(mainMod .. " + SHIFT + Up",    hl.dsp.focus({ monitor = "up" }))
 hl.bind(mainMod .. " + SHIFT + Down",  hl.dsp.focus({ monitor = "down" }))
-hl.bind(mainMod .. " + SHIFT + H",     hl.dsp.focus({ monitor = "left" }))
-hl.bind(mainMod .. " + SHIFT + L",     hl.dsp.focus({ monitor = "right" }))
 hl.bind(mainMod .. " + SHIFT + CTRL + Left",  hl.dsp.window.move({ monitor = "left" }))
 hl.bind(mainMod .. " + SHIFT + CTRL + Right", hl.dsp.window.move({ monitor = "right" }))
 hl.bind(mainMod .. " + SHIFT + CTRL + Up",    hl.dsp.window.move({ monitor = "up" }))
