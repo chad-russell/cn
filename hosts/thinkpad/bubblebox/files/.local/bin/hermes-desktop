@@ -52,4 +52,12 @@ if [ -z "$bin" ]; then
   exit 1
 fi
 
+# Wayland-native Electron: without these the app falls back to XWayland and,
+# on fractionally-scaled outputs (Samsungs @ 1.25), gets bitmap-stretched —
+# pixellated fonts/icons. Native Wayland renders at the monitor's scale.
+# Set HERMES_DESKTOP_X11=1 to temporarily force the old behaviour.
+if [ -z "${HERMES_DESKTOP_X11:-}" ]; then
+  set -- "$@" --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations
+fi
+
 exec "$bin" "$@"
