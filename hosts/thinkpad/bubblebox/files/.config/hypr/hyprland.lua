@@ -27,6 +27,14 @@ hl.monitor({ output = "desc:Dell Inc. DELL P3225QE 5KCK784", mode = "3840x2160@5
 -- Cursor: set BOTH variable families. Hyprland renders its own cursor via
 -- hyprcursor; leaving HYPRCURSOR_* unset makes it fall back to a default
 -- theme/size and then multiply by monitor scale (the "too big cursor").
+-- Rounded window corners (matches the shell border rounding so window and
+-- shell overlay geometry agree). Officially supported decoration:rounding.
+hl.config({
+    decoration = {
+        rounding = 16,
+    },
+})
+
 hl.env("XCURSOR_THEME", "Bibata-Modern-Ice")
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_THEME", "Bibata-Modern-Ice")
