@@ -116,3 +116,11 @@ dst = ".local/share/applications/hermes.desktop"
 [[units]]
 name = "vicinae"
 enable = true
+
+# The niri-caelestia-shell fork, as a systemd user unit (replaces the old
+# `spawn-at-startup "qs" ...` line in niri config.kdl): enabled via
+# niri.service.wants so it only runs under niri, and Restart=on-failure
+# turns a startup-race crash into a 1s blip. See the unit header.
+[[units]]
+name = "caelestia-shell"
+enable = true

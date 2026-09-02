@@ -9,11 +9,13 @@
 //     silently fail to find the binaries.
 //   - `xwayland-satellite`, `ptyxis`, `nautilus`, `flatpak`, `qs` are host
 //     packages (/usr/bin), always on PATH.
-//   - The desktop shell is our niri-caelestia-shell fork (image-installed,
-//     launched via `qs -c niri-caelestia-shell`; see Containerfile step 2.5).
-//     It provides bar, launcher (Mod+Space via vicinae remains as a fallback),
-//     notifications, lock, clipboard, quick toggles, and dashboard. Its `ipc
-//     call` verbs are invoked with `spawn-sh` (shell string, qs on PATH).
+//   - The desktop shell is our niri-caelestia-shell fork, started by the
+//     caelestia-shell.service user unit (enabled via niri.service.wants —
+//     see bubblebox/units/caelestia-shell.service; Restart=on-failure so a
+//     crash is a blip, not a dead shell). It provides bar, launcher,
+//     notifications, lock, clipboard, quick toggles, and dashboard. Its
+//     `ipc call` verbs are invoked with `spawn-sh` (shell string, qs on
+//     PATH).
 //   - vicinae stays as a systemd user service (vicinae.service, bound to
 //     graphical-session.target) — it's the fallback launcher if the fork is
 //     ever down.
@@ -81,8 +83,8 @@ layout {
 }
 
 spawn-at-startup "xwayland-satellite"
-spawn-at-startup "qs" "-c" "niri-caelestia-shell"
 spawn-at-startup "bash" "-c" "wl-paste --watch cliphist store"
+// (the shell itself is caelestia-shell.service, not spawn-at-startup)
 
 prefer-no-csd
 
