@@ -18,15 +18,18 @@
 #   validates the Host header authority, so dsh must be told to trust
 #   `dsh.internal.crussell.io` via --trusted-host.
 #
-# Model backends (mirrors the Hermes model set in
-# hosts/bee/configuration.nix):
-#   bees-llamacpp  local Qwen3.8-27B on bees over Nebula (default)
-#   gloo           employer-paid platform, WORK ONLY — hand-declared
-#                  catalog (the platform 403s /models), no compat
-#                  overrides: developer role + max_completion_tokens
-#                  + tool calls all verified accepted 2026-08-25
-#   openrouter     catalog route — inherits pi-ai's full OpenRouter
-#                  model catalog; personal fallback provider
+#   Model backends (mirrors the Hermes model set in
+#   hosts/bee/configuration.nix):
+#     zai-coding       Z.AI coding plan, glm-5.3 — PERSONAL default
+#                      (same subscription Hermes runs on; key from
+#                      secrets/zai-api-key.age via ZHIPU_API_KEY)
+#     bees-llamacpp    local Qwen3.8-27B on bees over Nebula
+#     gloo             employer-paid platform, WORK ONLY — hand-declared
+#                      catalog (the platform 403s /models), no compat
+#                      overrides: developer role + max_completion_tokens
+#                      + tool calls all verified accepted 2026-08-25
+#     openrouter       catalog route — inherits pi-ai's full OpenRouter
+#                      model catalog; personal fallback provider
 #
 # Settings lifecycle: DSH_HOME=/var/lib/dsh is seeded ONCE with
 # settings.yaml (providers + default model). Thereafter the file belongs
@@ -198,6 +201,28 @@ let
             input = [ "text" "image" ];
           }];
         };
+        # Hand-declared Z.AI coding-plan route (pi-ai ships a z-ai.json
+        # but not a coding-endpoint one; pi-ai's z-ai also keys off
+        # ZAI_API_KEY/GLM_API_KEY env names, not ZHIPU_API_KEY). Endpoint
+        # compat verified 2026-09-02 against the live API: developer role,
+        # max_completion_tokens, and OpenAI tools all accepted → default
+        # OpenAI shaping, NO compat overrides. Quirk: the endpoint
+        # rejects system/developer-ONLY message lists with error 1214 —
+        # harmless for pi-ai, which always sends a user message.
+        zai-coding = {
+          displayName = "Z.AI coding plan (personal)";
+          api = "openai-completions";
+          baseURL = "https://api.z.ai/api/coding/paas/v4";
+          apiKeyEnv = "ZHIPU_API_KEY";
+          # Sizing: glm-5.2's row in pi-ai's pinned OpenRouter catalog
+          # (1048576/131072) — glm-5.3 isn't in the pinned catalog yet;
+          # same-series values, advisory not hard caps.
+          models = [
+            { id = "glm-5.3"; contextWindow = 1048576; maxTokens = 131072; }
+            { id = "glm-5.3-flash"; contextWindow = 1048576; maxTokens = 131072; }
+            { id = "glm-5-turbo"; contextWindow = 202752; maxTokens = 131072; }
+          ];
+        };
         # Hand-declared Gloo route (pi-ai ships nothing under "gloo").
         # No compat overrides: the platform accepts the developer role,
         # max_completion_tokens, and tool calls (verified 2026-08-25).
@@ -218,8 +243,8 @@ let
       };
     };
     agent-default-model = {
-      provider = "bees-llamacpp";
-      model = llamaModel;
+      provider = "zai-coding";
+      model = "glm-5.3";
     };
   };
 
@@ -239,10 +264,11 @@ in {
     # dsh's local sandbox probes PATH for bwrap at tool-run time.
     environment.systemPackages = [ cfg.package pkgs.bubblewrap ];
 
-    # Provider credentials (same .age files opencode.nix uses; equal
-    # definitions from both modules merge cleanly). gloo-api-key's
-    # first NixOS consumer is here; login shells read the same value
-    # via the server-shell zshenv pattern.
+    # Provider credentials (same .age files the login-shell zshenv
+    # pattern exports; equal definitions across modules merge cleanly).
+    # zai-api-key was first consumed by modules/opencode.nix (retired
+    # 2026-09-02); dsh now owns it alongside server-shell.
+    age.secrets.zai-api-key.file = ../secrets/zai-api-key.age;
     age.secrets.gloo-api-key.file = ../secrets/gloo-api-key.age;
     age.secrets.openrouter-api-key.file = ../secrets/openrouter-api-key.age;
 
@@ -280,11 +306,12 @@ in {
         ExecStart = "${cfg.package}/bin/dsh web --port ${
             toString port
           } --no-open --trusted-host ${hostname}";
-        # GLOO_API_KEY (gloo route) + OPENROUTER_API_KEY (openrouter
-        # route), resolved per request via the settings.yaml apiKeyEnv
-        # references. Same .age sources as the zshenv login-shell
-        # pattern (modules/server-shell.nix).
+        # ZHIPU_API_KEY (zai-coding route) + GLOO_API_KEY (gloo route) +
+        # OPENROUTER_API_KEY (openrouter route), resolved per request via
+        # the settings.yaml apiKeyEnv references. Same .age sources as the
+        # zshenv login-shell pattern (modules/server-shell.nix).
         EnvironmentFile = [
+          config.age.secrets.zai-api-key.path
           config.age.secrets.gloo-api-key.path
           config.age.secrets.openrouter-api-key.path
         ];

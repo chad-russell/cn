@@ -42,7 +42,7 @@ let
         fi
       fi
       # Cache holds plain KEY=... lines; set -a exports them (children like
-      # opencode/hermes need them in the environment). Thinkpad pattern.
+      # dsh/hermes need them in the environment). Thinkpad pattern.
       if [ -f "$_cache" ]; then
         set -a
         . "$_cache"
@@ -172,7 +172,7 @@ in {
   users.users.crussell.shell = pkgs.zsh;
 
   # Decrypt age secrets (ZHIPU/OPENROUTER/GLOO API keys) into every login
-  # shell, so interactive opencode/hermes/CLI sessions inherit them.
+  # shell, so interactive dsh/hermes/CLI sessions inherit them.
   # Mirrors hosts/thinkpad/bubblebox/files/.zshenv — see the pattern docs
   # there (tmpfs-cached, once per login, non-fatal when absent).
   environment.etc."zshenv".text = ''

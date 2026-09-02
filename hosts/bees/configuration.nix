@@ -13,7 +13,6 @@
     ../../modules/freshness-checks.nix
     ./disk-config.nix
     ../../modules/nebula-client.nix
-    ../../modules/opencode.nix
     ./media-services.nix
     ./immich.nix
     ./immich-backup.nix
@@ -130,9 +129,8 @@
 
   # ── Nebula ──────────────────────────────────────────────────────
   # (homelab client defaults + enable live in modules/nebula-client.nix)
-
-  # ── opencode AI coding agent ────────────────────────────────────
-  # (enable + web defaults live in modules/opencode.nix)
+  # (opencode retired 2026-09-02 — work coding goes through hermes'
+  #  direct gloo provider or the codex CLI on bee; see AGENTS.md.)
 
   # ── Firewall: disabled (router handles it) ───────────────────────
   networking.firewall.enable = false;

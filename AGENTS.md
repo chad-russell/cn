@@ -81,7 +81,7 @@ Last validated via SSH: **2026-08-10**.
 │   ├── server-home.nix        # Home-manager config for crussell on all servers
 │   ├── nebula-client.nix      # Shared Nebula client defaults (used by servers)
 │   ├── nebula-hosts.nix       # /etc/hosts entries for Nebula overlay names (generated from lib/host-meta.nix)
-│   ├── opencode.nix           # opencode CLI + web service (default-on for importers)
+│   ├── dsh.nix                # DeepSeek Harness (dsh) web UI on bee
 │   ├── beszel-agent.nix       # Beszel agent (default-on for importers)
 │   ├── restic-backup.nix      # Shared restic backup job builder
 │   ├── btrfs-snapshots.nix    # Btrfs snapshot management
@@ -150,7 +150,7 @@ Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
-| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), self-hosted Buzz relay, Hermes Agent gateway, opencode web, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
+| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), self-hosted Buzz relay, Hermes Agent gateway, dsh web UI, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
 | `think`          | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Resolves Nebula overlay names via baked `/usr/etc/hosts` (Containerfile step 3.7). Not a NixOS deploy target. |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 25.11 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
@@ -371,7 +371,7 @@ Running services:
 - `buzz-relay-pod.service` — self-hosted Buzz relay (podman pod: relay, postgres, redis, minio, pair-relay)
 - Dev stacks (`dev-quadlets/`) — gpl, polymer, buildspace (podman quadlets, reached via SSH tunnels; see `hosts/bee/dev-quadlets/README.md` and `cjust dev-tunnel`)
 - Restic backup (daily S3 backup via `hosts/bee/backup.nix`)
-- `opencode-web.service` — opencode web interface on port `4096`
+- `dsh-web.service` — DeepSeek Harness web UI (`modules/dsh.nix`): loopback `:3080` → `dsh-web-proxy` socket on Nebula `10.10.0.12:3080` → bees Caddy `https://dsh.internal.crussell.io`. Default model `zai-coding/glm-5.3` (personal coding plan; replaces opencode, retired 2026-09-02). `codex` CLI also installed for work-lane delegation.
 - Beszel agent (default-on via `modules/beszel-agent.nix`)
 
 bee is podman-only (no Docker daemon). Deploy with `nix run .#deploy -- bee`

@@ -46,7 +46,6 @@ in {
     ../../modules/freshness-checks.nix
     ./disk-config.nix
     ../../modules/nebula-client.nix
-    ../../modules/opencode.nix
     ../../modules/dsh.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
@@ -295,13 +294,9 @@ in {
   users.groups.hermes = { };
   users.users.crussell.extraGroups = [ "hermes" ];
 
-  # ── opencode AI coding agent ────────────────────────────────────
-  # (enable + web defaults live in modules/opencode.nix)
-  # Managed config: pins glm-5.3 default + provider whitelist — bee is
-  # the personal coding host. bees keeps its hand-managed work config.
-  services.opencode.manageConfig = true;
-
   # ── Age secrets ─────────────────────────────────────────────────
+  # (opencode retired 2026-09-02: personal coding → hermes delegate_task
+  #  + dsh web UI, both on zai-coding/glm-5.3. See modules/dsh.nix.)
   age.secrets.hermes-bee-env.file = ../../secrets/hermes-bee-env.age;
 
   # ── Qdrant: vector store for Hermes' mem0 memory backend ─────────
