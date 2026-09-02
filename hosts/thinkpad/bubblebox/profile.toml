@@ -73,6 +73,10 @@ dst = ".config/niri/config.kdl"
 [[files]]
 dst = ".config/hypr/hyprland.lua"
 
+# satty (screenshot editor) theme/config — see Mod+P bind in hyprland.lua
+[[files]]
+dst = ".config/satty/config.toml"
+
 [[files]]
 dst = ".config/ghostty/config"
 
