@@ -769,6 +769,25 @@ in {
     environment = {
       HERMES_HOME = "/var/lib/hermes/.hermes";
       HOME = "/home/crussell";
+      # Hermes resolves its terminal-tool shell with `which bash`, falling
+      # back to $SHELL (zsh here) when bash is absent from PATH. systemd's
+      # default unit PATH has no bash (and NixOS has no /bin/bash), so every
+      # desktop-session terminal command silently ran under zsh — off-spec
+      # for Hermes' bash-engineered wrapper (zsh EQUALS-expansion turns
+      # `echo ===` into "== not found" and aborts the rest of the command;
+      # unmatched globs error instead of passing through). The upstream
+      # hermes-agent module's gateway unit already carries bashInteractive
+      # in PATH; this unit is hand-rolled and was missing it. mkForce because
+      # NixOS's systemd module defines a default PATH for every unit.
+      #
+      # SHELL: hermes' PTY/background spawn path (_find_shell) prefers
+      # $SHELL over bash by design, so without this, interactive PTY
+      # commands would still run under zsh while foreground ones ran bash.
+      # Pointing SHELL at the same bash makes both lanes bash-native —
+      # this only affects hermes-serve's subprocesses, never a login shell.
+      PATH = lib.mkForce
+        "/run/wrappers/bin:${pkgs.bashInteractive}/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
+      SHELL = "${pkgs.bashInteractive}/bin/bash";
     };
     serviceConfig = {
       Type = "simple";
