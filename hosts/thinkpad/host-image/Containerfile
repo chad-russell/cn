@@ -63,8 +63,10 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 #
 # Hyprland + Caelestia-shell were REMOVED 2026-09-02 (trial concluded; the
 # keeper is niri + our own fork of niri-caelestia-shell, see below). satty,
-# dart-sass, and the mineiro/hyprland + peterwu/rendezvous COPRs were
-# Hyprland-trial baggage and leave with it.
+# dart-sass, and the mineiro/hyprland COPR were Hyprland-trial baggage and
+# leave with it. peterwu/rendezvous stays: it only ever supplied
+# bibata-cursor-themes, which the cursor setup (niri xcursor-theme + user
+# gsettings) still uses.
 #
 # The shell stack for niri (fork: github.com/chad-russell/niri-caelestia-shell,
 # our maintenance fork of AyushKr2003's archived port of Caelestia to niri):
@@ -87,8 +89,14 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 #   ydotool/wtype (virtual input), translate-shell, cava (CLI visualizer),
 #   libqalculate + qalculate (launcher calc mode), pavucontrol, lm_sensors,
 #   geoclue2 (weather location), fish (launcher calc mode), jq/bc/rsync/
-#   xdg-user-dirs/xdg-utils (shell scripts), networkmanager-applet (tray
-#   NM state). Portals: the niri-friendly set (gnome screen-share + gtk).
+#   xdg-user-dirs/xdg-utils (shell scripts), nm-connection-editor (tray NM
+#   state). Portals: the niri-friendly set (gnome screen-share + gtk).
+#
+# NO dolphin/system-settings: their weak-dep chain pulls in the entire Plasma
+# workspace (plasma.desktop session included). nautilus (GNOME base) is the
+# file manager; the fork's file-manager config default just points at a
+# binary — nautilus covers it. install_weak_deps=False keeps other recommends
+# (fonts, extra modules) from ballooning the image the same way.
 #
 # COSMIC soft-removed 2026-09-01: not in active use; revisit in a few months
 # to check epoch progress. To restore, un-comment the cosmic lines below and
@@ -103,7 +111,9 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     && dnf5 -y copr enable gmanka/caelestia \
     && dnf5 -y copr enable celestelove/libcava \
     && dnf5 -y copr enable celestelove/app2unit \
-    && dnf5 -y install niri xwayland-satellite bibata-cursor-themes \
+    && dnf5 -y copr enable peterwu/rendezvous \
+    && dnf5 -y --setopt=install_weak_deps=False install \
+                       niri xwayland-satellite bibata-cursor-themes \
                        quickshell app2unit libcava libcava-devel \
                        material-symbols-fonts cascadia-code-nerd-fonts \
                        python3-materialyoucolor matugen \
@@ -113,11 +123,11 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        tesseract tesseract-langpack-eng wf-recorder \
                        ydotool wtype translate-shell cava \
                        libqalculate qalculate pavucontrol lm_sensors \
-                       geoclue2 system-settings dolphin \
+                       geoclue2 \
                        xdg-desktop-portal-gnome xdg-desktop-portal-gtk \
                        fish jq bc curl wget ripgrep rsync \
                        xdg-user-dirs xdg-utils libnotify brightnessctl \
-                       ddcutil playerctl upower networkmanager-applet \
+                       ddcutil playerctl upower nm-connection-editor \
                        breeze-icon-theme
     # && dnf5 -y install cosmic-desktop
 
@@ -127,30 +137,46 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # providers) + `caelestia` version helper. We build it from OUR fork
 # (chad-russell/niri-caelestia-shell — maintenance fork of AyushKr2003's
 # archived niri port of Caelestia) at a pinned commit, same model as a
-# distro package: system-wide install to /usr (/usr/lib/qt6/qml/Caelestia,
-# /usr/lib/caelestia, /etc/xdg/quickshell/caelestia), no user-clone needed
-# to run it. Iterating on the shell happens in a user clone that overrides
-# via qs -c / XDG paths; the image copy is the stable baseline.
+# distro package: system-wide install (plugin → /usr/lib/qt6/qml/Caelestia,
+# helper → /usr/lib/caelestia, shell QML → /etc/xdg/quickshell/
+# niri-caelestia-shell), no user-clone needed to run it. Iterating on the
+# shell happens in a user clone at ~/.config/quickshell/niri-caelestia-shell
+# (same config name shadows the system copy — that's the Quickshell lookup
+# order); the image copy is the stable baseline.
 #
 # Pin is deliberate: bump on purpose, not by drift. Rebuilds are cached
 # by the dnf layer below this one; this layer recompiles only when the pin
 # moves (~2-3 min). The toolchain + *-devel packages stay in the image on
 # purpose: this is the machine we iterate on the shell from, so building
 # the C++ plugin on-host is a feature, not bloat.
-ADD https://github.com/chad-russell/niri-caelestia-shell/archive/68c02988d7aa64af9c17fb375dd1a394da1223c8.tar.gz /tmp/ncs.tar.gz
+#
+# NOTE on prefixes: upstream's CMake install dirs are RELATIVE ("usr/lib/...,
+# etc/xdg/..."), so the prefix MUST be "/" (their README's invocation) —
+# CMAKE_INSTALL_PREFIX=/usr yields /usr/usr/... and /usr/etc/..., the latter
+# failing `bootc container lint` (etc-usretc). Two more overrides, both
+# required on Fedora (upstream defaults are Arch-flavored):
+#   - INSTALL_QMLDIR must be /usr/lib64/qt6/qml (Fedora's Qt6 QML2_IMPORT_DIR;
+#     the default usr/lib/qt6/qml is Arch's layout — landed there on first
+#     build attempt and `import Caelestia` would fail at runtime).
+#   - INSTALL_QSCONFDIR is the fork's canonical config name so `qs -c
+#     niri-caelestia-shell` (spawn line in niri config.kdl + ipc binds)
+#     resolves against this install.
+ADD https://github.com/chad-russell/niri-caelestia-shell/archive/bf2620b936dc9e6741d7874475723776dc6f3ada.tar.gz /tmp/ncs.tar.gz
 RUN tar -xzf /tmp/ncs.tar.gz -C /tmp \
     && dnf5 -y install cmake ninja-build gcc-c++ \
                        qt6-qtbase-devel qt6-qtdeclarative-devel \
                        qt6-qt5compat-devel qt6-qtmultimedia-devel \
                        fftw-devel libqalculate-devel pipewire-devel \
                        aubio-devel \
-    && cmake -S /tmp/niri-caelestia-shell-68c02988d7aa64af9c17fb375dd1a394da1223c8 \
+    && cmake -S /tmp/niri-caelestia-shell-bf2620b936dc9e6741d7874475723776dc6f3ada \
            -B /tmp/ncs-build \
-           -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+           -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ \
+           -DINSTALL_QMLDIR=usr/lib64/qt6/qml \
+           -DINSTALL_QSCONFDIR=etc/xdg/quickshell/niri-caelestia-shell \
            -DDISTRIBUTOR="cn image build" \
     && cmake --build /tmp/ncs-build \
     && cmake --install /tmp/ncs-build \
-    && rm -rf /tmp/ncs.tar.gz /tmp/niri-caelestia-shell-68c02988d7aa64af9c17fb375dd1a394da1223c8 /tmp/ncs-build
+    && rm -rf /tmp/ncs.tar.gz /tmp/niri-caelestia-shell-bf2620b936dc9e6741d7874475723776dc6f3ada /tmp/ncs-build
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/

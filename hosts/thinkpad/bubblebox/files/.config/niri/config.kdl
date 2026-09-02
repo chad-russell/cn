@@ -182,9 +182,9 @@ binds {
     Mod+Space { spawn "vicinae" "toggle"; }
 
     // niri-caelestia-shell fork IPC (qs on PATH from the image)
+    // (Mod+L stays focus-column-right; lock is Super+Alt+L below)
     Mod+D { spawn-sh "qs -c niri-caelestia-shell ipc call drawers toggle dashboard"; }
     Mod+I { spawn-sh "qs -c niri-caelestia-shell ipc call controlCenter open"; }
-    Mod+L { spawn-sh "qs -c niri-caelestia-shell ipc call lock lock"; }
     Mod+N { spawn-sh "qs -c niri-caelestia-shell ipc call quicktoggles toggle"; }
     Mod+Shift+S { spawn-sh "qs -c niri-caelestia-shell ipc call picker openFreeze"; }
     Mod+Shift+X { spawn-sh "qs -c niri-caelestia-shell ipc call picker regionOcr"; }

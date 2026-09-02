@@ -115,11 +115,11 @@ fi
 # whose shell is missing at next login.
 echo "==> verifying niri-caelestia-shell artifacts in the built image"
 for artifact in \
-  "${VERIFY_MNT}/usr/lib/qt6/qml/Caelestia/qmldir" \
-  "${VERIFY_MNT}/usr/lib/qt6/qml/Caelestia/Internal/qmldir" \
-  "${VERIFY_MNT}/usr/lib/qt6/qml/Caelestia/Services/qmldir" \
+  "${VERIFY_MNT}/usr/lib64/qt6/qml/Caelestia/qmldir" \
+  "${VERIFY_MNT}/usr/lib64/qt6/qml/Caelestia/Internal/qmldir" \
+  "${VERIFY_MNT}/usr/lib64/qt6/qml/Caelestia/Services/qmldir" \
   "${VERIFY_MNT}/usr/lib/caelestia/version" \
-  "${VERIFY_MNT}/etc/xdg/quickshell/caelestia/shell.qml"
+  "${VERIFY_MNT}/etc/xdg/quickshell/niri-caelestia-shell/shell.qml"
 do
   if [ ! -f "${artifact}" ]; then
     echo "ERROR: ${artifact} missing from ${IMAGE}" >&2
