@@ -66,11 +66,12 @@ dst = ".config/environment.d/10-bubblebox.conf"
 [[files]]
 dst = ".config/niri/config.kdl"
 
-# Hyprland config for the Caelestia-shell trial (2026-09-01). Minimal by
-# design — see the file header. Drop this entry + the file if the trial is
-# retired without graduating to the full caelestia dots.
+# Hyprland config for the Caelestia-shell trial (2026-09-01). Lua format —
+# hyprlang .conf is removed in Hyprland 0.57. See the file header for the
+# session-target bridge and niri-parity notes. Drop this entry + the file if
+# the trial is retired without graduating to the full caelestia dots.
 [[files]]
-dst = ".config/hypr/hyprland.conf"
+dst = ".config/hypr/hyprland.lua"
 
 [[files]]
 dst = ".config/ghostty/config"
@@ -123,3 +124,10 @@ enable = true
 [[units]]
 name = "vicinae"
 enable = true
+
+# Bridge target started by Hyprland at session start (see hyprland.lua) —
+# dependency-starts graphical-session.target, which Fedora's start-hyprland
+# wrapper doesn't do (niri/GNOME do it themselves). enable stays false:
+# systemd enable is wrong for a compositor-started target.
+[[units]]
+name = "hyprland-session.target"

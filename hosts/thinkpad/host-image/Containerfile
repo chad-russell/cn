@@ -78,8 +78,8 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     && dnf5 -y copr enable gmanka/caelestia \
     && dnf5 -y copr enable peterwu/rendezvous \
     && dnf5 -y install niri xwayland-satellite bibata-cursor-themes \
-                       hyprland xdg-desktop-portal-hyprland \
-                       caelestia-shell caelestia-cli
+                       hyprland xdg-desktop-portal-hyprland hyprland-guiutils \
+                       caelestia-shell caelestia-cli dart-sass
     # && dnf5 -y install cosmic-desktop
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
