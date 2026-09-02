@@ -13,10 +13,24 @@
 
 local mainMod = "SUPER"
 
-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
+-- ---- monitors: niri parity (niri config.kdl outputs{}) --------------------
+-- Home desk: laptop + two 4K Samsungs above (niri uses generic DP-3/DP-5
+-- names for them — same boot-order tradeoff there). Work desk Dells are
+-- matched by full description (distinct serials).
+-- NOTE: position uses the "XxY" string form ("−3648x−1728"), per the wiki.
+hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = 1 })
+hl.monitor({ output = "DP-3", mode = "3840x2160@60", position = "-3648x-1728", scale = 1.25 })
+hl.monitor({ output = "DP-5", mode = "3840x2160@60", position = "-576x-1728", scale = 1.25 })
+hl.monitor({ output = "desc:Dell Inc. DELL P3225QE 616K784", mode = "2560x1440@59.951", position = "320x-1440", scale = 1 })
+hl.monitor({ output = "desc:Dell Inc. DELL P3225QE 5KCK784", mode = "3840x2160@59.997", position = "-576x-1728", scale = 1.25 })
 
+-- Cursor: set BOTH variable families. Hyprland renders its own cursor via
+-- hyprcursor; leaving HYPRCURSOR_* unset makes it fall back to a default
+-- theme/size and then multiply by monitor scale (the "too big cursor").
 hl.env("XCURSOR_THEME", "Bibata-Modern-Ice")
 hl.env("XCURSOR_SIZE", "24")
+hl.env("HYPRCURSOR_THEME", "Bibata-Modern-Ice")
+hl.env("HYPRCURSOR_SIZE", "24")
 
 -- Match niri keyboard/touchpad behaviour:
 --   xkb options "caps:swapescape"; touchpad tap + natural-scroll +
@@ -44,7 +58,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("quickshell -c caelestia")
 end)
 
--- ---- focus (niri: Mod+arrows / HJKL) ------------------------------------
+-- ---- focus (niri: Mod+arrows / HJKL) --------------------------------------
 local function focus(dir)
     return hl.dsp.focus({ direction = dir })
 end
@@ -57,7 +71,7 @@ hl.bind(mainMod .. " + L",     focus("right"))
 hl.bind(mainMod .. " + K",     focus("up"))
 hl.bind(mainMod .. " + J",     focus("down"))
 
--- ---- move window within layout (niri: Mod+Ctrl+Left/Right, Ctrl+H/L) ----
+-- ---- move window within layout (niri: Mod+Ctrl+Left/Right, Ctrl+H/L) ------
 local function moveWin(dir)
     return hl.dsp.window.move({ direction = dir })
 end
@@ -71,7 +85,7 @@ hl.bind(mainMod .. " + CTRL + Down", hl.dsp.window.move({ workspace = "e+1" }))
 hl.bind(mainMod .. " + CTRL + K",    hl.dsp.window.move({ workspace = "e-1" }))
 hl.bind(mainMod .. " + CTRL + J",    hl.dsp.window.move({ workspace = "e+1" }))
 
--- ---- workspace nav (niri: Mod+Shift+J/K) ---------------------------------
+-- ---- workspace nav (niri: Mod+Shift+J/K) -----------------------------------
 hl.bind(mainMod .. " + SHIFT + J", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mainMod .. " + SHIFT + K", hl.dsp.focus({ workspace = "e-1" }))
 -- numeric workspaces too (additive; niri has none)
@@ -79,16 +93,26 @@ for i = 1, 9 do
     hl.bind(mainMod .. " + " .. i, hl.dsp.focus({ workspace = i }))
 end
 
--- ---- resize (niri: Mod+Minus/Equal width, +Shift height) ------------------
-local function resize(x, y)
-    return hl.dsp.window.resize({ x = x, y = y, relative = true })
+-- ---- resize (niri: Mod+Minus/Equal width, +Shift height) --------------------
+-- Caelestia upstream resize helper: percentage of the window's own size.
+local function resize(pct_x, pct_y)
+    return function()
+        local win = hl.get_active_window()
+        if win and win.size then
+            hl.dispatch(hl.dsp.window.resize({
+                x = win.size.x * (pct_x / 100),
+                y = win.size.y * (pct_y / 100),
+                relative = true,
+            }))
+        end
+    end
 end
-hl.bind(mainMod .. " + minus",       resize(-0.1, 0))
-hl.bind(mainMod .. " + equal",       resize(0.1, 0))
-hl.bind(mainMod .. " + SHIFT + minus", resize(0, -0.1))
-hl.bind(mainMod .. " + SHIFT + equal", resize(0, 0.1))
+hl.bind(mainMod .. " + minus",         resize(-10, 0))
+hl.bind(mainMod .. " + equal",         resize(10, 0))
+hl.bind(mainMod .. " + SHIFT + minus", resize(0, -10))
+hl.bind(mainMod .. " + SHIFT + equal", resize(0, 10))
 
--- ---- window actions (niri parity) ------------------------------------------
+-- ---- window actions (niri parity) -------------------------------------------
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + V", hl.dsp.window.float())
 hl.bind(mainMod .. " + X", hl.dsp.window.fullscreen({ mode = "maximized" }))
@@ -96,11 +120,11 @@ hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "fullscreen
 hl.bind(mainMod .. " + W", hl.dsp.group.toggle())
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("caelestia screenshot"))
 
--- ---- overview (niri Mod+O) / launcher (niri Mod+Space) ---------------------
+-- ---- overview (niri Mod+O) / launcher (niri Mod+Space) ----------------------
 hl.bind(mainMod .. " + O", hl.dsp.exec_cmd("caelestia toggle dashboard"))
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("vicinae toggle"))
 
--- ---- monitors: focus (niri Mod+Shift+arrows/H/L), move (+Ctrl) -------------
+-- ---- monitors: focus (niri Mod+Shift+arrows/H/L), move (+Ctrl) --------------
 hl.bind(mainMod .. " + SHIFT + Left",  hl.dsp.focus({ monitor = "left" }))
 hl.bind(mainMod .. " + SHIFT + Right", hl.dsp.focus({ monitor = "right" }))
 hl.bind(mainMod .. " + SHIFT + Up",    hl.dsp.focus({ monitor = "up" }))
@@ -114,21 +138,21 @@ hl.bind(mainMod .. " + SHIFT + CTRL + Down",  hl.dsp.window.move({ monitor = "do
 hl.bind(mainMod .. " + SHIFT + CTRL + H",     hl.dsp.window.move({ monitor = "left" }))
 hl.bind(mainMod .. " + SHIFT + CTRL + L",     hl.dsp.window.move({ monitor = "right" }))
 
--- ---- lock (niri: Super+Alt+L via noctalia) → caelestia lock ----------------
+-- ---- lock (niri Super+Alt+L) -> caelestia lock ------------------------------
 hl.bind(mainMod .. " + ALT + L", hl.dsp.global("caelestia:lock"))
 
--- ---- mouse: Mod+LMB drag move, Mod+RMB drag resize (stock hyprland) --------
+-- ---- mouse: Mod+LMB drag move, Mod+RMB drag resize (stock hyprland) ---------
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- ---- apps (niri parity) ------------------------------------------------------
+-- ---- apps (niri parity) -------------------------------------------------------
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd("ghostty"))
 hl.bind(mainMod .. " + T",      hl.dsp.exec_cmd("wezterm"))
 hl.bind(mainMod .. " + B",      hl.dsp.exec_cmd("flatpak run app.zen_browser.zen"))
 hl.bind(mainMod .. " + F",      hl.dsp.exec_cmd("nautilus --new-window"))
 hl.bind(mainMod .. " + M",      hl.dsp.exec_cmd("hyprctl dispatch 'hl.dsp.exit()'"))
 
--- ---- media keys (pipewire direct; caelestia panel also works) ---------------
+-- ---- media keys (pipewire direct; caelestia panel also works) ----------------
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true })
 hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     { locked = true })
