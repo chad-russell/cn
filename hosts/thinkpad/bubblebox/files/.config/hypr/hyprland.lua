@@ -93,9 +93,18 @@ hl.bind(mainMod .. " + CTRL + Down", hl.dsp.window.move({ workspace = "e+1" }))
 hl.bind(mainMod .. " + CTRL + K",    hl.dsp.window.move({ workspace = "e-1" }))
 hl.bind(mainMod .. " + CTRL + J",    hl.dsp.window.move({ workspace = "e+1" }))
 
--- ---- workspace nav (niri: Mod+Shift+J/K) -----------------------------------
+-- ---- workspace nav (niri: Mod+Shift+J/K) ---------------------------------
+-- e±1 = existing-relative per-monitor strip (wraps, never creates, never
+-- crosses monitors — the niri-semantics equivalent on Hyprland; verified
+-- live: +1/-1 are GLOBAL workspace numbers and cross monitors, m±1 stall
+-- at strip ends).
 hl.bind(mainMod .. " + SHIFT + J", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mainMod .. " + SHIFT + K", hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mainMod .. " + CTRL + J", hl.dsp.window.move({ workspace = "e+1" }))
+hl.bind(mainMod .. " + CTRL + K", hl.dsp.window.move({ workspace = "e-1" }))
+-- Alt+Tab window cycling — Caelestia upstream default, currently unbound here
+hl.bind("ALT + TAB", hl.dsp.window.cycle_next(), { repeating = true })
+hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }), { repeating = true })
 -- numeric workspaces too (additive; niri has none)
 for i = 1, 9 do
     hl.bind(mainMod .. " + " .. i, hl.dsp.focus({ workspace = i }))
