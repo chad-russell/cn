@@ -197,16 +197,20 @@ PID_WEB=$!
 trap 'kill "$PID_FWD" "$PID_API" "$PID_WEB" 2>/dev/null || true; exit 0' TERM INT
 
 # --- Wait for the web server, then seed ------------------------------------
-# Payload pushes schema while the dev server boots, so the seed (which needs
-# the tables) must run after :3000 answers. First compile can take a couple of
-# minutes on a cold .next; poll up to 4 minutes.
-echo "==> waiting for web at localhost:3000 ..."
+# Payload pushes schema WHILE the dev server boots, so the seed (which needs
+# the tables) must run after :3000 answers. Poll /api/access — a Payload REST
+# endpoint, NOT a page: it waits out the same init+push, but never touches a
+# cached page getter. Hitting `/` here would cache a null homepage fetch in
+# Next's unstable_cache (Payload's cached getters) if it beat the seed —
+# leaving a 404 homepage until the cache clears. First compile on a cold
+# .next can take a couple of minutes; poll up to 4.
+echo "==> waiting for web at localhost:3000/api/access ..."
 node <<'NODE'
 const http = require("http");
 (function check(attempt) {
-  const req = http.get("http://localhost:3000", (res) => {
+  const req = http.get("http://localhost:3000/api/access", (res) => {
     res.resume();
-    console.log("==> web is responding (http " + res.statusCode + ")");
+    console.log("==> web is responding (/api/access http " + res.statusCode + ")");
     process.exit(0);
   });
   req.on("error", () => {
