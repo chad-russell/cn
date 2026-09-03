@@ -69,21 +69,34 @@ RUN git config --global --add safe.directory ${FLUTTER_ROOT} \
     && flutter --version \
     && flutter doctor || true
 
-# --- bootstrap script (runs as ExecStartPost of the quadlet unit) ---
-RUN mkdir -p /opt/dev && cat > /opt/dev/thi-aha-dev-bootstrap.sh <<'EOF'
+# --- late system-dep layer: runtime libs the emulator needs that the base
+# --- apt set missed. libpulse0: qemu-system links it even with -audio none
+# --- (ubuntu:24.04 ships without it — emulator dies with a loader error).
+# --- Separate late layer so lib additions never re-download the SDK layers.
+RUN apt-get update -qq && apt-get install -y --no-install-recommends libpulse0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- entrypoint: creates the AVD on first run, boots the emulator inside tmux,
+# --- waits for boot, then sleeps forever (container == emulator lifecycle;
+# --- stdout lands in the systemd journal via conmon) ---
+RUN mkdir -p /opt/dev && cat > /opt/dev/thi-aha-dev-entrypoint.sh <<'EOF'
 #!/usr/bin/env bash
 # Idempotent: creates the AVD on first run, starts the emulator inside tmux,
 # waits for boot. Safe to re-run on every container start.
 set -uo pipefail
 say(){ echo "[thi-aha-bootstrap] $*"; }
 
-# 1. Pick a working X display (:1 = niri Xwayland on think; :0 fallback).
-if ! DISPLAY="${DISPLAY:-:1}" xset q >/dev/null 2>&1; then
+# 1. Pick a working X display (:0 = niri's Xwayland on think, via
+#    xwayland-satellite; :1 is the stray systemd-user satellite).
+#    NOTE: probe with xdpyinfo — xset is NOT in the ubuntu:x11-utils set as
+#    pulled here (silently absent), xdpyinfo is verified present.
+xdpyinfo -display "${DISPLAY:-:0}" >/dev/null 2>&1 && export DISPLAY="${DISPLAY:-:0}"
+if ! xdpyinfo -display "${DISPLAY:-}" >/dev/null 2>&1; then
   for d in :0 :1 :2; do
-    if DISPLAY="$d" xset q >/dev/null 2>&1; then export DISPLAY="$d"; break; fi
+    if xdpyinfo -display "$d" >/dev/null 2>&1; then export DISPLAY="$d"; break; fi
   done
 fi
-if DISPLAY="${DISPLAY:-}" xset q >/dev/null 2>&1; then
+if xdpyinfo -display "${DISPLAY:-}" >/dev/null 2>&1; then
   say "emulator window on DISPLAY=$DISPLAY"
   WINDOWED=1
 else
@@ -136,8 +149,9 @@ else
   say "  podman exec thi-aha-dev tmux capture-pane -t emulator -p"
   say "  podman exec thi-aha-dev adb devices"
 fi
-EOF
-RUN chmod +x /opt/dev/thi-aha-dev-bootstrap.sh
 
-# keep the container alive; real work runs via tmux/podman-exec
-CMD ["sleep", "infinity"]
+exec sleep infinity
+EOF
+RUN chmod +x /opt/dev/thi-aha-dev-entrypoint.sh
+
+ENTRYPOINT ["/opt/dev/thi-aha-dev-entrypoint.sh"]
