@@ -48,8 +48,8 @@ in {
   # the GUI desktop app via the ~/.local/bin/hermes-desktop wrapper.
   "hermes-thinkpad-env.age".publicKeys = [ crussell ];
 
-  # ── SearXNG meta-search engine on bee (localhost-only) ──────────
-  # Secret key for Flask session signing (SEARX_SECRET_KEY env var).
-  # See hosts/bee/searxng.nix.
-  "searx-secret.age".publicKeys = [ crussell ];
+  # ── searx-secret (retired 2026-09-03) ───────────────────────────
+  # Removed with the SearXNG service (hosts/bee/searxng.nix deleted);
+  # was the Flask session-signing key for the localhost searx instance.
+  # secrets/searx-secret.age left on disk until agenix re-encrypt is run.
 }

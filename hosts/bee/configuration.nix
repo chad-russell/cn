@@ -55,7 +55,13 @@ in {
     }
     ../../modules/beszel-agent.nix
     ./dev-quadlets.nix
-    ./searxng.nix
+    # ./searxng.nix      # retired 2026-09-03 — every upstream engine except
+    #                      # bing had flagged this IP (google 403, ddg/startpage
+    #                      # CAPTCHA, brave rate-limit, yahoo flaky-then-dead,
+    #                      # qwant/mojeek denied), leaving Bing-only results.
+    #                      # Hermes web_search now uses the built-in keyless
+    #                      # ring (exa/parallel/firecrawl/keenable MCP free
+    #                      # tiers) — see web-search-scrape skill.
     # ./hermes-webui.nix  # retired 2026-09-01 — desktop + Discord are the
     #                      # only chat surfaces now; webui state dir was 210 MB
     ./trades-site.nix
@@ -548,11 +554,15 @@ in {
           auth = "oauth";
         };
       };
-      # Self-hosted SearXNG as the web search backend (free, unlimited,
-      # no API key). SEARXNG_URL is set in the environment block below.
-      # Note: SearXNG is search-only — it cannot extract page content.
-      # web_extract falls through to the native HTTP fetcher (default).
-      web.search_backend = "searxng";
+      # Web search backend: UNPINNED (retired searxng 2026-09-03). With no
+      # web.search_backend configured and no keyed provider, Hermes resolves
+      # web_search through the built-in keyless free-tier ring — round-robin
+      # across exa → parallel → firecrawl → keenable public MCP endpoints
+      # with automatic failover on rate limits (verified working from this
+      # IP 2026-09-03; searxng was Bing-only after every other upstream
+      # engine flagged the IP — see import block note above).
+      # web_extract already resolves through the same ring (searxng was
+      # search-only), so both capabilities now share one healthy path.
       # Allow the browser toolset to navigate to localhost/private IPs.
       # bee is a dev server — local QA testing of dev stacks (polymer,
       # gpl, buildspace) is a primary use case. The browser.* tools block
@@ -606,9 +616,9 @@ in {
 
     environment = {
       ZAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
-      # SearXNG self-hosted search (see hosts/bee/searxng.nix). Powers
-      # Hermes' web_search toolset — no API key needed, localhost-only.
-      SEARXNG_URL = "http://127.0.0.1:8888";
+      # ZAI_BASE_URL only — SEARXNG_URL retired 2026-09-03 with the SearXNG
+      # service; leaving it set would keep the searxng provider "available"
+      # and re-shadow the keyless ring even with the backend pin removed.
       # Browser automation: agent-browser uses nixpkgs chromium (already
       # in systemPackages below). NixOS chromium has all shared libs;
       # agent-browser's own Chrome download lacks them on NixOS.
@@ -666,12 +676,18 @@ in {
       if isinstance(mcp_servers, dict) and "sqlite" in mcp_servers:
           del mcp_servers["sqlite"]
           prunes.append("mcp_servers.sqlite")
-      web = config.get("web")
+      web = config.get("web") or {}
       if isinstance(web, dict) and "extract_backend" in web:
           # Retired 2026-08-12: SearXNG cannot extract, and a stale
           # searxng value here broke @url extraction silently.
           del web["extract_backend"]
           prunes.append("web.extract_backend")
+      if isinstance(web, dict) and web.get("search_backend") == "searxng":
+          # Retired 2026-09-03: SearXNG service removed (Bing-only after
+          # upstream engine blocks). Deep-merge would keep the stale pin
+          # on disk forever; it must not re-shadow the keyless ring.
+          del web["search_backend"]
+          prunes.append("web.search_backend=searxng")
 
       # Retired 2026-08-31: Telegram decommissioned (Discord lane model is
       # the sole messaging platform). Nix no longer declares
