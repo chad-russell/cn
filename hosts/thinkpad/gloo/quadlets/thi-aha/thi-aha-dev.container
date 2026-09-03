@@ -4,13 +4,10 @@
 #   systemctl --user start thi-aha-dev     # build-check image, run container, boot emulator
 #   systemctl --user stop  thi-aha-dev     # tears it all down
 #
-# What happens on start:
-#   1. thi-aha-dev-build.service builds/verifies the image (layer-cached).
-#   2. Container starts (sleep infinity — it's a toolbox, not a server).
-#   3. ExecStartPost runs /opt/dev/thi-aha-dev-bootstrap.sh (baked into the
-#      image): creates the AVD on first run, boots the emulator inside tmux
-#      (windowed on the niri Xwayland display, headless fallback), waits for
-#      sys.boot_completed=1.
+# What happens on start: the image ENTRYPOINT (baked into the image) creates
+# the AVD on first run, boots the emulator inside tmux (windowed on the niri
+# Xwayland display, headless fallback), waits for sys.boot_completed=1, then
+# sleeps forever. Progress lands in `journalctl --user -u thi-aha-dev`.
 #
 # Then (all via podman exec; see hosts/thinkpad/gloo/quadlets/thi-aha/README.md):
 #   podman exec -it thi-aha-dev tmux attach -t flutter   # flutter run session
@@ -19,14 +16,16 @@
 #
 # Devices: /dev/kvm (world-rw on think) + /dev/dri/renderD128 (host-GPU
 # rendering; emulator auto-falls-back to swiftshader if the GPU path fails).
-# Graphics: X only (Xwayland :0/:1 socket mounted; niri apps run through
+# Graphics: X only (Xwayland :0 socket mounted; niri apps run through
 # Xwayland anyway). SELinux is disabled on think → no :Z mount labels.
 # Not [Install]-enabled — nothing auto-starts after reboot, like every other
 # dev stack on this host.
 
 [Unit]
 Description=THI-AHA Flutter dev — Android emulator + Flutter 3.41.9 (Gloo)
-Requires=thi-aha-dev-build.service thi-aha-dev-android.volume thi-aha-dev-gradle.volume thi-aha-dev-pub-cache.volume
+# The three .volume units are auto-required via the Volume=*.volume
+# references below (quadlet wires Requires=/After= on them itself).
+Requires=thi-aha-dev-build.service
 After=thi-aha-dev-build.service
 
 [Container]
@@ -51,9 +50,8 @@ Volume=/tmp/.X11-unix:/tmp/.X11-unix
 
 Environment=TERM=xterm-256color
 
-ExecStartPost=/opt/dev/thi-aha-dev-bootstrap.sh
-TimeoutStartSec=1800
-
 [Service]
-# tmux sessions (emulator, flutter) outlive ExecStartPost; that's by design.
-KillMode=mixed
+# NOTE: systemd-level keys must live here — quadlet copies [Service] through
+# verbatim, and unknown keys in [Container] (e.g. ExecStartPost) fail unit
+# generation SILENTLY (only visible via the generator binary directly).
+# The emulator/bootstrap runs as the image ENTRYPOINT, so no Exec* needed.

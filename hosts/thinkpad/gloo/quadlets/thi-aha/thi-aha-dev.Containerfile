@@ -76,6 +76,22 @@ RUN git config --global --add safe.directory ${FLUTTER_ROOT} \
 RUN apt-get update -qq && apt-get install -y --no-install-recommends libpulse0 \
     && rm -rf /var/lib/apt/lists/*
 
+# --- runtime HOME: avdmanager/adb write to $HOME/.android, NOT
+# --- ANDROID_AVD_HOME (that var is only honored by the emulator). Without
+# --- this, AVDs + adb keys silently land in container-local /root and are
+# --- lost on every container recreation. HOME must point at the volume-
+# --- mounted /home/dev so ALL tool state persists.
+RUN mkdir -p /home/dev
+ENV HOME=/home/dev \
+    ANDROID_USER_HOME=/home/dev/.android
+
+# git safe.directory must be (re)written AFTER HOME points at /home/dev —
+# the build-time config at the flutter layer landed in /root/.gitconfig,
+# invisible at runtime ("dubious ownership" kills every flutter command).
+# /home/dev is NOT volume-shadowed (only .android/.gradle/.pub-cache are),
+# so this .gitconfig persists in the image and is seen at runtime.
+RUN git config --global --add safe.directory ${FLUTTER_ROOT}
+
 # --- entrypoint: creates the AVD on first run, boots the emulator inside tmux,
 # --- waits for boot, then sleeps forever (container == emulator lifecycle;
 # --- stdout lands in the systemd journal via conmon) ---
