@@ -399,6 +399,12 @@ in {
       # OpenRouter embeddings; behavioral config in $HERMES_HOME/mem0.json).
       # The built-in MEMORY.md/USER.md stays active alongside it.
       memory.provider = "mem0";
+      # Raised from the 2200-char default — bee's memory block sat at 99% and
+      # every save needed a consolidate-to-fit dance. mem0 carries the
+      # unbounded semantic store; this is the always-injected scratchpad.
+      # Read once at process start — bounce all hermes units after changing.
+      memory.memory_char_limit = 6000;
+      memory.user_char_limit = 2000;
       custom_providers = [
         {
           name = "zai-coding";
