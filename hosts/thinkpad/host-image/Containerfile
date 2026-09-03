@@ -158,14 +158,14 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 #   - INSTALL_QSCONFDIR is the fork's canonical config name so `qs -c
 #     niri-caelestia-shell` (spawn line in niri config.kdl + ipc binds)
 #     resolves against this install.
-ADD https://github.com/chad-russell/niri-caelestia-shell/archive/bf2620b936dc9e6741d7874475723776dc6f3ada.tar.gz /tmp/ncs.tar.gz
+ADD https://github.com/chad-russell/niri-caelestia-shell/archive/566f92997d27dbce4e5315b1a35d9d143ce0db5b.tar.gz /tmp/ncs.tar.gz
 RUN tar -xzf /tmp/ncs.tar.gz -C /tmp \
     && dnf5 -y install cmake ninja-build gcc-c++ \
                        qt6-qtbase-devel qt6-qtdeclarative-devel \
                        qt6-qt5compat-devel qt6-qtmultimedia-devel \
                        fftw-devel libqalculate-devel pipewire-devel \
                        aubio-devel \
-    && cmake -S /tmp/niri-caelestia-shell-bf2620b936dc9e6741d7874475723776dc6f3ada \
+    && cmake -S /tmp/niri-caelestia-shell-566f92997d27dbce4e5315b1a35d9d143ce0db5b \
            -B /tmp/ncs-build \
            -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ \
            -DINSTALL_QMLDIR=usr/lib64/qt6/qml \
@@ -173,7 +173,7 @@ RUN tar -xzf /tmp/ncs.tar.gz -C /tmp \
            -DDISTRIBUTOR="cn image build" \
     && cmake --build /tmp/ncs-build \
     && cmake --install /tmp/ncs-build \
-    && rm -rf /tmp/ncs.tar.gz /tmp/niri-caelestia-shell-bf2620b936dc9e6741d7874475723776dc6f3ada /tmp/ncs-build
+    && rm -rf /tmp/ncs.tar.gz /tmp/niri-caelestia-shell-566f92997d27dbce4e5315b1a35d9d143ce0db5b /tmp/ncs-build
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/
