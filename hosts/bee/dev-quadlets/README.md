@@ -1,4 +1,4 @@
-# bee remote dev stacks — podman user-quadlets (gpl, polymer, buildspace, hummingbird, storyhub)
+# bee remote dev stacks — podman user-quadlets (gpl, polymer, buildspace, hummingbird, storyhub, openbible)
 
 This mirrors the **thinkpad's** rootless user-quadlet dev setup onto `bee`, so
 you can use bee as a remote dev machine for the Gloo/buildspace/Wycliffe
@@ -18,9 +18,9 @@ thinkpad.
 ## Architecture
 
 ```
-~/Gloo/360-gpl, ~/Gloo/360-polymer, ~/Gloo/360-hummingbird, ~/buildspace
+~/Gloo/360-gpl, ~/Gloo/360-polymer, ~/Gloo/360-hummingbird, ~/Gloo/open-bible, ~/buildspace
                                               cloned product repos on bee
-~/.../hosts/bee/dev-quadlets/{gpl,polymer,buildspace,hummingbird,storyhub}/
+~/.../hosts/bee/dev-quadlets/{gpl,polymer,buildspace,hummingbird,storyhub,openbible}/
 ├── *.network / *.volume / *.container              quadlet input files
 ├── *.build / *.Containerfile                        storyhub custom image build
 ├── dev-server.sh                                   PID 1 of each app container
@@ -50,6 +50,7 @@ user manager (and the user podman socket) is always up.
 | buildspace | `oven/bun:1.3.14` | postgres:17 | minio (pinned) | `3000`, `3002`, `3003`, `3004`, `3005`, `3006`, `3008`, `3010` |
 | hummingbird | `devcontainers/javascript-node:24` | postgres:16 | — | `3000` (web), `8000` (api) |
 | storyhub | `localhost/storyhub-dev:latest` (custom build) | postgres:16 | minio | `3001` (web), `8001` (worker), `9000` (minio API), `9001` (minio console) |
+| openbible | `devcontainers/javascript-node:22` | postgres:17 | minio | `3000` (web), `9876` (api), `9000` (minio API), `9001` (minio console) |
 
 All app containers run as **root (UID 0) inside the container** — in
 rootless podman that maps to crussell on the host, so bind-mount artifacts
@@ -90,6 +91,36 @@ ownership outcome.
   integration, set `HUMMINGBIRD_API_URL` to the Hummingbird container hostname
   and start the hummingbird stack too.
 
+### Open.Bible-specific notes
+
+- **Repo:** `~/Gloo/open-bible` (biblica/open-bible — pnpm + Turborepo monorepo).
+  Next.js 15 + Payload CMS 3 web (`apps/web`), Hono/Drizzle API (`apps/api`).
+  NOTE: distinct from `~/Gloo/360-open-bible` (TangoGroup's older Next.js-only
+  build of the same site) and `360-open-bible-api` (the API-only extraction).
+- **Two dev servers in one container** (like hummingbird/storyhub): Payload web
+  `next dev` on `:3000` + Hono API `tsx watch` on `:9876` (repo compose
+  convention; `OPEN_BIBLE_API_BASE_URL=http://localhost:9876` points web at it).
+- **ONE Postgres, TWO schemas** (mirrors prod's shared Aurora): Payload tables
+  in `public` (`DATABASE_URI`), Drizzle API tables in `api` (`DATABASE_URL`).
+  Both migrators run on every start (`payload:migrate` + the api's library
+  migrator); a stale `dev` row in `payload_migrations` is deleted first to
+  avoid the non-TTY "data loss? (y/N)" hang.
+- **S3_ENDPOINT=localhost:9000 + in-container forwarder.** Payload's s3Storage
+  plugin uses `clientUploads` — the browser must reach MinIO at the same URL
+  the server uses. dev-server.sh runs a tiny TCP forwarder
+  `localhost:9000 -> openbible-minio:9000` inside the app container, so one
+  URL serves both (browser via SSH tunnel → bee:3402, server via forwarder).
+  Two buckets auto-created: `open-bible-v2-media-items` (web media) +
+  `open-bible-artifacts` (api).
+- **ETL not run** (`apps/etl`): it polls the DBL API and needs DBL credentials;
+  in the repo it's a GitHub-Actions-triggered ECS task, not a dev companion.
+- **Seeding:** content pages seed via `pnpm --filter @open-bible/web seed`
+  (idempotent find-or-create) automatically after the web server answers;
+  Payload dev admin auto-login gives you an admin session without credentials
+  in dev (`DISABLE_ADMIN_AUTO_LOGIN=true` env to test login screens).
+- **Linear tickets are BIB-###** in this repo family (BIB prefix spans the
+  qrcode.bible + open-bible projects).
+
 ## Daily use
 
 **1. Start the stack on bee** (db + minio + app, on-demand — nothing auto-starts):
@@ -103,6 +134,7 @@ qd gpl down            # stops app + db + minio (PartOf= cascade)
 # same for:  qd polymer ...   |   qd buildspace ...
 #            qd hummingbird ... (or: qd hb ...)
 #            qd storyhub ...   (or: qd sh ...)
+#            qd openbible ...
 ```
 
 **2. Open the tunnel from your laptop** and browse `localhost`:
@@ -115,6 +147,7 @@ cjust dev-tunnel polymer      # http://localhost:3000 + http://localhost:3001
 cjust dev-tunnel buildspace   # 8 ports: 3000,3002–3006,3008,3010
 cjust dev-tunnel hummingbird  # http://localhost:3000 (web) + http://localhost:8000 (api)
 cjust dev-tunnel storyhub     # http://localhost:3001 (web) + :8001 + :9000 + :9001
+cjust dev-tunnel openbible    # http://localhost:3000 (web) + :9876 (api) + :9000/:9001 (minio)
 ```
 
 Ctrl-C closes a tunnel. `cjust dev-tunnel <project>` forwards the **same** ports
@@ -126,11 +159,12 @@ the difference from local dev.
 bee also runs the former buzz-relay (which used to own bee's `:3000` and `:5000`; removed 2026-08-20), so
 the dev stacks publish on **offset host ports** on bee that never collide with
 each other (the buzz-relay is gone): gpl `:3006`, polymer `:3100`/`:3101`, buildspace
-`:32xx`, hummingbird `:3300`/`:3308`, storyhub `:3301`/`:3309`/`:3390`/`:3391`.
+`:32xx`, hummingbird `:3300`/`:3308`, storyhub `:3301`/`:3309`/`:3390`/`:3391`,
+openbible `:3400`/`:3401`/`:3402`/`:3403`.
 The `cjust dev-tunnel` (and `cjust dev-up`) re-maps those onto the
 thinkpad-standard localhost ports (`:3000`, `:3006`, …) so nothing in the apps or
-your muscle memory changes. Because the five projects use disjoint host-port
-ranges on bee, all five *can* run simultaneously — see the RAM caveat below.
+your muscle memory changes. Because the projects use disjoint host-port
+ranges on bee, they all *can* run simultaneously — see the RAM caveat below.
 
 > **RAM is the real limiter, not ports.** The dev compilers are memory-heavy
 > (polymer's Turbopack app alone peaks ~20 GB; buildspace's turbo runs 8+ apps;
@@ -186,6 +220,10 @@ podman exec hummingbird-quadlet-app bash -lc 'cd /workspace && CONN_URL=postgres
 # storyhub — runs prisma:generate + prisma:push + seed. Creates a default
 # workspace + admin HummingbirdUser record. Destructive (wipes existing data).
 podman exec storyhub-quadlet-app bash -lc 'cd /workspace && pnpm --filter storyhub-prisma run seed'
+
+# openbible — migrations + seed run automatically on every start (see the
+# Open.Bible notes above); nothing extra needed. Re-seed manually if desired:
+podman exec openbible-quadlet-app pnpm --filter @open-bible/web seed
 ```
 
 (MinIO buckets are created automatically by each `dev-server.sh`.)

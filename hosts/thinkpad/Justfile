@@ -923,13 +923,19 @@ dev-tunnel project:
         exec ssh "${SSH_OPTS[@]}" "$BEE" \
           -L 3001:localhost:3301 -L 8001:localhost:3309 -L 9000:localhost:3390 -L 9001:localhost:3391
         ;;
+      openbible|ob)
+        echo "==> openbible tunnel: http://localhost:{3000,9876,9000,9001} -> bee:3400/3401/3402/3403  (Ctrl-C to close)"
+        exec ssh "${SSH_OPTS[@]}" "$BEE" \
+          -L 3000:localhost:3400 -L 9876:localhost:3401 -L 9000:localhost:3402 -L 9001:localhost:3403
+        ;;
       *)
-        echo "usage: cjust dev-tunnel <gpl|polymer|buildspace|bs|hummingbird|hb|storyhub|sh>" >&2
+        echo "usage: cjust dev-tunnel <gpl|polymer|buildspace|bs|hummingbird|hb|storyhub|sh|openbible|ob>" >&2
         echo "  gpl         -> http://localhost:3006" >&2
         echo "  polymer     -> http://localhost:3000 (polymer) + http://localhost:3001 (admin360)" >&2
         echo "  buildspace  -> http://localhost:{3000,3002,3003,3004,3005,3006,3008,3010}" >&2
         echo "  hummingbird -> http://localhost:3000 (web) + http://localhost:8000 (api)" >&2
         echo "  storyhub    -> http://localhost:3001 (web) + :8001 (worker) + :9000/:9001 (minio)" >&2
+        echo "  openbible   -> http://localhost:3000 (web) + :9876 (api) + :9000/:9001 (minio)" >&2
         echo "start the stack on bee first:  ssh -o IdentitiesOnly=yes \"$BEE\" 'qd <project> up'" >&2
         echo "polymer+buildspace+hummingbird share laptop :3000; gpl+buildspace share :3006." >&2
         exit 1
@@ -947,12 +953,13 @@ dev-up project:
     set -euo pipefail
     BEE="${BEE:-crussell@10.10.0.12}"
     case "{{ project }}" in
-      gpl|polymer|buildspace|hummingbird|storyhub) proj="{{ project }}" ;;
+      gpl|polymer|buildspace|hummingbird|storyhub|openbible) proj="{{ project }}" ;;
       bs)                     proj="buildspace" ;;
       hb)                     proj="hummingbird" ;;
       sh)                     proj="storyhub" ;;
+      ob)                     proj="openbible" ;;
       *)
-        echo "usage: cjust dev-up <gpl|polymer|buildspace|bs|hummingbird|hb|storyhub|sh>" >&2
+        echo "usage: cjust dev-up <gpl|polymer|buildspace|bs|hummingbird|hb|storyhub|sh|openbible|ob>" >&2
         exit 1
         ;;
     esac

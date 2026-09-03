@@ -1,0 +1,92 @@
+# The open-bible dev app (Next.js+Payload web :3000 + Hono API :9876) as a
+# podman quadlet container — bee edition.
+#
+# This ONE unit drives the whole stack:
+#   systemctl --user start openbible-dev-app   # starts db + minio, then app
+#   systemctl --user stop  openbible-dev-app   # stops app + db + minio (PartOf=)
+#
+# Repo: ~/Gloo/open-bible (biblica/open-bible monorepo — pnpm + Turborepo).
+# Runs TWO dev servers in one container (like hummingbird/storyhub):
+#   - web: next dev -H 0.0.0.0:3000  (Payload CMS frontend)
+#   - api: tsx watch (Hono) on :9876  (PORT env; matches the repo compose's
+#     host-port convention, and OPEN_BIBLE_API_BASE_URL below)
+# The ETL app is NOT run here — it's an on-demand job needing DBL credentials
+# (triggered via GitHub Actions in the repo's own workflow).
+#
+# ONE PostgreSQL (openbible-db) serves both database systems, mirroring prod:
+#   - Payload CMS tables in schema `public` (DATABASE_URI)
+#   - Drizzle API tables in schema `api`  (DATABASE_URL)
+#
+# S3_ENDPOINT points at localhost:9000 because Payload's s3Storage plugin uses
+# clientUploads — the BROWSER must reach MinIO at the same URL the server
+# does. The laptop SSH tunnel maps localhost:9000 -> bee:3402 (published by
+# the minio unit), and dev-server.sh runs a tiny in-container TCP forwarder
+# localhost:9000 -> openbible-minio:9000 so the SERVER side works too.
+#
+# Runs from the PUBLISHED devcontainers/javascript-node:22 image (repo needs
+# Node >= 22; no .build unit) — podman pulls it on first start. The repo is
+# bind-mounted (live code); dev-server.sh is Nix-managed under
+# /etc/dev-quadlets/openbible/.
+#
+# Not [Install]-enabled anywhere: the stack only runs when you start it.
+[Unit]
+Description=Open.Bible quadlet dev stack — app (web :3000 + API :9876)
+Requires=openbible-dev-db.container openbible-dev-minio.container
+After=openbible-dev-db.container openbible-dev-minio.container
+
+[Container]
+Image=mcr.microsoft.com/devcontainers/javascript-node:22
+ContainerName=openbible-quadlet-app
+Network=openbible-dev.network
+# Run as root inside the container — bee's rootless podman + native overlay
+# breaks UserNS=keep-id (same as gpl/polymer/buildspace/hummingbird/storyhub
+# on bee); container-UID-0 maps to crussell on the host so bind-mount
+# artifacts (node_modules/.next) land crussell-owned.
+User=0
+WorkingDir=/workspace
+
+# Browser-facing ports published to the host (reached over the SSH tunnel
+# from the laptop: localhost:3000 -> bee:3400, localhost:9876 -> bee:3401;
+# MinIO 3402/3403 are published by the minio unit).
+PublishPort=3400:3000
+PublishPort=3401:9876
+
+# Product repo (read/write). bee has no SELinux, so no :Z suffix. Code changes
+# are picked up live by Next.js HMR / tsx watch.
+Volume=/home/crussell/Gloo/open-bible:/workspace
+
+# Startup script lives outside the product repo (Nix-managed); mount read-only.
+Volume=/etc/dev-quadlets/openbible/dev-server.sh:/usr/local/bin/dev-server.sh:ro
+
+# --- web (Payload CMS) wiring ---
+# apps/web reads DATABASE_URI (Payload postgres adapter); apps/api reads
+# DATABASE_URL (drizzle). Same DB, different schemas (public vs api).
+Environment=NODE_ENV=development
+Environment=DATABASE_URI=postgresql://postgres:postgres@openbible-db:5432/openbible
+Environment=DATABASE_URL=postgresql://postgres:postgres@openbible-db:5432/openbible
+Environment=PAYLOAD_SECRET=8WwZZgOdiZ9peA3QlHEozd1BmvI4YFIHgeAg4eeYc8
+Environment=CRON_SECRET=qm9Nvj5E3Sfi5XwGEqRvRQ
+Environment=PREVIEW_SECRET=zlBYygRs0OH76X7bUng1Q
+Environment=NEXT_PUBLIC_SERVER_URL=http://localhost:3000
+# S3 (MinIO) — shared by web (media) and api (artifacts). localhost:9000 works
+# for BOTH the browser (SSH tunnel) and the server (in-container forwarder);
+# see the header comment. The API's bucket (open-bible-artifacts) is
+# overridden inline in dev-server.sh — the web app owns S3_BUCKET here.
+Environment=S3_ENDPOINT=http://localhost:9000
+Environment=S3_REGION=us-east-1
+Environment=S3_BUCKET=open-bible-v2-media-items
+Environment=S3_ACCESS_KEY_ID=minio
+Environment=S3_SECRET_ACCESS_KEY=password
+# Point the web app at the in-container Hono API (the repo default would be
+# the deployed https://api-dev.open.bible).
+Environment=OPEN_BIBLE_API_BASE_URL=http://localhost:9876
+# Empty SendGrid key → dev email adapter logs mail to the terminal.
+Environment=SENDGRID_API_KEY=
+
+Exec=/usr/local/bin/dev-server.sh
+
+[Service]
+# First run pulls the image + runs pnpm install across the monorepo (Payload
+# is heavy); give it 15 minutes. Dev server: no auto-restart (default
+# Restart=no) so you see crashes instead of a restart loop.
+TimeoutStartSec=900

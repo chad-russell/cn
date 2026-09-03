@@ -1,0 +1,6 @@
+# Persistent PostgreSQL data for the openbible quadlet stack.
+# Default volume name: systemd-openbible-dev-db
+[Unit]
+Description=Open.Bible quadlet dev stack — PostgreSQL data
+
+[Volume]

@@ -1,0 +1,6 @@
+# Persistent MinIO (S3) data for the openbible quadlet stack.
+# Default volume name: systemd-openbible-dev-minio
+[Unit]
+Description=Open.Bible quadlet dev stack — MinIO data
+
+[Volume]

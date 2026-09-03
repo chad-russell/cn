@@ -1,0 +1,30 @@
+# MinIO (S3-compatible storage) for the openbible quadlet stack.
+# NetworkAlias=openbible-minio (HYPHEN — MinIO rejects underscores in the Host
+# header). Credentials minio/password match apps/web/.env.example and the
+# repo's compose files.
+#
+# Host ports ARE published (3402 API / 3403 console, unlike gpl/polymer which
+# publish none): Payload's S3 plugin uses clientUploads, so the BROWSER must
+# reach MinIO at the same S3_ENDPOINT the server uses. The laptop SSH tunnel
+# maps localhost:9000 -> bee:3402, making S3_ENDPOINT=http://localhost:9000
+# work for both sides (the server side goes through an in-container forwarder
+# — see dev-server.sh). Buckets are created idempotently on app start.
+[Unit]
+Description=Open.Bible quadlet dev stack — MinIO (S3)
+# Stop/restart this with the app unit (see openbible-dev-app.container).
+PartOf=openbible-dev-app.container
+
+[Container]
+Image=docker.io/minio/minio:latest
+ContainerName=openbible-quadlet-minio
+Network=openbible-dev.network
+NetworkAlias=openbible-minio
+Environment=MINIO_ROOT_USER=minio
+Environment=MINIO_ROOT_PASSWORD=password
+PublishPort=3402:9000
+PublishPort=3403:9001
+Volume=openbible-dev-minio.volume:/data
+Exec=server /data --console-address :9001
+
+[Service]
+TimeoutStartSec=120

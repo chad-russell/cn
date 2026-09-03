@@ -1,0 +1,28 @@
+# PostgreSQL 17 for the openbible quadlet stack (matches the repo's root
+# docker-compose.yml and apps/web/docker-compose.yml). ONE instance serves
+# BOTH database systems, mirroring prod where Payload (`public` schema) and
+# the Drizzle API (`api` schema) share one Aurora.
+# NetworkAlias=openbible-db lets the app resolve it via DATABASE_URI.
+[Unit]
+Description=Open.Bible quadlet dev stack — PostgreSQL
+# Stop/restart this with the app unit (see openbible-dev-app.container).
+PartOf=openbible-dev-app.container
+
+[Container]
+Image=docker.io/library/postgres:17
+ContainerName=openbible-quadlet-db
+Network=openbible-dev.network
+NetworkAlias=openbible-db
+Environment=POSTGRES_PASSWORD=postgres
+Environment=POSTGRES_USER=postgres
+Environment=POSTGRES_DB=openbible
+ShmSize=512m
+HealthCmd=pg_isready -U postgres -d openbible
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=5
+Volume=openbible-dev-db.volume:/var/lib/postgresql/data
+
+[Service]
+# First run pulls postgres:17; give it room past the 90s default.
+TimeoutStartSec=120

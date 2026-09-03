@@ -64,6 +64,13 @@ let
     "storyhub/storyhub-dev-minio.container"
     "storyhub/storyhub-dev.build"
     "storyhub/storyhub-dev-app.container"
+    # open-bible (Open.Bible Payload web + Hono API)
+    "openbible/openbible-dev.network"
+    "openbible/openbible-dev-db.volume"
+    "openbible/openbible-dev-minio.volume"
+    "openbible/openbible-dev-db.container"
+    "openbible/openbible-dev-minio.container"
+    "openbible/openbible-dev-app.container"
   ];
 
   # dev-server.sh for each project (bind-mount source, NOT a quadlet unit).
@@ -76,6 +83,7 @@ let
     "hummingbird/dev-server.sh"
     "storyhub/dev-server.sh"
     "storyhub/storyhub-dev.Containerfile"
+    "openbible/dev-server.sh"
   ];
 
   # Everything that goes under /etc/dev-quadlets/ (rel paths below, prefixed at
@@ -126,15 +134,15 @@ in {
   #    per-project copies). Raw `systemctl --user` always works too.
   environment.systemPackages = [
     (pkgs.writeShellScriptBin "qd" ''
-      # qd <gpl|polymer|buildspace|hummingbird|storyhub|hb|sh> <up|down|restart|status|logs>
+      # qd <gpl|polymer|buildspace|hummingbird|storyhub|openbible|hb|sh> <up|down|restart|status|logs>
       set -euo pipefail
       proj="''${1:-}"; cmd="''${2:-up}"
       case "$proj" in
         hb) proj="hummingbird" ;; sh) proj="storyhub" ;;
       esac
       case "$proj" in
-        gpl|polymer|buildspace|hummingbird|storyhub) svc="$proj-dev-app" ;;
-        *) echo "usage: qd <gpl|polymer|buildspace|hummingbird|storyhub|hb|sh> <up|down|restart|status|logs>" >&2; exit 1 ;;
+        gpl|polymer|buildspace|hummingbird|storyhub|openbible) svc="$proj-dev-app" ;;
+        *) echo "usage: qd <gpl|polymer|buildspace|hummingbird|storyhub|openbible|hb|sh> <up|down|restart|status|logs>" >&2; exit 1 ;;
       esac
       case "$cmd" in
         up)      systemctl --user start "$svc" ;;

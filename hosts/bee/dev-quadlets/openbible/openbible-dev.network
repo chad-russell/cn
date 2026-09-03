@@ -1,0 +1,11 @@
+# Podman network for the openbible quadlet dev stack.
+#
+# Default network name is systemd-openbible-dev. Containers on it resolve each
+# other by ContainerName and by NetworkAlias (DNS), so the app reaches postgres
+# and MinIO via the openbible-db / openbible-minio hostnames baked into
+# DATABASE_URI and the in-container S3 forwarder target.
+[Unit]
+Description=Open.Bible quadlet dev stack — podman network
+
+[Network]
+Label=io.biblica.project=open-bible
