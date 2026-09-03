@@ -64,6 +64,7 @@ in {
     #                      # tiers) — see web-search-scrape skill.
     # ./hermes-webui.nix  # retired 2026-09-01 — desktop + Discord are the
     #                      # only chat surfaces now; webui state dir was 210 MB
+    ./hermes-personal.nix
     ./trades-site.nix
     ./backup.nix
     ./tailscale.nix
