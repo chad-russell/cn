@@ -180,7 +180,9 @@ pnpm --filter @open-bible/api migrate \
 # the web media bucket from the .container env.
 echo "==> api  -> http://0.0.0.0:9876 (tsx watch, artifacts bucket)"
 cd /workspace/apps/api && \
-  PORT=9876 S3_BUCKET=open-bible-artifacts pnpm dev &
+  PORT=9876 S3_BUCKET=open-bible-artifacts \
+  AWS_ACCESS_KEY_ID=minio AWS_SECRET_ACCESS_KEY=password \
+  pnpm dev &
 PID_API=$!
 
 # Web (Payload/Next.js) on :3000. `next dev` defaults to localhost, which
