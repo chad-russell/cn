@@ -1,0 +1,59 @@
+# THI-AHA Flutter dev stack — Android emulator + pinned Flutter toolchain.
+#
+# Usage (the only unit you ever touch):
+#   systemctl --user start thi-aha-dev     # build-check image, run container, boot emulator
+#   systemctl --user stop  thi-aha-dev     # tears it all down
+#
+# What happens on start:
+#   1. thi-aha-dev-build.service builds/verifies the image (layer-cached).
+#   2. Container starts (sleep infinity — it's a toolbox, not a server).
+#   3. ExecStartPost runs /opt/dev/thi-aha-dev-bootstrap.sh (baked into the
+#      image): creates the AVD on first run, boots the emulator inside tmux
+#      (windowed on the niri Xwayland display, headless fallback), waits for
+#      sys.boot_completed=1.
+#
+# Then (all via podman exec; see hosts/thinkpad/gloo/quadlets/thi-aha/README.md):
+#   podman exec -it thi-aha-dev tmux attach -t flutter   # flutter run session
+#   podman exec thi-aha-dev adb exec-out screencap -p > screen.png
+#   podman exec thi-aha-dev adb logcat -d | tail -50
+#
+# Devices: /dev/kvm (world-rw on think) + /dev/dri/renderD128 (host-GPU
+# rendering; emulator auto-falls-back to swiftshader if the GPU path fails).
+# Graphics: X only (Xwayland :0/:1 socket mounted; niri apps run through
+# Xwayland anyway). SELinux is disabled on think → no :Z mount labels.
+# Not [Install]-enabled — nothing auto-starts after reboot, like every other
+# dev stack on this host.
+
+[Unit]
+Description=THI-AHA Flutter dev — Android emulator + Flutter 3.41.9 (Gloo)
+Requires=thi-aha-dev-build.service thi-aha-dev-android.volume thi-aha-dev-gradle.volume thi-aha-dev-pub-cache.volume
+After=thi-aha-dev-build.service
+
+[Container]
+Image=localhost/thi-aha-dev:latest
+ContainerName=thi-aha-dev
+HostName=thi-aha-dev
+
+# The flutter repo, bind-mounted live — never modified by the stack itself.
+Volume=/var/home/crussell/Gloo/thi-aha-flutter:/workspace
+
+# Persistent caches (survive container recreation; image rebuilds don't touch them)
+Volume=thi-aha-dev-android.volume:/home/dev/.android
+Volume=thi-aha-dev-gradle.volume:/home/dev/.gradle
+Volume=thi-aha-dev-pub-cache.volume:/home/dev/.pub-cache
+
+# Hardware acceleration + GPU
+AddDevice=/dev/kvm
+AddDevice=/dev/dri/renderD128
+
+# X server socket (Xwayland) for the emulator window
+Volume=/tmp/.X11-unix:/tmp/.X11-unix
+
+Environment=TERM=xterm-256color
+
+ExecStartPost=/opt/dev/thi-aha-dev-bootstrap.sh
+TimeoutStartSec=1800
+
+[Service]
+# tmux sessions (emulator, flutter) outlive ExecStartPost; that's by design.
+KillMode=mixed

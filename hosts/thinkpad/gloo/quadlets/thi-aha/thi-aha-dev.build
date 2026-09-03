@@ -1,0 +1,21 @@
+# Builds the THI-AHA Flutter dev image (localhost/thi-aha-dev:latest) on think.
+#
+# The container unit (thi-aha-dev.container) Requires= this unit, so a plain
+#   systemctl --user start thi-aha-dev
+# builds (or layer-cache-verifies) the image first. Manual rebuild after
+# editing the Containerfile:
+#   systemctl --user start thi-aha-dev-build.service
+#
+# File= is the ABSOLUTE cn path — pitfall #2 in the quadlet-build notes:
+# SetWorkingDirectory=unit resolves to the quadlet search dir
+# (~/.config/containers/systemd), where this file's siblings do NOT exist.
+# The Containerfile is therefore self-contained (no COPY, bootstrap inlined
+# via heredoc), so the (wrong) working directory doesn't matter.
+
+[Unit]
+Description=THI-AHA Flutter dev image build (localhost/thi-aha-dev:latest)
+
+[Build]
+ImageTag=localhost/thi-aha-dev:latest
+File=/var/home/crussell/Code/cn/hosts/thinkpad/gloo/quadlets/thi-aha/thi-aha-dev.Containerfile
+SetWorkingDirectory=unit
