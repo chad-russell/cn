@@ -13,7 +13,9 @@ ContainerName=kan-web
 # POSTGRES_PASSWORD) come from the agenix env file.
 Environment=NEXT_PUBLIC_BASE_URL=https://trello.crussell.io
 Environment=NEXT_PUBLIC_ALLOW_CREDENTIALS=true
-Environment=NEXT_PUBLIC_DISABLE_SIGN_UP=true
+# Open until the first (owner) account is created, then flip to true and
+# redeploy + restart kan.service.
+Environment=NEXT_PUBLIC_DISABLE_SIGN_UP=false
 Environment=BETTER_AUTH_TRUSTED_ORIGINS=https://trello.crussell.io
 Environment=TZ=America/New_York
 EnvironmentFile=/run/agenix/kan-env
