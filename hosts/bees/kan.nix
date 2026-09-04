@@ -58,7 +58,7 @@
       ExecStart = pkgs.writeShellScript "kan-migrate" ''
         exec ${pkgs.podman}/bin/podman run --rm \
           --name kan-migrate \
-          --network kan.network \
+          --network kan \
           --env-file ${config.age.secrets.kan-env.path} \
           ghcr.io/kanbn/kan-migrate:latest
       '';
