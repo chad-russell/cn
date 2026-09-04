@@ -55,12 +55,11 @@
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      EnvironmentFile = [ config.age.secrets.kan-env.path ];
       ExecStart = pkgs.writeShellScript "kan-migrate" ''
         exec ${pkgs.podman}/bin/podman run --rm \
           --name kan-migrate \
           --network kan.network \
-          --env-file "$ENVIRONMENT_FILE" \
+          --env-file ${config.age.secrets.kan-env.path} \
           ghcr.io/kanbn/kan-migrate:latest
       '';
     };
