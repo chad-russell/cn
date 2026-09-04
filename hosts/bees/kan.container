@@ -18,7 +18,9 @@ Environment=BETTER_AUTH_TRUSTED_ORIGINS=https://trello.crussell.io
 Environment=TZ=America/New_York
 EnvironmentFile=/run/agenix/kan-env
 Network=kan.network
-PublishPort=127.0.0.1:3300:3000
+# All-interfaces bind (house pattern: gateway Caddy proxies over Nebula;
+# the router does not forward :3300 inbound from the internet).
+PublishPort=3300:3000
 
 [Service]
 Restart=always
