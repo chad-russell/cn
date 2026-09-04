@@ -413,6 +413,7 @@ Public routes (gateway Caddy → backend over Nebula):
 | `jellyfin.crussell.io`      | `10.10.0.6:8096`                                                                         |
 | `photos.crussell.io`        | `10.10.0.6:2283`                                                                         |
 | `datenight.crussell.io`     | `10.10.0.6:7890`                                                                         |
+| `trello.crussell.io`        | `10.10.0.6:3300` (Kan/kan.bn quadlets — see `hosts/bees/kan.nix`; Caddy `basic_auth` outer layer) |
 
 > To add/change a public route, edit `hosts/gateway/caddy.nix` and `nix run .#deploy -- gateway`. Adding a new hostname requires it to resolve to the gateway (covered by the `*.crussell.io` wildcard) and Caddy auto-issues its cert on first request via HTTP-01.
 
