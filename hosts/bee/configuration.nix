@@ -196,6 +196,10 @@ in {
     # OpenAI Codex CLI (from nixos-unstable — not in 25.11). Used via the
     # Hermes codex skill and the openai-codex provider integration.
     unstable.codex
+    # Proton Pass CLI (from nixos-unstable — not in 25.11; needs ≥2.3 for
+    # `agent` mode). Agent-scoped access to the "Glen" Proton Pass vault:
+    # viewer PAT with audit logging (agent monitor), see proton-pass skill.
+    unstable.proton-pass-cli
     # Chromium for agent-browser (Hermes browser toolset). NixOS chromium
     # bundles all shared libs; agent-browser's own Chrome-for-Testing download
     # fails on NixOS (missing libglib etc.). AGENT_BROWSER_EXECUTABLE_PATH
