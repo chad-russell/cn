@@ -24,3 +24,8 @@ handle @dsh {
 handle @trades {
     reverse_proxy 10.10.0.12:8901
 }
+
+@nsfw host nsfw.internal.crussell.io
+handle @nsfw {
+    reverse_proxy 127.0.0.1:8097
+}
