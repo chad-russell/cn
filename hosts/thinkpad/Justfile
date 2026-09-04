@@ -969,6 +969,46 @@ dev-up project:
     exec just --justfile "{{ justfile_directory() }}/Justfile" dev-tunnel "$proj"
 
 # ═══════════════════════════════════════════════════════════════════════════
+# gloo team VM — shared team Hermes on hermes.dev.360.gloo.com (AWS)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# The 360/Wycliffe team Hermes instance (t4g.large VM in the Gloo AWS dev
+# account; Terraform + onboarding docs: ~/Code/hermes-team-infra on bee,
+# github chad-russell/hermes-team-infra). Auth is this host's SSH key
+# (~/.ssh/id_ed25519) in ubuntu@VM authorized_keys — no tokens needed.
+# Model runs on the employer Gloo AI platform; memory is ONE SHARED TEAM
+# BRAIN on the VM — never paste secrets/tokens into it.
+#
+# Desktop app alternative: Settings → Gateways → Add connection → kind SSH →
+# ubuntu@hermes.dev.360.gloo.com (the app tunnels + runs `hermes serve` on the
+# VM itself; chats/sessions/memory all live there).
+
+# One-shot query to the team Hermes (or, with no args, an interactive session
+# on the VM — exit with /exit). Examples:
+#   cjust gloo-hermes "what do you remember about the pilot?"
+#   cjust gloo-hermes
+[group('gloo')]
+gloo-hermes *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    VM="${GLOO_HERMES:-ubuntu@hermes.dev.360.gloo.com}"
+    # just shebang recipes don't forward CLI args to $@ — pull them in via
+    # interpolation (quote() keeps words/spaces/parens intact as one string).
+    set -- {{ quote(args) }}
+    if [ $# -eq 0 ]; then
+      echo "==> interactive team Hermes on ${VM}  (/exit to quit)"
+      exec ssh -t -o IdentitiesOnly=yes "$VM" '~/.local/bin/hermes'
+    fi
+    exec ssh -o IdentitiesOnly=yes "$VM" \
+      "~/.local/bin/hermes chat -Q --query=$(printf '%q' "$*")"
+
+# Plain shell on the team VM (admin: hermes-gateway is a system service there —
+# `systemctl status hermes-gateway`, logs via journalctl -u hermes-gateway).
+[group('gloo')]
+gloo-vm:
+    exec ssh -o IdentitiesOnly=yes "${GLOO_HERMES:-ubuntu@hermes.dev.360.gloo.com}"
+
+# ═══════════════════════════════════════════════════════════════════════════
 # bees remote ops — llama.cpp LLM server (on-demand, OpenAI API on :8888)
 # ═══════════════════════════════════════════════════════════════════════════
 #
