@@ -28,6 +28,10 @@ in {
   # every beszel-agent. Created after first booting the hub.
   "beszel-agent-env.age".publicKeys = [ crussell ];
 
+  # ── Kan (kan.bn) on bees — trello.crussell.io ────────────────────
+  # POSTGRES_PASSWORD, POSTGRES_URL, BETTER_AUTH_SECRET, KAN_ADMIN_API_KEY.
+  "kan-env.age".publicKeys = [ crussell ];
+
   # ── Hermes Agent gateway on bee ───────────────────────────────
   # Combined env: OPENAI_API_KEY (Z.AI key remapped for Hermes'
   # OpenAI-compatible provider) + TELEGRAM_BOT_TOKEN + dashboard-auth
