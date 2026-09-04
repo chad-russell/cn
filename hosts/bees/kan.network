@@ -1,0 +1,6 @@
+[Unit]
+Description=Kan (kan.bn) — internal network
+
+[Network]
+# Bridge network; DNS names = container names (kan-web, kan-postgres).
+Driver=bridge

@@ -1,0 +1,30 @@
+[Unit]
+Description=Kan (kan.bn) — PostgreSQL 15
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/library/postgres:15
+ContainerName=kan-postgres
+# POSTGRES_PASSWORD comes from the agenix env file (/run/agenix/kan-env).
+Environment=POSTGRES_DB=kan_db
+Environment=POSTGRES_USER=kan
+EnvironmentFile=/run/agenix/kan-env
+Volume=kan_postgres_data:/var/lib/postgresql/data
+# No PublishPort — reachable only inside the kan network.
+Network=kan.network
+# Not considered started until the DB accepts connections, so
+# kan-migrate.service (After/Requires this unit) never races a booting DB.
+HealthCmd=pg_isready -U kan -d kan_db
+HealthInterval=5s
+HealthRetries=12
+HealthStartPeriod=10s
+HealthTimeout=3s
+Notify=healthy
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

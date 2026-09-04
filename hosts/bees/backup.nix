@@ -36,6 +36,10 @@
       "/var/lib/papra"
       "/var/lib/linkding"
 
+      # Kan (trello.crussell.io): postgres lives in a named podman
+      # volume, covered via /var/lib/containers/storage/volumes above.
+      "/var/lib/kan"
+
       # Immich photo library (on NAS via NFS)
       "/mnt/photos"
     ];

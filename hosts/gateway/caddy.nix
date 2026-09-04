@@ -48,5 +48,15 @@
     virtualHosts."datenight.crussell.io".extraConfig = ''
       reverse_proxy 10.10.0.6:7890
     '';
+
+    virtualHosts."trello.crussell.io".extraConfig = ''
+      # Kan (kan.bn) on bees — gated with HTTP basic auth (bcrypt) as an
+      # outer layer; Kan's own account login is the inner layer.
+      basic_auth {
+        chad $2a$14$bpSfhkNVHkUy.NHBPOi5m.emTNdbX9dEMl1kKIIHAUscIoDnc1Wje
+      }
+      # WebSockets (tRPC subscriptions / live board updates)
+      reverse_proxy 10.10.0.6:3300
+    '';
   };
 }

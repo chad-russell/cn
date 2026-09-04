@@ -20,6 +20,7 @@
     ./datenight.nix
     ./caddy.nix
     ./services.nix
+    ./kan.nix
     ./llama-server.nix
     ./comfyui.nix
     ./backup.nix

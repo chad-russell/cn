@@ -1,0 +1,28 @@
+[Unit]
+Description=Kan (kan.bn) — open-source Trello alternative
+After=network-online.target
+Wants=network-online.target
+# One-shot DB migrations must succeed before the web app starts.
+Requires=kan-migrate.service
+After=kan-migrate.service
+
+[Container]
+Image=ghcr.io/kanbn/kan:latest
+ContainerName=kan-web
+# Secrets (POSTGRES_URL, BETTER_AUTH_SECRET, KAN_ADMIN_API_KEY,
+# POSTGRES_PASSWORD) come from the agenix env file.
+Environment=NEXT_PUBLIC_BASE_URL=https://trello.crussell.io
+Environment=NEXT_PUBLIC_ALLOW_CREDENTIALS=true
+Environment=NEXT_PUBLIC_DISABLE_SIGN_UP=true
+Environment=BETTER_AUTH_TRUSTED_ORIGINS=https://trello.crussell.io
+Environment=TZ=America/New_York
+EnvironmentFile=/run/agenix/kan-env
+Network=kan.network
+PublishPort=127.0.0.1:3300:3000
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
