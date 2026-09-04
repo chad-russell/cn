@@ -32,6 +32,13 @@ in {
   # POSTGRES_PASSWORD, POSTGRES_URL, BETTER_AUTH_SECRET, KAN_ADMIN_API_KEY.
   "kan-env.age".publicKeys = [ crussell ];
 
+  # ── Proton Pass agent token for bee ("Glen" vault) ───────────────
+  # PROTON_PASS_PERSONAL_ACCESS_TOKEN (hermes-bee agent, 6m expiry — renew via
+  # pass-cli agent renew) + PROTON_PASS_ENCRYPTION_KEY (env key provider for
+  # headless pass-cli). Deployed 0440 group=hermes so agent shells (user
+  # crussell) can source it directly without sudo.
+  "proton-pass-env.age".publicKeys = [ crussell ];
+
   # ── Hermes Agent gateway on bee ───────────────────────────────
   # Combined env: OPENAI_API_KEY (Z.AI key remapped for Hermes'
   # OpenAI-compatible provider) + TELEGRAM_BOT_TOKEN + dashboard-auth

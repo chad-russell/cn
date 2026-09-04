@@ -310,6 +310,16 @@ in {
   #  + dsh web UI, both on zai-coding/glm-5.3. See modules/dsh.nix.)
   age.secrets.hermes-bee-env.file = ../../secrets/hermes-bee-env.age;
 
+  # Proton Pass agent token + env-key-provider key, sourced directly by
+  # /var/lib/hermes/.hermes/scripts/pp-*.sh (NOT injected into any unit env —
+  # keeps the token out of the gateway process). Group-readable so agent
+  # shells running as crussell (member of hermes group) can read it.
+  age.secrets.proton-pass-env = {
+    file = ../../secrets/proton-pass-env.age;
+    mode = "0440";
+    group = "hermes";
+  };
+
   # ── Qdrant: vector store for Hermes' mem0 memory backend ─────────
   # mem0 OSS in qdrant local-file mode holds an exclusive lock — only ONE
   # process can open the folder. bee runs three hermes processes against
