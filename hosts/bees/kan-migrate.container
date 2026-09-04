@@ -1,0 +1,21 @@
+[Unit]
+Description=Kan (kan.bn) — one-shot DB migrations
+# Runs after postgres is healthy (kan-postgres has Notify=healthy).
+Requires=kan-postgres.service
+After=kan-postgres.service
+
+[Container]
+Image=ghcr.io/kanbn/kan-migrate:latest
+ContainerName=kan-migrate
+# POSTGRES_URL comes from the agenix env file (/run/agenix/kan-env).
+EnvironmentFile=/run/agenix/kan-env
+Network=kan.network
+
+[Service]
+# One-shot: run migrations, exit 0, stay "active" so kan-web can depend
+# on it. Re-runs on restart (image bumps re-apply migrations).
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
