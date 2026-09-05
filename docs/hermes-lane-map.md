@@ -60,7 +60,11 @@ category permission overwrites (403 matrix verified 2026-09-05).
 
 - Tier B renames (Developer Portal, Chad's 2 min): personal bot
   `hermes-private` → `hermes`; work bot `bot1544082952290566235` → `hermes-gloo`.
-- Channel rename `general` → `gloo-general` in the Gloo category needs owner
-  click (bots lack MANAGE_CHANNELS there; nick renames done 2026-09-05).
-- Policy: employer data on personal NAS/S3 restic — Chad's explicit yes/no.
-- Policy: ratify glen-contains-private-lanes doctrine (review recommends yes).
+  (Reminder scheduled 2026-09-06.)
+- DONE 2026-09-05: channel renamed `general` → `gloo-general` (owner click);
+  bot nicknames Glen/Gloo set.
+- DECIDED 2026-09-05 (Chad): employer data on personal NAS/S3 restic is
+  ACCEPTABLE — everything stays on the one personal backup system.
+- DECIDED 2026-09-05 (Chad, ratified): glen contains private lanes —
+  "glen = everything personal incl. private, gloo = work only" is standing
+  doctrine. The 2026-09-03 strict-separation doctrine is superseded.
