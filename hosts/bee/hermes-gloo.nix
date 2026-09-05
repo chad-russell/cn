@@ -14,16 +14,48 @@
 #
 # Isolation guarantees (vs default/glen):
 #   - separate HERMES_HOME → separate state.db, sessions, memories/, skills/
-#   - NO mem0 (memory.provider "" in profile config.yaml) — personal
-#     qdrant/mem0 is untouchable from work
+#   - mem0 IS enabled (memory.provider "mem0", declared below) but isolated
+#     from glen's memory: the profile's own $HERMES_HOME/mem0.json points at
+#     a SEPARATE qdrant collection 'mem0-gloo' with user_id 'chad-gloo'
+#     (both profiles share the loopback qdrant server 127.0.0.1:6333, which
+#     is safe — server mode has no cross-instance folder lock). mem0.json is
+#     deliberately NOT nix-managed; it lives in the profile home.
 #   - NO dashboard secrets in its env (serve stays glen-only)
 #   - env from agenix: secrets/hermes-gloo-env.age (ZAI_CODING_KEY,
 #     OPENROUTER_API_KEY, GLOO_API_KEY, original DISCORD_BOT_TOKEN,
 #     DISCORD_ALLOWED_USERS). NEVER load hermes-bee-env-glen.age here — the
 #     private bot token would win/trip Hermes' bot-token lock.
-{ config, lib, pkgs, ... }:
+#
+# Declarative config (2026-09-05): the memory keys below are Nix-owned and
+# deep-merged into $glooHome/config.yaml at every activation, using the SAME
+# machinery as the upstream hermes-agent module uses for glen (pinned flake
+# input renders toJSON → YAML and merges: Nix keys replace the same keys on
+# disk, every runtime-owned key — model picks, custom_providers, mcp_servers,
+# gateway.platforms, `hermes config set` results — survives the merge).
+# The hand-rolled unit below stays: same ExecStart/env/EnvironmentFile.
+{ config, lib, pkgs, hermes-agent, ... }:
 
-{
+let
+  glooHome = "/var/lib/hermes/.hermes/profiles/gloo";
+
+  # Exactly the keys this module owns. Anything else in the live config.yaml
+  # is runtime-owned and must survive activation untouched.
+  glooSettings = {
+    memory = {
+      provider = "mem0";
+      memory_char_limit = 6000;
+      user_char_limit = 2000;
+    };
+  };
+
+  # Same renderer + merge script as upstream (nix/moduleCommon.nix): toJSON
+  # output is valid YAML, and the pinned input's configMergeScript.nix
+  # (python3 + pyyaml) overlays the Nix keys onto the file on disk.
+  glooConfigGenerated =
+    pkgs.writeText "hermes-gloo-config.yaml" (builtins.toJSON glooSettings);
+  glooConfigMerge =
+    pkgs.callPackage (hermes-agent + "/nix/configMergeScript.nix") { };
+in {
   systemd.services.hermes-gloo-gateway = {
     description = "Hermes Agent Gateway (gloo work profile)";
     wantedBy = [ "multi-user.target" ];
@@ -31,8 +63,13 @@
     wants = [ "network-online.target" ];
 
     environment = {
-      HERMES_HOME = "/var/lib/hermes/.hermes/profiles/gloo";
+      HERMES_HOME = glooHome;
       HOME = "/home/crussell";
+      # Restart trigger: the store path changes whenever the declared
+      # settings above change, which rewrites the unit text and makes
+      # switch-to-configuration bounce the gateway so it picks up the new
+      # config.yaml (hermes caches config at process start).
+      HERMES_GLOO_DECLARED_CONFIG = glooConfigGenerated;
       # 2026-09-05: user-session env for systemd-run --user --scope — see
       # the identical fix on hermes-agent in configuration.nix (cron /
       # background-child dispatch dies without it on hermes ≥0.21).
@@ -60,4 +97,17 @@
       ProtectSystem = false;
     };
   };
+
+  # Deep-merge the declared settings into the profile's config.yaml at
+  # activation (runs before switch-to-configuration restarts the gateway).
+  # Activation runs as root and python rewrites the file in place, so
+  # ownership/mode are set explicitly afterwards (a fresh file would
+  # otherwise be root-owned).
+  system.activationScripts.hermes-gloo-config =
+    lib.stringAfter [ "users" "groups" ] ''
+      mkdir -p ${glooHome}
+      ${glooConfigMerge} ${glooConfigGenerated} ${glooHome}/config.yaml
+      chown crussell:hermes ${glooHome}/config.yaml
+      chmod 660 ${glooHome}/config.yaml
+    '';
 }
