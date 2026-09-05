@@ -20,6 +20,11 @@
       # skills, plugins, cron jobs. This is the agent's entire memory
       # and config — irreplaceable if the host is lost.
       "/var/lib/hermes"
+
+      # Glen's personal brain: timestamped event log + inbox drops
+      # (~/brain, 2026-09-05). Git-tracked locally; this adds a second
+      # copy beyond the checkout.
+      "/home/crussell/brain"
     ];
 
     exclude = [
