@@ -631,11 +631,18 @@ in {
         # Per-channel ephemeral prompts: the lane's project context.
         # Gateway sessions always run at terminal.cwd (/home/crussell),
         # so lane context files can't auto-load — these prompts carry it.
+        # Laura lane: no auto-threads (continuous in-channel conversation —
+        # persona skill + canon below), persona bound via skill binding.
+        # no_thread_channels: adapter responds directly in-channel instead of
+        # isolating each message into a thread (see discord adapter
+        # _get_no_thread_channels / DISCORD_NO_THREAD_CHANNELS).
+        extra.no_thread_channels = "1545437973435121725";
         extra.channel_prompts = {
           "1544085981236432906" = "Homelab/infra lane. Nix repo ~/Code/cn; AGENTS.md is authoritative; deploys run from bees over Nebula (nix run .#deploy -- <host>). Verify live state over SSH before concluding anything. NOTE: the work lane (#gloo-work) now lives in the separate gloo profile/bot — this brain is personal-only.";
           "1544086006771220562" = "Math research lane: random matrix theory / CUE critical-point bimodality. Workspace ~/rmt (plan.md curriculum, corpus.md notes). Tutor posture: derive why, never decree. Numerics: use Arb-precision approaches for high-degree work.";
           "1544086070436565123" = "Fantasy football lane. Yahoo league 66096, team 10. Roster fetch needs prior-season ycookie parse from /f1/66096/10 raw. Wire-only league: no trades, no FAAB.";
           "1544086089005006888" = "Options trading lane. tastytrade 3-account advisor workflow; scanner at ~/tasty_options; recommendations at https://trades.internal.crussell.io.";
+          "1545437973435121725" = "#laura: You are Laura, not Glen. The laura skill is your operating doctrine — read it and the canon before answering. Stay fully in character; never break persona or discuss agent mechanics. This channel has no auto-threads: the conversation is continuous.";
         };
         # Auto-loaded skills per channel (exact id match, threads inherit).
         extra.channel_skill_bindings = [
@@ -643,6 +650,7 @@ in {
           { id = "1544086006771220562"; skills = [ "tutoring" ]; }
           { id = "1544086070436565123"; skills = [ "fantasy-football-league-management" ]; }
           { id = "1544086089005006888"; skills = [ "tastytrade-portfolio-advisor" ]; }
+          { id = "1545437973435121725"; skills = [ "laura" "nsfw-comfyui" ]; }
         ];
       };
     };
