@@ -555,35 +555,18 @@ in {
       # Enable session checkpoints (rollback snapshots for long sessions)
       checkpoints.enabled = true;
       # MCP servers — GitHub tools (26 tools: PRs, issues, code search, etc.)
-      # use gh CLI's OAuth token (gh is authed as crussell). Linear uses the
-      # official hosted read-only MCP endpoint; OAuth is completed interactively
-      # on first connection/login, and no Linear secret is stored in Nix.
+      # use gh CLI's OAuth token (gh is authed as crussell).
       # Note: SQLite was considered but removed — sqlite3 via terminal is
       # more capable than an MCP wrapper, with no persistent subprocess.
+      # 2026-09-05 per-side tooling (topology review): linear + vercel are
+      # WORK tooling — they live only in the gloo profile's config.yaml and
+      # were pruned from this (glen) side. Keep this side personal-only.
       mcp_servers = {
         github = {
           command = "${pkgs.writeShellScript "mcp-github" ''
             export GITHUB_PERSONAL_ACCESS_TOKEN="$(gh auth token)"
             exec ${pkgs.nodejs_22}/bin/npx -y @modelcontextprotocol/server-github
           ''}";
-        };
-        linear = {
-          # Single endpoint for both scopes — read vs write is chosen at
-          # OAuth authorization time (scopes_supported: read,write), NOT by
-          # URL path (/mcp/write and /mcp/readonly 404). Requires an
-          # interactive `hermes mcp login linear` that authorizes
-          # scope=read+write (deploy config first, then login).
-          url = "https://mcp.linear.app/mcp";
-          auth = "oauth";
-        };
-        # Vercel official remote MCP — deployment management for storyhub.
-        # NOTE: endpoint is the BARE domain (no /mcp path — that 404s with an
-        # HTML page, which the MCP client surfaces as "Session terminated").
-        # OAuth tokens are acquired via `hermes mcp login vercel` (one-time,
-        # interactive browser flow; token cache lives in Hermes auth store).
-        vercel = {
-          url = "https://mcp.vercel.com";
-          auth = "oauth";
         };
       };
       # Web search backend: UNPINNED (retired searxng 2026-09-03). With no
@@ -723,6 +706,12 @@ in {
       if isinstance(mcp_servers, dict) and "sqlite" in mcp_servers:
           del mcp_servers["sqlite"]
           prunes.append("mcp_servers.sqlite")
+      # Retired from glen 2026-09-05 (per-side tooling): linear + vercel are
+      # work tooling and live only in the gloo profile's config.yaml.
+      for stale_mcp in ("linear", "vercel"):
+          if isinstance(mcp_servers, dict) and stale_mcp in mcp_servers:
+              del mcp_servers[stale_mcp]
+              prunes.append(f"mcp_servers.{stale_mcp}")
       web = config.get("web") or {}
       if isinstance(web, dict) and "extract_backend" in web:
           # Retired 2026-08-12: SearXNG cannot extract, and a stale
