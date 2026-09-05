@@ -310,7 +310,12 @@ in {
   # ── Age secrets ─────────────────────────────────────────────────
   # (opencode retired 2026-09-02: personal coding → hermes delegate_task
   #  + dsh web UI, both on zai-coding/glm-5.3. See modules/dsh.nix.)
-  age.secrets.hermes-bee-env.file = ../../secrets/hermes-bee-env.age;
+  # 2026-09-04 Glen/Gloo split: the default (glen) gateway now runs the
+  # hermes-private bot; the ORIGINAL hermes bot token belongs to the work
+  # profile's gateway (hosts/bee/hermes-gloo.nix). hermes-bee-env.age is
+  # retired at the split (kept on disk for the one-cycle rollback).
+  age.secrets.hermes-bee-env-glen.file = ../../secrets/hermes-bee-env-glen.age;
+  age.secrets.hermes-gloo-env.file = ../../secrets/hermes-gloo-env.age;
 
   # Proton Pass agent token + env-key-provider key, sourced directly by
   # /var/lib/hermes/.hermes/scripts/pp-*.sh (NOT injected into any unit env —
