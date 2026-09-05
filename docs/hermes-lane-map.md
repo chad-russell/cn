@@ -20,7 +20,7 @@ renames allowed freely; structural renames need strong justification.
 |---|---|---|
 | Unit | `hermes-agent.service` | `hermes-gloo-gateway.service` |
 | Profile / HERMES_HOME | default: `/var/lib/hermes/.hermes` | `/var/lib/hermes/.hermes/profiles/gloo` |
-| Discord bot (app id) | hermes-private (`1545187919961129123`), nick **Glen** | hermes (`1544082952290566235`), nick **Gloo** |
+| Discord bot (app id) | hermes-glen (`1545187919961129123`), nick **Glen** — app still named `hermes-private` (portal rename pending) | hermes-gloo (`1544082952290566235`), nick **Gloo** — app still named `hermes` (portal rename pending) |
 | Discord lanes | Personal category (1545197493346766968): #general, #infra, #rmt, #trading, #fantasy-football, #bible-reading, #business-time, #laura, #nsfw, #inbox, #hermes-loop | Gloo category (1544084775499735070): #gloo-general (1544085937577918535) |
 | Long-term memory | mem0 → qdrant `mem0` (user `chad`) | mem0 → qdrant `mem0-gloo` (user `chad-gloo`) |
 | MCP servers | github | github, linear, vercel |
@@ -58,9 +58,22 @@ category permission overwrites (403 matrix verified 2026-09-05).
 
 ## Pending / decisions open
 
-- Tier B renames (Developer Portal, Chad's 2 min): personal bot
-  `hermes-private` → `hermes`; work bot `bot1544082952290566235` → `hermes-gloo`.
-  (Reminder scheduled 2026-09-06.)
+- Tier B renames — USERNAMES done via Discord API 2026-09-05 (no portal
+  needed): personal bot `hermes-private` → **hermes-glen**, work bot
+  `bot1544082952290566235` → **hermes-gloo**. (`hermes` as a username is
+  globally taken on Discord — hence hermes-glen; symmetric naming,
+  Chad-approved.) Remaining (portal-only, ~1 min): APPLICATION display
+  names — app `hermes-private` → `hermes-glen`, app `hermes` →
+  `hermes-gloo`. A bot token cannot rename its application via API
+  (PATCH returns 200 but silently ignores it). Reminder cron 7cfba5f4ee88
+  fires 2026-09-06 10:00.
+- Home channels declared 2026-09-05 (commit ea47ff0): glen → Personal
+  #general (1544084776363888723), gloo → #gloo-general. Stops the
+  "No home channel" nag; bare-platform cron deliveries (e.g.
+  daily-hermes-state-backup `deliver: discord`) resolve there.
+  NOTE: the loader accepts `gateway.platforms.discord.home_channel`
+  (nested) as well as top-level `platforms.*`; glen unit is
+  generation-stable — bounce after config changes.
 - DONE 2026-09-05: channel renamed `general` → `gloo-general` (owner click);
   bot nicknames Glen/Gloo set.
 - DECIDED 2026-09-05 (Chad): employer data on personal NAS/S3 restic is
