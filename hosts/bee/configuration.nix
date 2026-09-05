@@ -172,6 +172,12 @@ in {
     # BEFORE the service starts — ReadWritePaths bind-mounts this path and
     # systemd fails the unit with 226/NAMESPACE if it's missing.
     "d /var/lib/hermes/mem0_qdrant_server 2770 crussell hermes -"
+    # /bin/true compat symlink: hermes ≥0.21's restart-safe-scope probe runs
+    # `systemd-run --user --scope -- /bin/true` (tools/process_registry.py);
+    # NixOS ships no /bin/true, so without this the probe always fails and
+    # every cron fire dies fail-closed ("cannot create restart-safe systemd
+    # scope ... unavailable"). Verified live 2026-09-04.
+    "L+ /bin/true - - - - ${pkgs.coreutils}/bin/true"
   ];
 
   # ── Firewall: disabled (router handles it) ───────────────────────
