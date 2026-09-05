@@ -727,6 +727,18 @@ in {
                       del platforms[stale]
                       prunes.append(f"{section}.platforms.{stale}")
 
+      # Retired 2026-09-04 (Glen/Gloo split): the #gloo-work channel
+      # (1544085937577918535) belongs to the gloo profile now — prune its
+      # stale channel prompt so this (default/glen) gateway never picks it
+      # up even if Discord permission denies lag.
+      discord = ((config.get("gateway") or {}).get("platforms") or {}).get("discord")
+      if isinstance(discord, dict):
+          extra = discord.get("extra") or {}
+          prompts = extra.get("channel_prompts")
+          if isinstance(prompts, dict) and "1544085937577918535" in prompts:
+              del prompts["1544085937577918535"]
+              prunes.append("gateway.platforms.discord.extra.channel_prompts[gloo-work]")
+
       if prunes:
           path.write_text(yaml.dump(config, default_flow_style=False, sort_keys=False))
           print(f"hermes-prune-stale-config: pruned {', '.join(prunes)}")
