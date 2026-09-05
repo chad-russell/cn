@@ -27,6 +27,8 @@
 # profile dir): absent until the bot token is written to the profile
 # .env, then `touch`ed once — after which the gateway starts on every
 # boot without further manual steps.
+{ config, lib, pkgs, ... }:
+
 {
   # RETIRED at the 2026-09-04 Glen/Gloo split: the personal profile's 11
   # sessions were merged into the DEFAULT profile (Glen = everything-else,
