@@ -64,8 +64,6 @@ in {
     #                      # tiers) — see web-search-scrape skill.
     # ./hermes-webui.nix  # retired 2026-09-01 — desktop + Discord are the
     #                      # only chat surfaces now; webui state dir was 210 MB
-    ./hermes-personal.nix  # RETIRED at the 2026-09-04 Glen/Gloo split —
-    # delete after the deploy flips units (kept one cycle for rollback).
     ./hermes-gloo.nix
     ./trades-site.nix
     ./backup.nix
@@ -312,8 +310,8 @@ in {
   #  + dsh web UI, both on zai-coding/glm-5.3. See modules/dsh.nix.)
   # 2026-09-04 Glen/Gloo split: the default (glen) gateway now runs the
   # hermes-private bot; the ORIGINAL hermes bot token belongs to the work
-  # profile's gateway (hosts/bee/hermes-gloo.nix). hermes-bee-env.age is
-  # retired at the split (kept on disk for the one-cycle rollback).
+  # profile's gateway (hosts/bee/hermes-gloo.nix). hermes-bee-env.age was
+  # deleted at the 2026-09-05 cleanup (rollback window elapsed).
   age.secrets.hermes-bee-env-glen.file = ../../secrets/hermes-bee-env-glen.age;
   age.secrets.hermes-gloo-env.file = ../../secrets/hermes-gloo-env.age;
 
@@ -798,6 +796,16 @@ in {
         "/run/current-system/sw/bin/hermes gateway run --replace --external-supervisor";
     };
     environment.HOME = lib.mkForce "/home/crussell";
+    # 2026-09-05: hermes ≥0.21 dispatches cron jobs and background children
+    # through `systemd-run --user --scope` (restart-safe scopes). System
+    # services get NO user-session env, so without these the dispatch dies
+    # with "systemd-run --user --scope is unavailable" and every cron job
+    # fails (observed after the 0.21.0 bump: htb-watchdog streak 47,
+    # homelab-health streak 24, tasty capture lost). crussell = uid 1000,
+    # user manager runs persistent (linger). Verified: with XDG_RUNTIME_DIR
+    # set, systemd-run --user --scope succeeds from the unit context.
+    environment.XDG_RUNTIME_DIR = "/run/user/1000";
+    environment.DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
   };
 
   # ── hermes-serve: HTTP/JSON-RPC API for remote clients over Nebula ────
@@ -823,6 +831,10 @@ in {
     environment = {
       HERMES_HOME = "/var/lib/hermes/.hermes";
       HOME = "/home/crussell";
+      # 2026-09-05: user-session env for systemd-run --user --scope — see
+      # the identical fix on hermes-agent above (cron/background dispatch).
+      XDG_RUNTIME_DIR = "/run/user/1000";
+      DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
       # Hermes resolves its terminal-tool shell with `which bash`, falling
       # back to $SHELL (zsh here) when bash is absent from PATH. systemd's
       # default unit PATH has no bash (and NixOS has no /bin/bash), so every

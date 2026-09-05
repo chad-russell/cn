@@ -33,6 +33,11 @@
     environment = {
       HERMES_HOME = "/var/lib/hermes/.hermes/profiles/gloo";
       HOME = "/home/crussell";
+      # 2026-09-05: user-session env for systemd-run --user --scope — see
+      # the identical fix on hermes-agent in configuration.nix (cron /
+      # background-child dispatch dies without it on hermes ≥0.21).
+      XDG_RUNTIME_DIR = "/run/user/1000";
+      DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
       SHELL = "${pkgs.bashInteractive}/bin/bash";
       PATH = lib.mkForce
         "/run/wrappers/bin:${pkgs.bashInteractive}/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
