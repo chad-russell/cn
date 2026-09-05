@@ -38,11 +38,8 @@
   systemd.services.hermes-personal-gateway = {
     description = "Hermes Agent Gateway (personal profile) [RETIRED]";
     wantedBy = lib.mkForce [ ];  # never auto-start
-    # Auto-start at boot, but ONLY once the Discord token is in place:
-    # the condition marker is touched when DISCORD_BOT_TOKEN is added to
-    # the profile .env. Until then systemd cleanly SKIPS the unit
-    # (condition not met — no crash-looping adapter on every boot).
-    wantedBy = [ "multi-user.target" ];
+    # never auto-start after the split (mkForce [] below replaces the
+    # original wantedBy; kept out of wantedBy list form to avoid dup attr)
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
     unitConfig.ConditionPathExists =
