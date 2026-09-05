@@ -46,6 +46,16 @@ let
       memory_char_limit = 6000;
       user_char_limit = 2000;
     };
+    # Home channel — fallback delivery target for bare-platform cron
+    # deliveries / cross-platform messages = the one Gloo lane. Equivalent
+    # of /sethome in #gloo-general; declared 2026-09-05 to stop the
+    # "No home channel" first-message nag. (Unit text changes with
+    # glooConfigGenerated, so a deploy restarts this gateway automatically.)
+    gateway.platforms.discord.home_channel = {
+      platform = "discord";
+      chat_id = "1544085937577918535";
+      name = "gloo-general";
+    };
   };
 
   # Same renderer + merge script as upstream (nix/moduleCommon.nix): toJSON

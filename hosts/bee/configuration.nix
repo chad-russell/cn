@@ -639,6 +639,17 @@ in {
           { id = "1545437973435121725"; skills = [ "laura" "nsfw-comfyui" ]; }
           { id = "1545653384197967912"; skills = [ "inbox-brain" ]; }
         ];
+        # Home channel — fallback delivery target for bare-platform cron
+        # deliveries (e.g. daily-hermes-state-backup's deliver: discord) and
+        # cross-platform messages. Equivalent of /sethome in Personal #general;
+        # declared 2026-09-05 to stop the "No home channel" first-message nag.
+        # NOTE: the glen unit is generation-stable — bounce hermes-agent
+        # explicitly after changes here so the running gateway reloads config.
+        home_channel = {
+          platform = "discord";
+          chat_id = "1544084776363888723";
+          name = "general";
+        };
       };
     };
 
