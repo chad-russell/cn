@@ -27,11 +27,17 @@
 # profile dir): absent until the bot token is written to the profile
 # .env, then `touch`ed once — after which the gateway starts on every
 # boot without further manual steps.
-{ config, lib, pkgs, ... }:
-
 {
+  # RETIRED at the 2026-09-04 Glen/Gloo split: the personal profile's 11
+  # sessions were merged into the DEFAULT profile (Glen = everything-else,
+  # now running the hermes-private bot), and this unit's lane is served by
+  # hermes-agent.service with hermes-bee-env-glen.age. Disabled (not
+  # deleted) for one rollback cycle; delete this file + its import after
+  # the split is verified. If it ever started alongside the default
+  # gateway, BOTH would present the same bot token → lock conflict.
   systemd.services.hermes-personal-gateway = {
-    description = "Hermes Agent Gateway (personal profile)";
+    description = "Hermes Agent Gateway (personal profile) [RETIRED]";
+    wantedBy = lib.mkForce [ ];  # never auto-start
     # Auto-start at boot, but ONLY once the Discord token is in place:
     # the condition marker is touched when DISCORD_BOT_TOKEN is added to
     # the profile .env. Until then systemd cleanly SKIPS the unit

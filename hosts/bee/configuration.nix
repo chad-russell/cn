@@ -64,7 +64,9 @@ in {
     #                      # tiers) — see web-search-scrape skill.
     # ./hermes-webui.nix  # retired 2026-09-01 — desktop + Discord are the
     #                      # only chat surfaces now; webui state dir was 210 MB
-    ./hermes-personal.nix
+    ./hermes-personal.nix  # RETIRED at the 2026-09-04 Glen/Gloo split —
+    # delete after the deploy flips units (kept one cycle for rollback).
+    ./hermes-gloo.nix
     ./trades-site.nix
     ./backup.nix
     ./tailscale.nix
@@ -600,17 +602,19 @@ in {
       # lane-model rationale. Sole messaging platform since 2026-08-31
       # (Telegram decommissioned).
       # Discord bot (2026-08-31): the "lane model" — one private server,
-      # one channel per project lane (#gloo-work, #infra, #rmt,
-      # #fantasy-football, #trading, #bible-reading). Each channel is its
-      # own gateway session namespace, so lanes get transcript isolation
-      # for free while memory/skills stay unified (cross-lane work like
-      # "deploy a demo site for the fantasy draft" keeps working with full
-      # homelab knowledge — the reason we did NOT split this into profiles).
+      # one channel per project lane (#infra, #rmt,
+      # #fantasy-football, #trading, #bible-reading, + Personal category).
+      # 2026-09-04 Glen/Gloo split: the work lane (#gloo-work,
+      # 1544085937577918535) moved to the gloo profile (its own gateway,
+      # SOUL, sessions; Discord deny overwrites blind it to personal
+      # categories). The default profile is "Glen" — everything else —
+      # and runs the hermes-private bot (see hermes-bee-env-glen.age).
       # require_mention=false: single-user server, so every channel is
       # free-response — type and it answers, no @mention ceremony.
-      # Telegram was decommissioned the same day (see prune script below);
-      # Discord is the sole messaging platform. Token: DISCORD_BOT_TOKEN in
-      # hermes-bee-env.age; allowlist: DISCORD_ALLOWED_USERS below.
+      # Telegram was decommissioned 2026-08-31 (see prune script below);
+      # Discord is the sole messaging platform. Token: DISCORD_BOT_TOKEN
+      # (hermes-private bot) in hermes-bee-env-glen.age; allowlist:
+      # DISCORD_ALLOWED_USERS below.
       gateway.platforms.discord = {
         enabled = true;
         extra.require_mention = false;
@@ -619,8 +623,7 @@ in {
         # Gateway sessions always run at terminal.cwd (/home/crussell),
         # so lane context files can't auto-load — these prompts carry it.
         extra.channel_prompts = {
-          "1544085937577918535" = "Gloo work lane. Work repos live under ~/Gloo (360-gpl, 360-polymer, 360-hummingbird). Work code routes to the gloo provider or Codex — never personal providers for work traffic. RFCs in ~/Gloo/TangoGroup/360-acceleration-rfcs.";
-          "1544085981236432906" = "Homelab/infra lane. Nix repo ~/Code/cn; AGENTS.md is authoritative; deploys run from bees over Nebula (nix run .#deploy -- <host>). Verify live state over SSH before concluding anything.";
+          "1544085981236432906" = "Homelab/infra lane. Nix repo ~/Code/cn; AGENTS.md is authoritative; deploys run from bees over Nebula (nix run .#deploy -- <host>). Verify live state over SSH before concluding anything. NOTE: the work lane (#gloo-work) now lives in the separate gloo profile/bot — this brain is personal-only.";
           "1544086006771220562" = "Math research lane: random matrix theory / CUE critical-point bimodality. Workspace ~/rmt (plan.md curriculum, corpus.md notes). Tutor posture: derive why, never decree. Numerics: use Arb-precision approaches for high-degree work.";
           "1544086070436565123" = "Fantasy football lane. Yahoo league 66096, team 10. Roster fetch needs prior-season ycookie parse from /f1/66096/10 raw. Wire-only league: no trades, no FAAB.";
           "1544086089005006888" = "Options trading lane. tastytrade 3-account advisor workflow; scanner at ~/tasty_options; recommendations at https://trades.internal.crussell.io.";
@@ -644,21 +647,23 @@ in {
       # in systemPackages below). NixOS chromium has all shared libs;
       # agent-browser's own Chrome download lacks them on NixOS.
       AGENT_BROWSER_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
-      # ZAI_CODING_KEY, OPENROUTER_API_KEY, GLOO_API_KEY, and
-      # DISCORD_BOT_TOKEN are in hermes-bee-env.age. (Telegram env vars
-      # were removed with the platform 2026-08-31.)
+      # ZAI_CODING_KEY, OPENROUTER_API_KEY, and DISCORD_BOT_TOKEN
+      # (hermes-private bot) are in hermes-bee-env-glen.age. GLOO_API_KEY
+      # moved to hermes-gloo-env.age (work profile only — Glen must not
+      # bill employer budget on personal traffic).
+      # (Telegram env vars were removed with the platform 2026-08-31.)
       # Allow Chad's Discord account (user ID) on the lane server.
       DISCORD_ALLOWED_USERS = "588760941076676676";
     };
 
-    environmentFiles = [ config.age.secrets.hermes-bee-env.path ];
+    environmentFiles = [ config.age.secrets.hermes-bee-env-glen.path ];
   };
 
   # Inject secrets directly into the systemd service environment so the
   # Hermes runtime provider resolver sees OPENAI_API_KEY before python-dotenv
   # loads .env. Without this, the resolver falls back to "no-key-required".
   systemd.services.hermes-agent.serviceConfig.EnvironmentFile =
-    [ config.age.secrets.hermes-bee-env.path ];
+    [ config.age.secrets.hermes-bee-env-glen.path ];
 
   # The Hermes NixOS module deep-merges declarative settings into the existing
   # mutable config.yaml so user-owned keys survive. That means removing a nested
@@ -827,7 +832,7 @@ in {
       Group = "hermes";
       ExecStart =
         "/run/current-system/sw/bin/hermes serve --host 10.10.0.12 --port 9119";
-      EnvironmentFile = [ config.age.secrets.hermes-bee-env.path ];
+      EnvironmentFile = [ config.age.secrets.hermes-bee-env-glen.path ];
       Restart = "on-failure";
       RestartSec = 5;
     };

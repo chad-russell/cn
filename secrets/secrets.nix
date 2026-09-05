@@ -40,10 +40,18 @@ in {
   "proton-pass-env.age".publicKeys = [ crussell ];
 
   # ── Hermes Agent gateway on bee ───────────────────────────────
-  # Combined env: OPENAI_API_KEY (Z.AI key remapped for Hermes'
-  # OpenAI-compatible provider) + TELEGRAM_BOT_TOKEN + dashboard-auth
-  # secrets. (Legacy BUZZ_* keys may linger inside; they are unused.)
-  "hermes-bee-env.age".publicKeys = [ crussell ];
+  # ── Hermes Agent gateway on bee (Glen, everything-else lane) ────
+  # 2026-09-04 Glen/Gloo split: this env now carries the HERMES-PRIVATE
+  # bot token (Glen = everything-else instance). The ORIGINAL hermes bot
+  # token moved to hermes-gloo-env.age for the work profile. This file
+  # keeps its historical name to avoid re-encrypting existing references.
+  "hermes-bee-env-glen.age".publicKeys = [ crussell ];
+
+  # ── Gloo (work lane) gateway env on bee ─────────────────────────
+  # ZAI_CODING_KEY + OPENROUTER_API_KEY + GLOO_API_KEY + the ORIGINAL
+  # hermes bot token (work instance's Discord identity) + allowed users.
+  "hermes-gloo-env.age".publicKeys = [ crussell ];
+
 
   # ── Hermes WebUI on bee ─────────────────────────────────────────
   # HERMES_WEBUI_PASSWORD for the web login gate at
