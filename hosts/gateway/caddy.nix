@@ -67,5 +67,15 @@
       root * /srv/glen-site
       file_server
     '';
+
+    # noms.crussell.io — Noms food-app design review (static picker page +
+    # three self-contained prototype variants; sample data only, no
+    # backend). Will later host the real app behind a login.
+    # Content lives in /srv/noms on the gateway (NOT flake-managed) —
+    # published from ~/Code/noms/design/ on bee.
+    virtualHosts."noms.crussell.io".extraConfig = ''
+      root * /srv/noms
+      file_server
+    '';
   };
 }
