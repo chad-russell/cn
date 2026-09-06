@@ -80,6 +80,10 @@ in {
       # switch-to-configuration bounce the gateway so it picks up the new
       # config.yaml (hermes caches config at process start).
       HERMES_GLOO_DECLARED_CONFIG = glooConfigGenerated;
+      # Browser automation (2026-09-06): same hook as glen's unit in
+      # configuration.nix — agent-browser uses nixpkgs chromium from
+      # systemPackages; its own Chrome download lacks shared libs on NixOS.
+      AGENT_BROWSER_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
       # 2026-09-05: user-session env for systemd-run --user --scope — see
       # the identical fix on hermes-agent in configuration.nix (cron /
       # background-child dispatch dies without it on hermes ≥0.21).
