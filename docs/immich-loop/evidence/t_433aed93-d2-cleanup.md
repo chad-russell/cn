@@ -192,3 +192,53 @@ all checks passed!                                 # FLAKE-CHECK-EXIT=0
 ```
 
 Live bees untouched (read-only SSH confirms module-era generation).
+
+## Round-3 rework (run 9, reviewer blocker from comment 11)
+
+Docs-only fix, no Nix touched — RUNBOOK §7.3's revert chain documented as
+an attended sequence with the expected conflict made explicit.
+
+The round-2 review EXECUTED §7.3 in a scratch worktree at ed955d6 and
+found revert #2 (9a9790a) stops with CONFLICT (modify/delete) on
+`hosts/bees/immich-native.nix` + this evidence file — 9cc25fe modified
+both after 9a9790a created them. Round-2's §7.3 implied the chain ran
+unattended; it does not.
+
+Fix applied to RUNBOOK-cutover.md §7.3:
+
+1. The revert command block now carries the resolution inline: an
+   `# EXPECT:` comment naming the two conflicted paths and why, then
+   `git rm hosts/bees/immich-native.nix
+   docs/immich-loop/evidence/t_433aed93-d2-cleanup.md` +
+   `git revert --continue --no-edit` (the revert's intent IS their
+   deletion — accept it and continue).
+2. The ordering paragraph no longer claims unattended completion: it now
+   says revert #1 lands clean, revert #2 stops at the expected
+   modify/delete conflict, and the git rm + --continue lines resolve it.
+
+Verification (this round, re-executed independently before patching —
+script /tmp/r3-repro.sh, scratch worktree at ed955d6):
+
+```
+sim cutover: 210f430
+--- revert 1: cutover --- CLEAN
+--- revert 2: 9a9790a ---  CONFLICT as reviewer claimed; status:
+UD docs/immich-loop/evidence/t_433aed93-d2-cleanup.md
+UD hosts/bees/immich-native.nix        # (+ M CONTRACT.md, M configuration.nix,
+                                        #  A immich.nix + immich-backup.nix staged)
+--- resolve: git rm conflicted paths + revert --continue --- REVERT-CONTINUE-OK
+--- post-rollback tree ---
+hosts/bees/immich.nix + immich-backup.nix restored, immich-native.nix gone,
+configuration.nix imports ./immich.nix + ./immich-backup.nix,
+immich.nix:31 permittedInsecurePackages = [ "immich-2.7.5" ] restored
+bees EVAL-OK, services.immich.enable = true
+```
+
+The exact `git revert --continue --no-edit` form was separately verified
+(second scratch worktree): completes cleanly, commit subjects
+`Revert "bees: immich cutover …"` + `Revert "immich-loop D2: …"`.
+
+Reverting 9cc25fe in the chain instead was considered and rejected (per
+reviewer): it would leave ed955d6's §3-preamble line stale in the
+runbook; the git-rm note matches the already-listed expected effects.
+

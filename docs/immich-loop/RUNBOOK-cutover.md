@@ -418,22 +418,41 @@ gone and the revert would not compile. Revert BOTH commits together:
 # on bee:
 cd ~/loop/cn && git checkout loop/wip && git pull
 git log --oneline -5                      # identify the cutover commit + 9a9790a
-git revert <cutover-commit-sha> 9a9790a   # restores immich.nix + immich-backup.nix,
-                                           # re-adds the immich-2.7.5 permit,
-                                           # deletes immich-native.nix + the id pins,
-                                           # restores the ./immich.nix import
+git revert <cutover-commit-sha> 9a9790a   # reverts BOTH: restores immich.nix +
+                                           # immich-backup.nix, re-adds the
+                                           # immich-2.7.5 permit, deletes
+                                           # immich-native.nix + the id pins,
+                                           # restores the ./immich.nix import.
+                                           # NOTE: this command STOPS mid-way
+                                           # at an EXPECTED conflict — see below.
+# EXPECT: revert #1 (cutover commit) applies cleanly; revert #2 (9a9790a)
+# stops with CONFLICT (modify/delete) on hosts/bees/immich-native.nix and
+# docs/immich-loop/evidence/t_433aed93-d2-cleanup.md (round-2 commit 9cc25fe
+# modified both after 9a9790a created them, so the inverse diff no longer
+# applies cleanly). The revert's intent IS their deletion — accept it:
+git rm hosts/bees/immich-native.nix docs/immich-loop/evidence/t_433aed93-d2-cleanup.md
+git revert --continue --no-edit           # completes revert #2
 git push origin loop/wip
 # then deploy exactly as §4 from bees, and re-verify rows 1,3,5,6 against module 2.7.5
 # (run verify-immich.sh with IMMICH_EXPECT_VERSION=2.7.5 to allow the old version)
 ```
 
 Ordering note: revert NEWEST first (cutover commit, then 9a9790a), exactly
-as written — `git revert A B` applies A then B as two commits. The
-intermediate tree (after A, before B) is just the D2 state and evals clean.
-The REVERSE order breaks: reverting 9a9790a first restores immich.nix and
-deletes immich-native.nix while configuration.nix still imports
+as written — `git revert A B` applies A then B as two commits. The sequence
+requires the manual conflict resolution above (it does NOT run unattended
+end-to-end): revert #1 lands, then revert #2 stops at the expected
+modify/delete conflict, which the `git rm` + `git revert --continue` lines
+resolve. The intermediate tree (after revert #1, before revert #2) is just
+the D2 state and evals clean. The REVERSE order breaks for a different
+reason: reverting 9a9790a first restores immich.nix and deletes
+immich-native.nix while configuration.nix still imports
 ./immich-native.nix (import of a missing file → eval error, likely
-conflict on the second revert).
+conflict on the second revert). Executed and verified in a scratch
+worktree at ed955d6 (run 9): revert #1 CLEAN, revert #2 stops UD on
+immich-native.nix + the evidence file, `git rm` both + `git revert
+--continue --no-edit` completes the chain, and the resulting tree evals
+clean with `services.immich.enable = true` and the immich-2.7.5 permit
+restored.
 
 If git history is unavailable for any reason, manual equivalent:
 restore `hosts/bees/immich.nix` + `hosts/bees/immich-backup.nix` from
