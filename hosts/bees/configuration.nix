@@ -15,6 +15,7 @@
     ../../modules/nebula-client.nix
     ./media-services.nix
     ./immich-native.nix
+    ./immich-quadlet.nix
     ./ntfy.nix
     ./datenight.nix
     ./caddy.nix
