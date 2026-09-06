@@ -14,7 +14,8 @@
 # drop, so they are a no-op against the existing DB; extensions already
 # installed persist (verify post-cutover per runbook §1.5).
 #
-# Ids: immich = 991:993, redis-immich = 992 (FACTS.md).
+# Ids: immich = 991:993 and nas-photos gid = 1000 — pinned below (FACTS.md);
+# redis-immich = 992 stays module-held (see the pin block comment).
 #
 # → Once this is live, disable Immich's built-in backup in the admin UI
 #   (Administration → Backup) so there's a single source of dumps.
@@ -25,6 +26,24 @@ let
   dumpDir = "/mnt/photos/backups";
   pg = config.services.postgresql.package;
 in {
+  # ── Id reservations (FACTS.md: immich 991:993, nas-photos gid 1000) ──
+  # The nixpkgs immich module declared the immich user/group with
+  # auto-allocated ids (mutableUsers persisted them as 991/993 on bees).
+  # With the module gone, pin them so nothing can re-allocate the ids:
+  # the quadlets hardcode User=991:993 (PG peer auth and NFS ownership
+  # are numeric — /mnt/photos root is immich:immich 700) and A2's NFS
+  # uid/gid mapping references gid 1000. Values match the live
+  # /etc/passwd + /etc/group entries, so the first switch is a no-op.
+  # (redis-immich needs no pin: services.redis below keeps its group
+  # declared, so its mutableUsers gid reservation persists.)
+  users.users.immich = {
+    uid = 991;
+    isSystemUser = true;
+    group = "immich";
+  };
+  users.groups.immich.gid = 993;
+  users.groups.nas-photos.gid = 1000;
+
   # ── Survivors the immich module used to own (RUNBOOK §3c) ──────────
   services.postgresql = {
     enable = true;

@@ -21,11 +21,12 @@ Grounding facts baked in below (all verified 2026-09-06):
 - Redis: the module's `services.redis.servers.immich` listens on a **unix
   socket** by default (`/run/redis-immich/redis.sock`, group `redis-immich`),
   NOT TCP. `redis-cli -s /run/redis-immich/redis.sock ping` is the probe.
-  Whether the container uses the socket (volume-mount) or we switch to TCP
-  is `TODO-B1(env-db-vars)`.
+  RESOLVED by B1: the container volume-mounts `/run/redis-immich` and uses
+  `REDIS_SOCKET` (see `immich-server.container`).
 - pg_hba today: local socket = peer, `127.0.0.1/32` + `::1/128` = md5.
-  The immich DB role password exists (module used a secretsFile); the
-  container's connection strategy must be resolved in §1.5 / TODO-B1.
+  RESOLVED by B1: the container connects over the LOCAL SOCKET with
+  peer auth (`DB_URL=postgresql://immich@/immich?host=/run/postgresql`)
+  — no password is involved; the `immich` role has none.
 - Unit-file discriminator (live-verified): quadlet units have
   `SourcePath=/etc/containers/systemd/<x>.container` +
   `FragmentPath=/run/systemd/generator/…`; NixOS units are
@@ -105,19 +106,23 @@ sudo podman images | grep immich    # both pinned tags present
 (Pre-pull also proves registry reachability. If the quadlet uses a
 `podman.image`/`Image=` tag identical to D1 this is instant.)
 
-### 1.5 DB connection strategy (with B1's answers — TODO-B1(env-db-vars))
+### 1.5 DB connection strategy (resolved by B1's committed container)
 
-Facts to confirm from the dry-run and fill in before cutover:
+B1's `hosts/bees/immich-server.container` answers all three open
+questions (committed 24d7f2d; verified against the file):
 
-- `TODO-B1(env-db-vars)`: exact env names the container uses for DB + Redis
-  (v3 images use `DB_URL` incl. `?sslMode=disable` for remote PG; older-style
-  `DB_HOSTNAME/DB_USERNAME/DB_PASSWORD/DB_DATABASE_NAME` still work). Note
-  which one B1's env file uses.
-- `TODO-B1(env-db-vars)`: password handling — env-file reference to the
-  agenix-rendered secret on bees, never plaintext in the repo (CONTRACT #5).
-- `TODO-B1(env-db-vars)`: redis over the unix socket (volume mount
-  `/run/redis-immich` + `REDIS_SOCKET`) or TCP (set
-  `services.redis.servers.immich.port`/`bind` accordingly in §3).
+- Env: `DB_URL=postgresql://immich@/immich?host=/run/postgresql` (v3
+  style) + `REDIS_SOCKET=/run/redis-immich/redis.sock` — inline env,
+  no env file.
+- Password handling: NONE. Peer auth over the local socket; the
+  `immich` role has no password (D8 discovery). No agenix entry, no
+  secret material (CONTRACT #5 satisfied trivially).
+- Redis over the **unix socket**: `/run/redis-immich` is volume-mounted
+  + `GroupAdd=992` for the socket gid; no TCP listener needed.
+
+Still operator-owned at cutover time — capture the DB facts for row 7
+(and §7.2's extension restore):
+
 - Resolve DB name + user authoritatively (module defaults). The §1.5
   extension list IS the pre-cutover capture that check row 7 compares
   against — save the output (it also feeds §7.2's extension restore).
@@ -150,49 +155,46 @@ bee only): `ssh bees 'bash ~/Code/cn/docs/immich-loop/scripts/notify.sh "H1 cuto
 ## 3. The cutover commit (exact contents) — author on bee
 
 Author in the board repo on bee (`~/loop/cn`), commit to `loop/wip` (D5),
-push, then gate on bees. One commit, three file changes, nothing else:
+push, then gate on bees. The branch state at authoring time already
+includes D2's post-soak cleanup (commit 9a9790a, round-2 rework):
+`hosts/bees/immich.nix` and `hosts/bees/immich-backup.nix` are DELETED,
+and the imported native-side file is `hosts/bees/immich-native.nix`
+(id reservations + postgres + redis-immich + db-dump + freshness —
+RUNBOOK §3c's re-declaration already lives there, imported and eval'd
+clean on loop/wip; do NOT re-add PG/redis elsewhere). B1's
+`hosts/bees/immich-quadlet.nix` + `immich-server.container` +
+`immich-machine-learning.container` are already committed but NOT yet
+imported — the cutover commit is what wires them in.
+
+One commit, two file changes, nothing else:
 
 **a) `hosts/bees/configuration.nix`:**
 
-1. imports list: replace `./immich.nix` with `./immich-quadlet.nix`
-   (B1's file; deployable prod quadlet — 2283/3003, NFS mounts, uid-mapping
-   per A2, `TODO-B1(final-quadlet-names)` for unit names).
-2. DELETE the `systemd.services.immich-server.onFailure` override. After the
-   module is disabled, a `systemd.services.*` entry would create a stub
-   immich-server.service that SHADOWS the quadlet-generated unit — the exact
-   caddy trap documented in this same file (see its comment block). The
-   quadlet's OnFailure (if any) must come from a systemd.packages drop-in or
-   inside the .container file (TODO-B1(final-quadlet-names): confirm B1 did
-   one of these).
+1. imports list: add `./immich-quadlet.nix` on the line AFTER
+   `./immich-native.nix` (which stays — it is the imported native-side
+   home). There is no `./immich.nix` to replace anymore (D2 deleted it).
+2. The `systemd.services.immich-server.onFailure` override is already
+   gone (D2 removed it with the module). Nothing to do here — the
+   quadlet's OnFailure alerting ships as an [Unit] line in
+   `immich-server.container` (B1, commit 95e80f1; verified present).
 
-**b) `hosts/bees/immich.nix` (module file): disable, do NOT delete** (D9 —
-it IS the rollback). Note its other content still applies while imported —
-but since (a) removes the import, ALSO relocate these two surviving bits
-into `immich-quadlet.nix` (they only merge when the module is imported):
+**b) `hosts/bees/immich.nix` (module file): ALREADY DELETED** — the
+runbook's original "disable, do NOT delete" (D9) applied to the pre-D2
+branch. D2's cleanup diff (9a9790a) removed the file and its permit
+(`permittedInsecurePackages immich-2.7.5` lands nowhere now), and
+relocated every surviving bit into the imported `immich-native.nix`:
+the nas-photos gid-1000 reservation AND the immich uid-991/gid-993
+reservations are pinned there explicitly (round-2 rework, reviewer
+blockers #1/#2), so the ids cannot drift while the module is gone.
+Rollback no longer relies on the disabled module file — see §7 (gen
+rollback §7.1, or revert the cutover commit AND 9a9790a together §7.3).
 
-- `users.groups.nas-photos = { gid = 1000; }` — keep the group declared so
-  the gid never shifts (the container's NFS uid/gid mapping from A2
-  references it).
-- `nixpkgs.config.permittedInsecurePackages = [ "immich-2.7.5" ]` — keep
-  through the soak ONLY if loop/wip still evals it (harmless); D2 removes
-  it. Simplest correct move: move the permit into immich-quadlet.nix now,
-  drop it in D2 with the module file.
-- The `systemd.services.immich-server.serviceConfig.SupplementaryGroups`
-  override is DELETED along with the onFailure in (a).2 — same stub trap.
-
-Then the module disable itself:
+**c) native PG + redis re-declaration: ALREADY IN PLACE** — committed
+in `hosts/bees/immich-native.nix` (imported since 9a9790a), runbook-§3c
+exact:
 
 ```nix
-   services.immich.enable = false;   # was true — cutover 2026-09-XX, H1
-```
-
-(and leave everything else in the file untouched).
-
-**c) `hosts/bees/immich-quadlet.nix` (or the host config): RE-ADD the
-surviving services the module used to own** — CRITICAL per PLAN risk:
-
-```nix
-   # ── Survives services.immich disablement (owned by the module before) ──
+   # ── Survivors the immich module used to own (RUNBOOK §3c) ──────────
    services.postgresql = {
      enable = true;
      package = pkgs.postgresql_17;          # 26.05 default; pin explicitly
@@ -217,8 +219,8 @@ surviving services the module used to own** — CRITICAL per PLAN risk:
    services.redis.servers.immich = {
      enable = true;
      logLevel = "warning";
-     # socket default; if the container needs TCP instead, set port/bind here
-     # per TODO-B1(env-db-vars)
+     # socket default (/run/redis-immich/redis.sock); the server container
+     # auths via REDIS_SOCKET (B1's immich-server.container).
    };
 ```
 
@@ -232,26 +234,37 @@ Notes:
 ```bash
    sudo -n -u postgres psql -d immich -c "CREATE EXTENSION IF NOT EXISTS \"<ext>\"; ALTER EXTENSION \"<ext>\" UPDATE;"
 ```
-- `git diff origin/loop/wip` must show EXACTLY the three files: `hosts/bees/
-  configuration.nix`, `hosts/bees/immich.nix`, `hosts/bees/immich-quadlet.nix`
-  (the last carries B1's files arriving via B1's own commits — the cutover
-  commit touches only config + module flag if B1's file is already on
-  loop/wip; `git diff --cached --stat` in §3b shows the truth).
+- `git diff origin/loop/wip` must show EXACTLY one file:
+  `hosts/bees/configuration.nix` (one-line import add). B1's quadlet files
+  and D2's immich-native.nix are already on loop/wip via their own commits
+  — the cutover commit adds only the import that wires them in
+  (`git diff --cached --stat` in §3b shows the truth).
 
 ### 3b. Commit, push, and the eval gate on bees
 
 ```bash
 # on bee:
 cd ~/loop/cn
-git add hosts/bees/configuration.nix hosts/bees/immich.nix hosts/bees/immich-quadlet.nix
-git diff --cached --stat                # EXACTLY the three files
-git commit -m "bees: immich cutover — disable module, enable v3.1.0 quadlet, re-add explicit PG+Redis"
+git add hosts/bees/configuration.nix
+git diff --cached --stat                # EXACTLY the one file, one-line import add
+git commit -m "bees: immich cutover — import immich-quadlet.nix (v3.1.0 quadlet goes live)"
 git push origin loop/wip
 
-# on bees — THE gate (module disabled but PG+Redis survive):
+# on bees — THE gate (quadlet wired, module gone, PG+Redis native):
 ssh bees
 cd ~/Code/cn && git fetch origin && git checkout loop/wip && git pull
+# services.immich exists as an option via the nixpkgs base module list
+# even with our module file deleted — the assertion is the VALUE false:
 nix eval .#nixosConfigurations.bees.config.services.immich.enable                                  # false
+# the quadlet files are now installed into the system etc tree:
+nix eval --raw '.#nixosConfigurations.bees.config.environment.etc."containers/systemd/immich-server.container".source' \
+  && echo            # → /nix/store/…-immich-server.container
+nix eval --raw '.#nixosConfigurations.bees.config.environment.etc."containers/systemd/immich-machine-learning.container".source' \
+  && echo            # → /nix/store/…-immich-machine-learning.container
+# id pins from immich-native.nix (reviewer blockers #1/#2):
+nix eval .#nixosConfigurations.bees.config.users.users.immich.uid                                  # 991
+nix eval .#nixosConfigurations.bees.config.users.groups.immich.gid                                 # 993
+nix eval .#nixosConfigurations.bees.config.users.groups.nas-photos.gid                             # 1000
 nix eval .#nixosConfigurations.bees.config.services.postgresql.enable                              # true
 nix eval .#nixosConfigurations.bees.config.services.postgresql.package.name                        # postgresql-17.x
 nix eval .#nixosConfigurations.bees.config.services.postgresql.ensureDatabases                     # ["immich"]
@@ -397,21 +410,39 @@ authoritative; trim the CREATE list if something wasn't installed.)
 
 ### 7.3 Re-enable the module declaratively (if rollback needs a deploy)
 
-The cutover commit is on loop/wip; revert it rather than hand-editing:
+Post-D2 branch state: D2 (9a9790a) DELETED `hosts/bees/immich.nix`, so
+reverting the cutover commit ALONE is wrong — the module file would stay
+gone and the revert would not compile. Revert BOTH commits together:
 
 ```bash
 # on bee:
 cd ~/loop/cn && git checkout loop/wip && git pull
-git revert <cutover-commit-sha>       # restores immich.nix import + enable=true
+git log --oneline -5                      # identify the cutover commit + 9a9790a
+git revert <cutover-commit-sha> 9a9790a   # restores immich.nix + immich-backup.nix,
+                                           # re-adds the immich-2.7.5 permit,
+                                           # deletes immich-native.nix + the id pins,
+                                           # restores the ./immich.nix import
 git push origin loop/wip
 # then deploy exactly as §4 from bees, and re-verify rows 1,3,5,6 against module 2.7.5
 # (run verify-immich.sh with IMMICH_EXPECT_VERSION=2.7.5 to allow the old version)
 ```
 
-If git history is unavailable for any reason, manual equivalent: edit
-`hosts/bees/immich.nix` → `services.immich.enable = true;`, restore the
-`./immich.nix` import in configuration.nix, commit "bees: rollback —
-re-enable services.immich (H1 aborted)", deploy as §4.
+Ordering note: revert NEWEST first (cutover commit, then 9a9790a), exactly
+as written — `git revert A B` applies A then B as two commits. The
+intermediate tree (after A, before B) is just the D2 state and evals clean.
+The REVERSE order breaks: reverting 9a9790a first restores immich.nix and
+deletes immich-native.nix while configuration.nix still imports
+./immich-native.nix (import of a missing file → eval error, likely
+conflict on the second revert).
+
+If git history is unavailable for any reason, manual equivalent:
+restore `hosts/bees/immich.nix` + `hosts/bees/immich-backup.nix` from
+`git show 9a9790a^:hosts/bees/immich.nix` (and the backup file), set
+`services.immich.enable = true;` (it already is in that snapshot),
+restore the `./immich.nix` + `./immich-backup.nix` imports in
+configuration.nix, drop the `./immich-native.nix` + quadlet imports,
+commit "bees: rollback — re-enable services.immich (H1 aborted)",
+deploy as §4.
 
 ### 7.4 Post-rollback
 
@@ -426,4 +457,8 @@ re-enable services.immich (H1 aborted)", deploy as §4.
   gates the soak (no FAIL for ≥7 clean days → ask Chad for H2).
 - B1 sandbox cleanup: ensure `/mnt/photos/.loop-sandbox/` and the
   `immich_dryrun` DB are gone (`TODO-B1`: B1 confirms in its evidence).
-- Post-soak cleanup diff (D2 task) removes immich.nix + the insecure permit.
+- Post-soak cleanup diff (D2 task) has LANDED on loop/wip (commit 9a9790a +
+  round-2 rework): module + permit + supplementary-group config deleted,
+  id reservations + PG/redis/db-dump/freshness now in imported
+  `hosts/bees/immich-native.nix`. It activates only with the next bees
+  deploy after H2 approval.

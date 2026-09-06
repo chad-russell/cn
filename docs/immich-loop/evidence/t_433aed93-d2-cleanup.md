@@ -22,13 +22,14 @@ was accessed but has no value defined` — PLAN's predicted hazard: with the
 module gone, nothing enables services.postgresql on bees, and the dump unit
 reads `config.services.postgresql.package`. The runbook's §3c re-declaration
 therefore must live in an IMPORTED file pre-cutover (importing
-immich-quadlet.nix early would itself perform the cutover wiring). The
-re-declaration is runbook-exact; `ensure*` only create (no-op against the
-existing DB), `pgvector` + `vectorchord` extensions, peer/md5 auth unchanged,
-redis-immich socket + logLevel warning. During the soak window the module and
-this file coexist: both enable postgres/redis-immich with compatible values
-(identical package, identical auth) — merged config is idempotent, and the
-module's values win where they overlap exactly because they match.
+immich-quadlet.nix early would itself perform the cutover wiring).
+The re-declaration is runbook-exact; `ensure*` only create (no-op against
+the existing DB), `pgvector` + `vectorchord` extensions, peer/md5 auth unchanged,
+redis-immich socket + logLevel warning. Pre-cutover, live bees still runs the
+module-era generation; the immich-native.nix tree (module gone, native
+re-declaration + id pins in) is the post-H2 cleanup deploy's content, gated
+behind H2 — it is not live until then, and the module never coexists with it
+in a single deployment.
 
 ## Verification commands (output excerpts)
 
@@ -38,11 +39,14 @@ $ grep -rn 'permittedInsecurePackages' --include='*.nix' .
 $ grep -rn 'nas-photos' --include='*.nix' .
 ./hosts/bees/immich.nix:19,20,22          # (only occurrences — both files deleted)
 # after the diff:
-$ grep -rn 'permittedInsecurePackages\|nas-photos' --include='*.nix' .
+$ grep -rn 'permittedInsecurePackages\|immich-2.7.5' --include='*.nix' .
 (no matches → permit entry landed nowhere)
+$ grep -rn 'nas-photos' --include='*.nix' .
+hosts/bees/immich-native.nix   # exactly one hit — the gid-1000 reservation pin
 
-$ git show HEAD:hosts/bees/immich-backup.nix > /tmp/orig.nix && diff -u /tmp/orig.nix hosts/bees/immich-db-dump.nix
-→ single hunk: +6 provenance comment lines; service/timer/check bodies identical
+$ git show HEAD:hosts/bees/immich-backup.nix > /tmp/orig.nix && diff -u /tmp/orig.nix hosts/bees/immich-native.nix
+→ dump/timer/freshness bodies identical; native file adds the provenance
+  comment, the id-reservation block, and the §3c PG+redis re-declaration
 
 $ nix shell nixpkgs#treefmt nixpkgs#nixfmt-classic -c treefmt --ci
 traversed 464 files / emitted 46 / formatted 46 files (0 changed) — clean
@@ -112,19 +116,79 @@ matches PLAN's Definition of Done "module removed, docs updated".)
 
 ## Notes / decisions
 
-- The db-dump module kept its own file `hosts/bees/immich-db-dump.nix` instead
-  of folding into `immich-quadlet.nix`: B1's cutover commit already created
-  and committed `immich-quadlet.nix` mid-run (concurrent worker; my earlier
-  same-path draft was overwritten — abandoned without a fight). Separate
-  files also mirror the pre-existing layout (backup.nix was standalone).
-- uid 991 / gid 993 reservation: the module owned the `immich` user; after
-  removal NixOS could re-allocate those ids to a future system user and
-  silently change NFS ownership semantics on /mnt/photos (numeric checks).
-  Left as an explicit TODO in the cutover path — recorded here and in the
-  card metadata since immich-quadlet.nix is B1's file.
+- The survivors live in `hosts/bees/immich-native.nix` rather than folding
+  into `immich-quadlet.nix`: B1's cutover file was committed mid-run by a
+  concurrent worker (my earlier same-path draft was overwritten — conceded;
+  see the hotspot comment on the card). The separate native file also keeps
+  the imported pre-cutover state self-sufficient: importing
+  immich-quadlet.nix early would itself perform the cutover wiring.
+- uid/gid reservations: landed (round-2 rework, reviewer blockers #1/#2)
+  in `hosts/bees/immich-native.nix` — `users.users.immich.uid = 991`
+  (+ isSystemUser, group immich), `users.groups.immich.gid = 993`,
+  `users.groups.nas-photos.gid = 1000`. The nixpkgs module declared the
+  user/group with auto-allocated ids (mutableUsers persisted 991/993);
+  with the module gone, the pins prevent re-allocation drift — the
+  quadlets hardcode User=991:993 and PG peer auth + NFS ownership are
+  numeric. redis-immich (gid 992) stays module-held via
+  services.redis.servers.immich below. Verified by eval:
+  uid=991, gid=993, nas-photos gid=1000 all green.
 - Bees firewall: `networking.firewall.enable = false` (configuration.nix:137),
   so dropping the module's `openFirewall = true` changes nothing.
 - Sandbox cleanup checklist added to CONTRACT.md (D2 item). Requires SSH to
   bees to VERIFY (read-only); not executed in this run — nothing was deployed.
 - Rollback story unchanged (PLAN D9): gen rollback restores the module; this
   diff only lands with the post-H2 cleanup deploy.
+
+## Round-2 rework (run 7, reviewer blockers from comment 8)
+
+Changes on top of 9a9790a, all pure git work on loop/wip — live bees
+untouched (module-era generation still running):
+
+1. **Blocker #1 + #2 — id reservations pinned** in
+   `hosts/bees/immich-native.nix`: `users.users.immich.uid = 991`
+   (isSystemUser, group immich), `users.groups.immich.gid = 993`,
+   `users.groups.nas-photos.gid = 1000`. The nixpkgs module declared the
+   user/group with auto-allocated ids (mutableUsers persisted 991/993
+   live); with the module gone the pins keep the ids stable — the
+   quadlets hardcode User=991:993, and PG peer auth + NFS ownership are
+   numeric. redis-immich (gid 992) stays declared by
+   services.redis.servers.immich in the same file, so its mutableUsers
+   reservation persists; no pin needed.
+2. **Blocker #3 — RUNBOOK-cutover.md rewritten for the post-D2 branch**:
+   §3 header now names the D2 pre-state (immich.nix deleted,
+   immich-native.nix imported, quadlet files committed but unwired);
+   §3a = one-line import add (nothing to replace); §3b git-add list is
+   the single configuration.nix, commit msg updated, eval gate gains
+   quadlet-etc-source + id-pin assertions (with the note that
+   services.immich stays evalable via the nixpkgs base module list);
+   §7.3 = revert cutover commit AND 9a9790a together (newest first),
+   with the ordering rationale + manual-equivalent fallback;
+   §8's D2 bullet notes the diff has landed.
+3. **Nit #4 — evidence paths fixed**: both `immich-db-dump.nix`
+   references corrected to `immich-native.nix` (verification commands
+   now reproduce); false "TODO in the cutover path" claim replaced with
+   the landed pins; stale "module coexists during soak" rationale
+   replaced with the correct gating story (never coexist in one
+   deployment; native tree activates only at the post-H2 deploy).
+4. Also resolved §1.5's TODO-B1(env-db-vars) block from B1's committed
+   `immich-server.container` (DB_URL socket peer-auth, REDIS_SOCKET,
+   GroupAdd=992 — no secret material), so the runbook is H1-final.
+
+Verification (this round, real output):
+
+```
+$ nix shell nixpkgs#treefmt nixpkgs#nixfmt-classic -c treefmt --ci
+formatted 46 files (0 changed) in 657ms            # clean
+
+$ grep -rn 'permittedInsecurePackages\|immich-2\.7\.5' --include='*.nix' .
+(no matches → permit still lands nowhere)
+
+$ grep -rn 'nas-photos' --include='*.nix' .
+hosts/bees/immich-native.nix  # header comment ×2 + the gid-1000 pin — intended
+
+$ nix flake check
+building '.../nixos-system-bees-26.05.20260905.6713828.drv'...
+all checks passed!                                 # FLAKE-CHECK-EXIT=0
+```
+
+Live bees untouched (read-only SSH confirms module-era generation).
