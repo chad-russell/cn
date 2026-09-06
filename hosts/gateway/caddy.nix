@@ -63,11 +63,9 @@
     # (personal-use, unverified). Google (Aug 2026) requires a homepage +
     # privacy policy URL on an authorized domain to publish an OAuth app.
     # This is a static site, nothing dynamic, no data collected.
-    virtualHosts."glen.crussell.io" = {
-      root = "/srv/glen-site";
-      extraConfig = ''
-        file_server
-      '';
-    };
+    virtualHosts."glen.crussell.io".extraConfig = ''
+      root * /srv/glen-site
+      file_server
+    '';
   };
 }
