@@ -23,4 +23,10 @@
 
   # Reduce Redis log verbosity
   services.redis.servers.immich.logLevel = "warning";
+
+  # 26.05 ships immich 2.7.5, marked insecure (CVE-2026-59258 album-role
+  # escalation, CVE-2026-82272; both need an authenticated editor account —
+  # family-only instance, and 2.7.5 is what already ran pre-upgrade).
+  # Real fix = immich 3.x (in nixpkgs unstable / 26.11) — upgrade separately.
+  nixpkgs.config.permittedInsecurePackages = [ "immich-2.7.5" ];
 }

@@ -225,7 +225,10 @@ in {
     pkgs.awscli2
     # Vercel CLI — storyhub deploy management (login token lands in
     # ~/.vercel/auth.json; enables REST/MCP deploy visibility).
-    pkgs.nodePackages.vercel
+    # nixpkgs 26.05 removed nodePackages and never exposed `vercel` at the
+    # top level — use `npx vercel` (nodejs_22 above provides npx) until a
+    # nixpkgs package returns.
+    # pkgs.nodePackages.vercel
     # composefs tools (mkcomposefs + composefs-info) — the bubblebox engine's
     # store/descriptor primitives, needed by the nightly pkgs CI below.
     pkgs.composefs
