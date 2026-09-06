@@ -166,7 +166,7 @@ clean on loop/wip; do NOT re-add PG/redis elsewhere). B1's
 `immich-machine-learning.container` are already committed but NOT yet
 imported — the cutover commit is what wires them in.
 
-One commit, two file changes, nothing else:
+One commit, one file change, nothing else:
 
 **a) `hosts/bees/configuration.nix`:**
 
