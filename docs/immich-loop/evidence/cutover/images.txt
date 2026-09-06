@@ -1,0 +1,2 @@
+ghcr.io/immich-app/immich-server            v3.1.0               8c6b230769c6  5 weeks ago    2.21 GB
+ghcr.io/immich-app/immich-machine-learning  v3.1.0               0d63f0a93ac4  5 weeks ago    1.32 GB

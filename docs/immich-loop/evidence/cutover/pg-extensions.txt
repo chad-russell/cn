@@ -1,0 +1,8 @@
+cube
+earthdistance
+pg_trgm
+plpgsql
+unaccent
+uuid-ossp
+vchord
+vector

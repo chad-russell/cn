@@ -1,0 +1,14 @@
+{"check":"units","status":"PASS","detail":"server: immich-server.service active"}
+{"check":"units","status":"PASS","detail":"ml: immich-machine-learning.service active"}
+{"check":"image","status":"PASS","detail":"immich-server running ghcr.io/immich-app/immich-server:v3.1.0 (running)"}
+{"check":"ping","status":"PASS","detail":"GET /server/ping -> {"res":"pong"}"}
+{"check":"version","status":"PASS","detail":"server reports v3.1.0"}
+{"check":"auth","status":"PASS","detail":"api key accepted (chaddouglasrussell@gmail.com)"}
+{"check":"albums","status":"PASS","detail":"GET /albums -> 1 albums"}
+{"check":"assets","status":"PASS","detail":"library has 4725 assets (floor 1000)"}
+{"check":"db","status":"PASS","detail":"databases: immich postgres "}
+{"check":"db","status":"PASS","detail":"role immich exists"}
+{"check":"db","status":"PASS","detail":"pg extensions present: cube earthdistance pg_trgm plpgsql unaccent uuid-ossp vchord vector "}
+{"check":"drift","status":"PASS","detail":"assets 4725 -> 4725 (baseline ±5% ok; albums 1 -> 1)"}
+{"check":"ml","status":"PASS","detail":"smart search (CLIP via ML) responded — page total=1"}
+{"summary":{"pass":13,"fail":0,"skip":0},"result":"PASS","url":"http://127.0.0.1:2283/api","ts":"2026-09-06T15:01:10Z"}
