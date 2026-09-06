@@ -334,7 +334,9 @@ if [ "$MODE" = upload ]; then
       ok album "test album '$ALBUM_NAME' ($ALBUM_ID)"
       if [ -n "$ASSET_ID" ]; then
         http PUT "/albums/$ALBUM_ID/assets" "$(jq -nc --arg i "$ASSET_ID" '{ids:[$i]}')"
-        ADDED="$(printf %s "$BODY" | jq -r --arg i "$ASSET_ID" '.[$i].success // false' 2>/dev/null || echo false)"
+        # v3.1.0 returns an ARRAY: [{"id":..,"success":true,"error":null}]
+        # (older versions returned an object keyed by asset id)
+        ADDED="$(printf %s "$BODY" | jq -r --arg i "$ASSET_ID" 'if type=="array" then (.[0].success // false) else (.[$i].success // false) end' 2>/dev/null || echo false)"
         [ "$ADDED" = true ] && ok album "asset added to album" \
                           || bad album "add-to-album: HTTP $CODE $(printf %s "$BODY" | head -c 120)"
       fi

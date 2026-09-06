@@ -17,6 +17,11 @@ User=991:993
 Environment=IMMICH_HOST=127.0.0.1
 Environment=IMMICH_PORT=3003
 Environment=MACHINE_LEARNING_CACHE_FOLDER=/cache
+# The image defaults HOME=/usr/src (root-owned); running as uid 991 the HF
+# model downloader cannot write ~/.config or ~/.cache and fails with
+# "Permission denied" on first model fetch. Point HOME at the writable
+# cache volume (C1 cutover finding, 2026-09-06).
+Environment=HOME=/cache
 Environment=TZ=America/New_York
 # Model cache = DB-independent state on local NVMe. Everything else
 # (media/thumbs/profile/encoded video) stays in /mnt/photos; the ML
