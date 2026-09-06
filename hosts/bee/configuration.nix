@@ -64,7 +64,8 @@ in {
     #                      # tiers) — see web-search-scrape skill.
     # ./hermes-webui.nix  # retired 2026-09-01 — desktop + Discord are the
     #                      # only chat surfaces now; webui state dir was 210 MB
-    ./hermes-gloo.nix
+    # ./hermes-gloo.nix  # removed 2026-09-06 (single-brain collapse — work
+    #                      # lane folded into the default glen gateway)
     ./trades-site.nix
     ./backup.nix
     ./tailscale.nix
@@ -320,14 +321,12 @@ in {
   users.users.crussell.extraGroups = [ "hermes" ];
 
   # ── Age secrets ─────────────────────────────────────────────────
-  # (opencode retired 2026-09-02: personal coding → hermes delegate_task
-  #  + dsh web UI, both on zai-coding/glm-5.3. See modules/dsh.nix.)
-  # 2026-09-04 Glen/Gloo split: the default (glen) gateway now runs the
-  # hermes-private bot; the ORIGINAL hermes bot token belongs to the work
-  # profile's gateway (hosts/bee/hermes-gloo.nix). hermes-bee-env.age was
-  # deleted at the 2026-09-05 cleanup (rollback window elapsed).
+  # Single brain since 2026-09-06: the default glen gateway
+  # (hermes-agent.service) runs the hermes-glen bot for BOTH personal and
+  # work lanes (Gloo Discord category); the gloo work gateway unit is gone.
+  # hermes-bee-env-glen.age carries the hermes-glen bot token + GLOO_API_KEY
+  # (folded in from the retired hermes-gloo-env.age at the collapse).
   age.secrets.hermes-bee-env-glen.file = ../../secrets/hermes-bee-env-glen.age;
-  age.secrets.hermes-gloo-env.file = ../../secrets/hermes-gloo-env.age;
 
   # Proton Pass agent token + env-key-provider key, sourced directly by
   # /var/lib/hermes/.hermes/scripts/pp-*.sh (NOT injected into any unit env —
@@ -566,15 +565,23 @@ in {
       # use gh CLI's OAuth token (gh is authed as crussell).
       # Note: SQLite was considered but removed — sqlite3 via terminal is
       # more capable than an MCP wrapper, with no persistent subprocess.
-      # 2026-09-05 per-side tooling (topology review): linear + vercel are
-      # WORK tooling — they live only in the gloo profile's config.yaml and
-      # were pruned from this (glen) side. Keep this side personal-only.
+      # 2026-09-06 single-brain collapse: linear + vercel (work tooling,
+      # OAuth) are declared here again — one brain serves work too. First
+      # use needs `hermes mcp login linear|vercel` in a PTY (Chad).
       mcp_servers = {
         github = {
           command = "${pkgs.writeShellScript "mcp-github" ''
             export GITHUB_PERSONAL_ACCESS_TOKEN="$(gh auth token)"
             exec ${pkgs.nodejs_22}/bin/npx -y @modelcontextprotocol/server-github
           ''}";
+        };
+        linear = {
+          auth = "oauth";
+          url = "https://mcp.linear.app/mcp";
+        };
+        vercel = {
+          auth = "oauth";
+          url = "https://mcp.vercel.com";
         };
       };
       # Web search backend: UNPINNED (retired searxng 2026-09-03). With no
@@ -611,11 +618,10 @@ in {
       # Discord bot (2026-08-31): the "lane model" — one private server,
       # one channel per project lane (#infra, #rmt,
       # #fantasy-football, #trading, #bible-reading, + Personal category).
-      # 2026-09-04 Glen/Gloo split: the work lane (#gloo-work,
-      # 1544085937577918535) moved to the gloo profile (its own gateway,
-      # SOUL, sessions; Discord deny overwrites blind it to personal
-      # categories). The default profile is "Glen" — everything else —
-      # and runs the hermes-private bot (see hermes-bee-env-glen.age).
+      # 2026-09-06 single-brain collapse: ONE bot (hermes-glen) serves all
+      # lanes including the Gloo work category (#gloo-general — channel
+      # prompt above). Categories are UI organization only; the old
+      # two-profile split (and its blindness overwrites) is retired.
       # require_mention=false: single-user server, so every channel is
       # free-response — type and it answers, no @mention ceremony.
       # Telegram was decommissioned 2026-08-31 (see prune script below);
@@ -638,8 +644,10 @@ in {
         # gets a one-line confirm in-channel, threads would fragment it.
         extra.no_thread_channels = "1545437973435121725,1545653384197967912";
         extra.channel_prompts = {
+          "1544085937577918535" =
+            "Work lane (Gloo category #gloo-general): Chad's employer work — Wycliffe/360: GPL, Polymer, Hummingbird, open-bible, Bible QR codes, acceleration RFCs. Work repos live under ~/Gloo; RFCs in ~/Gloo/TangoGroup/360-acceleration-rfcs. Linear is the ticket source of truth. Route work coding to the gloo provider (employer-paid, model IDs gloo-*) or the codex CLI; never bill personal providers for work traffic. GitHub PR reviews in isolated worktrees (/tmp/pr-N-review).";
           "1544085981236432906" =
-            "Homelab/infra lane. Nix repo ~/Code/cn; AGENTS.md is authoritative; deploys run from bees over Nebula (nix run .#deploy -- <host>). Verify live state over SSH before concluding anything. NOTE: the work lane (#gloo-work) now lives in the separate gloo profile/bot — this brain is personal-only.";
+            "Homelab/infra lane. Nix repo ~/Code/cn; AGENTS.md is authoritative; deploys run from bees over Nebula (nix run .#deploy -- <host>). Verify live state over SSH before concluding anything.";
           "1544086006771220562" =
             "Math research lane: random matrix theory / CUE critical-point bimodality. Workspace ~/rmt (plan.md curriculum, corpus.md notes). Tutor posture: derive why, never decree. Numerics: use Arb-precision approaches for high-degree work.";
           "1544086070436565123" =
@@ -649,7 +657,7 @@ in {
           "1545437973435121725" =
             "#laura: You are Laura, not Glen. The laura skill is your operating doctrine — read it and the canon before answering. Stay fully in character; never break persona or discuss agent mechanics. This channel has no auto-threads: the conversation is continuous.";
           "1545653384197967912" =
-            "#inbox capture lane (no auto-threads): every message is a drop to classify and route, not converse. Life fact → append ~/brain/events; link/screenshot → ~/brain/inbox verbatim; action → ~/brain/todo.md; durable fact/preference → mem0; question → answer from the event log per recall order; work content → redirect to the Gloo work lane (Gloo category #general). One-line confirms only. The inbox-brain skill (auto-bound) is the authoritative doctrine — follow it. Timestamped events NEVER go into mem0; when/how-many questions are answered only from ~/brain/events.";
+            "#inbox capture lane (no auto-threads): every message is a drop to classify and route, not converse. Life fact → append ~/brain/events; link/screenshot → ~/brain/inbox verbatim; action → ~/brain/todo.md; durable fact/preference → mem0; question → answer from the event log per recall order; work content → handle with work doctrine (gloo provider, ~/Gloo repos — same brain since 2026-09-06). One-line confirms only. The inbox-brain skill (auto-bound) is the authoritative doctrine — follow it. Timestamped events NEVER go into mem0; when/how-many questions are answered only from ~/brain/events.";
         };
         # Auto-loaded skills per channel (exact id match, threads inherit).
         extra.channel_skill_bindings = [
@@ -701,10 +709,10 @@ in {
       # in systemPackages below). NixOS chromium has all shared libs;
       # agent-browser's own Chrome download lacks them on NixOS.
       AGENT_BROWSER_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
-      # ZAI_CODING_KEY, OPENROUTER_API_KEY, and DISCORD_BOT_TOKEN
-      # (hermes-private bot) are in hermes-bee-env-glen.age. GLOO_API_KEY
-      # moved to hermes-gloo-env.age (work profile only — Glen must not
-      # bill employer budget on personal traffic).
+      # ZAI_CODING_KEY, OPENROUTER_API_KEY, DISCORD_BOT_TOKEN (hermes-glen
+      # bot) and GLOO_API_KEY (work provider — folded in 2026-09-06 when the
+      # gloo gateway was retired; the single brain serves work too) are in
+      # hermes-bee-env-glen.age.
       # (Telegram env vars were removed with the platform 2026-08-31.)
       # Allow Chad's Discord account (user ID) on the lane server.
       DISCORD_ALLOWED_USERS = "588760941076676676";
@@ -756,12 +764,6 @@ in {
       if isinstance(mcp_servers, dict) and "sqlite" in mcp_servers:
           del mcp_servers["sqlite"]
           prunes.append("mcp_servers.sqlite")
-      # Retired from glen 2026-09-05 (per-side tooling): linear + vercel are
-      # work tooling and live only in the gloo profile's config.yaml.
-      for stale_mcp in ("linear", "vercel"):
-          if isinstance(mcp_servers, dict) and stale_mcp in mcp_servers:
-              del mcp_servers[stale_mcp]
-              prunes.append(f"mcp_servers.{stale_mcp}")
       web = config.get("web") or {}
       if isinstance(web, dict) and "extract_backend" in web:
           # Retired 2026-08-12: SearXNG cannot extract, and a stale
@@ -787,21 +789,16 @@ in {
                       del platforms[stale]
                       prunes.append(f"{section}.platforms.{stale}")
 
-      # Retired 2026-09-04 (Glen/Gloo split): the #gloo-work channel
-      # (1544085937577918535) belongs to the gloo profile now — prune its
-      # stale channel prompt so this (default/glen) gateway never picks it
-      # up even if Discord permission denies lag.
       # Repointed 2026-09-05 (topology review L6): the inbox lane binding
       # was pinned to THREAD 1545654237004832788 ("First message in inbox")
       # instead of the actual #inbox channel 1545653384197967912 — prune
       # the thread-keyed entries so only the channel-keyed ones remain.
+      # (The old #gloo-work prompt prune was removed 2026-09-06 — that
+      # channel is now served by this same gateway, single-brain collapse.)
       discord = ((config.get("gateway") or {}).get("platforms") or {}).get("discord")
       if isinstance(discord, dict):
           extra = discord.get("extra") or {}
           prompts = extra.get("channel_prompts")
-          if isinstance(prompts, dict) and "1544085937577918535" in prompts:
-              del prompts["1544085937577918535"]
-              prunes.append("gateway.platforms.discord.extra.channel_prompts[gloo-work]")
           stale_thread = "1545654237004832788"
           if isinstance(prompts, dict) and stale_thread in prompts:
               del prompts[stale_thread]

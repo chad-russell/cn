@@ -19,8 +19,9 @@ in {
 
   # ── Gloo AI platform direct access ──────────────────────────────
   # GLOO_API_KEY for direct-to-platform work sessions (opencode on bees,
-  # after the self-hosted gloo proxy was retired). Same key value as the
-  # GLOO_API_KEY line inside hermes-gloo-env.age on bee.
+  # login shells via the age-decrypt zshenv pattern) AND for the Hermes
+  # gateway's gloo provider (same value folded into
+  # hermes-bee-env-glen.age at the 2026-09-06 single-brain collapse).
   "gloo-api-key.age".publicKeys = [ crussell ];
 
   # ── Beszel monitoring ──────────────────────────────────────────
@@ -39,18 +40,12 @@ in {
   # crussell) can source it directly without sudo.
   "proton-pass-env.age".publicKeys = [ crussell ];
 
-  # ── Hermes Agent gateway on bee ───────────────────────────────
-  # ── Hermes Agent gateway on bee (Glen, everything-else lane) ────
-  # 2026-09-04 Glen/Gloo split: this env now carries the HERMES-PRIVATE
-  # bot token (Glen = everything-else instance). The ORIGINAL hermes bot
-  # token moved to hermes-gloo-env.age for the work profile. This file
-  # keeps its historical name to avoid re-encrypting existing references.
+  # ── Hermes Agent gateway on bee (single brain: Glen, all lanes) ─
+  # 2026-09-06 single-brain collapse: the gloo work profile/bot was
+  # retired; the default gateway serves personal + work lanes with one
+  # bot (hermes-glen). This env carries its token plus GLOO_API_KEY
+  # (work provider). Historical name kept to avoid re-encrypting.
   "hermes-bee-env-glen.age".publicKeys = [ crussell ];
-
-  # ── Gloo (work lane) gateway env on bee ─────────────────────────
-  # ZAI_CODING_KEY + OPENROUTER_API_KEY + GLOO_API_KEY + the ORIGINAL
-  # hermes bot token (work instance's Discord identity) + allowed users.
-  "hermes-gloo-env.age".publicKeys = [ crussell ];
 
   # ── Hermes WebUI on bee ─────────────────────────────────────────
   # HERMES_WEBUI_PASSWORD for the web login gate at
