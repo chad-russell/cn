@@ -351,9 +351,18 @@ in {
     systemd.sockets."dsh-web-proxy" = {
       description = "Nebula socket for dsh web proxy";
       wantedBy = [ "sockets.target" ];
+      # 26.05 boot ordering: nebula's tun often appears after sockets.target,
+      # so binding the Nebula IP failed with I/O error and left the socket
+      # dead until manual restart (seen on 2026-09-06 boots). FreeBind lets
+      # the socket bind before the address exists; wants/after order boot;
+      # PartOf re-creates it whenever nebula itself restarts.
+      wants = [ "nebula@homelab.service" ];
+      after = [ "nebula@homelab.service" ];
+      partOf = [ "nebula@homelab.service" ];
       socketConfig = {
         ListenStream = "${nebulaIp}:${toString port}";
         BindIPv6Only = "both";
+        FreeBind = true;
       };
     };
 
