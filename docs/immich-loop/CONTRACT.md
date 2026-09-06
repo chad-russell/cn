@@ -27,6 +27,12 @@ constitution. This file governs blast radius and behavior.
    operator-runbook — never committed plaintext.
 6. `blocked = ping, never guess`. Block the card, fire
    `docs/immich-loop/scripts/notify.sh`, stop.
+7. **C1 exception (D6-amended, 2026-09-06):** the cutover card executes
+   RUNBOOK-cutover.md §1–§6 on bees as *operator proxy* — Chad's chat grant
+   (GATES.md H1 log) is the authority. During C1 only, rules 1–2 above are
+   lifted for bees + immich services exactly per the runbook, deviating only
+   to follow §7 rollback. Deploys to other hosts remain operator-only. H2
+   (post-soak cleanup) stays a human gate.
 
 ## Dry-run sandbox (the only place workers touch bees)
 
