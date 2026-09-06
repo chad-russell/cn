@@ -70,7 +70,8 @@
       # native subvolume snapshot layer commits instead of the FUSE fallback
       # the shared overlay-on-btrfs store suffers from. The push to zot goes
       # over HTTP to 10.10.0.6:5000 and doesn't read this store at all.
-      Environment = [ "CONTAINERS_STORAGE_CONF=/etc/thinkpad-build-storage.conf" ];
+      Environment =
+        [ "CONTAINERS_STORAGE_CONF=/etc/thinkpad-build-storage.conf" ];
     };
     onFailure = [ "ntfy-failure@thinkpad-image-build.service" ];
   };

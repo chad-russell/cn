@@ -20,10 +20,8 @@
 
 { config, lib, pkgs, ... }:
 
-let
-  tastyRoot = "/home/crussell/tasty_options";
-in
-{
+let tastyRoot = "/home/crussell/tasty_options";
+in {
   # ── 1) Site service (system) ─────────────────────────────────────
   systemd.services.trades-site = {
     description = "Trades recommendation site (read-only portfolio.db view)";
@@ -37,10 +35,7 @@ in
       Group = "users";
       # Nebula-overlay bind — bees Caddy reaches this over Nebula, same
       # door policy as hermes-webui (10.10.0.12). Never LAN/public.
-      Environment = [
-        "HOST=10.10.0.12"
-        "PORT=8901"
-      ];
+      Environment = [ "HOST=10.10.0.12" "PORT=8901" ];
       ExecStart = "${pkgs.python3}/bin/python ${tastyRoot}/tracker/site.py";
       WorkingDirectory = tastyRoot;
       Restart = "on-failure";
@@ -56,7 +51,8 @@ in
     serviceConfig = {
       Type = "oneshot";
       TimeoutStartSec = "15min";
-      ExecStart = "${pkgs.bash}/bin/bash -lc 'cd ${tastyRoot} && ./run scan --trigger scheduled'";
+      ExecStart =
+        "${pkgs.bash}/bin/bash -lc 'cd ${tastyRoot} && ./run scan --trigger scheduled'";
     };
     path = [ pkgs.bash pkgs.podman pkgs.coreutils ];
   };

@@ -52,7 +52,6 @@ in {
   # hermes bot token (work instance's Discord identity) + allowed users.
   "hermes-gloo-env.age".publicKeys = [ crussell ];
 
-
   # ── Hermes WebUI on bee ─────────────────────────────────────────
   # HERMES_WEBUI_PASSWORD for the web login gate at
   # https://hermes.internal.crussell.io (routed by bees Caddy to bee).

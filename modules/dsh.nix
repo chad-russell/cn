@@ -218,9 +218,21 @@ let
           # (1048576/131072) — glm-5.3 isn't in the pinned catalog yet;
           # same-series values, advisory not hard caps.
           models = [
-            { id = "glm-5.3"; contextWindow = 1048576; maxTokens = 131072; }
-            { id = "glm-5.3-flash"; contextWindow = 1048576; maxTokens = 131072; }
-            { id = "glm-5-turbo"; contextWindow = 202752; maxTokens = 131072; }
+            {
+              id = "glm-5.3";
+              contextWindow = 1048576;
+              maxTokens = 131072;
+            }
+            {
+              id = "glm-5.3-flash";
+              contextWindow = 1048576;
+              maxTokens = 131072;
+            }
+            {
+              id = "glm-5-turbo";
+              contextWindow = 202752;
+              maxTokens = 131072;
+            }
           ];
         };
         # Hand-declared Gloo route (pi-ai ships nothing under "gloo").
