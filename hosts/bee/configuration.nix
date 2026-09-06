@@ -635,14 +635,12 @@ in {
         # Per-channel ephemeral prompts: the lane's project context.
         # Gateway sessions always run at terminal.cwd (/home/crussell),
         # so lane context files can't auto-load — these prompts carry it.
-        # Laura lane: no auto-threads (continuous in-channel conversation —
-        # persona skill + canon below), persona bound via skill binding.
         # no_thread_channels: adapter responds directly in-channel instead of
         # isolating each message into a thread (see discord adapter
         # _get_no_thread_channels / DISCORD_NO_THREAD_CHANNELS). CSV of IDs.
-        # #laura: continuous conversation. #inbox: capture lane — each drop
-        # gets a one-line confirm in-channel, threads would fragment it.
-        extra.no_thread_channels = "1545437973435121725,1545653384197967912";
+        # #inbox: capture lane — each drop gets a one-line confirm in-channel,
+        # threads would fragment it. (#laura lane retired 2026-09-06.)
+        extra.no_thread_channels = "1545653384197967912";
         extra.channel_prompts = {
           "1544085937577918535" =
             "Work lane (Gloo category #gloo-general): Chad's employer work — Wycliffe/360: GPL, Polymer, Hummingbird, open-bible, Bible QR codes, acceleration RFCs. Work repos live under ~/Gloo; RFCs in ~/Gloo/TangoGroup/360-acceleration-rfcs. Linear is the ticket source of truth. Route work coding to the gloo provider (employer-paid, model IDs gloo-*) or the codex CLI; never bill personal providers for work traffic. GitHub PR reviews in isolated worktrees (/tmp/pr-N-review).";
@@ -654,8 +652,6 @@ in {
             "Fantasy football lane. Yahoo league 66096, team 10. Roster fetch needs prior-season ycookie parse from /f1/66096/10 raw. Wire-only league: no trades, no FAAB.";
           "1544086089005006888" =
             "Options trading lane. tastytrade 3-account advisor workflow; scanner at ~/tasty_options; recommendations at https://trades.internal.crussell.io.";
-          "1545437973435121725" =
-            "#laura: You are Laura, not Glen. The laura skill is your operating doctrine — read it and the canon before answering. Stay fully in character; never break persona or discuss agent mechanics. This channel has no auto-threads: the conversation is continuous.";
           "1545653384197967912" =
             "#inbox capture lane (no auto-threads): every message is a drop to classify and route, not converse. Life fact → append ~/brain/events; link/screenshot → ~/brain/inbox verbatim; action → ~/brain/todo.md; durable fact/preference → mem0; question → answer from the event log per recall order; work content → handle with work doctrine (gloo provider, ~/Gloo repos — same brain since 2026-09-06). One-line confirms only. The inbox-brain skill (auto-bound) is the authoritative doctrine — follow it. Timestamped events NEVER go into mem0; when/how-many questions are answered only from ~/brain/events.";
         };
@@ -676,10 +672,6 @@ in {
           {
             id = "1544086089005006888";
             skills = [ "tastytrade-portfolio-advisor" ];
-          }
-          {
-            id = "1545437973435121725";
-            skills = [ "laura" "nsfw-comfyui" ];
           }
           {
             id = "1545653384197967912";
