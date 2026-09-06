@@ -36,6 +36,14 @@ constitution. This file governs blast radius and behavior.
   postgres (worker MAY create/drop this one DB; nothing else in PG).
  `CREATE DATABASE immich_dryrun` needs superuser — if `sudo -u postgres` on bees is unavailable to you, block with a precise ask.
 - Dry-run containers must NOT connect to the `immich` prod DB. Env must point at `immich_dryrun`.
+- **Sandbox cleanup (task D2 / post-H2):** before the board closes, verify the
+  sandbox is gone: `ssh bees 'ls -d /mnt/photos/.loop-sandbox'` should fail and
+  `sudo -u postgres psql -lt` should show no `immich_dryrun`. If the dry-run
+  worker left anything behind, the OPERATOR removes it
+  (`sudo rm -rf /mnt/photos/.loop-sandbox`, drop DB `immich_dryrun`, and
+  `systemctl stop/disable/reset-failed immich-dryrun-*` if those units were
+  installed) — workers may not touch production systemd or PG beyond the
+  scratch DB.
 
 ## Evidence
 

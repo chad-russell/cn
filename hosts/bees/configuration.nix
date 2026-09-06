@@ -14,8 +14,7 @@
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ./media-services.nix
-    ./immich.nix
-    ./immich-backup.nix
+    ./immich-native.nix
     ./ntfy.nix
     ./datenight.nix
     ./caddy.nix
@@ -170,10 +169,10 @@
   # Surface prolonged failures of the most critical services (they auto-restart,
   # so this only fires when the restart limit is exhausted).
   #
-  # immich-server is a native NixOS module, so a normal `systemd.services`
-  # override merges cleanly into its generated unit.
-  systemd.services.immich-server.onFailure =
-    [ "ntfy-failure@immich-server.service" ];
+  # immich-server is a podman quadlet — its OnFailure → ntfy alerting ships as
+  # an [Unit] line in hosts/bees/immich-server.container (a
+  # `systemd.services.immich-server.*` override here would write a stub unit
+  # that shadows the podman-system-generator output — same trap as caddy).
 
   # caddy is a podman quadlet — its unit comes from the podman-system-generator
   # at /run/systemd/generator/caddy.service, NOT from NixOS. Setting
