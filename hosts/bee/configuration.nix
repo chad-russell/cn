@@ -638,11 +638,11 @@ in {
         # no_thread_channels: adapter responds directly in-channel instead of
         # isolating each message into a thread (see discord adapter
         # _get_no_thread_channels / DISCORD_NO_THREAD_CHANNELS). CSV of IDs.
-        # #general: default conversational lane — thread-per-message makes the
-        # main channel unusable (every message spawns a new thread). #inbox:
-        # capture lane — each drop gets a one-line confirm in-channel, threads
-        # would fragment it. (#laura lane retired 2026-09-06.)
-        extra.no_thread_channels = "1544084776363888723,1545653384197967912";
+        # #general stays AUTO-THREADED (Chad's preference 2026-09-06, tried
+        # inline and went back): each top-level message gets its own thread.
+        # #inbox: capture lane — each drop gets a one-line confirm in-channel,
+        # threads would fragment it. (#laura lane retired 2026-09-06.)
+        extra.no_thread_channels = "1545653384197967912";
         extra.channel_prompts = {
           "1544085937577918535" =
             "Work lane (Gloo category #gloo-general): Chad's employer work — Wycliffe/360: GPL, Polymer, Hummingbird, open-bible, Bible QR codes, acceleration RFCs. Work repos live under ~/Gloo; RFCs in ~/Gloo/TangoGroup/360-acceleration-rfcs. Linear is the ticket source of truth. Route work coding to the gloo provider (employer-paid, model IDs gloo-*) or the codex CLI; never bill personal providers for work traffic. GitHub PR reviews in isolated worktrees (/tmp/pr-N-review).";
