@@ -106,7 +106,7 @@ Last validated via SSH: **2026-08-10**.
                                   ▼
                 ┌────────────────────────────────────┐
                 │ gateway / Hetzner VPS              │
-                │ 178.156.171.212 / NixOS 25.11      │
+                │ 178.156.171.212 / NixOS 26.05      │
                 │ Caddy: *.crussell.io TLS ingress   │
                 │   (HTTP-01) → backends over Nebula │
                 │ Nebula lighthouse+relay 10.10.0.2  │
@@ -149,12 +149,12 @@ Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 25.11 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
-| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 25.11 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), self-hosted Buzz relay, Hermes Agent gateway, dsh web UI, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
+| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 26.05 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
+| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 26.05 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), self-hosted Buzz relay, Hermes Agent gateway, dsh web UI, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
 | `think`          | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Resolves Nebula overlay names via baked `/usr/etc/hosts` (Containerfile step 3.7). Not a NixOS deploy target. |
-| `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 25.11 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
+| `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 26.05 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
-| `gateway`       | `178.156.171.212` | `10.10.0.2`                           | NixOS 25.11 | `hosts/gateway/`                     | Hetzner Cloud VPS: **Caddy public TLS ingress** for `*.crussell.io` (HTTP-01, reverse-proxies to backends over Nebula). Nebula lighthouse/relay.                                                   |
+| `gateway`       | `178.156.171.212` | `10.10.0.2`                           | NixOS 26.05 | `hosts/gateway/`                     | Hetzner Cloud VPS: **Caddy public TLS ingress** for `*.crussell.io` (HTTP-01, reverse-proxies to backends over Nebula). Nebula lighthouse/relay.                                                   |
 
 ## SSH Access
 
@@ -391,7 +391,7 @@ Source files:
 - `hosts/gateway/caddy.nix` — native NixOS Caddy, public TLS termination
 - `hosts/gateway/disk-config.nix`
 
-NixOS 25.11 on Hetzner Cloud x86_64 (legacy BIOS boot, GRUB).
+NixOS 26.05 on Hetzner Cloud x86_64 (legacy BIOS boot, GRUB).
 
 - Public IP `178.156.171.212` (DHCP from Hetzner Cloud)
 - Nebula `10.10.0.2` (lighthouse + relay, UDP `4242`)
