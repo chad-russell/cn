@@ -1,0 +1,51 @@
+[Unit]
+Description=Immich Server (quadlet migration — see docs/immich-loop/)
+After=network-online.target postgresql.service redis-immich.service mnt-photos.automount
+Wants=network-online.target
+Requires=postgresql.service redis-immich.service
+
+[Container]
+Image=ghcr.io/immich-app/immich-server:v3.1.0
+ContainerName=immich-server
+# Host network: Postgres + Redis stay native on bees (PLAN D2) and the
+# container reaches them over localhost unix sockets. The server binds
+# :2283 directly — host network and PublishPort are mutually exclusive,
+# so no publish stanza (bees firewall already allows 2283).
+Network=host
+# Run as the live `immich` account (uid 991 / gid 993) so NFS file
+# ownership and Postgres peer auth keep working exactly as the native
+# service had them (FACTS.md; quadlet User= is uid:gid, no /etc/passwd
+# entry needed inside the image).
+User=991:993
+# Supplementary gid 992 (redis-immich): read/write access to the
+# /run/redis-immich/redis.sock (socket is redis-immich:redis-immich 0660).
+GroupAdd=992
+# v3.1.0 removed the IMMICH_MACHINE_LEARNING_URL env var; machineLearning
+# .urls defaults to http://immich-machine-learning:3003 in DB config.
+# Alias that hostname to loopback so the default resolves under host
+# networking (the ML container listens on 127.0.0.1:3003).
+AddHost=immich-machine-learning:127.0.0.1
+# Auth = unix sockets + peer, same as the native service today (PLAN D8
+# discovery: role `immich` has no password, redis has no TCP listener —
+# so no secret material exists and env is inline + diffable).
+# postgresql://user@/db?host=<dir> = libpq socket form (same driver +
+# pattern the native service uses); peer auth maps container uid 991 to
+# the `immich` role. The explicit user matters: the container has no
+# /etc/passwd entry for uid 991, so node-postgres cannot infer it.
+Environment=DB_URL=postgresql://immich@/immich?host=/run/postgresql
+Environment=REDIS_SOCKET=/run/redis-immich/redis.sock
+# Same path inside and out (bind at identical path) — DB-stored asset
+# paths from the native deployment stay valid. Zero data movement (D7).
+Environment=IMMICH_MEDIA_LOCATION=/mnt/photos
+Environment=IMMICH_PORT=2283
+Environment=TZ=America/New_York
+Volume=/mnt/photos:/mnt/photos:rslave
+Volume=/run/postgresql:/run/postgresql
+Volume=/run/redis-immich:/run/redis-immich
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

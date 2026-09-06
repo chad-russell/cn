@@ -1,0 +1,28 @@
+[Unit]
+Description=immich-loop B1 DRY-RUN server (NOT for production)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/immich-app/immich-server:v3.1.0
+ContainerName=immich-dryrun-server
+Network=host
+User=991:993
+GroupAdd=992
+AddHost=immich-machine-learning:127.0.0.1
+Environment=DB_URL=postgresql://immich@/immich_dryrun?host=/run/postgresql
+Environment=REDIS_SOCKET=/run/redis-immich/redis.sock
+# Sandbox media root (CONTRACT: only .loop-sandbox may be touched).
+# Server listens on the scratch port.
+Environment=IMMICH_MEDIA_LOCATION=/mnt/photos/.loop-sandbox/library
+Environment=IMMICH_PORT=3283
+Environment=TZ=America/New_York
+Volume=/mnt/photos/.loop-sandbox/library:/mnt/photos/.loop-sandbox/library:rslave
+Volume=/run/postgresql:/run/postgresql
+Volume=/run/redis-immich:/run/redis-immich
+
+[Service]
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

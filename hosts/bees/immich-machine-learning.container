@@ -1,0 +1,31 @@
+[Unit]
+Description=Immich Machine Learning (quadlet migration — see docs/immich-loop/)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/immich-app/immich-machine-learning:v3.1.0
+ContainerName=immich-machine-learning
+# Host network per PLAN D2. Loopback-only bind: upstream documents the ML
+# service as an internal API with no auth whatsoever — never expose it.
+# immich-server reaches it at http://immich-machine-learning:3003
+# (AddHost alias in immich-server.container) -> 127.0.0.1:3003.
+Network=host
+# Same ids as the immich account (991:993) so the model cache is owned
+# consistently with the rest of the immich state.
+User=991:993
+Environment=IMMICH_HOST=127.0.0.1
+Environment=IMMICH_PORT=3003
+Environment=MACHINE_LEARNING_CACHE_FOLDER=/cache
+Environment=TZ=America/New_York
+# Model cache = DB-independent state on local NVMe. Everything else
+# (media/thumbs/profile/encoded video) stays in /mnt/photos; the ML
+# container is stateless beyond this cache.
+Volume=/var/lib/immich-quadlet/ml-cache:/cache
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
