@@ -58,5 +58,16 @@
       # WebSockets (tRPC subscriptions / live board updates)
       reverse_proxy 10.10.0.6:3300
     '';
+
+    # glen.crussell.io — Google OAuth consent branding for the "Glen" app
+    # (personal-use, unverified). Google (Aug 2026) requires a homepage +
+    # privacy policy URL on an authorized domain to publish an OAuth app.
+    # This is a static site, nothing dynamic, no data collected.
+    virtualHosts."glen.crussell.io" = {
+      root = "/srv/glen-site";
+      extraConfig = ''
+        file_server
+      '';
+    };
   };
 }
