@@ -55,6 +55,10 @@
     ripgrep
     fd
     unstable.cursor-cli
+    # Python one-offs: `uv run --with <pkgs> python …` or PEP 723 inline
+    # script metadata. Replaces ad-hoc `nix-shell -p python3.withPackages`
+    # (quoting hell, eval cost per invocation). uv envs cache in ~/.cache/uv.
+    uv
   ];
 
   # ── Allow unfree packages ────────────────────────────────────────
