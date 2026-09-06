@@ -142,6 +142,15 @@
     dockerCompat = true;
   };
 
+  # IP forwarding for published container ports. Netavark DNATs published
+  # ports to the podman bridge, which requires forwarding; NixOS's default
+  # renders net.ipv4.conf.all.forwarding=0 into 60-nixos.conf and re-applies
+  # it on every switch. Older netavark flipped it to 1 at network setup —
+  # nixpkgs 20260630 no longer does, so every published port (jellyfin 8096,
+  # zot 5000, linkding 30080, …) went dark cross-host after the 2026-09-05
+  # fleet bump (public jellyfin.crussell.io 502).
+  boot.kernel.sysctl."net.ipv4.conf.all.forwarding" = true;
+
   # ── Monitoring ───────────────────────────────────────────────────
   # Alert if the internal wildcard cert stops renewing (Route53 DNS challenge
   # via Caddy in a container). Check the live cert on localhost.

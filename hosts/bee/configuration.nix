@@ -183,8 +183,13 @@ in {
   # ── Firewall: disabled (router handles it) ───────────────────────
   networking.firewall.enable = false;
 
-  # ── Podman ──────────────────────────────────────────
+  # ── Podman ──────────────────────────────────────────────────
   virtualisation.podman = { enable = true; };
+
+  # IP forwarding for published container ports (netavark DNAT) — see the
+  # matching comment in hosts/bees/configuration.nix (2026-09-05: fleet bump
+  # left forwarding=0 and killed all cross-host access to published ports).
+  boot.kernel.sysctl."net.ipv4.conf.all.forwarding" = true;
 
   # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
   programs.nix-ld.enable = true;
