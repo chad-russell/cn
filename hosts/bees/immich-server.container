@@ -3,6 +3,11 @@ Description=Immich Server (quadlet migration — see docs/immich-loop/)
 After=network-online.target postgresql.service redis-immich.service mnt-photos.automount
 Wants=network-online.target
 Requires=postgresql.service redis-immich.service
+# Alert parity with the native module (which had a systemd.services
+# override). A plain override here would write a stub unit shadowing the
+# podman-system-generator output (same trap as caddy) — [Unit] lines in
+# the .container file land in the generated unit instead.
+OnFailure=ntfy-failure@immich-server.service
 
 [Container]
 Image=ghcr.io/immich-app/immich-server:v3.1.0
