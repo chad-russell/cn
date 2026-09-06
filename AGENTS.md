@@ -39,7 +39,8 @@ Last validated via SSH: **2026-08-10**.
 │   │   ├── caddy.nix + caddy/ (Caddyfile, routes, caddy.container)
 │   │   │   └── routes/internal/ (services.caddy, media.caddy, beszel.caddy)
 │   │   ├── media-services.nix
-│   │   ├── immich.nix + immich-backup.nix
+│   │   ├── immich-quadlet.nix   # Immich quadlets (server + ML containers)
+│   │   ├── immich-native.nix    # native PG + redis-immich + db dump + freshness
 │   │   ├── beszel.nix         # Beszel monitoring hub
 │   │   ├── ntfy.nix, datenight.nix
 │   │   ├── services.nix
@@ -247,7 +248,8 @@ Source files:
 - `hosts/bees/configuration.nix`
 - `hosts/bees/caddy.nix` + `hosts/bees/caddy/` (Caddyfile, routes, caddy.container)
 - `hosts/bees/media-services.nix` — Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr
-- `hosts/bees/immich.nix` + `hosts/bees/immich-backup.nix` — Immich server + ML
+- `hosts/bees/immich-quadlet.nix` — Immich server + ML quadlets (wired at cutover)
+- `hosts/bees/immich-native.nix` — native postgres + redis-immich + nightly pg_dump + freshness check
 - `hosts/bees/beszel.nix` — Beszel monitoring hub
 - `hosts/bees/thinkpad-registry.nix` + `zot.container` — zot OCI registry (thinkpad host images) + daily build/publish service
 - `hosts/bees/ntfy.nix`, `datenight.nix`
@@ -269,8 +271,8 @@ Live systemd services:
 - `prowlarr.service` — `9696`
 - `jellyseerr.service` — `5055`
 - `qbittorrent.service` — Web UI `8080`, torrenting `51413`
-- `immich-server.service` — `2283`
-- `immich-machine-learning.service`
+- `immich-server.service` — podman quadlet, `2283` (host network)
+- `immich-machine-learning.service` — podman quadlet, `127.0.0.1:3003`
 - `postgresql.service` — Immich DB
 - `redis-immich.service`
 - `beszel.service` — Beszel monitoring hub, `127.0.0.1:8091` (8091 not its default 8090, which ntfy uses)
