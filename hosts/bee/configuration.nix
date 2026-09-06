@@ -590,6 +590,13 @@ in {
       # bee is a dev server — local QA testing of dev stacks (polymer,
       # gpl, buildspace) is a primary use case. The browser.* tools block
       # private URLs by default (SSRF guard); this lifts it for localhost.
+      # Protected agent-instruction files (AGENTS.md / CLAUDE.md / SOUL.md /
+      # .cursorrules): upstream default is an always-ask approval gate that
+      # fails closed for headless kanban workers (their AGENTS.md edits block
+      # until an approval times out). Chad opted out 2026-09-06: these repos
+      # are his own, watched via code review, and the workers' whole job is
+      # editing them. Gate OFF — agents may write instruction files directly.
+      security.protected_instruction_files = false;
       browser.allow_private_urls = true;
       # Approval prompt window: 15 minutes (default 300s repeatedly timed
       # out in desktop/WebUI sessions Aug 17-19 — a Beszel password reset,

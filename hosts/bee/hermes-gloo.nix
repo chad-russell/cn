@@ -46,6 +46,10 @@ let
       memory_char_limit = 6000;
       user_char_limit = 2000;
     };
+    # Protected agent-instruction files (AGENTS.md et al): gate OFF — same
+    # rationale + date as glen's side (headless kanban workers edit these
+    # repos by design; see hosts/bee/configuration.nix settings comment).
+    security.protected_instruction_files = false;
     # Home channel — fallback delivery target for bare-platform cron
     # deliveries / cross-platform messages = the one Gloo lane. Equivalent
     # of /sethome in #gloo-general; declared 2026-09-05 to stop the
