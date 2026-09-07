@@ -718,8 +718,23 @@ in {
   # Inject secrets directly into the systemd service environment so the
   # Hermes runtime provider resolver sees OPENAI_API_KEY before python-dotenv
   # loads .env. Without this, the resolver falls back to "no-key-required".
-  systemd.services.hermes-agent.serviceConfig.EnvironmentFile =
-    [ config.age.secrets.hermes-bee-env-glen.path ];
+  #
+  # 2026-09-07 rootless-podman fix (26.05 hop brought shadow 4.19): the setuid
+  # newuidmap/newgidmap now reject target processes whose PRIMARY gid differs
+  # from the passwd entry's pw_gid ("Target process is owned by a different
+  # user"). The module's Group = "hermes" gave gateway children primary gid 990
+  # while crussell's passwd gid is 100 (users) — so every rootless-podman
+  # spawn from gateway children (agent terminal tools, cron scripts like the
+  # tasty 9am brief's ./run) died at newuidmap with exit 125. The unit's
+  # primary group MUST be the passwd group; hermes stays SUPPLEMENTARY so the
+  # setgid /var/lib/hermes sharing (UMask 0007, group-writable state dirs,
+  # tmpfiles 2770 user:hermes) is completely unchanged. mkForce because the
+  # upstream module's commonServiceConfig also sets Group.
+  systemd.services.hermes-agent.serviceConfig = {
+    EnvironmentFile = [ config.age.secrets.hermes-bee-env-glen.path ];
+    Group = lib.mkForce "users";
+    SupplementaryGroups = [ "hermes" ];
+  };
 
   # The Hermes NixOS module deep-merges declarative settings into the existing
   # mutable config.yaml so user-owned keys survive. That means removing a nested
@@ -926,7 +941,12 @@ in {
     serviceConfig = {
       Type = "simple";
       User = "crussell";
-      Group = "hermes";
+      # 2026-09-07: primary group = passwd group (users), hermes supplementary
+      # — same rootless-podman/newuidmap fix as hermes-agent above (shadow
+      # 4.19 rejects targets whose primary gid ≠ pw_gid; serve children hit
+      # it identically). Sharing via setgid dirs + supplementary group.
+      Group = "users";
+      SupplementaryGroups = [ "hermes" ];
       ExecStart =
         "/run/current-system/sw/bin/hermes serve --host 10.10.0.12 --port 9119";
       EnvironmentFile = [ config.age.secrets.hermes-bee-env-glen.path ];
