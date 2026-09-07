@@ -48,8 +48,9 @@ handle @lane {
 # as-is. Real auth preserved end-to-end (2026-09-07).
 @lanehooks host lane-hooks.internal.crussell.io
 handle @lanehooks {
-    header_up linear-signature {http.request.header.X-Plane-Signature}
-    reverse_proxy 10.10.0.12:8644
+    reverse_proxy 10.10.0.12:8644 {
+        header_up linear-signature {http.request.header.X-Plane-Signature}
+    }
 }
 
 # Wankbank (bees quadlet — private video catalog)
