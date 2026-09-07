@@ -6,7 +6,7 @@ Wants=network-online.target
 [Container]
 Image=docker.io/library/postgres:15.7-alpine
 ContainerName=plane-db
-Command=postgres -c max_connections=200
+Exec=postgres -c max_connections=200
 # POSTGRES_PASSWORD (+ DATABASE_URL creds for the app units) live in the
 # agenix env file (/run/agenix/lane-env).
 Environment=POSTGRES_DB=plane

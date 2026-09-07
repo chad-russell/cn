@@ -6,7 +6,7 @@ After=lane-api.service
 [Container]
 Image=docker.io/makeplane/plane-backend:v1.4.2
 ContainerName=beat-worker
-Command=./bin/docker-entrypoint-beat.sh
+Exec=./bin/docker-entrypoint-beat.sh
 Environment=WEB_URL=https://lane.internal.crussell.io
 Environment=APP_DOMAIN=lane.internal.crussell.io
 Environment=DEBUG=0

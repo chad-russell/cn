@@ -6,7 +6,7 @@ After=lane-postgres.service lane-redis.service
 [Container]
 Image=docker.io/makeplane/plane-backend:v1.4.2
 ContainerName=plane-migrator
-Command=./bin/docker-entrypoint-migrator.sh
+Exec=./bin/docker-entrypoint-migrator.sh
 Environment=WEB_URL=https://lane.internal.crussell.io
 Environment=DEBUG=0
 Environment=USE_MINIO=1

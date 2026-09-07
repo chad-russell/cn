@@ -6,7 +6,7 @@ After=lane-postgres.service lane-redis.service lane-mq.service lane-migrator.ser
 [Container]
 Image=docker.io/makeplane/plane-backend:v1.4.2
 ContainerName=api
-Command=./bin/docker-entrypoint-api.sh
+Exec=./bin/docker-entrypoint-api.sh
 # Non-secret tunables inline (diffable); creds/URLs in /run/agenix/lane-env.
 Environment=WEB_URL=https://lane.internal.crussell.io
 Environment=CORS_ALLOWED_ORIGINS=https://lane.internal.crussell.io
