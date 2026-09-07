@@ -33,6 +33,12 @@ in {
   # POSTGRES_PASSWORD, POSTGRES_URL, BETTER_AUTH_SECRET, KAN_ADMIN_API_KEY.
   "kan-env.age".publicKeys = [ crussell ];
 
+  # ── Lane (self-hosted Plane CE) on bees — lane.internal.crussell.io ──
+  # SECRET_KEY, LIVE_SERVER_SECRET_KEY, POSTGRES_PASSWORD, DATABASE_URL,
+  # REDIS_URL, AMQP_URL, RABBITMQ_DEFAULT_PASS, AWS_ACCESS_KEY_ID,
+  # AWS_SECRET_ACCESS_KEY, WEBHOOK_ALLOWED_IPS.
+  "lane-env.age".publicKeys = [ crussell ];
+
   # ── Proton Pass agent token for bee ("Glen" vault) ───────────────
   # PROTON_PASS_PERSONAL_ACCESS_TOKEN (hermes-bee agent, 6m expiry — renew via
   # pass-cli agent renew) + PROTON_PASS_ENCRYPTION_KEY (env key provider for

@@ -1,0 +1,23 @@
+[Unit]
+Description=Lane (Plane CE) — Valkey (Redis-compatible)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/valkey/valkey:7.2.11-alpine
+ContainerName=plane-redis
+Volume=lane_redisdata:/data
+Network=lane.network
+HealthCmd=valkey-cli ping
+HealthInterval=5s
+HealthRetries=12
+HealthStartPeriod=5s
+HealthTimeout=3s
+Notify=healthy
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+[Unit]
+Description=Lane (Plane CE) — internal network
+# DNS names = ContainerName values (web, api, space, admin, live, plane-db,
+# plane-redis, plane-mq, plane-minio) — the plane-proxy image hardcodes those
+# upstream names, so they stay canonical while units carry the lane- prefix.
+
+[Network]
+Driver=bridge

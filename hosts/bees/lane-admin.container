@@ -1,0 +1,16 @@
+[Unit]
+Description=Lane (Plane CE) — instance admin UI (:3000)
+Requires=lane-api.service
+After=lane-api.service lane-web.service
+
+[Container]
+Image=docker.io/makeplane/plane-admin:v1.4.2
+ContainerName=admin
+Network=lane.network
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

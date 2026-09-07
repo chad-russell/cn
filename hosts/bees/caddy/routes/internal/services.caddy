@@ -35,3 +35,9 @@ handle @nsfw {
 handle @files {
     reverse_proxy 10.10.0.12:8093
 }
+
+# Lane (self-hosted Plane CE) on bees — proxy → 127.0.0.1:8100
+@lane host lane.internal.crussell.io
+handle @lane {
+    reverse_proxy 127.0.0.1:8100
+}

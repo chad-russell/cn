@@ -21,6 +21,7 @@
     ./caddy.nix
     ./services.nix
     ./kan.nix
+    ./lane.nix
     ./llama-server.nix
     ./comfyui.nix
     ./backup.nix

@@ -1,0 +1,42 @@
+[Unit]
+Description=Lane (Plane CE) — Django API (gunicorn :8000)
+Requires=lane-postgres.service lane-redis.service lane-mq.service lane-migrator.service
+After=lane-postgres.service lane-redis.service lane-mq.service lane-migrator.service
+
+[Container]
+Image=docker.io/makeplane/plane-backend:v1.4.2
+ContainerName=api
+Command=./bin/docker-entrypoint-api.sh
+# Non-secret tunables inline (diffable); creds/URLs in /run/agenix/lane-env.
+Environment=WEB_URL=https://lane.internal.crussell.io
+Environment=CORS_ALLOWED_ORIGINS=https://lane.internal.crussell.io
+Environment=APP_DOMAIN=lane.internal.crussell.io
+Environment=DEBUG=0
+Environment=USE_MINIO=1
+Environment=MINIO_ENDPOINT_SSL=0
+Environment=GUNICORN_WORKERS=1
+Environment=API_KEY_RATE_LIMIT=120/minute
+Environment=AUTHENTICATION_RATE_LIMIT=10/minute
+Environment=TRUSTED_PROXIES=0.0.0.0/0
+Environment=PGHOST=plane-db
+Environment=PGDATABASE=plane
+Environment=POSTGRES_USER=plane
+Environment=POSTGRES_DB=plane
+Environment=POSTGRES_PORT=5432
+Environment=REDIS_HOST=plane-redis
+Environment=REDIS_PORT=6379
+Environment=RABBITMQ_HOST=plane-mq
+Environment=RABBITMQ_PORT=5672
+Environment=RABBITMQ_VHOST=plane
+Environment=AWS_S3_ENDPOINT_URL=http://plane-minio:9000
+Environment=AWS_S3_BUCKET_NAME=uploads
+EnvironmentFile=/run/agenix/lane-env
+Volume=lane_logs_api:/code/plane/logs
+Network=lane.network
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

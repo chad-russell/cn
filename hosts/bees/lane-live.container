@@ -1,0 +1,21 @@
+[Unit]
+Description=Lane (Plane CE) — realtime/live service (:4000)
+Requires=lane-api.service
+After=lane-api.service
+
+[Container]
+Image=docker.io/makeplane/plane-live:v1.4.2
+ContainerName=live
+# LIVE_SERVER_SECRET_KEY + REDIS creds come from /run/agenix/lane-env.
+Environment=API_BASE_URL=http://api:8000
+Environment=REDIS_HOST=plane-redis
+Environment=REDIS_PORT=6379
+EnvironmentFile=/run/agenix/lane-env
+Network=lane.network
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

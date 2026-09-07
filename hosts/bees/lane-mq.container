@@ -1,0 +1,29 @@
+[Unit]
+Description=Lane (Plane CE) — RabbitMQ 3.13
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/library/rabbitmq:3.13.6-management-alpine
+ContainerName=plane-mq
+# RABBITMQ_DEFAULT_PASS comes from /run/agenix/lane-env (image-native
+# name; the compose-layer RABBITMQ_PASSWORD indirection doesn't exist here
+# — AMQP_URL in the same file embeds the same credential).
+Environment=RABBITMQ_DEFAULT_USER=plane
+Environment=RABBITMQ_DEFAULT_VHOST=plane
+EnvironmentFile=/run/agenix/lane-env
+Volume=lane_rabbitmq:/var/lib/rabbitmq
+Network=lane.network
+HealthCmd=rabbitmq-diagnostics -q ping
+HealthInterval=10s
+HealthRetries=12
+HealthStartPeriod=20s
+HealthTimeout=5s
+Notify=healthy
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
