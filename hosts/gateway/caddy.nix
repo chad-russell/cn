@@ -68,14 +68,17 @@
       file_server
     '';
 
-    # noms.crussell.io — Noms food-app design review (static picker page +
-    # three self-contained prototype variants; sample data only, no
-    # backend). Will later host the real app behind a login.
-    # Content lives in /srv/noms on the gateway (NOT flake-managed) —
-    # published from ~/Code/noms/design/ on bee.
+    # noms.crussell.io — Noms food planner (Next app on bees, behind app
+    # login; /design/ keeps the static design-review picker).
     virtualHosts."noms.crussell.io".extraConfig = ''
-      root * /srv/noms
-      file_server
+      handle /design/* {
+        uri strip_prefix /design
+        root * /srv/noms
+        file_server
+      }
+      handle {
+        reverse_proxy 10.10.0.6:3097
+      }
     '';
   };
 }
