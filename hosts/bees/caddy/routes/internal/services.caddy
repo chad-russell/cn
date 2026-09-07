@@ -29,3 +29,9 @@ handle @trades {
 handle @nsfw {
     reverse_proxy 127.0.0.1:8097
 }
+
+# FileBrowser Quantum (bee — plans, docs, artifacts)
+@files host files.internal.crussell.io
+handle @files {
+    reverse_proxy 10.10.0.12:8093
+}
