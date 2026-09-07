@@ -692,6 +692,22 @@ in {
           name = "general";
         };
       };
+
+      # ── Inbound webhook platform (Lane Phase 3, 2026-09-07) ─────────
+      # Plane CE (bees) POSTs board events here → agent runs (sub-second
+      # wakeup vs the 5-min monitor). Secret = Plane webhook signing
+      # secret, injected via WEBHOOK_SECRET env (hermes-bee-env-glen.age)
+      # so it never lands in the declarative settings drift-check JSON.
+      # Signature: Plane sends X-Plane-Signature (hex HMAC-SHA256 of body)
+      # which Hermes' verifier does NOT recognize — bees Caddy copies it
+      # to `linear-signature` (identical hex-HMAC-of-body format) on
+      # proxy, so real HMAC auth survives end-to-end. Lane webhook →
+      # hermes webhook subscribe lane-events (prompt runs dispatcher
+      # logic; monitor cron stays as fallback).
+      gateway.platforms.webhook = {
+        enabled = true;
+        extra.port = 8644;
+      };
     };
 
     environment = {
