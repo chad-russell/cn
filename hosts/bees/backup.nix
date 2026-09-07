@@ -40,6 +40,10 @@
       # volume, covered via /var/lib/containers/storage/volumes above.
       "/var/lib/kan"
 
+      # Noms (noms.crussell.io): sqlite lives under the user quadlet's
+      # bind-mount dir — ~/noms/data on bees.
+      "/home/crussell/noms/data"
+
       # Immich photo library (on NAS via NFS)
       "/mnt/photos"
     ];
