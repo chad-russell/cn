@@ -1,0 +1,120 @@
+Sep 06 10:52:31 bees immich-server[252737]: [Nest] 48  - 09/06/2026, 10:52:31 AM     LOG [Api:MachineLearningRepository~tcovxsqq] Machine learning server became unhealthy (http://immich-machine-learning:3003).
+Sep 06 10:52:31 bees immich-server[252737]: [Nest] 48  - 09/06/2026, 10:52:31 AM   ERROR [Api:ErrorInterceptor~tcovxsqq] Unknown error: Error: Machine learning request '{"clip":{"textual":{"modelName":"ViT-B-32__openai","options":{}}}}' failed for all URLs
+Sep 06 10:52:31 bees immich-server[252737]: Error: Machine learning request '{"clip":{"textual":{"modelName":"ViT-B-32__openai","options":{}}}}' failed for all URLs
+Sep 06 10:52:31 bees immich-server[252737]:     at MachineLearningRepository.predict (/usr/src/app/server/dist/repositories/machine-learning.repository.js:117:15)
+Sep 06 10:52:31 bees immich-server[252737]:     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+Sep 06 10:52:31 bees immich-server[252737]:     at async MachineLearningRepository.encodeText (/usr/src/app/server/dist/repositories/machine-learning.repository.js:140:26)
+Sep 06 10:52:31 bees immich-server[252737]:     at async SearchService.searchSmart (/usr/src/app/server/dist/services/search.service.js:125:29)
+Sep 06 10:52:31 bees immich-server[252737]: [Nest] 2  - 09/06/2026, 10:52:31 AM     LOG [Microservices:TrashService] Queued 1 asset(s) for deletion from the trash
+Sep 06 10:52:31 bees immich-server[252737]: [Nest] 2  - 09/06/2026, 10:52:31 AM   ERROR [Microservices:{"source":"upload","id":"a103eee0-438a-40a0-88bd-277703b663fc"}] Unable to run job handler (AssetGenerateThumbnails): Error: EACCES: permission denied, mkdir '/mnt/photos/thumbs/7b1b9617-17bb-49d5-bd92-fe78a7d4d78b/a1/03'
+Sep 06 10:52:31 bees immich-server[252737]: Error: EACCES: permission denied, mkdir '/mnt/photos/thumbs/7b1b9617-17bb-49d5-bd92-fe78a7d4d78b/a1/03'
+Sep 06 10:52:31 bees immich-server[252737]:     at mkdirSync (node:fs:1349:26)
+Sep 06 10:52:31 bees immich-server[252737]:     at StorageRepository.mkdirSync (/usr/src/app/server/dist/repositories/storage.repository.js:157:37)
+Sep 06 10:52:31 bees immich-server[252737]:     at StorageCore.ensureFolders (/usr/src/app/server/dist/cores/storage.core.js:211:32)
+Sep 06 10:52:31 bees immich-server[252737]:     at MediaService.generateImageThumbnails (/usr/src/app/server/dist/services/media.service.js:235:26)
+Sep 06 10:52:31 bees immich-server[252737]:     at async MediaService.handleGenerateThumbnails (/usr/src/app/server/dist/services/media.service.js:155:25)
+Sep 06 10:52:31 bees immich-server[252737]:     at async JobService.onJobRun (/usr/src/app/server/dist/services/job.service.js:78:30)
+Sep 06 10:52:31 bees immich-server[252737]:     at async EventRepository.onEvent (/usr/src/app/server/dist/repositories/event.repository.js:91:13)
+Sep 06 10:52:31 bees immich-server[252737]:     at async /usr/src/app/server/node_modules/.pnpm/bullmq@5.80.5/node_modules/bullmq/dist/cjs/classes/worker.js:589:32
+Sep 06 10:52:42 bees immich-server[252737]: [Nest] 48  - 09/06/2026, 10:52:42 AM     LOG [Api:MachineLearningRepository] Machine learning server became healthy (http://immich-machine-learning:3003).
+Sep 06 11:00:57 bees immich-server[252737]: [Nest] 2  - 09/06/2026, 11:00:57 AM     LOG [Microservices:TrashService] Queued 1 asset(s) for deletion from the trash
+Sep 06 11:00:57 bees immich-server[252737]: [Nest] 2  - 09/06/2026, 11:00:57 AM    WARN [Microservices:MetadataRepository] Error reading exif data (/mnt/photos/upload/7b1b9617-17bb-49d5-bd92-fe78a7d4d78b/50/c5/50c5779f-7e1b-4466-a297-147723b0032f.jpg): Error: File not found - /mnt/photos/upload/7b1b9617-17bb-49d5-bd92-fe78a7d4d78b/50/c5/50c5779f-7e1b-4466-a297-147723b0032f.jpg
+Sep 06 11:00:57 bees immich-server[252737]: Error: File not found - /mnt/photos/upload/7b1b9617-17bb-49d5-bd92-fe78a7d4d78b/50/c5/50c5779f-7e1b-4466-a297-147723b0032f.jpg
+Sep 06 11:00:57 bees immich-server[252737]:     at #parser (/usr/src/app/server/node_modules/.pnpm/exiftool-vendored@35.21.0/node_modules/exiftool-vendored/dist/ExifToolTask.js:91:31)
+Sep 06 11:00:57 bees immich-server[252737]:     at ReadTask.parser (/usr/src/app/server/node_modules/.pnpm/exiftool-vendored@35.21.0/node_modules/exiftool-vendored/dist/ExifToolTask.js:67:98)
+Sep 06 11:00:57 bees immich-server[252737]:     at #resolve (/usr/src/app/server/node_modules/.pnpm/batch-cluster@17.3.1/node_modules/batch-cluster/dist/Task.js:122:44)
+Sep 06 11:00:57 bees immich-server[252737]: Query failed : {
+Sep 06 11:00:57 bees immich-server[252737]:   durationMs: 3.198495000018738,
+Sep 06 11:00:57 bees immich-server[252737]:   error: PostgresError: insert or update on table "asset_exif" violates foreign key constraint "asset_exif_assetId_fkey"
+Sep 06 11:00:57 bees immich-server[252737]:       at ErrorResponse (file:///usr/src/app/server/node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/connection.js:815:30)
+Sep 06 11:00:57 bees immich-server[252737]:       at handle (file:///usr/src/app/server/node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/connection.js:489:6)
+Sep 06 11:00:57 bees immich-server[252737]:       at Socket.data (file:///usr/src/app/server/node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/connection.js:324:9)
+Sep 06 11:00:57 bees immich-server[252737]:       at Socket.emit (node:events:508:28)
+Sep 06 11:00:57 bees immich-server[252737]:       at addChunk (node:internal/streams/readable:563:12)
+Sep 06 11:00:57 bees immich-server[252737]:       at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+Sep 06 11:00:57 bees immich-server[252737]:       at Readable.push (node:internal/streams/readable:394:5)
+Sep 06 11:00:57 bees immich-server[252737]:       at Pipe.onStreamRead (node:internal/stream_base_commons:189:23) {
+Sep 06 11:00:57 bees immich-server[252737]:     severity_local: 'ERROR',
+Sep 06 11:00:57 bees immich-server[252737]:     severity: 'ERROR',
+Sep 06 11:00:57 bees immich-server[252737]:     code: '23503',
+Sep 06 11:00:57 bees immich-server[252737]:     detail: 'Key (assetId)=(3f22e621-624f-40e7-bdd8-5205a3be2df7) is not present in table "asset".',
+Sep 06 11:00:57 bees immich-server[252737]:     schema_name: 'public',
+Sep 06 11:00:57 bees immich-server[252737]:     table_name: 'asset_exif',
+Sep 06 11:00:57 bees immich-server[252737]:     constraint_name: 'asset_exif_assetId_fkey',
+Sep 06 11:00:57 bees immich-server[252737]:     file: 'ri_triggers.c',
+Sep 06 11:00:57 bees immich-server[252737]:     line: '2610',
+Sep 06 11:00:57 bees immich-server[252737]:     routine: 'ri_ReportViolation'
+Sep 06 11:00:57 bees immich-server[252737]:   },
+Sep 06 11:00:57 bees immich-server[252737]:   sql: 'insert into "asset_exif" ("assetId", "dateTimeOriginal", "modifyDate", "timeZone", "latitude", "longitude", "country", "state", "city", "fileSizeInByte", "exifImageHeight", "exifImageWidth", "orientation", "projectionType", "bitsPerSample", "colorspace", "make", "model", "fps", "iso", "exposureTime", "lensModel", "fNumber", "focalLength", "description", "profileDescription", "rating", "livePhotoCID", "autoStackId", "tags") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30) on conflict ("assetId") do update set "description" = case when $31 = any("asset_exif"."lockedProperties") then "asset_exif"."description" else "excluded"."description" end, "exifImageWidth" = case when $32 = any("asset_exif"."lockedProperties") then "asset_exif"."exifImageWidth" else "excluded"."exifImageWidth" end, "exifImageHeight" = case when $33 = any("asset_exif"."lockedProperties") then "asset_exif"."exifImageHeight" else "excluded"."exifImageHeight" end, "fileSizeInByte" = case when $34 = any("asset_exif"."lockedProperties") then "asset_exif"."fileSizeInByte" else "excluded"."fileSizeInByte" end, "orientation" = case when $35 = any("asset_exif"."lockedProperties") then "asset_exif"."orientation" else "excluded"."orientation" end, "dateTimeOriginal" = case when $36 = any("asset_exif"."lockedProperties") then "asset_exif"."dateTimeOriginal" else "excluded"."dateTimeOriginal" end, "modifyDate" = case when $37 = any("asset_exif"."lockedProperties") then "asset_exif"."modifyDate" else "excluded"."modifyDate" end, "timeZone" = case when $38 = any("asset_exif"."lockedProperties") then "asset_exif"."timeZone" else "excluded"."timeZone" end, "latitude" = case when $39 = any("asset_exif"."lockedProperties") then "asset_exif"."latitude" else "excluded"."latitude" end, "longitude" = case when $40 = any("asset_exif"."lockedProperties") then "asset_exif"."longitude" else "excluded"."longitude" end, "projectionType" = case when $41 = any("asset_exif"."lockedProperties") then "asset_exif"."projectionType" else "excluded"."projectionType" end, "city" = case when $42 = any("asset_exif"."lockedProperties") then "asset_exif"."city" else "excluded"."city" end, "livePhotoCID" = case when $43 = any("asset_exif"."lockedProperties") then "asset_exif"."livePhotoCID" else "excluded"."livePhotoCID" end, "autoStackId" = case when $44 = any("asset_exif"."lockedProperties") then "asset_exif"."autoStackId" else "excluded"."autoStackId" end, "state" = case when $45 = any("asset_exif"."lockedProperties") then "asset_exif"."state" else "excluded"."state" end, "country" = case when $46 = any("asset_exif"."lockedProperties") then "asset_exif"."country" else "excluded"."country" end, "make" = case when $47 = any("asset_exif"."lockedProperties") then "asset_exif"."make" else "excluded"."make" end, "model" = case when $48 = any("asset_exif"."lockedProperties") then "asset_exif"."model" else "excluded"."model" end, "lensModel" = case when $49 = any("asset_exif"."lockedProperties") then "asset_exif"."lensModel" else "excluded"."lensModel" end, "fNumber" = case when $50 = any("asset_exif"."lockedProperties") then "asset_exif"."fNumber" else "excluded"."fNumber" end, "focalLength" = case when $51 = any("asset_exif"."lockedProperties") then "asset_exif"."focalLength" else "excluded"."focalLength" end, "iso" = case when $52 = any("asset_exif"."lockedProperties") then "asset_exif"."iso" else "excluded"."iso" end, "exposureTime" = case when $53 = any("asset_exif"."lockedProperties") then "asset_exif"."exposureTime" else "excluded"."exposureTime" end, "profileDescription" = case when $54 = any("asset_exif"."lockedProperties") then "asset_exif"."profileDescription" else "excluded"."profileDescription" end, "colorspace" = case when $55 = any("asset_exif"."lockedProperties") then "asset_exif"."colorspace" else "excluded"."colorspace" end, "bitsPerSample" = case when $56 = any("asset_exif"."lockedProperties") then "asset_exif"."bitsPerSample" else "excluded"."bitsPerSample" end, "rating" = case when $57 = any("asset_exif"."lockedProperties") then "asset_exif"."rating" else "excluded"."rating" end, "fps" = case when $58 = any("asset_exif"."lockedProperties") then "asset_exif"."fps" else "excluded"."fps" end, "tags" = case when $59 = any("asset_exif"."lockedProperties") then "asset_exif"."tags" else "excluded"."tags" end',
+Sep 06 11:00:57 bees immich-server[252737]:   params: [
+Sep 06 11:00:57 bees immich-server[252737]:     '3f22e621-624f-40e7-bdd8-5205a3be2df7',
+Sep 06 11:00:57 bees immich-server[252737]:     2026-09-06T15:00:57.000Z,
+Sep 06 11:00:57 bees immich-server[252737]:     2026-09-06T15:00:57.000Z,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     106,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     '',
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     null,
+Sep 06 11:00:57 bees immich-server[252737]:     'description',
+Sep 06 11:00:57 bees immich-server[252737]:     'exifImageWidth',
+Sep 06 11:00:57 bees immich-server[252737]:     'exifImageHeight',
+Sep 06 11:00:57 bees immich-server[252737]:     'fileSizeInByte',
+Sep 06 11:00:57 bees immich-server[252737]:     'orientation',
+Sep 06 11:00:57 bees immich-server[252737]:     'dateTimeOriginal',
+Sep 06 11:00:57 bees immich-server[252737]:     'modifyDate',
+Sep 06 11:00:57 bees immich-server[252737]:     'timeZone',
+Sep 06 11:00:57 bees immich-server[252737]:     'latitude',
+Sep 06 11:00:57 bees immich-server[252737]:     'longitude',
+Sep 06 11:00:57 bees immich-server[252737]:     'projectionType',
+Sep 06 11:00:57 bees immich-server[252737]:     'city',
+Sep 06 11:00:57 bees immich-server[252737]:     'livePhotoCID',
+Sep 06 11:00:57 bees immich-server[252737]:     'autoStackId',
+Sep 06 11:00:57 bees immich-server[252737]:     'state',
+Sep 06 11:00:57 bees immich-server[252737]:     'country',
+Sep 06 11:00:57 bees immich-server[252737]:     'make',
+Sep 06 11:00:57 bees immich-server[252737]:     'model',
+Sep 06 11:00:57 bees immich-server[252737]:     'lensModel',
+Sep 06 11:00:57 bees immich-server[252737]:     'fNumber',
+Sep 06 11:00:57 bees immich-server[252737]:     'focalLength',
+Sep 06 11:00:57 bees immich-server[252737]:     'iso',
+Sep 06 11:00:57 bees immich-server[252737]:     'exposureTime',
+Sep 06 11:00:57 bees immich-server[252737]:     'profileDescription',
+Sep 06 11:00:57 bees immich-server[252737]:     'colorspace',
+Sep 06 11:00:57 bees immich-server[252737]:     'bitsPerSample',
+Sep 06 11:00:57 bees immich-server[252737]:     'rating',
+Sep 06 11:00:57 bees immich-server[252737]:     'fps',
+Sep 06 11:00:57 bees immich-server[252737]:     'tags'
+Sep 06 11:00:57 bees immich-server[252737]:   ]
+Sep 06 11:00:57 bees immich-server[252737]: }
+Sep 06 11:00:57 bees immich-server[252737]: [Nest] 2  - 09/06/2026, 11:00:57 AM   ERROR [Microservices:{"id":"3f22e621-624f-40e7-bdd8-5205a3be2df7","source":"upload"}] Unable to run job handler (AssetExtractMetadata): PostgresError: insert or update on table "asset_exif" violates foreign key constraint "asset_exif_assetId_fkey"
+Sep 06 11:00:57 bees immich-server[252737]: PostgresError: insert or update on table "asset_exif" violates foreign key constraint "asset_exif_assetId_fkey"
+Sep 06 11:00:57 bees immich-server[252737]:     at ErrorResponse (file:///usr/src/app/server/node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/connection.js:815:30)
+Sep 06 11:00:57 bees immich-server[252737]:     at handle (file:///usr/src/app/server/node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/connection.js:489:6)
+Sep 06 11:00:57 bees immich-server[252737]:     at Socket.data (file:///usr/src/app/server/node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/connection.js:324:9)
+Sep 06 11:00:57 bees immich-server[252737]:     at Socket.emit (node:events:508:28)
+Sep 06 11:00:57 bees immich-server[252737]:     at addChunk (node:internal/streams/readable:563:12)
+Sep 06 11:00:57 bees immich-server[252737]:     at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+Sep 06 11:00:57 bees immich-server[252737]:     at Readable.push (node:internal/streams/readable:394:5)
+Sep 06 11:00:57 bees immich-server[252737]:     at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)

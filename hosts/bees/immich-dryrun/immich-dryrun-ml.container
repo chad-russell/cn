@@ -1,0 +1,21 @@
+[Unit]
+Description=immich-loop B1 DRY-RUN machine learning (NOT for production)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/immich-app/immich-machine-learning:v3.1.0
+ContainerName=immich-dryrun-ml
+Network=host
+User=991:993
+Environment=IMMICH_HOST=127.0.0.1
+Environment=IMMICH_PORT=3303
+Environment=MACHINE_LEARNING_CACHE_FOLDER=/cache
+Environment=TZ=America/New_York
+Volume=/var/lib/immich-dryrun/ml-cache:/cache
+
+[Service]
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
