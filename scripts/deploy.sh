@@ -124,9 +124,12 @@ if [[ $DEPLOYING_BEE -eq 1 ]]; then
     echo "  bee was in the deploy set — scheduling activation via systemd-run …"
     echo "  (hermes-agent will restart; this session may drop — that's expected)"
 
-    # The newest system-*-link on bee is the just-built generation
+    # The newest system-*-link on bee is the just-built generation.
+    # NB: -d is required — without it ls lists the symlink's TARGET dir
+    # (the generation store path) and head -1 grabs the "path:" header
+    # line, which then fails "Failed to find executable".
     NEW_GEN=$(ssh -o IdentitiesOnly=yes -o ConnectTimeout=8 "$BEE_ROOT_SSH" \
-        "ls -t /nix/var/nix/profiles/system-*-link | head -1 | xargs readlink -f" 2>/dev/null || true)
+        "ls -dt /nix/var/nix/profiles/system-*-link | head -1 | xargs readlink -f" 2>/dev/null || true)
 
     if [[ -z "$NEW_GEN" ]]; then
         echo "  ⚠ could not determine new generation path on bee — activate manually:" >&2
