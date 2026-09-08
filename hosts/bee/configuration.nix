@@ -599,15 +599,41 @@ in {
         model = "glm-5.3-flash";
         reasoning_effort = "none";
       };
-      # Fallback if the primary is down (rate limit, overload, etc.).
-      # 2026-09-08: moved off openrouter qwen3.7-flash (stale model) onto the
-      # same Z.AI coding subscription — glm-5.3-flash. Zero spend, and a Gloo
-      # outage in the work lane can no longer spill onto a personal paid
-      # provider.
-      model.fallback = [{
-        provider = "zai-coding";
-        model = "glm-5.3-flash";
-      }];
+      # Fallback chain when the primary fails (rate limit, overload, auth,
+      # connection). MUST be top-level `fallback_providers` — hermes reads
+      # ONLY that key (hermes_cli/fallback_config.py::get_fallback_chain);
+      # a nested model.fallback is silently ignored. Found 2026-09-08: the
+      # previous `model.fallback` declaration was dead config and bee ran
+      # with NO effective fallback. Pruned on switch (see activation script).
+      # Hop 1: same Z.AI subscription (free, absorbs soft rate limits).
+      # Hop 2: OpenAI Codex subscription (company-given, ChatGPT OAuth
+      # credential in auth.json — verified `hermes auth status openai-codex`).
+      # Genuinely cross-provider: covers a full Z.AI outage. gpt-5.5 (not
+      # gpt-5.3-codex) because fallback must continue the full agent tool
+      # loop, which wants the general model. Fires only on failure-class
+      # errors; primary is restored automatically next turn.
+      fallback_providers = [
+        {
+          provider = "zai-coding";
+          model = "glm-5.3-flash";
+        }
+        {
+          provider = "openai-codex";
+          model = "gpt-5.5";
+        }
+      ];
+      # Pull-based access to the Codex subscription: `/model gpt` in any
+      # session (session-scoped; `--global` to persist) routes to GPT-5.5 on
+      # the OAuth provider. Other catalog slugs (`gpt-5.6-sol`, `gpt-5.4`,
+      # ...) resolve natively once the provider is active. User aliases
+      # shadow builtins, so this pins `gpt` to the Codex OAuth path rather
+      # than the API-key path we have no key for. Agentic coding stays on
+      # the codex CLI (see the codex skill) — this alias is for pulling
+      # extra reasoning into a normal session, not delegation.
+      model_aliases.gpt = {
+        provider = "openai-codex";
+        model = "gpt-5.5";
+      };
       # Show token cost in session output
       display.show_cost = true;
       # Enable session checkpoints (rollback snapshots for long sessions)
@@ -840,6 +866,14 @@ in {
       config = yaml.safe_load(path.read_text()) or {}
 
       prunes = []
+      # Retired 2026-09-08: `model.fallback` was never read by hermes (the
+      # runtime reads only top-level fallback_providers/fallback_model —
+      # get_fallback_chain), so bee silently ran with NO fallback. Nix now
+      # declares the real top-level key; drop the dead nested list.
+      model_section = config.get("model")
+      if isinstance(model_section, dict) and "fallback" in model_section:
+          del model_section["fallback"]
+          prunes.append("model.fallback (dead key — runtime reads only top-level fallback_providers)")
       # Retired 2026-09-07: the legacy `custom_providers` LIST is replaced by
       # the modern `providers` DICT (see the providers block above and the
       # incident note there). Hermes' v11→v12 migration and the NixOS
