@@ -308,7 +308,7 @@ clients reach bees directly over the overlay, bypassing the gateway.
 
 Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
-- `services.caddy` — linkding, papra, ntfy, hermes (webui on bee over Nebula)
+- `services.caddy` — linkding, papra, ntfy, dsh, trades, nsfw, files, lane, lane-hooks, wankbank
 - `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
 - `beszel.caddy` — Beszel hub (`beszel.internal.crussell.io` → `127.0.0.1:8091`, incl. WebSocket)
 
