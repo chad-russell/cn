@@ -1004,6 +1004,61 @@ in {
     };
   };
 
+  # ── hermes-dashboard: web admin panel on Nebula 10.10.0.12:9120 ──────
+  # Promotes the long-running-but-transient `hermes dashboard` scope
+  # (HML-7, agent-spawned repeatedly since 09-06, dies on reboot with no
+  # restart policy) into a managed system unit, mirroring hermes-serve
+  # above. Same auth story: non-loopback bind ⇒ auth gate engaged with the
+  # bundled `basic` dashboard-auth plugin (verified live 09-07: unauth GET
+  # serves the sign-in page; HERMES_DASHBOARD_BASIC_AUTH_{USERNAME,PASSWORD,
+  # SECRET} already in hermes-bee-env-glen.age; real usage logged from the
+  # thinkpad 09-06). No --insecure (a no-op since the June 2026 hardening)
+  # and no --skip-build: the `hermes` wrapper exports HERMES_WEB_DIST at
+  # the nix store's prebuilt web_dist, so no npm ever runs and the UI
+  # follows each hermes-agent deploy.
+  systemd.services.hermes-dashboard = {
+    description = "Hermes Web Dashboard (Nebula 10.10.0.12:9120)";
+    wantedBy = [ "multi-user.target" ];
+    # The unit binds the Nebula IP directly; like every such socket it can
+    # lose the boot race on 26.05 (see modules/dsh.nix) — order after the
+    # nebula unit and drag it along on nebula restarts.
+    after = [
+      "network-online.target"
+      "hermes-agent.service"
+      "nebula@homelab.service"
+    ];
+    bindsTo = [ "nebula@homelab.service" ];
+    partOf = [ "nebula@homelab.service" ];
+    environment = {
+      HERMES_HOME = "/var/lib/hermes/.hermes";
+      HOME = "/home/crussell";
+      # user-session env for systemd-run --user --scope — identical to
+      # hermes-agent/hermes-serve (the dashboard's embedded chat can
+      # dispatch background work the same way).
+      XDG_RUNTIME_DIR = "/run/user/1000";
+      DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
+      # bash + node in PATH: same rationale as hermes-serve (terminal-tool
+      # shell resolution; npm/node for optional MCP children like
+      # server-github, which the transient instance spawned via npx).
+      PATH = lib.mkForce
+        "/run/wrappers/bin:${pkgs.bashInteractive}/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
+      SHELL = "${pkgs.bashInteractive}/bin/bash";
+    };
+    serviceConfig = {
+      Type = "simple";
+      User = "crussell";
+      # primary group = passwd group, hermes supplementary — shadow 4.19
+      # newuidmap rule, same as hermes-agent/hermes-serve (2026-09-07).
+      Group = "users";
+      SupplementaryGroups = [ "hermes" ];
+      ExecStart =
+        "/run/current-system/sw/bin/hermes dashboard --host 10.10.0.12 --port 9120 --no-open";
+      EnvironmentFile = [ config.age.secrets.hermes-bee-env-glen.path ];
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+  };
+
   # ── Beszel monitoring agent ────────────────────────────────────
   # (enabled by default in modules/beszel-agent.nix)
 

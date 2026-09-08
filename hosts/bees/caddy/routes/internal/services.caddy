@@ -42,6 +42,20 @@ handle @lane {
     reverse_proxy 127.0.0.1:8100
 }
 
+# Hermes web dashboard on bee (HML-7): managed hermes-dashboard.service
+# (Nebula 10.10.0.12:9120). Auth gate is Hermes' own basic-auth provider
+# (HERMES_DASHBOARD_BASIC_AUTH_*) — caddy only terminates TLS. read_timeout
+# 360s per beszel.caddy precedent: the dashboard's embedded chat rides a
+# long-lived WebSocket and turns can run for minutes.
+@dashboard host dashboard.internal.crussell.io
+handle @dashboard {
+    reverse_proxy 10.10.0.12:9120 {
+        transport http {
+            read_timeout 360s
+        }
+    }
+}
+
 # Lane webhook bridge: Plane → Hermes webhook adapter (bee :8644).
 # Copies X-Plane-Signature → linear-signature so Hermes HMAC verifier
 # (hex HMAC-SHA256 of body, Linear format) validates Plane signature
