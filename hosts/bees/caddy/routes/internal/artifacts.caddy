@@ -1,0 +1,10 @@
+# Static artifact host (bee — Glen's throwaway HTML pages/demos).
+# python -m http.server user unit binds bee's Nebula IP 10.10.0.12:8910,
+# serving ~/crussell/artifacts (one self-contained file per artifact).
+# Publish flow: `publish-artifact <file> [slug]` on bee, then share
+# https://artifacts.internal.crussell.io/<slug>.
+
+@artifacts host artifacts.internal.crussell.io
+handle @artifacts {
+    reverse_proxy 10.10.0.12:8910
+}
