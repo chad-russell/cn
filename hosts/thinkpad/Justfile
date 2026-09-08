@@ -503,10 +503,10 @@ bubblebox: bubblebox-init bubblebox-build bubblebox-apply
 # build-from-source is the only distribution channel.
 #
 # Secrets: the desktop talks to bee over plain SSH (no provider keys needed
-# locally). Legacy: secrets/hermes-thinkpad-env.age previously fed a local
-# agent install via bubblebox/files/.zshenv; the wrapper at
-# bubblebox/files/.local/bin/hermes-desktop still sources that cache first so
-# a local agent could be re-added without a wrapper change.
+# locally). Legacy: secrets/hermes-thinkpad-env.age (removed 2026-09-08, HML-9)
+# previously fed a local agent install via bubblebox/files/.zshenv; the wrapper
+# at bubblebox/files/.local/bin/hermes-desktop still sources that cache first
+# so a local agent could be re-added without a wrapper change.
 
 # Build the hermes desktop (Electron) app OFF-HOST in a throwaway Fedora+Node
 # podman container from our own source checkout, then copy only the unpacked

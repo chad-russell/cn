@@ -59,16 +59,10 @@ in {
   # Retired 2026-09-01: hermes webui (desktop + Discord are the only surfaces).
   # "hermes-webui-env.age".publicKeys = [ crussell ];
 
-  # ── Hermes Agent CLI/TUI/Desktop on thinkpad ───────────────────
-  # OPENAI_API_KEY=<Z.AI coding key> so Hermes' OpenAI-compatible provider
-  # resolver finds it. Same key value as zai-api-key.age (which exports it
-  # under ZHIPU_API_KEY for opencode); remapped to OPENAI_API_KEY for Hermes.
-  # Sourced into shells via dotfiles/.zshenv (age-decrypt on login) and into
-  # the GUI desktop app via the ~/.local/bin/hermes-desktop wrapper.
-  "hermes-thinkpad-env.age".publicKeys = [ crussell ];
-
-  # ── searx-secret (retired 2026-09-03) ───────────────────────────
-  # Removed with the SearXNG service (hosts/bee/searxng.nix deleted);
-  # was the Flask session-signing key for the localhost searx instance.
-  # secrets/searx-secret.age left on disk until agenix re-encrypt is run.
+  # ── Hermes Agent CLI/TUI/Desktop on thinkpad (retired 2026-09-08, HML-9) ──
+  # Was OPENAI_API_KEY=<Z.AI coding key> for a local thinkpad agent install;
+  # thinkpad is desktop-only now (talks to bee over SSH, no local provider
+  # keys). No NixOS host consumed it. If a local agent ever returns, re-add
+  # here + re-create the .age file; the thinkpad .zshenv decrypt loop and
+  # hermes-desktop wrapper pick it back up unchanged.
 }
