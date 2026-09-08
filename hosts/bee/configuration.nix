@@ -612,6 +612,22 @@ in {
       display.show_cost = true;
       # Enable session checkpoints (rollback snapshots for long sessions)
       checkpoints.enabled = true;
+      # Retention (2026-09-07): pin upstream v0.21.0 defaults
+      # declaratively so the config-drift check enforces them. The gateway's
+      # startup sweep (idempotent via checkpoints/.last_prune, >=24h apart)
+      # drops projects untouched for 7d, GCs the shared git store, and
+      # round-robin drops oldest commits until the store fits the size cap.
+      # NOTE: the cap cannot go below one commit per LIVE project — the agent
+      # checkpoints ~60 workdirs (skill dirs, Code/*, /tmp scratch), so
+      # ~600MB is the expected steady state, not a leak. Orphans (PrivateTmp
+      # /tmp dirs, retired gloo profile paths) are kept until the 7d stale
+      # rule ages them out — the identity check refuses mount-namespace
+      # mismatches by design; don't force-delete.
+      checkpoints.auto_prune = true;
+      checkpoints.retention_days = 7;
+      checkpoints.max_total_size_mb = 500;
+      checkpoints.max_snapshots = 20;
+      checkpoints.min_interval_hours = 24;
       # MCP servers — GitHub tools (26 tools: PRs, issues, code search, etc.)
       # use gh CLI's OAuth token (gh is authed as crussell).
       # Note: SQLite was considered but removed — sqlite3 via terminal is
