@@ -40,50 +40,51 @@ let
     }
   ];
 
-  wol-watch = pkgs.writeShellScript "wol-watch" ''
-    set -u
-    export PATH="/run/current-system/sw/bin:$PATH"
-    STATE=/var/lib/wol-watch
-    mkdir -p "$STATE"
-
-    check_target() {
-      local name="$1" ip="$2"; shift 2
-      local file="$STATE/$name.miss"
-      if ping -c 1 -W 3 "$ip" >/dev/null 2>&1; then
-        if [ -f "$file" ]; then
-          echo "wol-watch: $name ($ip) reachable again — clearing miss counter"
-          rm -f "$file"
-        fi
-        return 0
-      fi
-      local miss
-      miss=$(cat "$file" 2>/dev/null || echo 0)
-      miss=$((miss + 1))
-      echo "$miss" > "$file"
-      echo "wol-watch: $name ($ip) missed $miss/3"
-      if [ "$miss" -ge 3 ]; then
-        for mac in "$@"; do
-          if wol -i 192.168.20.255 "$mac"; then
-            echo "wol-watch: sent magic packet → $name ($mac)"
-          else
-            echo "wol-watch: wol send FAILED for $name ($mac)" >&2
-          fi
-        done
-      fi
-    }
-
-  '' + lib.concatStrings (map (t: ''
+  checkCalls = lib.concatStrings (map (t: ''
     check_target ${t.name} ${t.ip} ${lib.concatStringsSep " " t.macs}
-  '') targets) + ''
-
-    exit 0
-  '';
-in {
+  '') targets);
+in
+{
   systemd.services.wol-watch = {
     description = "Wake bees/nas via WoL after 3 missed pings";
-    serviceConfig = { Type = "oneshot"; };
-    path = [ pkgs.wol ];
-    script = "${wol-watch}";
+    path = [
+      pkgs.iputils
+      pkgs.wol
+    ];
+    script = ''
+      set -u
+      STATE=/var/lib/wol-watch
+      mkdir -p "$STATE"
+
+      check_target() {
+        local name="$1" ip="$2"; shift 2
+        local file="$STATE/$name.miss"
+        if ping -c 1 -W 3 "$ip" >/dev/null 2>&1; then
+          if [ -f "$file" ]; then
+            echo "wol-watch: $name ($ip) reachable again — clearing miss counter"
+            rm -f "$file"
+          fi
+          return 0
+        fi
+        local miss
+        miss=$(cat "$file" 2>/dev/null || echo 0)
+        miss=$((miss + 1))
+        echo "$miss" > "$file"
+        echo "wol-watch: $name ($ip) missed $miss/3"
+        if [ "$miss" -ge 3 ]; then
+          for mac in "$@"; do
+            if wol -i 192.168.20.255 "$mac"; then
+              echo "wol-watch: sent magic packet → $name ($mac)"
+            else
+              echo "wol-watch: wol send FAILED for $name ($mac)" >&2
+            fi
+          done
+        fi
+      }
+
+      ${checkCalls}
+      exit 0
+    '';
   };
 
   systemd.timers.wol-watch = {
