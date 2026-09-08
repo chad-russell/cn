@@ -438,6 +438,25 @@ in {
       # Read once at process start — bounce all hermes units after changing.
       memory.memory_char_limit = 6000;
       memory.user_char_limit = 2000;
+      # Kanban worker concurrency guardrails (2026-09-08, Lane→kanban
+      # migration). The gateway-embedded dispatcher reads these from
+      # config.yaml on EVERY tick (kanban_db_dispatch.configured_max_in_progress
+      # → load_config_readonly), so a switch activates them without bouncing
+      # the gateway. Unset, bee's 27GB RAM derives a cap of 8 concurrent
+      # workers — the exact parallel-spawn shape that 429'd the shared Z.AI
+      # plan (2026-09-08 08:41: 8-9 concurrent gateway threads, code 1302) and
+      # starved the interactive gateway. Hard ceiling of 2 total running
+      # workers (across all boards, ready+review lanes), max 1 per profile —
+      # the interactive session always keeps headroom.
+      kanban.max_in_progress = 2;
+      kanban.max_in_progress_per_profile = 1;
+      # Manual orchestration first: Glen decomposes and creates cards from
+      # chat/CLI (auto_decompose=false). Flip the dashboard Auto pill (or this
+      # flag) once usage calibrates. NOTE: default_assignee stays UNSET —
+      # setting it would auto-spawn workers on the 2 unassigned ready cards
+      # sitting on the hermes-team board.
+      kanban.auto_decompose = false;
+      kanban.dispatch_in_gateway = true;
       # Custom providers in the MODERN v12+ `providers:` DICT shape (keyed
       # by provider id), NOT the legacy `custom_providers:` list.
       #
