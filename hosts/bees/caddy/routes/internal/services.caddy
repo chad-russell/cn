@@ -36,7 +36,17 @@ handle @files {
     reverse_proxy 10.10.0.12:8093
 }
 
+# Kanban dashboard (bee, user unit hermes-kanban-dashboard) — phone-first
+# board UI for Hermes kanban (Lane→kanban migration Phase 3, 2026-09-08).
+# Dashboard's own token/basic-auth gate in front.
+@kanban host kanban.internal.crussell.io
+handle @kanban {
+    reverse_proxy 10.10.0.12:9120
+}
+
 # Lane (self-hosted Plane CE) on bees — proxy → 127.0.0.1:8100
+# RETIRED-pending: Lane decommission in progress (kanban is source of truth);
+# kept browsable read-only until Phase 5 decommission.
 @lane host lane.internal.crussell.io
 handle @lane {
     reverse_proxy 127.0.0.1:8100
