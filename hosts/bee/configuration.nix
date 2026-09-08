@@ -574,10 +574,14 @@ in {
         model = "glm-5.3-flash";
         reasoning_effort = "none";
       };
-      # Fallback to OpenRouter if Z.AI is down (rate limit, overload, etc.)
+      # Fallback if the primary is down (rate limit, overload, etc.).
+      # 2026-09-08: moved off openrouter qwen3.7-flash (stale model) onto the
+      # same Z.AI coding subscription — glm-5.3-flash. Zero spend, and a Gloo
+      # outage in the work lane can no longer spill onto a personal paid
+      # provider.
       model.fallback = [{
-        provider = "openrouter";
-        model = "qwen/qwen3.7-flash";
+        provider = "zai-coding";
+        model = "glm-5.3-flash";
       }];
       # Show token cost in session output
       display.show_cost = true;
@@ -702,6 +706,20 @@ in {
             skills = [ "inbox-brain" ];
           }
         ];
+        # Per-channel default model (Hermes ≥0.21 `channel_overrides`, sibling
+        # of `extra` under the platform — bridged by gateway/config_loader.py;
+        # threads inherit the parent channel's override, session /model wins
+        # over it). #gloo-general runs employer-paid Gloo models by default
+        # while every personal lane stays glm-5.3/zai-coding; model chosen
+        # 2026-09-08: sonnet-4.6 = best agentic tool-use fit for GPL/Polymer
+        # work, vision-capable, verified live against the platform incl.
+        # reasoning_effort xhigh. Fallback (global) stays zai-coding glm-5.3-
+        # flash — but note it's personal: if the Gloo API errors mid-work,
+        # the turn falls back there. Escape hatch: /model in-session.
+        channel_overrides."1544085937577918535" = {
+          provider = "gloo";
+          model = "gloo-anthropic-claude-sonnet-4.6";
+        };
         # Home channel — fallback delivery target for bare-platform cron
         # deliveries (e.g. daily-hermes-state-backup's deliver: discord) and
         # cross-platform messages. Equivalent of /sethome in Personal #general;
