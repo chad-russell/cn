@@ -612,6 +612,22 @@ in {
       display.show_cost = true;
       # Enable session checkpoints (rollback snapshots for long sessions)
       checkpoints.enabled = true;
+      # Retention (2026-09-07): pin upstream v0.21.0 defaults
+      # declaratively so the config-drift check enforces them. The gateway's
+      # startup sweep (idempotent via checkpoints/.last_prune, >=24h apart)
+      # drops projects untouched for 7d, GCs the shared git store, and
+      # round-robin drops oldest commits until the store fits the size cap.
+      # NOTE: the cap cannot go below one commit per LIVE project — the agent
+      # checkpoints ~60 workdirs (skill dirs, Code/*, /tmp scratch), so
+      # ~600MB is the expected steady state, not a leak. Orphans (PrivateTmp
+      # /tmp dirs, retired gloo profile paths) are kept until the 7d stale
+      # rule ages them out — the identity check refuses mount-namespace
+      # mismatches by design; don't force-delete.
+      checkpoints.auto_prune = true;
+      checkpoints.retention_days = 7;
+      checkpoints.max_total_size_mb = 500;
+      checkpoints.max_snapshots = 20;
+      checkpoints.min_interval_hours = 24;
       # MCP servers — GitHub tools (26 tools: PRs, issues, code search, etc.)
       # use gh CLI's OAuth token (gh is authed as crussell).
       # Note: SQLite was considered but removed — sqlite3 via terminal is
@@ -965,6 +981,51 @@ in {
     # set, systemd-run --user --scope succeeds from the unit context.
     environment.XDG_RUNTIME_DIR = "/run/user/1000";
     environment.DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
+  };
+
+  # ── hermes-checkpoints-prune: daily checkpoint retention sweep ──────
+  # The gateway's auto_prune sweep (checkpoints.auto_prune) runs at STARTUP
+  # only (maybe_auto_prune_checkpoints is a startup hook, rate-limited 24h
+  # via checkpoints/.last_prune). The gateway stays up for weeks between
+  # deploys, so on a long-lived process nothing re-enforces retention — and
+  # the in-checkpoint size cap cannot reclaim single-commit refs
+  # (_drop_oldest_commit never drops below one commit per project), so the
+  # only real reclaim path is this stale/orphan sweep: run the same prune
+  # the startup hook would run, daily.
+  # Args are pinned to the declared knobs above — keep them in sync.
+  systemd.services.hermes-checkpoints-prune = {
+    description = "Hermes checkpoint store retention prune";
+    environment = {
+      HERMES_HOME = "/var/lib/hermes/.hermes";
+      HOME = "/home/crussell";
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      User = "crussell";
+      Group = "hermes";
+      # git gc over the shared pack — keep it off the foreground I/O path.
+      Nice = 10;
+      IOSchedulingClass = "idle";
+      ExecStart = "/run/current-system/sw/bin/hermes checkpoints prune -f"
+        + " --retention-days 7 --max-size-mb 500";
+      # The prune runs git ref expire + gc --prune=now against the live
+      # gateway's store. Git's own ref/pack locking serializes the two
+      # writers (the startup sweep runs this same code with agents live),
+      # but bound it so a stuck gc can't hold a deploy restart.
+      TimeoutStartSec = "10m";
+    };
+  };
+
+  systemd.timers.hermes-checkpoints-prune = {
+    description = "Daily Hermes checkpoint retention prune";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      # 04:41 — after the 04:17 bubblebox window, before the 09:00 state
+      # snapshot; deliberately staggered from both.
+      OnCalendar = "*-*-* 04:41:00";
+      RandomizedDelaySec = "10m";
+      Persistent = true;
+    };
   };
 
   # ── hermes-serve: HTTP/JSON-RPC API for remote clients over Nebula ────
