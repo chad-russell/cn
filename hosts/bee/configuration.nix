@@ -983,6 +983,51 @@ in {
     environment.DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
   };
 
+  # ── hermes-checkpoints-prune: daily checkpoint retention sweep ──────
+  # The gateway's auto_prune sweep (checkpoints.auto_prune) runs at STARTUP
+  # only (maybe_auto_prune_checkpoints is a startup hook, rate-limited 24h
+  # via checkpoints/.last_prune). The gateway stays up for weeks between
+  # deploys, so on a long-lived process nothing re-enforces retention — and
+  # the in-checkpoint size cap cannot reclaim single-commit refs
+  # (_drop_oldest_commit never drops below one commit per project), so the
+  # only real reclaim path is this stale/orphan sweep: run the same prune
+  # the startup hook would run, daily.
+  # Args are pinned to the declared knobs above — keep them in sync.
+  systemd.services.hermes-checkpoints-prune = {
+    description = "Hermes checkpoint store retention prune";
+    environment = {
+      HERMES_HOME = "/var/lib/hermes/.hermes";
+      HOME = "/home/crussell";
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      User = "crussell";
+      Group = "hermes";
+      # git gc over the shared pack — keep it off the foreground I/O path.
+      Nice = 10;
+      IOSchedulingClass = "idle";
+      ExecStart = "/run/current-system/sw/bin/hermes checkpoints prune -f"
+        + " --retention-days 7 --max-size-mb 500";
+      # The prune runs git ref expire + gc --prune=now against the live
+      # gateway's store. Git's own ref/pack locking serializes the two
+      # writers (the startup sweep runs this same code with agents live),
+      # but bound it so a stuck gc can't hold a deploy restart.
+      TimeoutStartSec = "10m";
+    };
+  };
+
+  systemd.timers.hermes-checkpoints-prune = {
+    description = "Daily Hermes checkpoint retention prune";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      # 04:41 — after the 04:17 bubblebox window, before the 09:00 state
+      # snapshot; deliberately staggered from both.
+      OnCalendar = "*-*-* 04:41:00";
+      RandomizedDelaySec = "10m";
+      Persistent = true;
+    };
+  };
+
   # ── hermes-serve: HTTP/JSON-RPC API for remote clients over Nebula ────
   # `hermes-agent.service` above runs `hermes gateway` — the messaging
   # platform adapters (Telegram) that make OUTBOUND connections and accept
