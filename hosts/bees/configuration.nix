@@ -29,9 +29,16 @@
     ./beszel.nix
     ./thinkpad-registry.nix
     ./e610-watchdog.nix
+    ../../modules/wol-enable.nix
   ];
 
   networking.hostName = "bees";
+
+  # Arm both E610 ports for WoL (target half of hosts/bee/wol-watch.nix).
+  cn.wol-enable = {
+    enable = true;
+    interfaces = [ "enp196s0f0" "enp196s0f1" ];
+  };
 
   # ── Essential packages ────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [ ];

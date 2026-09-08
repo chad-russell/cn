@@ -69,6 +69,7 @@ in {
     ./trades-site.nix
     ./backup.nix
     ./tailscale.nix
+    ./wol-watch.nix
   ];
 
   networking.hostName = "bee";

@@ -38,7 +38,14 @@
     ./btrfs-maintenance.nix
     ../../modules/nebula-client.nix
     ../../modules/beszel-agent.nix
+    ../../modules/wol-enable.nix
   ];
+
+  # Arm both I226-V ports for WoL (target half of hosts/bee/wol-watch.nix).
+  cn.wol-enable = {
+    enable = true;
+    interfaces = [ "enp2s0" "enp3s0" ];
+  };
 
   networking.hostName = "nas";
 
