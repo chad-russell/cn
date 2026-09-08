@@ -438,25 +438,53 @@ in {
       # Read once at process start — bounce all hermes units after changing.
       memory.memory_char_limit = 6000;
       memory.user_char_limit = 2000;
-      custom_providers = [
-        {
-          name = "zai-coding";
-          base_url = "https://api.z.ai/api/coding/paas/v4";
+      # Custom providers in the MODERN v12+ `providers:` DICT shape (keyed
+      # by provider id), NOT the legacy `custom_providers:` list.
+      #
+      # WHY (2026-09-07 incident — "Provider authentication failed"):
+      # Hermes 0.21.0 runs a v11→v12 config migration that converts a
+      # `custom_providers` LIST into a `providers` DICT and pops the list
+      # (config_migrations.py:_migrate_to_12). The NixOS module deep-merges
+      # our declared settings into config.yaml on every switch
+      # (hermes-agent nix/configMergeScript.nix). When Nix declared the
+      # legacy LIST, the module's merge and Hermes' own migration fought:
+      # a switch left `providers:` holding LIST content, which the runtime
+      # reader (config_providers.providers_dict_to_custom_providers) rejects
+      # because it requires a dict — so zai-coding AND gloo silently vanished
+      # ("Unknown provider 'zai-coding'") and every request, including all
+      # auxiliary slots, failed provider auth with the fallback also failing.
+      # Declaring the dict form directly makes the NixOS merge and the Hermes
+      # migration agree on ONE shape; verified idempotent under a full
+      # v0→current migration pass, so it cannot regress on a future
+      # switch/restart. Runtime still reads a list view via
+      # get_compatible_custom_providers(). Modern entries use `api:` for the
+      # base URL (not `base_url:`); an explicit `enabled = false` hides a
+      # provider from the picker/resolver/doctor (is_provider_enabled).
+      providers = {
+        # Disable the built-in zai provider so it doesn't shadow the
+        # zai-coding custom provider. The built-in zai auto-detects ZAI keys
+        # in env vars (GLM_API_KEY, ZAI_API_KEY, Z_AI_API_KEY) and would
+        # re-seed itself in auth.json on every restart. Using ZAI_CODING_KEY
+        # avoids this, and this flag suppresses any stale state.
+        zai.enabled = false;
+
+        zai-coding = {
+          api = "https://api.z.ai/api/coding/paas/v4";
           key_env = "ZAI_CODING_KEY";
-        }
+        };
+
         # Work-only provider (employer-paid). Direct to Gloo's platform —
         # the self-hosted gloo proxy on bees is retired. Model IDs carry
         # the gloo- prefix on the platform API. Never use for personal
         # tasks; Z.AI (zai-coding) is the personal default.
-        {
-          name = "gloo";
-          base_url = "https://platform.ai.gloo.com/ai/v2";
+        gloo = {
+          api = "https://platform.ai.gloo.com/ai/v2";
           key_env = "GLOO_API_KEY";
           discover_models = false;
-          # Dict form with per-model vision flags. agent/image_routing.py
-          # (branch 2b) reads custom_providers[].models.<model>.supports_vision:
-          # when a multimodal gloo model is the main model, images attach to
-          # it natively instead of detouring through the auxiliary vision
+          # Per-model vision flags. agent/image_routing.py (branch 2b) reads
+          # providers.<name>.models.<model>.supports_vision: when a
+          # multimodal gloo model is the main model, images attach to it
+          # natively instead of detouring through the auxiliary vision
           # pipeline. Vision capability verified against Gloo's platform
           # 2026-08-19 (gloo-google-gemini-3.5-flash image test passed).
           models = {
@@ -482,14 +510,8 @@ in {
             "gloo-minimax-m3" = { };
             "gloo-mistral-large-3" = { };
           };
-        }
-      ];
-      # Disable the built-in zai provider so it doesn't shadow the zai-coding
-      # custom provider. The built-in zai auto-detects ZAI keys in env vars
-      # (GLM_API_KEY, ZAI_API_KEY, Z_AI_API_KEY) and would re-seed itself in
-      # auth.json on every restart. Using ZAI_CODING_KEY avoids this, and
-      # this flag suppresses any stale state from before the rename.
-      providers.zai.enabled = false;
+        };
+      };
       model = {
         provider = "zai-coding";
         default = "glm-5.3";
@@ -785,6 +807,17 @@ in {
       config = yaml.safe_load(path.read_text()) or {}
 
       prunes = []
+      # Retired 2026-09-07: the legacy `custom_providers` LIST is replaced by
+      # the modern `providers` DICT (see the providers block above and the
+      # incident note there). Hermes' v11→v12 migration and the NixOS
+      # deep-merge fought over the two shapes, leaving an invalid list under
+      # `providers:` that broke provider auth. Nix now declares only the
+      # dict; drop any stale list left on disk from before the cutover so it
+      # can't be re-migrated into a colliding shape. get_compatible_custom_
+      # providers dedups by name+URL, so this is safe even if both coexist.
+      if "custom_providers" in config and isinstance(config.get("providers"), dict):
+          del config["custom_providers"]
+          prunes.append("custom_providers (legacy list; superseded by providers dict)")
       mcp_servers = config.get("mcp_servers")
       if isinstance(mcp_servers, dict) and "sqlite" in mcp_servers:
           del mcp_servers["sqlite"]
