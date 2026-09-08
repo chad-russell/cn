@@ -656,12 +656,18 @@ in {
       # editing them. Gate OFF — agents may write instruction files directly.
       security.protected_instruction_files = false;
       browser.allow_private_urls = true;
-      # Approval prompt window: 15 minutes (default 300s repeatedly timed
-      # out in desktop/WebUI sessions Aug 17-19 — a Beszel password reset,
-      # a PR typecheck, and a research detour were each degraded or skipped
-      # because the approval card expired before Chad saw it). Single knob:
-      # CLI, gateway, and WebUI approval cards all read this from the
-      # shared config.yaml.
+      # Approval prompts OFF (Chad 2026-09-08): every prompt he's ever
+      # gotten he blindly approved, and prompt timeouts degraded more work
+      # than the gate ever caught — so skip the ask entirely. NOT naked
+      # yolo: tools/approval.py runs an unconditional floor BEFORE the
+      # mode=off bypass, which no setting can turn off — hardline
+      # catastrophic commands (rm -rf /, fork bombs, dd to devices), the
+      # sudo-stdin password guard, and any future approvals.deny rules
+      # stay enforced. timeout stays as the fallback window if mode is
+      # ever flipped back to smart/manual (single knob: CLI, gateway, and
+      # desktop approval cards all read it from the shared config.yaml;
+      # raised to 900s 2026-08-19 after 300s defaults kept expiring).
+      approvals.mode = "off";
       approvals.timeout = 900;
       # Discord bot — see gateway.platforms.discord below for the full
       # lane-model rationale. Sole messaging platform since 2026-08-31
