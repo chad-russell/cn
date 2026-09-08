@@ -457,6 +457,12 @@ in {
       # sitting on the hermes-team board.
       kanban.auto_decompose = false;
       kanban.dispatch_in_gateway = true;
+      # Kanban dashboard public URL (kanban.internal.crussell.io, bees caddy →
+      # bee :9120). Feeds the dashboard's Host-header/WS-Origin allowlist
+      # (web_server._dashboard_public_hosts ← dashboard.public_url) — without
+      # it, proxied requests 400 "Invalid Host header". Restart the
+      # hermes-kanban-dashboard user unit after this changes (read at start).
+      dashboard.public_url = "https://kanban.internal.crussell.io";
       # Custom providers in the MODERN v12+ `providers:` DICT shape (keyed
       # by provider id), NOT the legacy `custom_providers:` list.
       #
