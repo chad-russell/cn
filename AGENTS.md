@@ -195,7 +195,22 @@ target *is* `bees`, the deploy script does a direct local switch (no SSH-to-self
 
 Available NixOS hosts (deploy targets): `bee`, `bees`, `nas`, `gateway`.
 
-Standard deploy (run from bees):
+Standard deploy — use the helper script from bee (or bees):
+
+```bash
+~/Code/cn/scripts/deploy.sh bee          # push local commits, build+switch bee
+~/Code/cn/scripts/deploy.sh bees         # build+switch bees (local switch on bees)
+~/Code/cn/scripts/deploy.sh bee bees     # multiple at once
+~/Code/cn/scripts/deploy.sh gateway      # build on bees, push to gateway
+```
+
+The script handles: push-before-pull sequencing (no "local commit not on bees"
+failures), fully detached deploy so session drops don't abort the build, log
+tailing with pass/fail detection, and the bee self-deploy bounce trap
+(schedules the activation via `systemd-run` from root SSH on bee so it
+survives a hermes-agent restart mid-switch).
+
+Manual fallback (raw commands on bees):
 
 ```bash
 ssh -o IdentitiesOnly=yes crussell@10.10.0.6
