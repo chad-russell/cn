@@ -45,8 +45,9 @@ in {
       out=${dumpDir}/forgejo-dump-$ts.zip
 
       # Same invocation the module's own dump unit used: full backup
-      # (repos + db + config + lfs) as a single zip, written to --output.
-      ${config.services.forgejo.package}/bin/forgejo dump --type zip --output "$out"
+      # (repos + db + config + lfs) as a single zip. Forgejo 15's flag is
+      # --file/-f (there is no --output).
+      ${config.services.forgejo.package}/bin/forgejo dump --type zip --file "$out"
 
       # Atomic size sanity gate: a dump must be meaningfully bigger than the
       # SQLite journal (repos alone are ~9 MiB even before the DB) — guards
