@@ -1,0 +1,26 @@
+name: CI
+on: [push]
+jobs:
+  flake:
+    # Skip on GitHub (origin) — there is no nix-host runner there; this
+    # workflow is for the git.crussell.io mirror.
+    if: ${{ github.server_url == 'https://git.crussell.io' }}
+    # bees forgejo-runner, host-exec on the deploy origin — real nix
+    # evaluation against the pinned flake.lock (inputs already in
+    # bees's store, so no downloads). Fast subset only: per-host
+    # hostname evals. Full `nix flake check` stays manual for now.
+    runs-on: nix-host
+    steps:
+      - name: Checkout
+        run: git clone --depth 1 ${{ github.server_url }}/${{ github.repository }}.git .
+      - name: nix sanity
+        run: |
+          nix --version
+          nix store info | head -4 || true
+      - name: Eval hosts
+        run: |
+          for h in bees bee gateway nas; do
+            printf '%s: ' "$h"
+            nix eval --raw .#nixosConfigurations."$h".config.networking.hostName
+            echo
+          done

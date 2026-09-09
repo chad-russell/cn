@@ -45,6 +45,12 @@ in {
   # Generated on gateway: forgejo actions generate-runner-token.
   "forgejo-runner-token.age".publicKeys = [ crussell ];
 
+  # ── Forgejo Actions runner on bees (nix-host label) ────────────
+  # Separate registration token from bee's — the module's ExecStartPre
+  # re-registers whenever the token hash changes, so a shared file would
+  # make both runners churn. Same generator on gateway.
+  "forgejo-runner-token-bees.age".publicKeys = [ crussell ];
+
   # ── Hermes Agent gateway on bee (single brain: Glen, all lanes) ─
   # 2026-09-06 single-brain collapse: the gloo work profile/bot was
   # retired; the default gateway serves personal + work lanes with one

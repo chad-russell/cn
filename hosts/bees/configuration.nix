@@ -29,6 +29,7 @@
     ./beszel.nix
     ./thinkpad-registry.nix
     ./e610-watchdog.nix
+    ./forgejo-runner.nix
     ../../modules/wol-enable.nix
   ];
 
