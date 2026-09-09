@@ -40,6 +40,11 @@ in {
   # crussell) can source it directly without sudo.
   "proton-pass-env.age".publicKeys = [ crussell ];
 
+  # ── Forgejo Actions runner on bee ──────────────────────────────
+  # TOKEN for registering the bee runner against git.crussell.io.
+  # Generated on gateway: forgejo actions generate-runner-token.
+  "forgejo-runner-token.age".publicKeys = [ crussell ];
+
   # ── Hermes Agent gateway on bee (single brain: Glen, all lanes) ─
   # 2026-09-06 single-brain collapse: the gloo work profile/bot was
   # retired; the default gateway serves personal + work lanes with one

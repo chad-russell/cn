@@ -67,6 +67,7 @@ in {
     # ./hermes-gloo.nix  # removed 2026-09-06 (single-brain collapse — work
     #                      # lane folded into the default glen gateway)
     ./trades-site.nix
+    ./forgejo-runner.nix  # Actions runner for git.crussell.io (Forgejo on gateway)
     ./backup.nix
     ./tailscale.nix
     ./wol-watch.nix
