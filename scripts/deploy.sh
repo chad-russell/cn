@@ -67,7 +67,11 @@ for h in "${HOSTS[@]}"; do [[ "$h" == "bee" ]] && DEPLOYING_BEE=1; done
 # ── Step 3: Kick off detached deploy on bees ──────────────────────────────────
 echo "  starting deploy on bees (log: bees:${LOG}) …"
 
-ssh -o IdentitiesOnly=yes -o ConnectTimeout=10 "$BEES_SSH" bash -s -- "$LOG" "$HOSTS_STR" << 'REMOTE'
+# NB: args MUST be single-quoted inside the remote command string — ssh
+# joins argv with spaces and the remote shell re-splits, so an unquoted
+# "gateway bees" arrives as two words and HOSTS_STR=$2 silently keeps
+# only "gateway" (multi-host deploys ran just the first host, false green).
+ssh -o IdentitiesOnly=yes -o ConnectTimeout=10 "$BEES_SSH" "bash -s -- '$LOG' '$HOSTS_STR'" << 'REMOTE'
 LOG="$1"
 HOSTS_STR="$2"
 cd ~/Code/cn
