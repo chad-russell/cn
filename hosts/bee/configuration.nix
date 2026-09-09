@@ -534,6 +534,8 @@ in {
             "gloo-qwen-3-coder" = { };
             "gloo-kimi-k3" = { };
             "gloo-z-ai-glm-5.2" = { };
+            "gloo-z-ai-glm-5.3" = { };
+            "gloo-z-ai-glm-5.3-flash" = { };
             "gloo-minimax-m3" = { };
             "gloo-mistral-large-3" = { };
           };
@@ -768,14 +770,13 @@ in {
         # Per-channel default model (Hermes ≥0.21 `channel_overrides`, sibling
         # of `extra` under the platform — bridged by gateway/config_loader.py;
         # threads inherit the parent channel's override, session /model wins
-        # over it). #gloo-general uses glm-5.3 (same as personal lanes) —
-        # vision falls to the global aux vision (zai-coding/glm-5.3-flash).
-        # 2026-09-09: switched from gloo-anthropic-claude-sonnet-4.6 per user
-        # preference; use /model gloo-anthropic-claude-sonnet-4.6 to override
-        # in-session for Gloo work that specifically needs the Gloo provider.
+        # over it). #gloo-general uses Gloo AI provider with gloo-z-ai-glm-5.3
+        # (employer-paid; confirmed live on platform 2026-09-09). Vision falls
+        # to the global aux vision (zai-coding/glm-5.3-flash). Use /model to
+        # override in-session (e.g. gloo-anthropic-claude-sonnet-4.6).
         channel_overrides."1544085937577918535" = {
-          provider = "zai-coding";
-          model = "glm-5.3";
+          provider = "gloo";
+          model = "gloo-z-ai-glm-5.3";
         };
         # Home channel — fallback delivery target for bare-platform cron
         # deliveries (e.g. daily-hermes-state-backup's deliver: discord) and
