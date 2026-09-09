@@ -80,5 +80,11 @@
         reverse_proxy 10.10.0.6:3097
       }
     '';
+
+    # git.crussell.io — Forgejo on the gateway itself (loopback HTTP;
+    # git-over-SSH uses Forgejo's built-in ssh server on :2222 directly).
+    virtualHosts."git.crussell.io".extraConfig = ''
+      reverse_proxy 127.0.0.1:3000
+    '';
   };
 }

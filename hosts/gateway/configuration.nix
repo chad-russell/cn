@@ -14,6 +14,7 @@
   imports = [
     ./disk-config.nix
     ./caddy.nix
+    ./forgejo.nix
     ../../modules/base-server.nix
     ../../modules/freshness-checks.nix
     ../../modules/beszel-agent.nix
