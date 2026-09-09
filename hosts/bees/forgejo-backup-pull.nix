@@ -67,4 +67,19 @@ in {
       RandomizedDelaySec = "10m";
     };
   };
+
+  # ── Output-layer monitoring: pulled dumps must stay fresh ────────
+  # Covers BOTH legs of the pipeline: a gateway dump that silently stops
+  # producing zips OR a dead/disabled pull timer both leave stale files
+  # here → ntfy (the silent-staleness class modules/freshness-checks.nix
+  # exists for). That makes a gateway-side dump-temp check redundant.
+  homelab.freshnessChecks.forgejo-dumps = {
+    description = "Forgejo dumps pulled from gateway";
+    path = dumpDir;
+    glob = "forgejo-dump-*.zip";
+    # Pull lands ~04:45–04:55 nightly; the check runs daily ~00:00 (+30m
+    # jitter) when the newest zip is ~19h old. One missed pull → ~43h →
+    # alert. A Persistent catch-up run after a ~1-day outage stays < 40h.
+    maxAgeHours = 40;
+  };
 }

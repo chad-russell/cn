@@ -84,9 +84,12 @@ the restored instance is the SAME instance (same tokens/2FA).
 
 - `forgejo-dump-bounded.service` / `forgejo-dump-pull.service` both have
   `onFailure → ntfy-failure@` (homelab-alerts topic).
-- Silence is the risk (the Immich stale-dump lesson): consider a
-  `homelab.freshnessChecks` entry on bees for dump mtime — not yet added.
-  (Deliberate: keep this MVP minimal; freshness check = easy follow-up.)
+- `freshness-forgejo-dumps.timer` (daily, declared in
+  `forgejo-backup-pull.nix`): newest `forgejo-dump-*.zip` on bees must be
+  < 40h old → ntfy otherwise. This covers BOTH legs — a silently-dead
+  gateway dump or a dead pull timer both leave stale zips on bees — so no
+  gateway-side freshness check is needed (landed 2026-09-09; was the
+  deliberate MVP follow-up noted here earlier).
 
 ## Restore drill log (2026-09-09, executed)
 
