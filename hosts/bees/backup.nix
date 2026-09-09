@@ -50,6 +50,11 @@
       # committed transactions (that exact mistake wiped reviews 2026-09-08).
       "/home/crussell/.local/share/wankbank"
 
+      # Forgejo (git.crussell.io) on gateway: nightly `forgejo dump` zips
+      # pulled from the VPS by forgejo-dump-pull.timer — the gateway itself
+      # has no restic/S3 credentials (secret-free by design).
+      "/var/lib/forgejo-dumps"
+
       # Immich photo library (on NAS via NFS)
       "/mnt/photos"
     ];

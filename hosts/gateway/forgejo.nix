@@ -10,8 +10,8 @@
 #  - No secrets on the VPS: INSTALL_LOCK + module-generated SECRET_KEY /
 #    INTERNAL_TOKEN / JWT_SECRET live under /var/lib/forgejo (state, not config).
 #
-# State: /var/lib/forgejo (DB, repos, dumps). Backup story for MVP = the
-# daily dump service below; fold into restic later if this grows.
+# State: /var/lib/forgejo (DB, repos). Backups: nightly bounded dump
+# (forgejo-dump-bounded.nix) pulled off-box to bees → restic (NAS + S3).
 
 { config, lib, pkgs, ... }:
 
@@ -21,9 +21,10 @@
 
     database.type = "sqlite3";
 
-    # Daily `forgejo dump` (repos + db + config) into /var/lib/forgejo/dump,
-    # default 4-week retention. Trivial single-user backup.
-    dump.enable = true;
+    # Backup: nightly bounded dump into dump-temp/ (retain 3) pulled to bees
+    # → restic — see forgejo-dump-bounded.nix (replaces the built-in dump
+    # timer, which has no retention control).
+    dump.enable = false;
 
     settings = {
       DEFAULT.APP_NAME = "crussell forge";

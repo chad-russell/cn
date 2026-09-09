@@ -30,6 +30,9 @@
     ./thinkpad-registry.nix
     ./e610-watchdog.nix
     ./forgejo-runner.nix
+    # Nightly rsync pull of gateway's Forgejo dumps into restic scope
+    # (allowlisted in backup.nix) — gateway stays S3-secret-free.
+    ./forgejo-backup-pull.nix
     ../../modules/wol-enable.nix
   ];
 

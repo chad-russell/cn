@@ -15,6 +15,9 @@
     ./disk-config.nix
     ./caddy.nix
     ./forgejo.nix
+    # Nightly bounded `forgejo dump` (retain 3) into dump-temp/, pulled to
+    # bees by forgejo-dump-pull.timer — replaces the built-in dump timer.
+    ./forgejo-dump-bounded.nix
     ./bees-watch.nix
     ../../modules/base-server.nix
     ../../modules/freshness-checks.nix
