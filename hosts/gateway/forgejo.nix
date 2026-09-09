@@ -51,6 +51,9 @@
       session.COOKIE_SECURE = true; # served over HTTPS only
 
       actions.ENABLED = true; # execution needs a runner (separate card)
+      # Push to a nonexistent <user>/<repo>.git to create it. Lets CI jobs
+      # clone cn (and future repos) over SSH without the admin API.
+      repository.ENABLE_PUSH_CREATE_USER = true;
     };
   };
 
