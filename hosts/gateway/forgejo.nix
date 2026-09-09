@@ -38,6 +38,9 @@
         START_SSH_SERVER = true;
         SSH_LISTEN_PORT = 2222;
         SSH_PORT = 2222; # port shown in clone URLs
+        # The built-in SSH server only accepts this username (defaults to
+        # RUN_USER = "forgejo"). "git" gives the conventional git@ URLs.
+        BUILTIN_SSH_SERVER_USER = "git";
       };
 
       service = {
