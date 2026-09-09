@@ -45,8 +45,9 @@
       "/home/crussell/noms/data"
 
       # Wankbank (wankbank.internal.crussell.io): sqlite reviews DB under the
-      # user quadlet's bind-mount dir. WAL/shm files are excluded below — restic
-      # would otherwise capture mid-write states that don't restore cleanly.
+      # user quadlet's bind-mount dir. db + -wal are backed up together —
+      # SQLite recovers the pair cleanly; a bare .db without its WAL loses
+      # committed transactions (that exact mistake wiped reviews 2026-09-08).
       "/home/crussell/.local/share/wankbank"
 
       # Immich photo library (on NAS via NFS)
