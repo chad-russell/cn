@@ -768,16 +768,14 @@ in {
         # Per-channel default model (Hermes ≥0.21 `channel_overrides`, sibling
         # of `extra` under the platform — bridged by gateway/config_loader.py;
         # threads inherit the parent channel's override, session /model wins
-        # over it). #gloo-general runs employer-paid Gloo models by default
-        # while every personal lane stays glm-5.3/zai-coding; model chosen
-        # 2026-09-08: sonnet-4.6 = best agentic tool-use fit for GPL/Polymer
-        # work, vision-capable, verified live against the platform incl.
-        # reasoning_effort xhigh. Fallback (global) stays zai-coding glm-5.3-
-        # flash — but note it's personal: if the Gloo API errors mid-work,
-        # the turn falls back there. Escape hatch: /model in-session.
+        # over it). #gloo-general uses glm-5.3 (same as personal lanes) —
+        # vision falls to the global aux vision (zai-coding/glm-5.3-flash).
+        # 2026-09-09: switched from gloo-anthropic-claude-sonnet-4.6 per user
+        # preference; use /model gloo-anthropic-claude-sonnet-4.6 to override
+        # in-session for Gloo work that specifically needs the Gloo provider.
         channel_overrides."1544085937577918535" = {
-          provider = "gloo";
-          model = "gloo-anthropic-claude-sonnet-4.6";
+          provider = "zai-coding";
+          model = "glm-5.3";
         };
         # Home channel — fallback delivery target for bare-platform cron
         # deliveries (e.g. daily-hermes-state-backup's deliver: discord) and
