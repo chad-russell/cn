@@ -24,6 +24,13 @@ in {
   # hermes-bee-env-glen.age at the 2026-09-06 single-brain collapse).
   "gloo-api-key.age".publicKeys = [ crussell ];
 
+  # ── Discord webhook for bees-watch (see hosts/gateway/bees-watch.nix) ──
+  # One line: DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/<id>/<token>
+  # Webhook "bees-watch alerts" in the #infra channel (created by
+  # hermes-glen 2026-09-09). Deliberate exception to the "no secrets on
+  # the VPS" invariant — see the bees-watch.nix header for rationale.
+  "discord-infra-webhook.age".publicKeys = [ crussell ];
+
   # ── Beszel monitoring ──────────────────────────────────────────
   # Env file (KEY=<hub public key>, TOKEN=<universal token>) shared by
   # every beszel-agent. Created after first booting the hub.

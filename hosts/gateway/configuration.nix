@@ -15,6 +15,7 @@
     ./disk-config.nix
     ./caddy.nix
     ./forgejo.nix
+    ./bees-watch.nix
     ../../modules/base-server.nix
     ../../modules/freshness-checks.nix
     ../../modules/beszel-agent.nix
