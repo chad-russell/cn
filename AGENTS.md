@@ -4,7 +4,7 @@ Root navigation and operating guide for agents working in this personal infrastr
 
 **Read this first.** The repository uses a unified Nix flake. Prefer the Nix configuration and live host state over older docs when facts disagree.
 
-Last validated via SSH: **2026-08-10**.
+Last validated via SSH: **2026-09-09**.
 
 ## Ground Rules for Agents
 
