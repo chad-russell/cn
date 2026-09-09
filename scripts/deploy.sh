@@ -8,7 +8,7 @@
 #   deploy.sh gateway
 #
 # What it does:
-#   1. Pushes any unpushed local commits from bee → origin (GitHub)
+#   1. Pushes any unpushed local commits from bee → origin (git.crussell.io)
 #   2. SSHes into bees (the deploy origin), pulls origin, runs
 #      `nix run .#deploy -- <hosts>` fully detached so it survives session drops
 #   3. Tails the log on bees until done, reporting success/failure here

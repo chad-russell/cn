@@ -10,9 +10,10 @@ Last validated via SSH: **2026-08-10**.
 
 1. **Source of truth:** `flake.nix`, `hosts/*/*.nix`, `modules/*.nix`, and live host state are authoritative.
 2. **Use Nix for host config changes** whenever possible. Deploy with `nix run .#deploy -- <host>` run **from `bees`** (the deploy origin — see [Nix Operations](#nix-operations)).
-3. **Caddy route source lives in `hosts/bees/caddy/`** and is installed to `/etc/caddy` by the `hosts/bees/caddy.nix` module; deploy `bees`, then validate/reload Caddy.
-4. **Never commit plaintext secrets.** Existing plaintext secret-like files should be treated carefully; do not print or copy their contents into docs, logs, or chat unless explicitly necessary.
-5. **When unsure, verify live state over SSH** using the SSH notes below.
+3. **Git origin is Forgejo:** `ssh://git@git.crussell.io:2222/chad/cn.git` (bee + bees checkouts). GitHub `chad-russell/cn` is an automatic **push mirror** — every push to Forgejo syncs out; never push to GitHub directly.
+4. **Caddy route source lives in `hosts/bees/caddy/`** and is installed to `/etc/caddy` by the `hosts/bees/caddy.nix` module; deploy `bees`, then validate/reload Caddy.
+5. **Never commit plaintext secrets.** Existing plaintext secret-like files should be treated carefully; do not print or copy their contents into docs, logs, or chat unless explicitly necessary.
+6. **When unsure, verify live state over SSH** using the SSH notes below.
 
 ## Current Repository Map
 
@@ -193,6 +194,10 @@ itself — the most powerful machine and always on. Builds happen on `bees`; the
 resulting closure is pushed to the target over Nebula and switched. When the
 target *is* `bees`, the deploy script does a direct local switch (no SSH-to-self).
 
+The repo's git origin is **`git.crussell.io/chad/cn`** (Forgejo on gateway,
+SSH port 2222, user `git`). GitHub is a push mirror only — pushes go to
+Forgejo (over Nebula, no rate limits) and mirror out automatically.
+
 Available NixOS hosts (deploy targets): `bee`, `bees`, `nas`, `gateway`.
 
 Standard deploy — use the helper script from bee (or bees):
@@ -221,13 +226,21 @@ nix run .#deploy -- bee bees  # multiple at once
 nix run .#deploy -- gateway   # build on bees, push closure to gateway
 ```
 
-Fallback if `bees` is down — pull the flake from GitHub and build on each target
-(secrets still decrypt on-target via agenix, so no key material is needed beyond
-what the target already holds):
+Fallback if `bees` is down — pull the flake from the GitHub mirror and build on
+each target (secrets still decrypt on-target via agenix, so no key material is
+needed beyond what the target already holds). The mirror lags origin by at most
+the sync interval (~8h worst case; normally seconds after each push):
 
 ```bash
 ssh -o IdentitiesOnly=yes crussell@<host-nebula-ip>
 sudo nixos-rebuild switch --flake github:chad-russell/cn#<host>
+```
+
+Forgejo runs on the gateway, so any host that can reach the overlay can pull
+origin directly without bees:
+
+```bash
+sudo nixos-rebuild switch --flake 'git+ssh://git@git.crussell.io:2222/chad/cn.git#<host>'
 ```
 
 Install/wipe a new host with nixos-anywhere (requires mandatory safety flag):
