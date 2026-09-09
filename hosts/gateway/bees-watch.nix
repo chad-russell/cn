@@ -59,7 +59,7 @@ let
     }
 
     save() { # fail_count first_fail last_alert
-      ${pkgs.coreutils}/bin/umask 027
+      umask 027
       printf 'fail_count=%s\nfirst_fail=%s\nlast_alert=%s\n' "$1" "$2" "$3" \
         > "$state.tmp" && ${pkgs.coreutils}/bin/mv "$state.tmp" "$state"
     }
