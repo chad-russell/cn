@@ -43,14 +43,10 @@ let
   checkCalls = lib.concatStrings (map (t: ''
     check_target ${t.name} ${t.ip} ${lib.concatStringsSep " " t.macs}
   '') targets);
-in
-{
+in {
   systemd.services.wol-watch = {
     description = "Wake bees/nas via WoL after 3 missed pings";
-    path = [
-      pkgs.iputils
-      pkgs.wol
-    ];
+    path = [ pkgs.iputils pkgs.wol ];
     script = ''
       set -u
       STATE=/var/lib/wol-watch
