@@ -42,9 +42,12 @@ in {
       mkdir -p ${dumpDir}
 
       # -a archive, --delete mirrors gateway's retain-3 prune, --times lets
-      # subsequent runs skip unchanged files. crussell's key is already an
-      # authorized root key on gateway (it's how deploys reach the VPS).
-      rsync -a --delete --times \
+      # subsequent runs skip unchanged files. --no-owner/--no-group: without
+      # them rsync copies gateway's numeric forgejo uid/gid, which maps to an
+      # unrelated user on bees (prowlarr) — files must land root-owned here.
+      # crussell's key is already an authorized root key on gateway (it's
+      # how deploys reach the VPS).
+      rsync -a --delete --times --no-owner --no-group \
         -e "ssh -i /home/crussell/.ssh/id_ed25519 -o IdentitiesOnly=yes -o BatchMode=yes" \
         ${src} ${dumpDir}/
 
