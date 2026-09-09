@@ -60,7 +60,7 @@ Volume=/etc/dev-quadlets/polymer/dev-server.sh:/usr/local/bin/dev-server.sh:ro
 # postgres (resolved via the polymer_db network alias). Per-app public URLs
 # (NEXT_PUBLIC_BASE_URL etc.) are NOT set here — see dev-server.sh header.
 EnvironmentFile=/home/crussell/Gloo/360-polymer/.env.local
-EnvironmentFile=-/home/crussell/Gloo/360-polymer/apps/polymer/.env.snowflake-prod
+EnvironmentFile=/home/crussell/Gloo/360-polymer/apps/polymer/.env.snowflake-prod
 Environment=NODE_ENV=development
 Environment=POSTGRES_URL=postgres://postgres:password@polymer_db:5432/postgres
 Environment=DATABASE_URL=postgres://postgres:password@polymer_db:5432/postgres
