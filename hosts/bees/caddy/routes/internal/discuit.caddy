@@ -1,6 +1,14 @@
 # Discuit (bees — podman quadlet; see hosts/bees/discuit.nix).
-# Single upstream app; reverse_proxy handles any websocket upgrades.
+# XFF is PINNED to ::1, deliberately: Discuit stores client IPs in
+# MariaDB INET6 columns, and debian MariaDB 10.11 rejects plain-IPv4
+# strings from the app's prepared statements (Error 1292, signup-
+# breaking — sql_mode relaxation does not help the binary protocol).
+# A valid IPv6 literal keeps every IP-writing path happy; real client
+# IPs are lost, which is fine on an overlay-private instance where
+# every client is caddy-on-loopback anyway.
 @discuit host discuit.internal.crussell.io
 handle @discuit {
-    reverse_proxy 127.0.0.1:8100
+    reverse_proxy 127.0.0.1:8100 {
+        header_up X-Forwarded-For "::1"
+    }
 }
