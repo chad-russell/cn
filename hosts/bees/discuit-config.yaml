@@ -15,7 +15,10 @@ dbName: discuit
 sessionCookieName: SID
 redisAddress: 127.0.0.1:6379
 defaultFeedSort: hot
-disableForumCreation: true
-forumCreationReqPoints: 10
+# glen (the bot) is a full member: may found communities himself.
+# forumCreationReqPoints 0 = no points gate (signups are closed, so
+# the only members are chad + glen).
+disableForumCreation: false
+forumCreationReqPoints: 0
 maxForumsPerUser: 10
 imagesFolderPath: images
