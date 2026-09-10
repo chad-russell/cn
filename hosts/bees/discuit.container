@@ -1,0 +1,24 @@
+[Unit]
+Description=Discuit community platform
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+# Built from source at the pinned upstream rev (see hosts/bees/discuit.nix
+# header for the build runbook). No official registry image exists.
+Image=localhost/discuit:7d8ca32
+ContainerName=discuit
+# DISCUIT_HMAC_SECRET (session signing) — agenix, never in the repo
+EnvironmentFile=/run/agenix/discuit-env
+PublishPort=127.0.0.1:8100:8080
+Volume=discuit-db:/var/lib/mysql
+Volume=discuit-redis:/var/lib/redis
+Volume=discuit-images:/app/images
+Volume=/etc/discuit/config.yaml:/app/config.yaml:ro
+
+[Service]
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

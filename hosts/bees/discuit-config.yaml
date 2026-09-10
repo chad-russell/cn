@@ -1,0 +1,17 @@
+# Discuit configuration — mounted read-only into the container at
+# /app/config.yaml (see hosts/bees/discuit.container). Secrets do NOT
+# live here: DISCUIT_HMAC_SECRET arrives via EnvironmentFile from
+# agenix (secrets/discuit-env.age). The MariaDB instance is
+# container-internal (never published), so its credentials only matter
+# inside the container; the entrypoint creates discuit/discuit.
+siteName: Crussell Hub
+siteDescription: Private homelab community platform.
+addr: :8080
+isDevelopment: false
+dbAddr: 127.0.0.1
+dbUser: discuit
+dbPassword: discuit
+dbName: discuit
+sessionCookieName: SID
+imagesFolderPath: images
+disableForumCreation: true

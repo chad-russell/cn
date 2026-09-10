@@ -31,6 +31,11 @@ in {
   # the VPS" invariant — see the bees-watch.nix header for rationale.
   "discord-infra-webhook.age".publicKeys = [ crussell ];
 
+  # ── Discuit (bees) ──────────────────────────────────────────────
+  # DISCUIT_HMAC_SECRET (session cookie signing) for the quadlet's
+  # EnvironmentFile. See hosts/bees/discuit.nix.
+  "discuit-env.age".publicKeys = [ crussell ];
+
   # ── Beszel monitoring ──────────────────────────────────────────
   # Env file (KEY=<hub public key>, TOKEN=<universal token>) shared by
   # every beszel-agent. Created after first booting the hub.

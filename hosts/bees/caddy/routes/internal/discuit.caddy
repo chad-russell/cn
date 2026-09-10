@@ -1,0 +1,6 @@
+# Discuit (bees — podman quadlet; see hosts/bees/discuit.nix).
+# Single upstream app; reverse_proxy handles any websocket upgrades.
+@discuit host discuit.internal.crussell.io
+handle @discuit {
+    reverse_proxy 127.0.0.1:8100
+}
