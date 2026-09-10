@@ -31,11 +31,6 @@ in {
   # the VPS" invariant — see the bees-watch.nix header for rationale.
   "discord-infra-webhook.age".publicKeys = [ crussell ];
 
-  # ── Lemmy admin password (bees) ─────────────────────────────────
-  # setup.admin_password for first-boot admin seeding (chad) via the
-  # nixpkgs services.lemmy module. See hosts/bees/lemmy.nix.
-  "lemmy-admin-password.age".publicKeys = [ crussell ];
-
   # ── Beszel monitoring ──────────────────────────────────────────
   # Env file (KEY=<hub public key>, TOKEN=<universal token>) shared by
   # every beszel-agent. Created after first booting the hub.
