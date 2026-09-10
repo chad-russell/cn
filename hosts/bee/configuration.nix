@@ -664,6 +664,38 @@ in {
           auth = "oauth";
           url = "https://mcp.vercel.com";
         };
+        # Monarch Money (read-only), 2026-09-10 — replaces the manual CSV
+        # export path. Third-party stdio MCP (robcerda/monarch-mcp-server,
+        # clone at ~/Code/monarch-mcp-server on bee, uv-managed venv; the
+        # console entry point has an absolute shebang so no PATH needed).
+        # Auth: one-time interactive `uv run login_setup.py` (choice 1,
+        # browser cookie) → session blob at ~/.monarch-mcp-server/token
+        # (bee has no keyring backend — keyring.backends.fail — so the
+        # library's file fallback applies: 0700 dir, 0600 file, atomic
+        # writes; gateway runs as crussell with HOME=/home/crussell, so
+        # the MCP child finds it). Re-auth when the session expires:
+        #   1. Copy the `cookie:` request header from app.monarch.com
+        #      DevTools → Network → any graphql request.
+        #   2. ssh bee 'umask 077; mkdir -p ~/.config/monarch-mcp; cat >
+        #      ~/.config/monarch-mcp/cookie.txt'  (paste, Ctrl-D) — direct
+        #      terminal pastes truncate at ~1024 chars (MAX_CANON), which
+        #      is why the file route is required.
+        #   3. cd ~/Code/monarch-mcp-server && uv run login_setup.py
+        #      (choice 1; reads the file automatically, keeps the old
+        #      session until the new one verifies).
+        # MONARCH_MCP_READ_ONLY=1 makes the server never REGISTER its
+        # mutating tools (create/update/delete transactions, bulk ops,
+        # budget/rule/category edits, splits, tags, login/logout) —
+        # stronger than approval gating: unregistered tools cannot be
+        # invoked at all. If the repo is updated: `git pull && uv sync`,
+        # then redeploy is NOT needed (command points at the live venv).
+        monarch = {
+          command = "${pkgs.writeShellScript "mcp-monarch" ''
+            export MONARCH_MCP_READ_ONLY=1
+            export HOME=/home/crussell
+            exec /home/crussell/Code/monarch-mcp-server/.venv/bin/monarch-mcp-server
+          ''}";
+        };
       };
       # Web search backend: UNPINNED (retired searxng 2026-09-03). With no
       # web.search_backend configured and no keyed provider, Hermes resolves
