@@ -20,16 +20,32 @@
 # closed, no federation. In lemmy 0.19.x these are NOT config.hjson
 # keys — they are database columns, and the nixpkgs module even asserts
 # against settings.federation. They are applied once, post-setup, via
-# SQL (idempotent), then owned by the admin UI:
+# idempotent SQL, then owned by the admin UI:
 #
 #   sudo -u postgres psql lemmy \
-#     -c "UPDATE local_site SET registration_mode = 'closed';" \
-#     -c "UPDATE site SET private_instance = true;"
+#     -c "UPDATE local_site SET registration_mode = 'Closed';" \
+#     -c "UPDATE local_site SET private_instance = true;"
 #
-# (enum registration_mode_enum: 'closed' | 'require_application' |
-#  'open'. private_instance auth-gates all listing endpoints and stops
-#  federation traffic; the *.internal wildcard also resolves only to
-#  the Nebula overlay, so remote servers can't reach us regardless.)
+# Schema notes from the live 0.19.19 DB (2026-09-10 — the migrations
+# in the source tree LIE about both details; trust live state):
+#   * BOTH columns live on local_site (site.private_instance from the
+#     2021 migration was moved later).
+#   * registration_mode_enum values are PascalCase {Closed,
+#     RequireApplication, Open}, not the lowercase labels the CREATE
+#     TYPE migration shows — diesel recreates the enum with serde
+#     casing.
+#
+# Verified live 2026-09-10: anonymous /api/v3/post/list →
+# {"error":"instance_is_private"}; /api/v3/user/register →
+# {"error":"registration_closed"}; login as chad returns a JWT;
+# federation workers report "Federating to 0/0 instances".
+#
+# Deploy note (2026-09-10): the first deploy tripped a glibc collation
+# version mismatch in postgresql-setup (cluster built under 2.40, new
+# closure brings 2.42) — fixed by ALTER DATABASE ... REFRESH COLLATION
+# VERSION on all DBs + REINDEX DATABASE immich; then the setup pass
+# creates the lemmy DB/user cleanly. Expect this once per glibc bump
+# on any DB-adding deploy.
 #
 # First boot: settings.setup seeds the admin (chad) from the agenix'd
 # password (secrets/lemmy-admin-password.age) — no web wizard.
