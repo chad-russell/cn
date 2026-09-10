@@ -26,12 +26,15 @@
 # READ it. The boundary is the network: *.internal.crussell.io
 # resolves only to the Nebula overlay (10.10.0.6), and the port is
 # loopback-published, so only overlay/LAN clients see it at all.
-# Signups are disabled via the site-settings blob (application_data
-# table, key "site_settings", JSON field "signupsDisabled") — set from
-# the admin UI, or deterministically:
-#   sudo podman exec discuit mysql discuit \
-#     -e 'UPDATE application_data SET value = JSON_SET(value, "$.signupsDisabled", true) WHERE `key` = "site_settings";'
-#   (restart discuit.service after a direct DB edit — settings are cached)
+# Signups live in the site-settings blob (application_data table,
+# key "site_settings"). CAREFUL: the row does not exist until an
+# admin saves settings through the UI once — a plain UPDATE hits zero
+# rows and silently does nothing (bit us 2026-09-10). Deterministic:
+#   sudo podman exec discuit mysql discuit -e \
+#     'INSERT INTO application_data (`key`, `value`) VALUES
+#      ("site_settings", "{\"signupsDisabled\":true,\"torBlocked\":false}")
+#      ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);'
+#   sudo systemctl restart discuit.service   # settings are cached
 #
 # First-boot runbook (verified 2026-09-10):
 #   1. Visit https://discuit.internal.crussell.io, create the "chad"
