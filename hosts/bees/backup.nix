@@ -26,6 +26,9 @@
       "/var/lib/datenight"
       "/var/lib/redis-immich"
 
+      # Lemmy: postgres is covered above; this is pict-rs image data
+      "/var/lib/pict-rs"
+
       # Container volumes (Caddy certs, etc.)
       "/var/lib/containers/storage/volumes"
 

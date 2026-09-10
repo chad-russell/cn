@@ -38,11 +38,12 @@ Last validated via SSH: **2026-09-09**.
 │   │   ├── configuration.nix
 │   │   ├── disk-config.nix
 │   │   ├── caddy.nix + caddy/ (Caddyfile, routes, caddy.container)
-│   │   │   └── routes/internal/ (services.caddy, media.caddy, beszel.caddy)
+│   │   │   └── routes/internal/ (services.caddy, media.caddy, beszel.caddy, lemmy.caddy)
 │   │   ├── media-services.nix
 │   │   ├── immich-quadlet.nix   # Immich quadlets (server + ML containers)
 │   │   ├── immich-native.nix    # native PG + redis-immich + db dump + freshness
 │   │   ├── beszel.nix         # Beszel monitoring hub
+│   │   ├── lemmy.nix          # Lemmy (lemmy.internal.crussell.io, private)
 │   │   ├── ntfy.nix, datenight.nix
 │   │   ├── services.nix
 │   │   ├── backup.nix         # Restic backup to S3
@@ -151,7 +152,7 @@ Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 26.05 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
+| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 26.05 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich, Lemmy. |
 | `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 26.05 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), self-hosted Buzz relay, Hermes Agent gateway, dsh web UI, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
 | `think`          | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Resolves Nebula overlay names via baked `/usr/etc/hosts` (Containerfile step 3.7). Not a NixOS deploy target. |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 26.05 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
@@ -281,6 +282,7 @@ Source files:
 - `hosts/bees/beszel.nix` — Beszel monitoring hub
 - `hosts/bees/thinkpad-registry.nix` + `zot.container` — zot OCI registry (thinkpad host images) + daily build/publish service
 - `hosts/bees/ntfy.nix`, `datenight.nix`
+- `hosts/bees/lemmy.nix` — Lemmy at `lemmy.internal.crussell.io` (private instance, registration closed; posture runbook in the file header)
 - `hosts/bees/services.nix` + `*.container` — linkding, papra
 - `hosts/bees/backup.nix` — Restic backup to S3
 - `*.container` files — jellyfin, jellyseerr, sonarr, radarr, prowlarr, qbittorrent, linkding, papra
@@ -304,6 +306,7 @@ Live systemd services:
 - `postgresql.service` — Immich DB
 - `redis-immich.service`
 - `beszel.service` — Beszel monitoring hub, `127.0.0.1:8091` (8091 not its default 8090, which ntfy uses)
+- `lemmy.service` / `lemmy-ui.service` / `pict-rs.service` — Lemmy stack at `lemmy.internal.crussell.io` (backend `8536`, UI `1234`, pict-rs `8537`; see `hosts/bees/lemmy.nix`)
 
 Storage:
 

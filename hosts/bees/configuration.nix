@@ -21,6 +21,9 @@
     ./caddy.nix
     ./services.nix
     ./kan.nix
+    # Lemmy at lemmy.internal.crussell.io (private instance, glen
+    # transport #4 substrate) — Caddy route in caddy/routes/internal/.
+    ./lemmy.nix
     # Lane (Plane CE) retired 2026-09-08 — Hermes kanban is the source of
     # truth; 13 lane-* containers decommissioned (archive on NAS).
     ./llama-server.nix
