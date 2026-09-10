@@ -13,5 +13,9 @@ dbUser: discuit
 dbPassword: discuit
 dbName: discuit
 sessionCookieName: SID
-imagesFolderPath: images
+redisAddress: 127.0.0.1:6379
+defaultFeedSort: hot
 disableForumCreation: true
+forumCreationReqPoints: 10
+maxForumsPerUser: 10
+imagesFolderPath: images
