@@ -1,0 +1,12 @@
+# MariaDB 10.11 (debian, inside the discuit container) rejects plain
+# IPv4 strings for INET6 columns, and Discuit's signup inserts the
+# client IP as a plain string — under the default STRICT_TRANS_TABLES
+# that fails every signup with:
+#   Error 1292: Incorrect inet6 value: '10.10.0.6' for column
+#   `discuit`.`users`.`created_ip` at row 1
+# users.created_ip is nullable, so dropping strict mode turns the
+# invalid value into NULL + a warning instead of a failed INSERT.
+# IPs are useless on this instance anyway (clients are caddy on
+# loopback / overlay addresses). Verified live 2026-09-10.
+[mysqld]
+sql_mode=NO_ENGINE_SUBSTITUTION

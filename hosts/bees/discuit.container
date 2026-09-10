@@ -15,6 +15,7 @@ Volume=discuit-db:/var/lib/mysql
 Volume=discuit-redis:/var/lib/redis
 Volume=discuit-images:/app/images
 Volume=/etc/discuit/config.yaml:/app/config.yaml:ro
+Volume=/etc/discuit/mariadb.cnf:/etc/mysql/mariadb.conf.d/99-sqlmode.cnf:ro
 
 [Service]
 Restart=always

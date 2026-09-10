@@ -58,6 +58,13 @@
     mode = "0644";
   };
 
+  # MariaDB quirk fix — see the cnf's header comment (signup-breaking
+  # inet6/IPv4 rejection on debian MariaDB 10.11).
+  environment.etc."discuit/mariadb.cnf" = {
+    source = ./discuit-mariadb.cnf;
+    mode = "0644";
+  };
+
   system.activationScripts.discuit-volumes = lib.stringAfter [ "users" ] ''
     ${pkgs.podman}/bin/podman volume create discuit-db 2>/dev/null || true
     ${pkgs.podman}/bin/podman volume create discuit-redis 2>/dev/null || true
