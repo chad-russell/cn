@@ -23,7 +23,6 @@
 
   systemd.services.glen-heartbeat = {
     description = "glen heartbeat dispatcher (jobs live in /home/crussell/glen)";
-    path = [ ];
     serviceConfig = {
       Type = "oneshot";
       User = "crussell";
@@ -33,8 +32,9 @@
       # zai-api-key.age exports ZHIPU_API_KEY=…
       EnvironmentFile = [ config.age.secrets.zai-api-key.path ];
     };
-    # node, dsh, bash, git live in the system profile (dsh.nix lesson).
-    environment.PATH = "/run/current-system/sw/bin";
+    # node, dsh, bash, git live in the system profile (dsh.nix lesson;
+    # mkForce because the systemd module sets a store-path default).
+    environment.PATH = lib.mkForce "/run/current-system/sw/bin";
     environment.HOME = "/home/crussell";
   };
 
