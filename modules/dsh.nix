@@ -315,7 +315,7 @@ in {
         User = "crussell";
         Group = "users";
         WorkingDirectory = "/home/crussell";
-        ExecStart = "${cfg.package}/bin/dsh web --port ${
+        ExecStart = "${cfg.package}/bin/dsh --profile glen -- --port ${
             toString port
           } --no-open --trusted-host ${hostname}";
         # ZHIPU_API_KEY (zai-coding route) + GLOO_API_KEY (gloo route) +
