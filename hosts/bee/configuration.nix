@@ -47,6 +47,9 @@ in {
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/dsh.nix
+    # glen heartbeat: one dumb timer → glen's caller-agnostic
+    # tools/heartbeat (jobs live in the glen repo). See that module.
+    ../../modules/glen-heartbeat.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
       # https://dsh.internal.crussell.io via bees Caddy (route in
