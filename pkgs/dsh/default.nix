@@ -18,20 +18,37 @@ buildNpmPackage rec {
   pname = "dsh";
   # npm scope dir must match: @deepseek-ai/dsh
   packageName = "@deepseek-ai/dsh";
-  version = "0.1.0-rc.7";
+  version = "0.1.5-rc.2";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/${packageName}/-/dsh-${version}.tgz";
-    hash = "sha256-L48Ldj1hGsU296lBHuQ8CvwGfBuHMsMQLATb45i8rMU=";
+    hash = "sha256-9MVIOdaegr8cOlpBqRDDzhQFzZ6dl9dTwMBPQGx9dIA=";
   };
 
   # Generated via npm install --package-lock-only (see header comment).
   # The npm tarball ships no lockfile; inject ours in postPatch.
+  # 0.1.5 declares devDependencies on unpublished experimental packages
+  # (e.g. @deepseek-ai/dsh-experimental-code-runtime-python -> 404); the
+  # prebuilt dist needs only the production tree, so strip devDeps at
+  # build time and ship a prod-only lockfile (generated 2026-09-11 with
+  # `npm install --package-lock-only` over the stripped package.json).
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
+    # 0.1.5 declares devDependencies on unpublished experimental packages
+    # (e.g. @deepseek-ai/dsh-experimental-code-runtime-python -> registry
+    # 404). The prebuilt dist needs only the production tree, so we ship
+    # a prod-only lockfile (generated 2026-09-11 via `npm install
+    # --package-lock-only` over a dev-stripped package.json) and strip
+    # devDependencies here. sed/awk only — this postPatch also runs in
+    # the npm-deps fetcher derivation, which has no node/python on PATH.
+    sed '/^  "devDependencies": {/,/^  }/d' package.json | awk '
+      prev ~ /,$/ && $0 ~ /^}/ { sub(/,$/, "", prev) }
+      { if (prev != "") print prev; prev = $0 }
+      END { print prev }' > package.json.stripped
+    mv package.json.stripped package.json
   '';
 
-  npmDepsHash = "sha256-iGfbvMoG71r+zXZ9cvesqmHvAP1dV7ionxPk3GK3xbI=";
+  npmDepsHash = "sha256-T8FGnMBLguJLbRDkPnvlXDbkUrD7EjtnGpCkUQBMjz8=";
 
   # Prebuilt distribution — no compile step, no scripts to run.
   npmInstallFlags = [ "--ignore-scripts" ];
