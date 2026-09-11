@@ -683,9 +683,14 @@ in {
         #      ~/.config/monarch-mcp/cookie.txt'  (paste, Ctrl-D) — direct
         #      terminal pastes truncate at ~1024 chars (MAX_CANON), which
         #      is why the file route is required.
-        #   3. cd ~/Code/monarch-mcp-server && uv run login_setup.py
+        #   3. cd ~/Code/monarch-mcp-server &&
+        #      SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+        #      uv run login_setup.py
         #      (choice 1; reads the file automatically, keeps the old
-        #      session until the new one verifies).
+        #      session until the new one verifies. The SSL_CERT_FILE
+        #      prefix is REQUIRED — same uv-python CA gap as the wrapper
+        #      below; without it login fails with CERTIFICATE_VERIFY_FAILED,
+        #      observed 2026-09-11).
         # MONARCH_MCP_READ_ONLY=1 makes the server never REGISTER its
         # mutating tools (create/update/delete transactions, bulk ops,
         # budget/rule/category edits, splits, tags, login/logout) —
@@ -696,6 +701,12 @@ in {
           command = "${pkgs.writeShellScript "mcp-monarch" ''
             export MONARCH_MCP_READ_ONLY=1
             export HOME=/home/crussell
+            # The venv python (uv cpython) hardcodes /etc/ssl/cert.pem as its
+            # OpenSSL CA default, which does not exist on NixOS; without this
+            # every api.monarch.com call dies with CERTIFICATE_VERIFY_FAILED
+            # (observed 2026-09-11). Set explicitly so the wrapper works from
+            # any parent env, not just the gateway's.
+            export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
             exec /home/crussell/Code/monarch-mcp-server/.venv/bin/monarch-mcp-server
           ''}";
         };
