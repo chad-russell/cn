@@ -29,6 +29,11 @@
       # restic-encrypted at rest on S3, acceptable for a personal instance;
       # volumes live in ~/.local/share/containers, covered below)
       "/home/crussell/stoat"
+      # glen agent state: memory log, session logs, skills git repo,
+      # stoat channel state (node_modules excluded by the global rule)
+      "/var/lib/dsh"
+      # glen curated source repo (no git remote — restic is its off-box copy)
+      "/home/crussell/glen"
       # rootless podman storage: stoat named volumes (db, minio, rabbit, caddy)
       "/home/crussell/.local/share/containers"
     ];
