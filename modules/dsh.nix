@@ -306,8 +306,11 @@ in {
     # ── Web service ────────────────────────────────────────────────
     systemd.services.dsh-web = {
       description = "DeepSeek Harness web UI (dsh web)";
-      wants = [ "dsh-seed.service" ];
-      after = [ "network-online.target" "dsh-seed.service" ];
+      # stoat.service is a oneshot (RemainAfterExit) whose ExecStart returns
+      # before the 16-container stack is fully serving — ordering alone is not
+      # enough, the channel plugin retries with backoff until the API answers.
+      wants = [ "dsh-seed.service" "stoat.service" ];
+      after = [ "network-online.target" "dsh-seed.service" "stoat.service" ];
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
