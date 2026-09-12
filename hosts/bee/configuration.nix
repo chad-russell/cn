@@ -49,6 +49,8 @@ in {
     ../../modules/dsh.nix
     # glen channel plugins (Stoat bridge secrets) — see hosts/bee/glen-stoat.nix
     ./glen-stoat.nix
+    # Stoat (ex-Revolt) instance: systemd-managed rootless compose stack
+    ./stoat.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
       # https://dsh.internal.crussell.io via bees Caddy (route in

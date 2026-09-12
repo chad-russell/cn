@@ -25,6 +25,12 @@
       # (~/brain, 2026-09-05). Git-tracked locally; this adds a second
       # copy beyond the checkout.
       "/home/crussell/brain"
+      # Stoat instance: compose project + config (secrets.env lives here —
+      # restic-encrypted at rest on S3, acceptable for a personal instance;
+      # volumes live in ~/.local/share/containers, covered below)
+      "/home/crussell/stoat"
+      # rootless podman storage: stoat named volumes (db, minio, rabbit, caddy)
+      "/home/crussell/.local/share/containers"
     ];
 
     exclude = [

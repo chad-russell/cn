@@ -1,0 +1,17 @@
+# Stoat chat (bee :8880, rootless compose via systemd) — the glen chat
+# surface. WebSockets: Caddy reverse_proxy proxies them natively; the
+# generous read timeout keeps the always-on WS (wss://…/ws) from being
+# cut. UDP media (livekit 7881 + 50000-50100) is NOT proxied — video is
+# off in the instance config; revisit if voice/video is ever enabled.
+
+@stoat host stoat.internal.crussell.io
+handle @stoat {
+    request_body {
+        max_size 32MB
+    }
+    reverse_proxy 10.10.0.12:8880 {
+        transport http {
+            read_timeout 360s
+        }
+    }
+}
