@@ -326,6 +326,9 @@ in {
           config.age.secrets.zai-api-key.path
           config.age.secrets.gloo-api-key.path
           config.age.secrets.openrouter-api-key.path
+          # glen channel plugins (@glen/channel-stoat tokenEnv) — declared
+          # in hosts/bee/glen-stoat.nix
+          config.age.secrets.glen-stoat-token.path
         ];
         Restart = "on-failure";
         RestartSec = "5";
