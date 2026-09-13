@@ -404,7 +404,7 @@ Running services:
 - `buzz-relay-pod.service` — self-hosted Buzz relay (podman pod: relay, postgres, redis, minio, pair-relay)
 - Dev stacks (`dev-quadlets/`) — gpl, polymer, buildspace (podman quadlets, reached via SSH tunnels; see `hosts/bee/dev-quadlets/README.md` and `cjust dev-tunnel`)
 - Restic backup (daily S3 backup via `hosts/bee/backup.nix`)
-- `dsh-web.service` — DeepSeek Harness web UI (`modules/dsh.nix`): loopback `:3080` → `dsh-web-proxy` socket on Nebula `10.10.0.12:3080` → bees Caddy `https://dsh.internal.crussell.io`. Default model `zai-coding/glm-5.3` (personal coding plan; replaces opencode, retired 2026-09-02). `codex` CLI also installed for work-lane delegation.
+- `dsh-web.service` — DeepSeek Harness web UI (`modules/dsh.nix`): loopback `:3080` → `dsh-web-proxy` socket on Nebula `10.10.0.12:3080` → bees Caddy `https://dsh.internal.crussell.io`. Default model `zai-coding/glm-5.3` (personal coding plan; replaces opencode, retired 2026-09-02). `codex` CLI also installed for work-lane delegation. `DSH_HOME` (`/var/lib/dsh`) is a **local git repo** (no remote): agents commit config changes in place after each edit — hand-maintained files only (`sessions/`, `storages/`, `relay/`, `.credentials.yaml` are gitignored, restic covers them; see `modules/dsh.nix` header).
 - Beszel agent (default-on via `modules/beszel-agent.nix`)
 
 bee is podman-only (no Docker daemon). Deploy with `nix run .#deploy -- bee`

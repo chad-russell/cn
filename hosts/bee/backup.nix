@@ -30,6 +30,8 @@
       # presets + profile incl. the hand-maintained @glen plugin sources
       # and vendored dsh-relay under profiles/glen/node_modules — edited
       # directly in place (staging repo ~/glen retired 2026-09-13).
+      # /var/lib/dsh is also a local git repo for the hand-maintained
+      # subset (no remote); THIS backup remains its off-machine copy.
       "/var/lib/dsh"
 
       # buzz relay deploy config + secrets (.env 0600; volumes in containers storage)

@@ -37,6 +37,16 @@
 # Models) — do not edit while the service is running. Re-seeding after a
 # catalog change means: stop dsh-web + dsh-seed, remove settings.yaml,
 # activate (dsh-seed's ConditionPathExists gate re-opens).
+#
+#   Change tracking (2026-09-13+): /var/lib/dsh is a LOCAL git repo
+#   (branch main, no remote). The hand-maintained subset — AGENTS.md,
+#   cordis patch layers, .agent-presets, skills/, settings.yaml, and the
+#   only-copy sources at profiles/glen/node_modules/{@glen/*,dsh-relay} —
+#   is committed in place after each change (author "glen (dsh agent)").
+#   Runtime state (sessions/, storages/, relay/, .credentials.yaml) is
+#   gitignored; restic (hosts/bee/backup.nix) remains the off-machine
+#   copy. Plan: fold the hand-maintained subset into this flake once
+#   iteration settles.
 
 { config, lib, pkgs, dsh, ... }:
 
