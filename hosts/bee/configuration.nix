@@ -51,6 +51,8 @@ in {
     ./glen-stoat.nix
     # Stoat (ex-Revolt) instance: systemd-managed rootless compose stack
     ./stoat.nix
+    # Buzz relay (nostr NIP-29): household chat substrate
+    ./buzz.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
       # https://dsh.internal.crussell.io via bees Caddy (route in

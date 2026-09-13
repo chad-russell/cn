@@ -1,0 +1,12 @@
+# Buzz relay (bee rootless compose via systemd unit `buzz`, loopback :3212) —
+# the glen household chat substrate (agents + humans, NIP-29).
+# WebSocket-native: reverse_proxy handles the upgrade; generous timeouts for
+# long-lived connections.
+@buzz host buzz.internal.crussell.io
+handle @buzz {
+    reverse_proxy 10.10.0.12:3212 {
+        transport http {
+            read_timeout 360s
+        }
+    }
+}

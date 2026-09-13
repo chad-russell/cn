@@ -34,6 +34,8 @@
       "/var/lib/dsh"
       # glen curated source repo (no git remote — restic is its off-box copy)
       "/home/crussell/glen"
+      # buzz relay deploy config + secrets (.env 0600; volumes in containers storage)
+      "/home/crussell/buzz"
       # rootless podman storage: stoat named volumes (db, minio, rabbit, caddy)
       "/home/crussell/.local/share/containers"
     ];
