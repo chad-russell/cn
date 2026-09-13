@@ -9,6 +9,12 @@
 # → agenix, never in patch files or the repo. Channel/user ids are
 # non-secret config and live in the DSH_HOME overlay.
 {
+  age.secrets.glen-buzz-bot-nsec = {
+    file = ../../secrets/glen-buzz-bot-nsec.age;
+    mode = "0440";
+    group = "users";
+  };
+
   age.secrets.glen-stoat-token = {
     file = ../../secrets/glen-stoat-token.age;
     mode = "0440";
