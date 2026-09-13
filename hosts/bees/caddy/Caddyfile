@@ -24,3 +24,16 @@
     # for a logical group of services.
     import /etc/caddy/imports/routes/internal/*.caddy
 }
+
+# dsh-relay management pages on the standard relay port — the dsh web UI's
+# "Relay" corner link points at host:3443, so it must answer on the DNS name.
+# Caddy terminates TLS with the same wildcard cert; the relay behind does its
+# own self-signed TLS (skip verify, SNI = the public hostname it accepts).
+dsh.internal.crussell.io:3443 {
+    reverse_proxy https://10.10.0.12:3443 {
+        transport http {
+            tls_insecure_skip_verify
+            tls_server_name dsh.internal.crussell.io
+        }
+    }
+}
