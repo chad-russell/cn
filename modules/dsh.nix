@@ -368,7 +368,9 @@ in {
         # what Android reports. Bind 0.0.0.0 so the harness is reachable and
         # discoverable from either. Trust is enforced by dsh's own fence
         # (--trusted-host) + token; LAN/WiFi members are trusted by policy.
-        ListenStream = "0.0.0.0:${toString port}";
+        # Both non-loopback interfaces explicitly (0.0.0.0 would collide
+        # with dsh-web's own 127.0.0.1 bind on the same port).
+        ListenStream = [ "${nebulaIp}:${toString port}" "192.168.20.105:${toString port}" ];
         BindIPv6Only = "both";
         FreeBind = true;
       };
