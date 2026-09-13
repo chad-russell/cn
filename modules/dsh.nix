@@ -330,9 +330,9 @@ in {
           config.age.secrets.gloo-api-key.path
           config.age.secrets.openrouter-api-key.path
           # glen channel plugins (@glen/channel-stoat tokenEnv,
-          # @glen/channel-buzz nsecEnv) — declared in hosts/bee/glen-stoat.nix
+          # @glen/channel-buzz persona nsecEnv) — declared in hosts/bee/glen-stoat.nix
           config.age.secrets.glen-stoat-token.path
-          config.age.secrets.glen-buzz-bot-nsec.path
+          config.age.secrets.glen-buzz-nsecs.path
         ];
         Restart = "on-failure";
         RestartSec = "5";
