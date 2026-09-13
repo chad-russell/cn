@@ -47,9 +47,10 @@ in {
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/dsh.nix
-    # Stoat (ex-Revolt) instance: systemd-managed rootless compose stack
     # Buzz relay (nostr NIP-29): household chat substrate
     ./buzz.nix
+    # glen channel plugins — buzz persona identities (agenix)
+    ./glen-buzz.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
       # https://dsh.internal.crussell.io via bees Caddy (route in
