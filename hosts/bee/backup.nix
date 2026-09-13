@@ -28,16 +28,11 @@
       # Stoat instance: compose project + config (secrets.env lives here —
       # restic-encrypted at rest on S3, acceptable for a personal instance;
       # volumes live in ~/.local/share/containers, covered below)
-      "/home/crussell/stoat"
-      # glen agent state: memory log, session logs, skills git repo,
-      # stoat channel state (node_modules excluded by the global rule)
-      "/var/lib/dsh"
+      # glen agent state: memory log, session logs, skills git repo,      "/var/lib/dsh"
       # glen curated source repo (no git remote — restic is its off-box copy)
       "/home/crussell/glen"
       # buzz relay deploy config + secrets (.env 0600; volumes in containers storage)
-      "/home/crussell/buzz"
-      # rootless podman storage: stoat named volumes (db, minio, rabbit, caddy)
-      "/home/crussell/.local/share/containers"
+      "/home/crussell/buzz"      "/home/crussell/.local/share/containers"
     ];
 
     exclude = [

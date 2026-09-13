@@ -2,7 +2,7 @@
 #
 # Canonical upstream compose (relay + postgres + redis + minio, 4 containers)
 # at ~/buzz/deploy (compose.yml from deploy/compose/, secrets in .env 0600).
-# This unit manages lifecycle like `stoat`: oneshot RemainAfterExit over the
+# This unit manages lifecycle: oneshot RemainAfterExit over the
 # rootless podman socket. Data in named volumes (postgres, minio, git).
 #
 # Network: relay publishes 127.0.0.1:3212; the stack needs NO other ingress —

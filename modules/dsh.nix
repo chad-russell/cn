@@ -306,11 +306,10 @@ in {
     # ── Web service ────────────────────────────────────────────────
     systemd.services.dsh-web = {
       description = "DeepSeek Harness web UI (dsh web)";
-      # stoat.service is a oneshot (RemainAfterExit) whose ExecStart returns
       # before the 16-container stack is fully serving — ordering alone is not
       # enough, the channel plugin retries with backoff until the API answers.
-      wants = [ "dsh-seed.service" "stoat.service" ];
-      after = [ "network-online.target" "dsh-seed.service" "stoat.service" ];
+      wants = [ "dsh-seed.service" ];
+      after = [ "network-online.target" "dsh-seed.service" ];
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
@@ -329,9 +328,6 @@ in {
           config.age.secrets.zai-api-key.path
           config.age.secrets.gloo-api-key.path
           config.age.secrets.openrouter-api-key.path
-          # glen channel plugins (@glen/channel-stoat tokenEnv,
-          # @glen/channel-buzz persona nsecEnv) — declared in hosts/bee/glen-stoat.nix
-          config.age.secrets.glen-stoat-token.path
           config.age.secrets.glen-buzz-nsecs.path
         ];
         Restart = "on-failure";

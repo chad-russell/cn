@@ -47,10 +47,7 @@ in {
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/dsh.nix
-    # glen channel plugins (Stoat bridge secrets) — see hosts/bee/glen-stoat.nix
-    ./glen-stoat.nix
     # Stoat (ex-Revolt) instance: systemd-managed rootless compose stack
-    ./stoat.nix
     # Buzz relay (nostr NIP-29): household chat substrate
     ./buzz.nix
     {
