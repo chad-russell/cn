@@ -319,7 +319,7 @@ in {
         WorkingDirectory = "/home/crussell";
         ExecStart = "${cfg.package}/bin/dsh --profile glen -- --port ${
             toString port
-          } --no-open --trusted-host ${hostname}";
+          } --no-open --trusted-host ${hostname} --trusted-host 10.10.0.12";
         # ZHIPU_API_KEY (zai-coding route) + GLOO_API_KEY (gloo route) +
         # OPENROUTER_API_KEY (openrouter route), resolved per request via
         # the settings.yaml apiKeyEnv references. Same .age sources as the
