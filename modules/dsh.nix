@@ -319,7 +319,7 @@ in {
         WorkingDirectory = "/home/crussell";
         ExecStart = "${cfg.package}/bin/dsh --profile glen -- --port ${
             toString port
-          } --no-open --trusted-host ${hostname} --trusted-host 10.10.0.12";
+          } --no-open --trusted-host ${hostname} --trusted-host 10.10.0.12 --trusted-host 192.168.20.105";
         # ZHIPU_API_KEY (zai-coding route) + GLOO_API_KEY (gloo route) +
         # OPENROUTER_API_KEY (openrouter route), resolved per request via
         # the settings.yaml apiKeyEnv references. Same .age sources as the
@@ -363,7 +363,12 @@ in {
       after = [ "nebula@homelab.service" ];
       partOf = [ "nebula@homelab.service" ];
       socketConfig = {
-        ListenStream = "${nebulaIp}:${toString port}";
+        # All interfaces: dsh-mobile's network scan walks the phone's primary
+        # subnet — WiFi (192.168.20.x) or Nebula (10.10.0.x) depending on
+        # what Android reports. Bind 0.0.0.0 so the harness is reachable and
+        # discoverable from either. Trust is enforced by dsh's own fence
+        # (--trusted-host) + token; LAN/WiFi members are trusted by policy.
+        ListenStream = "0.0.0.0:${toString port}";
         BindIPv6Only = "both";
         FreeBind = true;
       };
@@ -371,7 +376,7 @@ in {
 
     systemd.services."dsh-web-proxy" = {
       description =
-        "Socket proxy: Nebula ${nebulaIp}:${toString port} → dsh loopback";
+        "Socket proxy: all interfaces :${toString port} → dsh loopback";
       requires = [ "dsh-web.service" ];
       after = [ "dsh-web.service" ];
       serviceConfig = {
