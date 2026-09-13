@@ -25,19 +25,24 @@
       # (~/brain, 2026-09-05). Git-tracked locally; this adds a second
       # copy beyond the checkout.
       "/home/crussell/brain"
-      # Stoat instance: compose project + config (secrets.env lives here —
-      # restic-encrypted at rest on S3, acceptable for a personal instance;
-      # volumes live in ~/.local/share/containers, covered below)
-      # glen agent state: memory log, session logs, skills git repo,      "/var/lib/dsh"
-      # glen curated source repo (no git remote — restic is its off-box copy)
-      "/home/crussell/glen"
+
+      # glen agent state (dsh): memory log, session logs, skills git repo,
+      # presets + profile incl. the hand-maintained @glen plugin sources
+      # and vendored dsh-relay under profiles/glen/node_modules — edited
+      # directly in place (staging repo ~/glen retired 2026-09-13).
+      "/var/lib/dsh"
+
       # buzz relay deploy config + secrets (.env 0600; volumes in containers storage)
-      "/home/crussell/buzz"      "/home/crussell/.local/share/containers"
+      "/home/crussell/buzz"
+      "/home/crussell/.local/share/containers"
     ];
 
     exclude = [
-      # Node modules (rebuildable)
-      "**/node_modules"
+      # Home-dir node modules (rebuildable). Deliberately NOT a blanket
+      # pattern: /var/lib/dsh/profiles/glen/node_modules holds the only
+      # copies of the @glen plugin sources + vendored dsh-relay — those
+      # must be backed up.
+      "/home/crussell/**/node_modules"
       ".npm"
       "*.log"
       "*.tmp"
