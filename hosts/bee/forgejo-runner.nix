@@ -13,11 +13,7 @@
 # exposing TOKEN=. The module reads it via systemd EnvironmentFile and
 # re-registers automatically when the token or labels change
 # (ExecStartPre compares .token-hash / .labels in the state dir).
-{
-  config,
-  pkgs,
-  ...
-}:
+{ config, pkgs, ... }:
 
 {
   # Module default package is the ancient gitea-actions-runner 1.0.3;
@@ -30,10 +26,9 @@
     url = "https://git.crussell.io";
     tokenFile = config.age.secrets.forgejo-runner-token.path;
     labels = [ "ubuntu-latest:host" ];
-    settings = {
-      log.level = "info";
-    };
+    settings = { log.level = "info"; };
   };
 
-  age.secrets.forgejo-runner-token.file = ../../secrets/forgejo-runner-token.age;
+  age.secrets.forgejo-runner-token.file =
+    ../../secrets/forgejo-runner-token.age;
 }
