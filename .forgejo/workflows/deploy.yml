@@ -21,6 +21,11 @@ name: deploy
 on:
   push:
     branches: [main]
+  # Manual trigger from the Actions UI ("Run workflow" button). This
+  # Forgejo build has no re-run API, so this is the retry path: a dispatch
+  # run on current main re-evaluates drift and deploys only what changed
+  # (usually: re-tests a failed deploy after a fix).
+  workflow_dispatch:
 
 # Never two deploys at once; queue instead of cancelling (a cancelled
 # mid-switch deploy is worse than a queued one).
