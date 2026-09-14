@@ -29,7 +29,8 @@
         "XDG_RUNTIME_DIR=/run/user/1000"
         "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock"
       ];
-      ExecStart = "${pkgs.docker-compose}/bin/docker-compose up -d --remove-orphans";
+      ExecStart =
+        "${pkgs.docker-compose}/bin/docker-compose up -d --remove-orphans";
       ExecStop = "${pkgs.docker-compose}/bin/docker-compose down";
       TimeoutStartSec = 300;
       TimeoutStopSec = 120;

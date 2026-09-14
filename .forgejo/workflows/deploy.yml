@@ -1,0 +1,129 @@
+# Auto-deploy on merge to main — runs on the bees `nix-host` runner
+# (deploy origin), job shells execute as crussell.
+#
+# Which machines: deterministic build-diff, not path mapping. For each
+# host, eval the new toplevel's outPath and compare against
+# `readlink /run/current-system` ON THE TARGET (local readlink for bees).
+# Same path → up to date; different → deploy. A `modules/` change fans
+# out to every host it touches; a `hosts/bee/`-only change deploys just
+# bee; a flake.lock bump catches everything.
+#
+# Remote hosts go through the SAME `nix run .#deploy --` app as the
+# manual path (one code path). The bees self-switch runs detached via
+# `systemd-run` because activating bees can restart this very runner
+# mid-job — the switch survives even if the job doesn't (first run after
+# this workflow lands will hit exactly that and may show red; re-run is
+# green).
+#
+# Failures ping the `cn-ci` ntfy topic (ntfy runs on bees :8090).
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+# Never two deploys at once; queue instead of cancelling (a cancelled
+# mid-switch deploy is worse than a queued one).
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: nix-host
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        run: |
+          set -eu
+          git init -q .
+          git remote add origin "https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@git.crussell.io/chad/cn.git"
+          git fetch --depth 1 origin "+${GITHUB_REF}:"
+          git checkout --detach FETCH_HEAD
+
+      - name: Detect affected hosts
+        id: hosts
+        run: |
+          set -eu
+          AFFECTED=""
+          for h in bee bees nas gateway; do
+            want=$(nix eval --raw ".#nixosConfigurations.$h.config.system.build.toplevel.outPath")
+            case "$h" in
+              bees) have=$(readlink /run/current-system) ;;
+              bee)  have=$(ssh -o IdentitiesOnly=yes -o ConnectTimeout=8 crussell@10.10.0.12 'readlink /run/current-system' 2>/dev/null || echo ssh-unreachable) ;;
+              nas)  have=$(ssh -o IdentitiesOnly=yes -o ConnectTimeout=8 crussell@10.10.0.3  'readlink /run/current-system' 2>/dev/null || echo ssh-unreachable) ;;
+              gateway) have=$(ssh -o IdentitiesOnly=yes -o ConnectTimeout=8 root@10.10.0.2     'readlink /run/current-system' 2>/dev/null || echo ssh-unreachable) ;;
+            esac
+            if [ "$want" = "$have" ]; then
+              echo "$h: up to date"
+            else
+              AFFECTED="$AFFECTED $h"
+              echo "$h: drift -> deploy"
+            fi
+          done
+          AFFECTED="${AFFECTED# }"
+          echo "affected=$AFFECTED" >> "$GITHUB_OUTPUT"
+          echo "::notice::Affected hosts: ${AFFECTED:-none}"
+
+      - name: Deploy remote hosts (deploy app)
+        if: steps.hosts.outputs.affected != ''
+        run: |
+          set -eu
+          REMOTE=""
+          for h in ${{ steps.hosts.outputs.affected }}; do
+            [ "$h" = bees ] || REMOTE="$REMOTE $h"
+          done
+          REMOTE="${REMOTE# }"
+          if [ -n "$REMOTE" ]; then
+            nix run .#deploy -- $REMOTE
+          fi
+
+      - name: Deploy bees (detached — may restart this runner)
+        if: contains(steps.hosts.outputs.affected, 'bees')
+        run: |
+          set -eu
+          # Build first so build failures surface in THIS job's log;
+          # activate detached so a runner restart can't kill the switch.
+          # (Equivalent to the deploy app's local branch:
+          #   sudo nixos-rebuild switch --flake .#bees)
+          nix build .#nixosConfigurations.bees.config.system.build.toplevel \
+            --out-link /tmp/cn-ci-bees-toplevel
+          sudo systemd-run --wait --collect --unit=cn-ci-switch-bees \
+            /tmp/cn-bees-toplevel/bin/switch-to-configuration switch
+          rm -f /tmp/cn-ci-bees-toplevel
+
+      - name: Verify switched hosts
+        if: steps.hosts.outputs.affected != '' && job.status == 'success'
+        run: |
+          set -eu
+          rc=0
+          for h in ${{ steps.hosts.outputs.affected }}; do
+            want=$(nix eval --raw ".#nixosConfigurations.$h.config.system.build.toplevel.outPath")
+            case "$h" in
+              bees) have=$(readlink /run/current-system) ;;
+              bee)  have=$(ssh -o IdentitiesOnly=yes crussell@10.10.0.12 'readlink /run/current-system') ;;
+              nas)  have=$(ssh -o IdentitiesOnly=yes crussell@10.10.0.3  'readlink /run/current-system') ;;
+              gateway) have=$(ssh -o IdentitiesOnly=yes root@10.10.0.2 'readlink /run/current-system') ;;
+            esac
+            if [ "$want" = "$have" ]; then
+              echo "$h: switched OK"
+            else
+              echo "::error::$h did not activate expected generation ($have)"
+              rc=1
+            fi
+          done
+          exit $rc
+
+      - name: Notify (ntfy cn-ci)
+        if: always()
+        run: |
+          sha7=$(echo "$GITHUB_SHA" | cut -c1-7)
+          if [ "${{ job.status }}" = success ]; then
+            curl -s -H "Title: cn deploy OK" \
+              -d "main@${sha7} — deployed: ${{ steps.hosts.outputs.affected || 'none (all up to date)' }}" \
+              http://127.0.0.1:8090/cn-ci || true
+          else
+            curl -s -H "Title: cn deploy FAILED" -H "Priority: urgent" -H "Tags: warning" \
+              -d "main@${sha7} (${{ job.status }}) — logs: https://git.crussell.io/chad/cn/actions" \
+              http://127.0.0.1:8090/cn-ci || true
+          fi

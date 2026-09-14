@@ -24,17 +24,18 @@ let
     install -Dm644 ${./artifacts-server.py} $out
     python3 -m py_compile $out
   '';
-in
-{
+in {
   systemd.services.artifacts-server = {
-    description = "Static artifact host — ~/artifacts → artifacts.internal.crussell.io";
+    description =
+      "Static artifact host — ~/artifacts → artifacts.internal.crussell.io";
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       User = "crussell";
       Group = "users";
-      ExecStart = "${pkgs.python3}/bin/python3 ${serverPy} --bind 10.10.0.12 --port 8910 --root /home/crussell/artifacts";
+      ExecStart =
+        "${pkgs.python3}/bin/python3 ${serverPy} --bind 10.10.0.12 --port 8910 --root /home/crussell/artifacts";
       Restart = "on-failure";
       RestartSec = 3;
     };
