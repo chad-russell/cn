@@ -29,12 +29,19 @@ jobs:
       - name: Checkout
         run: |
           set -eu
-          exec > >(tee /tmp/ci-diag-last.txt) 2>&1
-          echo "diag: actor=${GITHUB_ACTOR:-UNSET} token_len=${#GITHUB_TOKEN} ref=$GITHUB_REF"
-          git init -q .
-          git remote add origin "https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@git.crussell.io/chad/cn.git"
-          git fetch --depth 1 origin "+${GITHUB_REF}:"
-          git checkout --detach FETCH_HEAD
+          tmp=$(mktemp)
+          rc=0
+          {
+            echo "diag: shell=$0 actor=${GITHUB_ACTOR:-UNSET} token_len=${#GITHUB_TOKEN} ref=$GITHUB_REF"
+            git init -q .
+            git remote add origin "https://${GITHUB_ACTOR:-x-access-token}:${{ secrets.GITHUB_TOKEN }}@git.crussell.io/chad/cn.git"
+            git fetch --depth 1 origin "+${GITHUB_REF}:"
+            git checkout --detach FETCH_HEAD
+          } >"$tmp" 2>&1 || rc=$?
+          curl -s --data-binary @"$tmp" http://127.0.0.1:8090/ci-diag || true
+          cat "$tmp"
+          rm -f "$tmp"
+          exit "$rc"
 
       - name: Format check (treefmt)
         run: nix shell nixpkgs#treefmt nixpkgs#nixfmt-classic -c treefmt --ci
