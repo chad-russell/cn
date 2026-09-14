@@ -218,8 +218,12 @@ Infrastructure changes go through Forgejo Actions (`.forgejo/workflows/`):
    Remote hosts go through the same `nix run .#deploy --` app as the
    manual path; the bees self-switch runs detached (`systemd-run`) since
    activating bees can restart the runner mid-job.
-4. **Watch / retry**: runs + full per-step logs at
-   https://git.crussell.io/chad/cn/actions. Failures ping the `cn-ci`
+4. **Watch / retry**: runs at
+   https://git.crussell.io/chad/cn/actions; job logs from any host with
+   gateway root SSH: `scripts/ci-log.sh [run]` (run = the number in the
+   Actions URL, or omit for latest; this Forgejo build predates the
+   Actions log API, so the script reads the zstd logs straight off the
+   gateway's actions_log storage). Failures ping the `cn-ci`
    ntfy topic (`ntfy.internal.crussell.io/cn-ci`). Retry = re-run the job
    from the Actions UI; `sudo nixos-rebuild --rollback` on a target (or
    the manual path below) always remains available.
