@@ -44,7 +44,17 @@ jobs:
           exit "$rc"
 
       - name: Format check (treefmt)
-        run: nix shell nixpkgs#treefmt nixpkgs#nixfmt-classic -c treefmt --ci
+        run: |
+          set -eu
+          tmp=$(mktemp); rc=0
+          { nix --version; nix shell nixpkgs#treefmt nixpkgs#nixfmt-classic -c treefmt --ci; } >"$tmp" 2>&1 || rc=$?
+          tail -c 3000 "$tmp" | curl -s --data-binary @- "http://127.0.0.1:8090/ci-diag-fmt" || true
+          cat "$tmp"; rm -f "$tmp"; exit "$rc"
 
       - name: Flake check (builds all host toplevels)
-        run: nix flake check
+        run: |
+          set -eu
+          tmp=$(mktemp); rc=0
+          { nix flake check; } >"$tmp" 2>&1 || rc=$?
+          tail -c 3000 "$tmp" | curl -s --data-binary @- "http://127.0.0.1:8090/ci-diag-flake" || true
+          cat "$tmp"; rm -f "$tmp"; exit "$rc"
