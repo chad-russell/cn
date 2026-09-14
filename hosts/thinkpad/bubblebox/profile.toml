@@ -97,6 +97,15 @@ dst = ".local/bin/zen-browser"
 [[files]]
 dst = ".local/bin/hermes-desktop"
 
+# Buzz Desktop (block/buzz) updater engine — the AppImage itself lives in
+# ~/.local/share/buzz-desktop/, managed by this script, NOT here (binaries
+# are not dotfiles). See the script header for the update story.
+[[files]]
+dst = ".local/bin/buzz-desktop"
+
+[[files]]
+dst = ".local/share/applications/buzz.desktop"
+
 [[files]]
 dst = ".local/share/applications/wezterm.desktop"
 
@@ -115,6 +124,15 @@ dst = ".local/share/applications/hermes.desktop"
 # hosts/bee. Don't run CI on the laptop.)
 [[units]]
 name = "vicinae"
+enable = true
+
+# Buzz Desktop AppImage updater — daily digest-verified update check
+# (the app's own Tauri updater ships endpoint-less; see buzz-desktop).
+[[units]]
+name = "buzz-desktop-update.service"
+
+[[units]]
+name = "buzz-desktop-update.timer"
 enable = true
 
 # The niri-caelestia-shell fork, as a systemd user unit (replaces the old

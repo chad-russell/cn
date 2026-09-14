@@ -1083,3 +1083,39 @@ llama action="start" model="Qwen3.8-27B-UD-Q6_K_XL":
     echo "ERROR: :8888 not answering after 120s — check with:" >&2
     echo "  ssh $BEES 'journalctl -u llama-server@${model} -n 50'" >&2
     exit 1
+
+# ═══════════════════════════════════════════════════════════════════════════
+# BUZZ DESKTOP (block/buzz AppImage; buzz-revival step 2)
+#
+# The AppImage + data live at ~/.local/share/buzz-desktop/, managed by the
+# bubblebox-deployed updater script (~/.local/bin/buzz-desktop). The app's
+# own Tauri updater ships endpoint-less (updater.endpoints = []), so OUR
+# daily timer owns updates: GitHub releases API, sha256-digest-verified,
+# atomic swap, one-generation rollback (.prev).
+# After editing anything under bubblebox/: `cjust bubblebox-apply`.
+# ═══════════════════════════════════════════════════════════════════════════
+
+[group('buzz')]
+buzz-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -x "$HOME/.local/bin/buzz-desktop" ]; then
+      echo "==> updater script not applied yet — run cjust bubblebox-apply first" >&2
+      exit 1
+    fi
+    "$HOME/.local/bin/buzz-desktop"
+    echo "==> launch from the app grid (Buzz), or: ~/.local/share/buzz-desktop/Buzz.AppImage"
+    echo "==> daily update timer:"; systemctl --user list-timers --all 'buzz-desktop-update.timer' --no-pager || true
+
+# Manual update check (same engine the timer runs)
+[group('buzz')]
+buzz-update: buzz-install
+
+[group('buzz')]
+buzz-status:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    v="$(cat "$HOME/.local/share/buzz-desktop/version" 2>/dev/null || true)"
+    echo "installed: ${v:-<none>}"
+    ls -lh "$HOME/.local/share/buzz-desktop/" 2>/dev/null || true
+    systemctl --user list-timers --all 'buzz-desktop-update.timer' --no-pager || true

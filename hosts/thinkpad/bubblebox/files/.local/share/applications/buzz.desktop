@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Buzz
+Comment=Buzz desktop (block/buzz) — household relay at buzz.internal.crussell.io
+Exec=/home/crussell/.local/share/buzz-desktop/Buzz.AppImage
+Icon=/home/crussell/.local/share/buzz-desktop/icon.png
+Terminal=false
+Categories=Network;InstantMessaging;
+# buzz:// deep links (Tauri deep-link scheme) — for future relay pairing
+MimeType=x-scheme-handler/buzz;
+StartupWMClass=Buzz

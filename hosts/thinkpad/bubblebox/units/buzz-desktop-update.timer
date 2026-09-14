@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily Buzz Desktop update check
+
+[Timer]
+OnCalendar=daily
+# Fire even if the laptop was asleep/offline at the scheduled time
+Persistent=true
+RandomizedDelaySec=30m
+Unit=buzz-desktop-update.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# buzz-desktop — install/update Buzz Desktop (github.com/block/buzz, Tauri
+# AppImage) on think.
+#
+# UPDATE STORY (2026-09-13, research): block/buzz ships Tauri updater
+# artifacts per release (updater-manifest.json + minisign .sigs) BUT
+# desktop/src-tauri/tauri.conf.json has plugins.updater.endpoints = [] —
+# the in-app updater has no endpoint to poll, so OSS builds do NOT
+# self-update. This script owns updates instead:
+#   - GitHub releases API (latest desktop-* tag) → asset URL + sha256
+#     digest (served by the API itself — stronger than trusting the CDN)
+#   - version-gated no-op when current; digest-verified download; atomic
+#     swap; one-generation rollback (Buzz.AppImage.prev)
+# Runs daily via the buzz-desktop-update.timer user unit (bubblebox
+# [[units]]), or on demand: `cjust buzz-update`.
+#
+# The AppImage + data live OUTSIDE bubblebox's content-addressed store on
+# purpose — 180MB binaries are not dotfiles. This script IS bubblebox-
+# managed ([[files]] .local/bin/buzz-desktop), so updates to the updater
+# ship declaratively.
+#
+# FUSE note: AppImages need libfuse2 — present on Bluefin. If launch ever
+# fails with a FUSE error, append --appimage-extract-and-run to Exec= in
+# bubblebox/files/.local/share/applications/buzz.desktop and re-apply.
+set -euo pipefail
+
+REPO="block/buzz"
+DATA="$HOME/.local/share/buzz-desktop"
+APP="$DATA/Buzz.AppImage"
+VERSION_FILE="$DATA/version"
+API="https://api.github.com/repos/$REPO/releases/latest"
+
+need() { command -v "$1" >/dev/null 2>&1 || { echo "missing dependency: $1" >&2; exit 1; }; }
+need curl; need node; need sha256sum; need find
+
+echo "==> querying $API for the latest desktop release"
+META=$(curl -fsSL "$API" | node -e '
+  const fs = require("fs");
+  const r = JSON.parse(fs.readFileSync(0, "utf8"));
+  if (!/^desktop-/.test(r.tag_name ?? "")) {
+    console.error(`latest release is not a desktop tag: ${r.tag_name}`); process.exit(1);
+  }
+  const a = (r.assets ?? []).find((x) => /^Buzz_.*_amd64\.AppImage$/.test(x.name));
+  if (!a) { console.error("no amd64 AppImage asset in release"); process.exit(1); }
+  console.log(`${r.tag_name}\t${a.browser_download_url}\t${(a.digest ?? "").replace("sha256:", "")}`);
+') || exit 1
+TAG=$(cut -f1 <<<"$META"); URL=$(cut -f2 <<<"$META"); DIGEST=$(cut -f3 <<<"$META")
+
+if [ "$(cat "$VERSION_FILE" 2>/dev/null || true)" = "$TAG" ] && [ -x "$APP" ]; then
+  echo "==> $TAG already installed — up to date"
+  exit 0
+fi
+
+echo "==> downloading $TAG ($(basename "$URL"))"
+mkdir -p "$DATA"
+TMP="$DATA/.download.AppImage"
+curl -fL -o "$TMP" "$URL"
+
+echo "==> verifying sha256 against the GitHub API digest"
+ACTUAL=$(sha256sum "$TMP" | cut -d" " -f1)
+if [ -n "$DIGEST" ] && [ "$ACTUAL" != "$DIGEST" ]; then
+  echo "digest mismatch (expected $DIGEST, got $ACTUAL) — keeping current version" >&2
+  rm -f "$TMP"; exit 1
+fi
+chmod +x "$TMP"
+
+echo "==> swapping in atomically (previous kept at Buzz.AppImage.prev)"
+[ -f "$APP" ] && mv "$APP" "$APP.prev"
+mv "$TMP" "$APP"
+echo "$TAG" >"$VERSION_FILE"
+
+echo "==> refreshing icon (best-effort)"
+rm -rf "$DATA/.icons"; mkdir -p "$DATA/.icons"
+if (cd "$DATA/.icons" && "$APP" --appimage-extract 'usr/share/icons/*.png' >/dev/null 2>&1); then
+  ICO=$(find "$DATA/.icons" -name '*.png' -printf '%s %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
+  [ -n "$ICO" ] && cp "$ICO" "$DATA/icon.png"
+fi
+rm -rf "$DATA/.icons"
+command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$HOME/.local/share/applications" || true
+
+echo "==> done: $TAG at $APP"

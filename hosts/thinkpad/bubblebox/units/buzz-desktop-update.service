@@ -1,0 +1,8 @@
+[Unit]
+Description=Buzz Desktop AppImage update check (github: block/buzz)
+# See bubblebox/files/.local/bin/buzz-desktop for the update story — the
+# app's in-app Tauri updater is endpoint-less, so this timer owns updates.
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/buzz-desktop
