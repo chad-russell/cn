@@ -53,6 +53,9 @@ in {
     ./glen-buzz.nix
     # Server-side buzz agents (glen/gloo lanes) on the relay
     ./buzz-acp.nix
+    # Static artifact host (artifacts.internal.crussell.io) — dsh skills
+    # `artifacts` + `design` publish into ~/artifacts; this serves them
+    ./artifacts.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
       # https://dsh.internal.crussell.io via bees Caddy (route in

@@ -1,8 +1,10 @@
-# Static artifact host (bee — Glen's throwaway HTML pages/demos).
-# python -m http.server user unit binds bee's Nebula IP 10.10.0.12:8910,
-# serving ~/crussell/artifacts (one self-contained file per artifact).
-# Publish flow: `publish-artifact <file> [slug]` on bee, then share
-# https://artifacts.internal.crussell.io/<slug>.
+# Static artifact host (bee — glen/gloo HTML pages, diagrams, mockups).
+# artifacts-server.service (hosts/bee/artifacts.nix) binds bee's Nebula IP
+# 10.10.0.12:8910, serving ~/artifacts: files, folders, generated catalog
+# (index.html + manifest.json), /assets vendored fonts+mermaid, and a small
+# JSON API (POST /-/delete, /-/reindex) for the catalog page.
+# Publish flow: dsh `artifacts` skill / `publish-artifact <file-or-dir>
+# [slug]` on bee, then share https://artifacts.internal.crussell.io/<slug>.
 
 @artifacts host artifacts.internal.crussell.io
 handle @artifacts {
