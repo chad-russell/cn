@@ -29,6 +29,8 @@ jobs:
       - name: Checkout
         run: |
           set -eu
+          exec > >(tee /tmp/ci-diag-last.txt) 2>&1
+          echo "diag: actor=${GITHUB_ACTOR:-UNSET} token_len=${#GITHUB_TOKEN} ref=$GITHUB_REF"
           git init -q .
           git remote add origin "https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@git.crussell.io/chad/cn.git"
           git fetch --depth 1 origin "+${GITHUB_REF}:"
