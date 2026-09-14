@@ -37,7 +37,7 @@ jobs:
         run: |
           set -eu
           git init -q .
-          git remote add origin ssh://git@git.crussell.io:2222/chad/cn.git
+          git remote add origin "https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@git.crussell.io/chad/cn.git"
           git fetch --depth 1 origin "+${GITHUB_REF}:"
           git checkout --detach FETCH_HEAD
 

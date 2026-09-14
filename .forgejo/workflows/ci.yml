@@ -7,12 +7,12 @@
 #      is a real build gate, not just eval. bees's persistent /nix/store
 #      makes it incremental.
 #
-# Checkout is plain git over SSH (jobs run as crussell on bees, whose
-# key + known_hosts already pull origin for manual deploys). On
-# pull_request, GITHUB_REF is the merge ref — we test exactly what
-# merging would produce. Replaces the 2026-09-09 hostname-eval smoke
-# workflow. (.forgejo/ is invisible to the GitHub mirror — only the
-# Forgejo instance runs these.)
+# Checkout is plain git over HTTPS with the job's GITHUB_TOKEN (works
+# for any runner identity; repo is private). On pull_request,
+# GITHUB_REF is the merge ref — we test exactly what merging would
+# produce. Replaces the 2026-09-09 hostname-eval smoke workflow.
+# (.forgejo/ is invisible to the GitHub mirror — only the Forgejo
+# instance runs these.)
 name: ci
 
 on:
@@ -30,7 +30,7 @@ jobs:
         run: |
           set -eu
           git init -q .
-          git remote add origin ssh://git@git.crussell.io:2222/chad/cn.git
+          git remote add origin "https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@git.crussell.io/chad/cn.git"
           git fetch --depth 1 origin "+${GITHUB_REF}:"
           git checkout --detach FETCH_HEAD
 
