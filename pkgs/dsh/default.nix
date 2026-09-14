@@ -57,6 +57,26 @@ buildNpmPackage rec {
   postInstall = ''
     # bin already points at lib/bin.js; ensure executable
     chmod +x $out/lib/node_modules/${packageName}/lib/bin.js
+
+    # ── household patch: settings UI on the proxied authority ──────
+    # Upstream gates settings/credential editing to loopback page
+    # hostnames: the browser classifies $host.isLoopback from the page
+    # URL, and SettingsScopeController treats non-loopback pages as
+    # "memory" persistence — the Models page then shows "settings are
+    # unavailable in this browser" and refuses all writes (the server
+    # itself accepts the writes; the gate is client-side only). Our
+    # browser path is https://dsh.internal.crussell.io — Nebula-only
+    # DNS, Caddy TLS, the /api browser-trust fence (--trusted-host),
+    # and cookie auth — already a declared trust boundary, so extend
+    # the classification to that hostname. REVISIT ON DSH BUMPS:
+    # upstream 1.4.0 may grow a first-class knob; the target line is
+    # dsh-client-connection/lib/client.js ("isLoopback: ..."). Runs in
+    # postInstall (NOT postPatch) because the tarball ships no
+    # node_modules — npm materializes it during install.
+    sed -i 's#isLoopbackHostname(pageLocation.hostname),#isLoopbackHostname(pageLocation.hostname) || pageLocation.hostname == "dsh.internal.crussell.io",#' \
+      "$out/lib/node_modules/${packageName}/node_modules/@deepseek-ai/dsh-client-connection/lib/client.js"
+    grep -q 'dsh.internal.crussell.io' "$out/lib/node_modules/${packageName}/node_modules/@deepseek-ai/dsh-client-connection/lib/client.js" \
+      || { echo 'dsh patch target not found in dsh-client-connection' >&2; exit 1; }
   '';
 
   # `dsh web` requires Node's --expose-internals flag (the Cordis HMR
