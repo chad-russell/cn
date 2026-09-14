@@ -1,10 +1,11 @@
 # ── buzz-acp: server-side Buzz agents (glen + gloo lanes) ──────────────
 #
-# Each persona runs a buzz-acp harness (github.com/block/buzz, ACP sidecar
-# extracted from the desktop AppImage — see /var/lib/dsh/buzz-acp/) that
-# holds the persona's nostr nsec, subscribes to @-mentions on every relay
-# channel at wss://buzz.internal.crussell.io, and spawns
-# `dsh --profile acp-<lane>` as its ACP agent:
+# Each persona runs a buzz-acp harness (github.com/block/buzz, built
+# from source by pkgs/buzz — pinned to the current desktop release tag,
+# see that file's header for the bump procedure) that holds the persona's
+# nostr nsec, subscribes to @-mentions on every relay channel at
+# wss://buzz.internal.crussell.io, and spawns `dsh --profile acp-<lane>`
+# as its ACP agent:
 #
 #   buzz-acp-glen.service → profiles/acp-glen (zai-coding/glm-5.3 — personal)
 #   buzz-acp-gloo.service → profiles/acp-gloo (gloo/sonnet-4.6 — employer, WORK)
@@ -27,7 +28,7 @@
 # Launchers (run-<lane>.sh, tracked in the /var/lib/dsh git repo) map
 # agenix env to the harness env; no secret ever appears on a command line.
 
-{ config, lib, ... }:
+{ config, lib, buzz, ... }:
 
 let
   buzzAcp = lane: {
@@ -56,6 +57,11 @@ let
     environment.PATH = lib.mkForce "/run/current-system/sw/bin";
   };
 in {
+  # buzz-acp + buzz land on the system PATH: the /var/lib/dsh launchers
+  # exec `buzz-acp` by name (version comes from this nix pin, not from
+  # anything in DSH_HOME), and `buzz` is the operator CLI for relay ops.
+  environment.systemPackages = [ buzz ];
+
   systemd.services.buzz-acp-glen = buzzAcp "glen";
   systemd.services.buzz-acp-gloo = buzzAcp "gloo";
 }
