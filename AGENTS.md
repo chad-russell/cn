@@ -23,6 +23,7 @@ Last validated via SSH: **2026-09-09**.
 ├── flake.lock
 ├── treefmt.toml               # nixfmt-classic formatter config (run: treefmt)
 ├── AGENTS.md                  # This guide
+├── .forgejo/workflows/        # Forgejo Actions: ci.yml (PR checks), deploy.yml (merge → auto-deploy)
 ├── hosts/
 │   ├── bee/                   # Beelink mini PC: dev server + Nebula lighthouse
 │   │   ├── configuration.nix
@@ -199,6 +200,36 @@ SSH port 2222, user `git`). GitHub is a push mirror only — pushes go to
 Forgejo (over Nebula, no rate limits) and mirror out automatically.
 
 Available NixOS hosts (deploy targets): `bee`, `bees`, `nas`, `gateway`.
+
+## Normal path — PR → checks → auto-deploy
+
+Infrastructure changes go through Forgejo Actions (`.forgejo/workflows/`):
+
+1. **Branch + PR.** Push a branch, open a PR against `main`
+   (`tea pr create --repo chad/cn --base main --head <branch> ...`).
+2. **PR checks** (`ci.yml`, bees runner, `nix-host` label): `treefmt --ci`
+   then `nix flake check` — the flake's checks BUILD every host toplevel,
+   so this is a real build gate, incremental on bees's persistent store.
+   Branch protection on `main` requires the check before merging.
+3. **Merge → deploy** (`deploy.yml`): for each host, eval the new
+   toplevel and compare against `readlink /run/current-system` on the
+   target; deploy only where they differ (a `modules/` change fans out to
+   every host it touches; a `hosts/bee/`-only change deploys just bee).
+   Remote hosts go through the same `nix run .#deploy --` app as the
+   manual path; the bees self-switch runs detached (`systemd-run`) since
+   activating bees can restart the runner mid-job.
+4. **Watch / retry**: runs + full per-step logs at
+   https://git.crussell.io/chad/cn/actions. Failures ping the `cn-ci`
+   ntfy topic (`ntfy.internal.crussell.io/cn-ci`). Retry = re-run the job
+   from the Actions UI; `sudo nixos-rebuild --rollback` on a target (or
+   the manual path below) always remains available.
+
+Job shells execute as `crussell` on bees (host-exec runner, per-host
+override in `hosts/bees/forgejo-runner.nix`). Single-user forge with
+registration disabled — only chad/glen can trigger runs — but treat PR
+job definitions with the same care as shell access to bees.
+
+## Manual deploy (fallback)
 
 Standard deploy — use the helper script from bee (or bees):
 
