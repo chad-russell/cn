@@ -36,10 +36,7 @@
 # vendors straight from the source's own ./Cargo.lock as a single
 # fixed-output (git deps via nix-prefetch-git). To bump: update rev +
 # version, set cargoHash = "", build, paste the reported sha256.
-{
-  pkgs,
-  lib,
-}:
+{ pkgs, lib, }:
 pkgs.rustPlatform.buildRustPackage {
   pname = "buzz-server";
   version = "0.5.23";
@@ -52,15 +49,10 @@ pkgs.rustPlatform.buildRustPackage {
     hash = "sha256-Mw8NXYLbLy9idH+doY287Mm3WuEXvAeO1B3H162rE70=";
   };
 
-  cargoHash = "";
+  cargoHash = "sha256-MFCN0LRVbqaRmCK5VgWgF58luvuJNTlpHwV+ULqXx2U=";
 
   # Build only what the server runs (see header for what this skips).
-  cargoBuildFlags = [
-    "-p"
-    "buzz-acp"
-    "-p"
-    "buzz-cli"
-  ];
+  cargoBuildFlags = [ "-p" "buzz-acp" "-p" "buzz-cli" ];
 
   nativeBuildInputs = [ ];
   buildInputs = [ ];
