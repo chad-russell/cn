@@ -2,11 +2,25 @@
 # the glen household chat substrate (agents + humans, NIP-29).
 # WebSocket-native: reverse_proxy handles the upgrade; generous timeouts for
 # long-lived connections.
+#
+# /pair: NIP-AB device pairing (mobile QR handshake). The desktop's "Start
+# pairing" probes NIP-11, sees nip-43, and dials wss://buzz.../pair (legacy
+# convention); route it to the standalone buzz-pair-relay sidecar (bee
+# :3213, stateless — added 2026-09-13; the main relay 404s that path).
 @buzz host buzz.internal.crussell.io
 handle @buzz {
-    reverse_proxy 10.10.0.12:3212 {
-        transport http {
-            read_timeout 360s
-        }
-    }
+	handle /pair* {
+		reverse_proxy 10.10.0.12:3213 {
+			transport http {
+				read_timeout 360s
+			}
+		}
+	}
+	handle {
+		reverse_proxy 10.10.0.12:3212 {
+			transport http {
+				read_timeout 360s
+			}
+		}
+	}
 }
