@@ -524,7 +524,7 @@ age -d -i ~/.ssh/id_ed25519 nebula/pki/bees.key.age > /tmp/bees.key
 
 Agenix and age are both used:
 
-- `secrets/*.age` — server secrets (aws-env, openrouter-api-key, restic passwords, S3 credentials, beszel-agent-env).
+- `secrets/*.age` — server secrets (aws-env, openrouter-api-key, restic passwords, S3 credentials, beszel-agent-env, forgejo-token).
 - `nebula/pki/*.key.age` — Nebula private keys encrypted to the SSH ed25519 public key.
 
 All secrets are encrypted to a single age public key (`crussell` in `secrets/secrets.nix`), so every host that consumes a secret must have the matching private identity at `/home/crussell/.config/age/key.txt` (set as `age.identityPaths` in `modules/base-server.nix`). `bees` and `bee` have always had it; **`nas` and `gateway` first needed a secret for the Beszel agent and so require the identity placed manually** (like Nebula certs) — copy it from `bees` after any `nixos-anywhere` reinstall:
