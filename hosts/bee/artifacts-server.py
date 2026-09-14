@@ -13,6 +13,7 @@ deletable. Replaces the hermes-era `python -m http.server` user unit
 (2026-09-07) now that the catalog needs delete/reindex.
 """
 import argparse
+import html
 import json
 import os
 import re
@@ -60,7 +61,7 @@ def scan() -> list:
                 head = open(path, "rb").read(65536).decode("utf-8", "ignore")
                 m = TITLE_RE.search(head)
                 if m:
-                    title = m.group(1).strip()[:120]
+                    title = html.unescape(m.group(1).strip())[:120]
             except OSError:
                 pass
         st = os.stat(path)
