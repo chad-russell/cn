@@ -18,7 +18,7 @@ let
   # $__ETC_ZSHRC_SOURCED check (bare prompt on every SSH login).
   secretsEnv = pkgs.writeShellScript "cn-secrets-env" ''
     _vars_missing() {
-      [ -z "''${ZHIPU_API_KEY:-}" ] || [ -z "''${OPENROUTER_API_KEY:-}" ] || [ -z "''${GLOO_API_KEY:-}" ]
+      [ -z "''${ZHIPU_API_KEY:-}" ] || [ -z "''${OPENROUTER_API_KEY:-}" ] || [ -z "''${GLOO_API_KEY:-}" ] || [ -z "''${FORGEJO_TOKEN:-}" ]
     }
     if _vars_missing; then
       _cache="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/cn-secrets.env"
@@ -31,7 +31,8 @@ let
         for _src in \
             "$HOME/Code/cn/secrets/zai-api-key.age" \
             "$HOME/Code/cn/secrets/openrouter-api-key.age" \
-            "$HOME/Code/cn/secrets/gloo-api-key.age"; do
+            "$HOME/Code/cn/secrets/gloo-api-key.age" \
+            "$HOME/Code/cn/secrets/forgejo-token.age"; do
           [ -f "$_src" ] || continue
           age -d -i "$HOME/.config/age/key.txt" "$_src" 2>/dev/null >>"$_cache".tmp || :
         done
@@ -171,10 +172,10 @@ in {
 
   users.users.crussell.shell = pkgs.zsh;
 
-  # Decrypt age secrets (ZHIPU/OPENROUTER/GLOO API keys) into every login
-  # shell, so interactive dsh/hermes/CLI sessions inherit them.
-  # Mirrors hosts/thinkpad/bubblebox/files/.zshenv — see the pattern docs
-  # there (tmpfs-cached, once per login, non-fatal when absent).
+  # Decrypt age secrets (ZHIPU/OPENROUTER/GLOO API keys + FORGEJO_TOKEN)
+  # into every login shell, so interactive dsh/hermes/CLI sessions inherit
+  # them. Mirrors hosts/thinkpad/bubblebox/files/.zshenv — see the pattern
+  # docs there (tmpfs-cached, once per login, non-fatal when absent).
   environment.etc."zshenv".text = ''
     if [ "$USER" = "crussell" ] && [ -z "''${__CN_SECRETS_ENV_LOADED:-}" ]; then
       export __CN_SECRETS_ENV_LOADED=1
@@ -192,6 +193,7 @@ in {
     bat
     fd
     ghostty.terminfo
+    tea # Gitea/Forgejo CLI (PRs, issues) — login "glen", FORGEJO_TOKEN
   ];
 
   # ── Zsh system config ────────────────────────────────────────────

@@ -63,6 +63,13 @@ in {
   # make both runners churn. Same generator on gateway.
   "forgejo-runner-token-bees.age".publicKeys = [ crussell ];
 
+  # ── Forgejo API token (tea, git.crussell.io) ───────────────────
+  # FORGEJO_TOKEN (single line) — scoped write:repository, write:issue,
+  # read:issue, write:user, read:user. Exported to login shells by the
+  # zshenv cache (modules/server-shell.nix) and to dsh-web via
+  # EnvironmentFile (modules/dsh.nix).
+  "forgejo-token.age".publicKeys = [ crussell ];
+
   # ── Hermes Agent gateway on bee (single brain: Glen, all lanes) ─
   # 2026-09-06 single-brain collapse: the gloo work profile/bot was
   # retired; the default gateway serves personal + work lanes with one

@@ -293,6 +293,8 @@ in {
     age.secrets.zai-api-key.file = ../secrets/zai-api-key.age;
     age.secrets.gloo-api-key.file = ../secrets/gloo-api-key.age;
     age.secrets.openrouter-api-key.file = ../secrets/openrouter-api-key.age;
+    # FORGEJO_TOKEN for glen's tool shells (tea / git.crussell.io API).
+    age.secrets.forgejo-token.file = ../secrets/forgejo-token.age;
 
     # ── State + seed ───────────────────────────────────────────────
     systemd.tmpfiles.rules = [ "d /var/lib/dsh 0700 crussell users -" ];
@@ -331,14 +333,16 @@ in {
             toString port
           } --no-open --trusted-host ${hostname} --trusted-host 10.10.0.12 --trusted-host 192.168.20.105";
         # ZHIPU_API_KEY (zai-coding route) + GLOO_API_KEY (gloo route) +
-        # OPENROUTER_API_KEY (openrouter route), resolved per request via
-        # the settings.yaml apiKeyEnv references. Same .age sources as the
-        # zshenv login-shell pattern (modules/server-shell.nix).
+        # OPENROUTER_API_KEY (openrouter route) + FORGEJO_TOKEN (tea),
+        # resolved per request via the settings.yaml apiKeyEnv references.
+        # Same .age sources as the zshenv login-shell pattern
+        # (modules/server-shell.nix).
         EnvironmentFile = [
           config.age.secrets.zai-api-key.path
           config.age.secrets.gloo-api-key.path
           config.age.secrets.openrouter-api-key.path
           config.age.secrets.glen-buzz-nsecs.path
+          config.age.secrets.forgejo-token.path
         ];
         Restart = "on-failure";
         RestartSec = "5";
@@ -380,7 +384,8 @@ in {
         # (--trusted-host) + token; LAN/WiFi members are trusted by policy.
         # Both non-loopback interfaces explicitly (0.0.0.0 would collide
         # with dsh-web's own 127.0.0.1 bind on the same port).
-        ListenStream = [ "${nebulaIp}:${toString port}" "192.168.20.105:${toString port}" ];
+        ListenStream =
+          [ "${nebulaIp}:${toString port}" "192.168.20.105:${toString port}" ];
         BindIPv6Only = "both";
         FreeBind = true;
       };
