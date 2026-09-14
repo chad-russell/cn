@@ -75,8 +75,13 @@ ssh -o IdentitiesOnly=yes -o ConnectTimeout=10 "$BEES_SSH" "bash -s -- '$LOG' '$
 LOG="$1"
 HOSTS_STR="$2"
 cd ~/Code/cn
+# Always fetch first. The old one-liner bound as `(rev-parse || fetch) &&
+# rev-parse`, so with an existing-but-STALE origin/main ref the fetch arm
+# never ran and a checkout sitting exactly at the stale ref skipped the
+# pull entirely — deploying yesterday's tree.
+git fetch --quiet origin
 LOCAL=$(git rev-parse HEAD)
-REMOTE_REV=$(git rev-parse origin/main 2>/dev/null || git fetch --quiet origin && git rev-parse origin/main)
+REMOTE_REV=$(git rev-parse origin/main)
 if [[ "$LOCAL" != "$REMOTE_REV" ]]; then
     git pull --ff-only origin main
 fi
