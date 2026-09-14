@@ -156,12 +156,12 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
+    global ROOT
     ap = argparse.ArgumentParser()
     ap.add_argument("--bind", default="10.10.0.12")
     ap.add_argument("--port", type=int, default=8910)
     ap.add_argument("--root", default=ROOT)
     args = ap.parse_args()
-    global ROOT
     ROOT = os.path.realpath(args.root)
     os.chdir(ROOT)
     os.makedirs(os.path.join(ROOT, ".meta"), exist_ok=True)

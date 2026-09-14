@@ -15,7 +15,15 @@
 # `artifacts` documents the publishing workflow.
 { config, pkgs, ... }:
 let
-  serverPy = pkgs.writeText "artifacts-server.py" (builtins.readFile ./artifacts-server.py);
+  # Copy into the store AND gate on byte-compilation — a SyntaxError in the
+  # python must fail the *build*, not the running unit (that bit us once:
+  # 2026-09-14, `global` after use shipped through a clean nix eval).
+  serverPy = pkgs.runCommand "artifacts-server.py" {
+    nativeBuildInputs = [ pkgs.python3 ];
+  } ''
+    install -Dm644 ${./artifacts-server.py} $out
+    python3 -m py_compile $out
+  '';
 in
 {
   systemd.services.artifacts-server = {
