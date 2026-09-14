@@ -1,12 +1,12 @@
-# ── glen channel plugins (buzz identities) ────────────────────────────
-# The @glen/channel-buzz plugin (source of truth: the deployed copy at
-# /var/lib/dsh/profiles/glen/node_modules/@glen/channel-buzz, edited in
-# place — the ~/glen staging repo was retired 2026-09-13) bridges the
-# self-hosted nostr relay (buzz.internal.crussell.io) into dsh sessions.
-# This module only provides the secrets (agenix, never in patch files).
+# ── glen buzz persona identities (agenix) ─────────────────────────────
+# Per-persona nostr identities for the buzz relay (buzz.internal.crussell.io).
+# Consumed by the server-side buzz-acp harnesses (hosts/bee/buzz-acp.nix)
+# via the unit EnvironmentFile — the persona nsec signs the agent's relay
+# traffic; the custom @glen/channel-buzz dsh plugin that used these before
+# was removed 2026-09-14 in favor of that architecture.
 {
   # per-persona nostr identities (glen/gloo) — env-file format
-  # GLEN_BUZZ_NSEC_<PERSONA>=<hex>, consumed by @glen/channel-buzz
+  # GLEN_BUZZ_NSEC_<PERSONA>=<hex>
   age.secrets.glen-buzz-nsecs = {
     file = ../../secrets/glen-buzz-nsecs.age;
     mode = "0440";

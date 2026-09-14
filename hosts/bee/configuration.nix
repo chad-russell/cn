@@ -49,8 +49,10 @@ in {
     ../../modules/dsh.nix
     # Buzz relay (nostr NIP-29): household chat substrate
     ./buzz.nix
-    # glen channel plugins — buzz persona identities (agenix)
+    # glen buzz persona identities (agenix)
     ./glen-buzz.nix
+    # Server-side buzz agents (glen/gloo lanes) on the relay
+    ./buzz-acp.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
       # https://dsh.internal.crussell.io via bees Caddy (route in
