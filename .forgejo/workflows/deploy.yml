@@ -93,8 +93,11 @@ jobs:
           #   sudo nixos-rebuild switch --flake .#bees)
           nix build .#nixosConfigurations.bees.config.system.build.toplevel \
             --out-link /tmp/cn-ci-bees-toplevel
-          sudo systemd-run --wait --collect --unit=cn-ci-switch-bees \
-            /tmp/cn-bees-toplevel/bin/switch-to-configuration switch
+          # /run/wrappers/bin/sudo is the setuid wrapper — the nix-store
+          # sudo in the runner job's PATH lacks the setuid bit (fix for the
+          # 2026-09-16 "sudo must be owned by uid 0" job failure).
+          /run/wrappers/bin/sudo systemd-run --wait --collect --unit=cn-ci-switch-bees \
+            /tmp/cn-ci-bees-toplevel/bin/switch-to-configuration switch
           rm -f /tmp/cn-ci-bees-toplevel
 
       - name: Verify switched hosts
