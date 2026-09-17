@@ -11,6 +11,11 @@
 #
 # zot retention (zot-config.json): keeps the rolling :44 forever and the last
 # 3 immutable 44-* tags; everything else is GC'd (blobs reclaimed hourly-ish).
+# TAG PATTERNS ARE UNANCHORED GO REGEX (retention/matcher.go), NOT globs: the
+# original ["44"]/["44-*"] kept EVERYTHING — "44" substring-matches every
+# "44-…" tag, first-match-wins bound them all to the rule-less policy
+# (observed 2026-09-17: 39 tags accumulating, 31G, every log line
+# "retained by patterns policy"). Always anchor: "^44$" / "^44-".
 
 { config, lib, pkgs, ... }:
 
