@@ -214,7 +214,10 @@
               fi
 
               HOSTS="$@"
-              THIS_HOST="$(hostname)"
+              # /bin/hostname may be missing in minimal PATHs (Forgejo runner
+              # jobs hit this 2026-09-16: deploy exit 127, whole job failed).
+              # Prefer coreutils hostname via PATH, fall back to /proc.
+              THIS_HOST="$(hostname 2>/dev/null || cat /proc/sys/kernel/hostname)"
 
               for host in $HOSTS; do
                 case "$host" in
