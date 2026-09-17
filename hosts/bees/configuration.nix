@@ -5,7 +5,7 @@
 # 2 TB NVMe (Crucial P310), dual Intel E610 10GbE
 # Active NIC: enp196s0f1 (second port; enp196s0f0 is unplugged)
 
-{ config, lib, pkgs, unstable, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   imports = [
@@ -34,6 +34,22 @@
     # (allowlisted in backup.nix) — gateway stays S3-secret-free.
     ./forgejo-backup-pull.nix
     ../../modules/wol-enable.nix
+    # ── NFS mounts from NAS (shared option policy in lib/nfs-mount.nix) ──
+    # Media library (Jellyfin/*arr stack) — see hosts/bees/media-services.nix
+    (import ../../lib/nfs-mount.nix {
+      device = "192.168.20.31:/pool/media";
+      mountPoint = "/mnt/media";
+    })
+    # Immich photo library
+    (import ../../lib/nfs-mount.nix {
+      device = "192.168.20.31:/pool/photos";
+      mountPoint = "/mnt/photos";
+    })
+    # Restic backup target (see modules/restic-backup.nix)
+    (import ../../lib/nfs-mount.nix {
+      device = "192.168.20.31:/pool/backups";
+      mountPoint = "/mnt/backups";
+    })
   ];
 
   networking.hostName = "bees";
@@ -43,9 +59,6 @@
     enable = true;
     interfaces = [ "enp196s0f0" "enp196s0f1" ];
   };
-
-  # ── Essential packages ────────────────────────────────────────────────
-  environment.systemPackages = with pkgs; [ ];
 
   # ── Boot ─────────────────────────────────────────────────────────
   boot.loader.systemd-boot.enable = true;
@@ -94,51 +107,6 @@
     address = [ "192.168.20.41/24" ];
     routes = [{ Gateway = "192.168.20.1"; }];
     dns = [ "8.8.8.8" "1.1.1.1" ];
-  };
-
-  # ── NFS: Media from NAS ─────────────────────────────────────────
-  fileSystems."/mnt/media" = {
-    device = "192.168.20.31:/pool/media";
-    fsType = "nfs";
-    options = [
-      "x-systemd.automount"
-      "noauto"
-      "timeo=14"
-      "nfsvers=4"
-      "rw"
-      "soft"
-      "intr"
-    ];
-  };
-
-  # ── NFS: Photos from NAS ────────────────────────────────────────
-  fileSystems."/mnt/photos" = {
-    device = "192.168.20.31:/pool/photos";
-    fsType = "nfs";
-    options = [
-      "x-systemd.automount"
-      "noauto"
-      "timeo=14"
-      "nfsvers=4"
-      "rw"
-      "soft"
-      "intr"
-    ];
-  };
-
-  # ── NFS: Backups from NAS ───────────────────────────────────────
-  fileSystems."/mnt/backups" = {
-    device = "192.168.20.31:/pool/backups";
-    fsType = "nfs";
-    options = [
-      "x-systemd.automount"
-      "noauto"
-      "timeo=14"
-      "nfsvers=4"
-      "rw"
-      "soft"
-      "intr"
-    ];
   };
 
   # ── Nebula ──────────────────────────────────────────────────────

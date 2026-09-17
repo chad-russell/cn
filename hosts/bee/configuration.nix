@@ -80,6 +80,12 @@ in {
     ./backup.nix
     ./tailscale.nix
     ./wol-watch.nix
+    # ── NFS mount from NAS (shared option policy in lib/nfs-mount.nix) ──
+    # Restic backup target (see modules/restic-backup.nix)
+    (import ../../lib/nfs-mount.nix {
+      device = "192.168.20.31:/pool/backups";
+      mountPoint = "/mnt/backups";
+    })
   ];
 
   networking.hostName = "bee";
@@ -105,21 +111,6 @@ in {
     address = [ "192.168.20.105/24" ];
     routes = [{ Gateway = "192.168.20.1"; }];
     dns = [ "8.8.8.8" "1.1.1.1" ];
-  };
-
-  # ── NFS: Backups from NAS ───────────────────────────────────────
-  fileSystems."/mnt/backups" = {
-    device = "192.168.20.31:/pool/backups";
-    fsType = "nfs";
-    options = [
-      "x-systemd.automount"
-      "noauto"
-      "timeo=14"
-      "nfsvers=4"
-      "rw"
-      "soft"
-      "intr"
-    ];
   };
 
   # ── Nebula ──────────────────────────────────────────────────────
