@@ -15,10 +15,10 @@
           "deleteUntagged": true,
           "keepTags": [
             {
-              "patterns": ["44"]
+              "patterns": ["^44$"]
             },
             {
-              "patterns": ["44-*"],
+              "patterns": ["^44-"],
               "mostRecentlyPushedCount": 3
             }
           ]
