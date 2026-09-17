@@ -449,6 +449,51 @@ in {
       # Read once at process start — bounce all hermes units after changing.
       memory.memory_char_limit = 6000;
       memory.user_char_limit = 2000;
+      # Skill-library slimming (2026-09-16 hygiene audit, Chad-approved):
+      # 46 of 155 skills had ZERO uses and ZERO views since install. The
+      # `skills.disabled` list HIDES them from the system-prompt catalog
+      # (prompt_builder.hides() — first-class config, live-effective, cached
+      # per disabled-set) without deleting the bundled copies — the gateway
+      # re-seeds bundled skills at every startup (run.py _sync_skills →
+      # sync_skills), so deletion alone never sticks. Local zero-use skills
+      # are rm'd by the hermes-prune-unused-skills activation script below
+      # (no re-seed path for locals). `hermes-agent` cannot be disabled
+      # (ESSENTIAL_SKILLS). To restore a skill: remove it from this list
+      # (bundled) or `hermes curator`-reinstall (local).
+      skills.disabled = [
+        # ── Tier 1a: bundled skills for accounts/stacks not in use ──
+        "airtable" # no Airtable account (hub bloat)
+        "notion" # no Notion account
+        "box" # no Box account
+        "maps" # OSM tooling unused; web tools cover geo
+        "himalaya" # email via skills/protocols not used
+        "email-inbox-triage" # inbox triage not used (has own inbox lane)
+        "teams-meeting-pipeline" # MS Teams — not used
+        "claude-code" # retired 2026-09-02 (delegation policy)
+        "baoyu-infographic" # infographic toolchain unused
+        "ascii-art" # pyfiglet/cowsay unused
+        "excalidraw" # JSON diagrams unused (hub-installed copy)
+        # ── Tier 1b: bundled doc/office skills unused by Chad's workflow ──
+        "docx" # rare Word needs; remove if a real ask lands
+        "pdf" # pdf needs → existing pdf workflows (rare)
+        "powerpoint" # pptx creation not used
+        "document-to-action-items"
+        "meeting-action-items"
+        "weekly-review-planning"
+        # ── Tier 1c: bundled research/monitor/dev-tool skills unused ──
+        "arxiv"
+        "competitor-news-monitor"
+        "product-price-monitor"
+        "codebase-inspection" # pygount LOC counting unused
+        "python-debugpy"
+        "node-inspect-debugger"
+        "spike" # throwaway-validation workflow unused
+        "songsee" # audio spectrograms unused
+        "songwriting-and-ai-music"
+        "huggingface-hub" # hf CLI not used on bee
+        "rss-feeds" # blogwatcher covers feed monitoring
+        "serving-llms-vllm" # strix-halo skill covers local serving
+      ];
       # Kanban worker concurrency guardrails (2026-09-08, Lane→kanban
       # migration). The gateway-embedded dispatcher reads these from
       # config.yaml on EVERY tick (kanban_db_dispatch.configured_max_in_progress
@@ -655,23 +700,18 @@ in {
       # use gh CLI's OAuth token (gh is authed as crussell).
       # Note: SQLite was considered but removed — sqlite3 via terminal is
       # more capable than an MCP wrapper, with no persistent subprocess.
-      # 2026-09-06 single-brain collapse: linear + vercel (work tooling,
-      # OAuth) are declared here again — one brain serves work too. First
-      # use needs `hermes mcp login linear|vercel` in a PTY (Chad).
+      # 2026-09-16: linear + vercel MCP servers REMOVED (hygiene audit).
+      # Zero mcp__linear/mcp__vercel tool calls in agent.log history and
+      # no OAuth tokens in auth.json (never completed `hermes mcp login`).
+      # Work tooling lives in the gloo lane/codex CLI per the 09-06
+      # single-brain doctrine; if Linear access is ever needed again,
+      # re-add here + `hermes mcp login linear` in a PTY.
       mcp_servers = {
         github = {
           command = "${pkgs.writeShellScript "mcp-github" ''
             export GITHUB_PERSONAL_ACCESS_TOKEN="$(gh auth token)"
             exec ${pkgs.nodejs_22}/bin/npx -y @modelcontextprotocol/server-github
           ''}";
-        };
-        linear = {
-          auth = "oauth";
-          url = "https://mcp.linear.app/mcp";
-        };
-        vercel = {
-          auth = "oauth";
-          url = "https://mcp.vercel.com";
         };
         # Monarch Money (read-only), 2026-09-10 — replaces the manual CSV
         # export path. Third-party stdio MCP (robcerda/monarch-mcp-server,
@@ -939,9 +979,18 @@ in {
           del config["custom_providers"]
           prunes.append("custom_providers (legacy list; superseded by providers dict)")
       mcp_servers = config.get("mcp_servers")
-      if isinstance(mcp_servers, dict) and "sqlite" in mcp_servers:
-          del mcp_servers["sqlite"]
-          prunes.append("mcp_servers.sqlite")
+      if isinstance(mcp_servers, dict):
+          if "sqlite" in mcp_servers:
+              del mcp_servers["sqlite"]
+              prunes.append("mcp_servers.sqlite")
+          # Retired 2026-09-16 (hygiene audit): linear + vercel MCP servers
+          # were declared 09-06 but NEVER used — zero mcp__linear/mcp__vercel
+          # tool calls in agent.log and no OAuth tokens in auth.json. Nix no
+          # longer declares them; deep-merge would keep them on disk forever.
+          for stale_mcp in ("linear", "vercel"):
+              if stale_mcp in mcp_servers:
+                  del mcp_servers[stale_mcp]
+                  prunes.append(f"mcp_servers.{stale_mcp} (never authenticated, zero calls)")
       web = config.get("web") or {}
       if isinstance(web, dict) and "extract_backend" in web:
           # Retired 2026-08-12: SearXNG cannot extract, and a stale
@@ -1000,6 +1049,80 @@ in {
       PY
       chown crussell:hermes /var/lib/hermes/.hermes/config.yaml
       chmod 0660 /var/lib/hermes/.hermes/config.yaml
+    '';
+
+  # ── Hermes unused-skill prune (2026-09-16 hygiene audit) ────────
+  # Chad-approved deletions that complement skills.disabled above:
+  #   - Tier 2: zero-use agent-created LOCAL skills (no re-seed path —
+  #     deleting locals is permanent until re-authored) — EXCEPT
+  #     work-repo-release-discipline (created same-day 2026-09-16, encodes
+  #     the client-repo PR doctrine; deleting it would lose the rule).
+  #   - Tier 3a: regenerable caches — skills/.hub/index-cache (40MB,
+  #     regenerates from taps on demand) and the stale usage-stats entries
+  #     for skills already gone from disk (keeps .usage.json honest).
+  # Idempotent: safe on every switch; reports what changed.
+  system.activationScripts."hermes-prune-unused-skills" =
+    lib.stringAfter [ "hermes-agent-setup" ] ''
+      ${pkgs.python3.withPackages (ps: [ ps.pyyaml ])}/bin/python3 - <<'PY'
+      import json, shutil
+      from pathlib import Path
+
+      home = Path("/var/lib/hermes/.hermes")
+      skills_dir = home / "skills"
+      actions = []
+
+      # ── Tier 2: delete zero-use local skills (dir + usage stats) ──
+      tier2 = [
+          "retirement-planning",        # superseded by retirement-readiness
+          "family-directory",           # family facts live in memory/FAMILY.md
+          "community-discovery",        # never used
+          "roku-tv-control",            # openhue + roku ECP cover TV control
+          "buildspace-impeccable-design",  # buildspace UI work dormant
+      ]
+      for name in tier2:
+          # locals can live in any category dir; find by name
+          matches = [d for d in skills_dir.glob(f"*/{name}") if d.is_dir()]
+          if matches:
+              for d in matches:
+                  shutil.rmtree(d)
+                  actions.append(f"deleted skill dir {d.relative_to(skills_dir)}")
+      # hermes-web-backends: zero-use, agent-created 2026-09-03; kept on disk
+      # so far only because no category scan caught it — same tier-2 class.
+      wb = skills_dir / "software-development/hermes-web-backends"
+      if wb.exists():
+          shutil.rmtree(wb)
+          actions.append("deleted skill dir software-development/hermes-web-backends")
+
+      # ── Tier 3a: purge stale usage stats (skill gone, stats remain) ──
+      usage_path = skills_dir / ".usage.json"
+      if usage_path.exists():
+          usage = json.loads(usage_path.read_text())
+          # names currently on disk (category/name)
+          on_disk = {d.name for cat in skills_dir.iterdir()
+                     if cat.is_dir() and not cat.name.startswith(".")
+                     for d in cat.iterdir() if d.is_dir()}
+          tier2_names = set(tier2) | {"hermes-web-backends"}
+          stale = [n for n, u in usage.items()
+                   if n not in on_disk and (
+                       n in tier2_names or          # just deleted
+                       u.get("use_count", 0) == 0 and u.get("view_count", 0) == 0
+                   )]
+          # also drop stats for never-used skills we just deleted
+          for n in stale:
+              del usage[n]
+              actions.append(f"dropped stale usage stats: {n}")
+          if stale:
+              usage_path.write_text(json.dumps(usage, indent=2))
+
+      # ── Tier 3a: hub index cache (regenerable, 40MB) ──
+      cache = skills_dir / ".hub" / "index-cache"
+      if cache.exists():
+          shutil.rmtree(cache)
+          actions.append("cleared skills/.hub/index-cache (regenerable)")
+
+      if actions:
+          print("hermes-prune-unused-skills: " + "; ".join(actions))
+      PY
     '';
 
   # ── Hermes config drift alarm ────────────────────────────────────
