@@ -1,6 +1,6 @@
 # ── Date Night Restaurant Picker ─────────────────────────────────
 
-{ config, lib, pkgs, ... }:
+{ pkgs, ... }:
 
 let
   pythonEnv = pkgs.python3.withPackages (ps: [ ps.flask ]);

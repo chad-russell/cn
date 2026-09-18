@@ -3,7 +3,7 @@
 # Backs up the Gloo dev stack data and the Hermes Agent state
 # (sessions, mem0/qdrant vectors, MEMORY.md, skills, cron).
 
-{ config, lib, pkgs, ... }:
+{ ... }:
 
 {
   imports =

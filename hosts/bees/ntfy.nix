@@ -1,6 +1,6 @@
 # ── Ntfy Push Notifications ──────────────────────────────────────
 
-{ config, lib, pkgs, ... }:
+{ ... }:
 
 {
   services.ntfy-sh = {

@@ -156,14 +156,14 @@ in {
 
     # ── Restic backup jobs ────────────────────────────────────────
     services.restic.backups = let
-      nasRetension = [ "--keep-daily 30" ];
+      nasRetention = [ "--keep-daily 30" ];
       s3Retention = [ "--keep-daily 30" "--keep-monthly 12" ];
     in (makeBackupJob {
       name = "nas";
       repo = "${cfg.nasMountPoint}/${hostname}";
       passwordFile = config.age.secrets.restic-password.path;
       environmentFile = null;
-      retention = nasRetension;
+      retention = nasRetention;
     }) // (makeBackupJob {
       name = "s3";
       repo =
