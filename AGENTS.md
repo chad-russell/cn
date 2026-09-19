@@ -30,9 +30,8 @@ Last validated via SSH: **2026-09-09**.
 │   │   ├── disk-config.nix
 │   │   ├── backup.nix         # Restic backup to S3
 │   │   ├── tailscale.nix      # On-demand Tailscale (not default-on)
-│   │   ├── buzz-relay.nix     # Self-hosted Buzz relay pod (6 containers)
-│   │   ├── buzz-relay.pod     # Podman pod definition
-│   │   ├── buzz-*.container   # Relay containers (relay, postgres, redis, minio, pair-relay)
+│   │   ├── filebrowser.nix    # filebrowser rootless quadlet (10.10.0.12:8093)
+│   │   │   └── filebrowser/   # the .container quadlet input
 │   │   └── dev-quadlets.nix   # Dev environment stacks + README
 │   │       └── dev-quadlets/  # gpl, polymer, buildspace (container + volume + network per project)
 │   ├── bees/                  # Production server: all shared + media + ingress services
@@ -95,8 +94,7 @@ Last validated via SSH: **2026-09-09**.
 │   ├── configs/               # Nebula config templates
 │   ├── pki/                   # Nebula CA/certs and age-encrypted private keys
 │   └── scripts/               # Nebula helper binaries/scripts
-├── pkgs/
-│   └── buzz/                  # Buzz CLI (Rust, built against pinned toolchain)
+├── pkgs/                   # dsh (npm dist); buzz pkg removed 2026-09-19 (D-014)
 ├── secrets/                   # Agenix secrets used by server modules
 └── treefmt.toml               # nixfmt-classic formatter config
 ```
@@ -153,7 +151,7 @@ Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 26.05 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
-| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 26.05 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), self-hosted Buzz relay, Hermes Agent gateway, dsh web UI, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
+| `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 26.05 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), Hermes Agent gateway (retiring), dsh web UI, filebrowser quadlet, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
 | `think`          | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Resolves Nebula overlay names via baked `/usr/etc/hosts` (Containerfile step 3.7). Not a NixOS deploy target. |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 26.05 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
@@ -424,7 +422,7 @@ Source files:
 - `hosts/bee/disk-config.nix`
 - `hosts/bee/backup.nix` — Restic backup to S3
 - `hosts/bee/tailscale.nix` — on-demand Tailscale (not enabled at boot)
-- `hosts/bee/buzz-relay.nix` + `buzz-relay.pod` + `buzz-*.container` — self-hosted Buzz relay
+- `hosts/bee/filebrowser.nix` + `filebrowser/` — filebrowser rootless quadlet (10.10.0.12:8093; buzz stack files removed 2026-09-19, D-014)
 - `hosts/bee/dev-quadlets.nix` + `dev-quadlets/` — dev environment stacks
 
 Running services:
@@ -433,11 +431,10 @@ Running services:
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
 - `hermes-agent.service` — Hermes Agent gateway (replaces buzz-acp; see `hosts/bee/configuration.nix`). Runs as `crussell` with full host access. Connects to the Buzz relay via NIP-42 auth, uses the `buzz` CLI for outbound message delivery. Memory backend: **mem0 (OSS mode)** — mem0ai baked into the sealed venv via the package override in `hosts/bee/configuration.nix`; behavioral config (Z.AI extraction LLM + OpenRouter embeddings + local qdrant at `$HERMES_HOME/mem0_qdrant`) in `/var/lib/hermes/.hermes/mem0.json`.
 - `hermes-serve.service` — Hermes JSON-RPC/WebSocket API on Nebula `10.10.0.12:9119` (desktop/mobile remote clients; basic-auth plugin). The WebUI (`hermes-webui.service`, port 8787, `https://hermes.internal.crussell.io`) was retired 2026-09-01 — desktop + Discord are the only chat surfaces.
-- `buzz-relay-pod.service` — self-hosted Buzz relay (podman pod: relay, postgres, redis, minio, pair-relay)
+- filebrowser (rootless quadlet, crussell user units) — web file manager on `10.10.0.12:8093` (`hosts/bee/filebrowser.nix`, 2026-09-19; replaced a manually-run container). NOTE: `hermes-agent.service` above still references the buzz CLI/NIP-42 — that path died with the buzz decommission; hermes decommission is pending (crons still scheduled there).
 - Dev stacks (`dev-quadlets/`) — gpl, polymer, buildspace (podman quadlets, reached via SSH tunnels; see `hosts/bee/dev-quadlets/README.md` and `cjust dev-tunnel`)
 - Restic backup (daily S3 backup via `hosts/bee/backup.nix`)
 - `dsh-web.service` — DeepSeek Harness web UI (`modules/dsh.nix`): loopback `:3080` → `dsh-web-proxy` socket on Nebula `10.10.0.12:3080` → bees Caddy `https://dsh.internal.crussell.io`. Default model `zai-coding/glm-5.3` (personal coding plan; replaces opencode, retired 2026-09-02). `codex` CLI also installed for work-lane delegation. `DSH_HOME` (`/var/lib/dsh`) is a **local git repo** (no remote): agents commit config changes in place after each edit — hand-maintained files only (`sessions/`, `storages/`, `relay/`, `.credentials.yaml` are gitignored, restic covers them; see `modules/dsh.nix` header).
-- `buzz-acp-glen.service` / `buzz-acp-gloo.service` — server-side Buzz agents (`hosts/bee/buzz-acp.nix`, 2026-09-14): one `buzz-acp` harness per persona (nostr nsec via agenix `glen-buzz-nsecs`), subscribing to @-mentions on every relay channel at `wss://buzz.internal.crussell.io` and spawning `dsh --profile acp-<lane>` as its ACP agent (acp-glen = personal Z.AI pin, acp-gloo = employer gloo pin; both carry persona prefix, shared `@glen/memory`, persona skills, one DSH_HOME). Thread-scoped sessions, mention-only routing, `respond-to=anyone` (closed relay). Replaced the custom `@glen/channel-buzz` dsh plugin (removed). Launchers tracked at `/var/lib/dsh/buzz-acp/` (binaries downloaded from the desktop AppImage release, gitignored); logs: `journalctl -u buzz-acp-glen`. Restart=on-failure per the buzz remote-agents spec (intentional `!shutdown` exits 0 and stays down).
 - Beszel agent (default-on via `modules/beszel-agent.nix`)
 - `artifacts-server.service` — static artifact host (`hosts/bee/artifacts.nix` + `artifacts-server.py`, 2026-09-14): serves `~/artifacts` on Nebula `10.10.0.12:8910` → bees Caddy `https://artifacts.internal.crussell.io` (route `hosts/bees/caddy/routes/internal/artifacts.caddy`). Files + folders + generated catalog (`index.html` reads `manifest.json`) + vendored `/assets/` (JetBrains Mono, mermaid) + JSON API (`POST /-/delete`, `/-/reindex`) for the catalog's delete buttons. Published by the dsh `artifacts` skill (`publish-artifact`, shim at `~/.local/bin/`); design governed by the dsh `design` skill. Replaced the hermes-era `python -m http.server` user unit (off-repo, retired same day). Keep-forever retention (no GC — old links must not rot); `~/artifacts` is inside bee's restic backup.
 
