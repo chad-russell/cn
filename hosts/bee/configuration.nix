@@ -701,6 +701,50 @@ in {
       checkpoints.max_total_size_mb = 500;
       checkpoints.max_snapshots = 20;
       checkpoints.min_interval_hours = 24;
+      # ── Skill pruning (HML-8, Chad sign-off 2026-09-08) ─────────────
+      # 30 bundled/official skills with zero use+view since install,
+      # removed from the always-on skills index via hermes' per-skill
+      # disable list (the same mechanism `hermes skills config` writes —
+      # skill_view on them returns "disabled"; reversible by removing a
+      # name). The .managed marker blocks imperative writes on this host,
+      # so the list lives here. excalidraw + reddit-reading were exempted
+      # (Chad's keep list); the 6 retired LOCAL skills and the 2 merge
+      # twins were deleted from the store outright (frozen at
+      # /var/lib/hermes/.hermes/plans/hml8_prune_freeze_20260908_011510.tar.gz,
+      # sha256 7a0d518e…). Lane-bound 5 are protected upstream
+      # (ESSENTIAL_SKILLS guards hermes-agent itself).
+      skills.disabled = [
+        "airtable"
+        "arxiv"
+        "ascii-art"
+        "baoyu-infographic"
+        "box"
+        "claude-code"
+        "codebase-inspection"
+        "competitor-news-monitor"
+        "docx"
+        "document-to-action-items"
+        "email-inbox-triage"
+        "himalaya"
+        "huggingface-hub"
+        "maps"
+        "meeting-action-items"
+        "node-inspect-debugger"
+        "notion"
+        "pdf"
+        "powerpoint"
+        "product-price-monitor"
+        "python-debugpy"
+        "rss-feeds"
+        "simplify-code"
+        "songsee"
+        "songwriting-and-ai-music"
+        "spike"
+        "teams-meeting-pipeline"
+        "weekly-review-planning"
+        "xlsx"
+        "xurl"
+      ];
       # MCP servers — GitHub tools (26 tools: PRs, issues, code search, etc.)
       # use gh CLI's OAuth token (gh is authed as crussell).
       # Note: SQLite was considered but removed — sqlite3 via terminal is
