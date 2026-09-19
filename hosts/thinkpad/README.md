@@ -218,11 +218,12 @@ concern is moot here — but the build also runs on the host (git + podman
 only), and the app dir is per-user state, so bubblebox has nothing to manage.
 
 **Secrets.** None needed locally — the desktop talks to bee over SSH and the
-provider keys live on bee. Legacy: `secrets/hermes-thinkpad-env.age` fed a
-former local agent install via `bubblebox/files/.zshenv`; the desktop wrapper
+provider keys live on bee. Legacy: `secrets/hermes-thinkpad-env.age` (removed
+2026-09-08, HML-9) fed a former local agent install via
+`bubblebox/files/.zshenv`; the desktop wrapper
 (`bubblebox/files/.local/bin/hermes-desktop`) still sources that cache before
 exec'ing the Electron app, so a local agent could be re-added without a
-wrapper change.
+wrapper change (re-create the .age + re-list it in secrets.nix).
 
 ### Host-resident dotfiles (`bubblebox/files/` + `[[files]]`)
 
