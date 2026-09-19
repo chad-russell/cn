@@ -52,12 +52,6 @@
       # modules/dsh.nix (services.dsh on bee).
       dshPkg = pkgs.callPackage ./pkgs/dsh { };
 
-      # ── Buzz server-side stack (buzz-acp + buzz CLI) ──────────────
-      # From-source Rust build pinned to the current desktop release
-      # tag, so the server agents can't silently diverge from the
-      # auto-updating desktop client. Consumed by hosts/bee/buzz-acp.nix.
-      buzzPkg = pkgs.callPackage ./pkgs/buzz { };
-
       # System pkgs for callPackage above.
       pkgs = import nixpkgs {
         system = "x86_64-linux";
@@ -108,7 +102,6 @@
           config.allowUnfree = true;
         };
         dsh = dshPkg;
-        buzz = buzzPkg;
       };
 
       # ── Helper to build a NixOS configuration ────────────────────
@@ -155,7 +148,6 @@
 
       # ── Packages ─────────────────────────────────────────────────
       packages.x86_64-linux.dsh = dshPkg;
-      packages.x86_64-linux.buzz = buzzPkg;
       # Rendered /etc/hosts fragment for the thinkpad host image (inspection:
       # nix build .#thinkpad-nebula-hosts && cat result).
       packages.x86_64-linux.thinkpad-nebula-hosts =
