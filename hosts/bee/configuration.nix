@@ -47,12 +47,10 @@ in {
     ./disk-config.nix
     ../../modules/nebula-client.nix
     ../../modules/dsh.nix
-    # Buzz relay (nostr NIP-29): household chat substrate
-    ./buzz.nix
-    # glen buzz persona identities (agenix)
-    ./glen-buzz.nix
-    # Server-side buzz agents (glen/gloo lanes) on the relay
-    ./buzz-acp.nix
+    # filebrowser — nix-managed rootless quadlet (10.10.0.12:8093, D-017;
+    # replaces the manual container 2026-09-19). Buzz stack removed same
+    # day (D-014): buzz.nix, glen-buzz.nix, buzz-acp.nix deleted.
+    ./filebrowser.nix
     # Static artifact host (artifacts.internal.crussell.io) — dsh skills
     # `artifacts` + `design` publish into ~/artifacts; this serves them
     ./artifacts.nix

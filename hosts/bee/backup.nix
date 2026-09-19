@@ -28,14 +28,16 @@
 
       # glen agent state (dsh): memory log, session logs, skills,
       # presets + profiles incl. the hand-maintained @glen plugin sources,
-      # vendored dsh-relay, the acp-* agent profiles, and the buzz-acp
-      # launchers + downloaded harness binaries — edited directly in place.
+      # vendored dsh-relay, the acp-* agent profiles — edited directly in place.
       # /var/lib/dsh is also a local git repo for the hand-maintained
       # subset (no remote); THIS backup remains its off-machine copy.
       "/var/lib/dsh"
 
-      # buzz relay deploy config + secrets (.env 0600; volumes in containers storage)
-      "/home/crussell/buzz"
+      # Published artifacts (keep-forever, served by artifacts-server).
+      # Added 2026-09-19 (D-015) — cn AGENTS.md had claimed this for a
+      # while, but the path was never actually listed until now.
+      "/home/crussell/artifacts"
+
       "/home/crussell/.local/share/containers"
     ];
 

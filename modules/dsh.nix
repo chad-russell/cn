@@ -341,7 +341,6 @@ in {
           config.age.secrets.zai-api-key.path
           config.age.secrets.gloo-api-key.path
           config.age.secrets.openrouter-api-key.path
-          config.age.secrets.glen-buzz-nsecs.path
           config.age.secrets.forgejo-token.path
         ];
         Restart = "on-failure";
