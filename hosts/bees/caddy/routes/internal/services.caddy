@@ -44,9 +44,29 @@ handle @kanban {
     reverse_proxy 10.10.0.12:9120
 }
 
+# Hermes web dashboard on bee (HML-7, stacked-merge resolution 2026-09-19):
+# managed hermes-dashboard.service on Nebula 10.10.0.12:9121 — NOT 9120,
+# which the kanban dashboard user unit owns (live-verified while stacking;
+# dashboard.public_url feeds a single-host allowlist, so one instance
+# cannot serve both hostnames without 400s). Auth gate is Hermes' own
+# basic-auth provider (HERMES_DASHBOARD_BASIC_AUTH_*) — caddy only
+# terminates TLS. read_timeout 360s per beszel.caddy precedent: the
+# dashboard's embedded chat rides a long-lived WebSocket and turns can
+# run for minutes.
+@dashboard host dashboard.internal.crussell.io
+handle @dashboard {
+    reverse_proxy 10.10.0.12:9121 {
+        transport http {
+            read_timeout 360s
+        }
+    }
+}
+
 # Lane (self-hosted Plane CE) RETIRED 2026-09-08 — Hermes kanban is the
 # source of truth (kanban.internal.crussell.io). Routes removed; archive
 # at NAS /mnt/backups/lane-archive-2026-09-08 (pg dump + uploads).
+# (HML-7's lane-hooks webhook bridge dropped in this merge too — its
+# Plane upstream is the thing that retired.)
 
 # Wankbank (bees quadlet — private video catalog)
 @wankbank host wankbank.internal.crussell.io spankbank.internal.crussell.io
