@@ -3,6 +3,11 @@ Description=filebrowser (gtstef/filebrowser) — web file manager, Nebula 10.10.
 
 [Container]
 Image=docker.io/gtstef/filebrowser:stable
+# Run as container-root: under rootless podman that IS crussell (uid 1000),
+# which is what the old manual container did — the image's named `filebrowser`
+# user maps to a shifted host uid that cannot read the 0660 config, and
+# --userns=keep-id trips a crun exec bug with this image (verified 2026-09-19).
+User=0:0
 PublishPort=10.10.0.12:8093:8080
 # Faithful port of the manual container's mounts (podman inspect 2026-09-19).
 # NOTE (security): browses the whole home incl. employer trees + hermes
