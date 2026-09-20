@@ -78,23 +78,6 @@
     createHome = false;
   };
 
-  # ── Jellyseerr (podman quadlet) ─────────────────────────────────
-  # Runs as uid 994 (native jellyseerr uid) — the official image has no
-  # PUID/PGID entrypoint, so User= is set directly in the .container. Data lives
-  # under /var/lib/jellyseerr/config (the NixOS module's CONFIG_DIRECTORY).
-  # See hosts/bees/jellyseerr.container.
-  environment.etc."containers/systemd/jellyseerr.container" = {
-    source = ./jellyseerr.container;
-    mode = "0644";
-  };
-  users.users.jellyseerr = {
-    uid = 994;
-    isSystemUser = true;
-    group = "media";
-    home = "/var/lib/jellyseerr";
-    createHome = false;
-  };
-
   # ── qBittorrent (podman quadlet) ────────────────────────────────
   # Runs as uid 992 via the linuxserver image's PUID/PGID (PGID = media, 2000).
   # Downloads go to /mnt/media/Downloads. The native --profile data dir

@@ -21,7 +21,6 @@
       "/var/lib/radarr"
       "/var/lib/prowlarr"
       "/var/lib/qBittorrent"
-      "/var/lib/jellyseerr"
       "/var/lib/ntfy-sh"
       "/var/lib/datenight"
       "/var/lib/redis-immich"
