@@ -20,11 +20,6 @@ handle @prowlarr {
     reverse_proxy 127.0.0.1:9696
 }
 
-@jellyseerr host jellyseerr.internal.crussell.io
-handle @jellyseerr {
-    reverse_proxy 127.0.0.1:5055
-}
-
 @jellyfin-internal host jellyfin.internal.crussell.io
 handle @jellyfin-internal {
     reverse_proxy 127.0.0.1:8096
