@@ -685,6 +685,22 @@ in {
       display.show_cost = true;
       # Enable session checkpoints (rollback snapshots for long sessions)
       checkpoints.enabled = true;
+      # Retention (HML-4, 2026-09-07): pin upstream v0.21.0 defaults
+      # declaratively so the config-drift check enforces them. The gateway's
+      # startup sweep (idempotent via checkpoints/.last_prune, >=24h apart)
+      # drops projects untouched for 7d, GCs the shared git store, and
+      # round-robin drops oldest commits until the store fits the size cap.
+      # NOTE: the cap cannot go below one commit per LIVE project — the agent
+      # checkpoints ~60 workdirs (skill dirs, Code/*, /tmp scratch), so
+      # ~600MB is the expected steady state, not a leak. Orphans (PrivateTmp
+      # /tmp dirs, retired gloo profile paths) are kept until the 7d stale
+      # rule ages them out — the identity check refuses mount-namespace
+      # mismatches by design; don't force-delete.
+      checkpoints.auto_prune = true;
+      checkpoints.retention_days = 7;
+      checkpoints.max_total_size_mb = 500;
+      checkpoints.max_snapshots = 20;
+      checkpoints.min_interval_hours = 24;
       # MCP servers — GitHub tools (26 tools: PRs, issues, code search, etc.)
       # use gh CLI's OAuth token (gh is authed as crussell).
       # Note: SQLite was considered but removed — sqlite3 via terminal is
@@ -1172,6 +1188,51 @@ in {
     environment.DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
   };
 
+  # ── hermes-checkpoints-prune: daily checkpoint retention sweep ──────
+  # The gateway's auto_prune sweep (checkpoints.auto_prune) runs at STARTUP
+  # only (maybe_auto_prune_checkpoints is a startup hook, rate-limited 24h
+  # via checkpoints/.last_prune). The gateway stays up for weeks between
+  # deploys, so on a long-lived process nothing re-enforces retention — and
+  # the in-checkpoint size cap cannot reclaim single-commit refs
+  # (_drop_oldest_commit never drops below one commit per project), so the
+  # only real reclaim path is this stale/orphan sweep. HML-4's "else a prune
+  # cron" fallback: run the same prune the startup hook would run, daily.
+  # Args are pinned to the declared knobs above — keep them in sync.
+  systemd.services.hermes-checkpoints-prune = {
+    description = "Hermes checkpoint store retention prune (HML-4)";
+    environment = {
+      HERMES_HOME = "/var/lib/hermes/.hermes";
+      HOME = "/home/crussell";
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      User = "crussell";
+      Group = "hermes";
+      # git gc over the shared pack — keep it off the foreground I/O path.
+      Nice = 10;
+      IOSchedulingClass = "idle";
+      ExecStart = "/run/current-system/sw/bin/hermes checkpoints prune -f"
+        + " --retention-days 7 --max-size-mb 500";
+      # The prune runs git ref expire + gc --prune=now against the live
+      # gateway's store. Git's own ref/pack locking serializes the two
+      # writers (the startup sweep runs this same code with agents live),
+      # but bound it so a stuck gc can't hold a deploy restart.
+      TimeoutStartSec = "10m";
+    };
+  };
+
+  systemd.timers.hermes-checkpoints-prune = {
+    description = "Daily Hermes checkpoint retention prune (HML-4)";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      # 04:41 — after the 04:17 bubblebox window, before the 09:00 state
+      # snapshot; deliberately staggered from both.
+      OnCalendar = "*-*-* 04:41:00";
+      RandomizedDelaySec = "10m";
+      Persistent = true;
+    };
+  };
+
   # ── hermes-serve: HTTP/JSON-RPC API for remote clients over Nebula ────
   # `hermes-agent.service` above runs `hermes gateway` — the messaging
   # platform adapters (Telegram) that make OUTBOUND connections and accept
@@ -1230,6 +1291,61 @@ in {
       SupplementaryGroups = [ "hermes" ];
       ExecStart =
         "/run/current-system/sw/bin/hermes serve --host 10.10.0.12 --port 9119";
+      EnvironmentFile = [ config.age.secrets.hermes-bee-env-glen.path ];
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+  };
+
+  # ── hermes-dashboard: web admin panel on Nebula 10.10.0.12:9120 ──────
+  # Promotes the long-running-but-transient `hermes dashboard` scope
+  # (HML-7, agent-spawned repeatedly since 09-06, dies on reboot with no
+  # restart policy) into a managed system unit, mirroring hermes-serve
+  # above. Same auth story: non-loopback bind ⇒ auth gate engaged with the
+  # bundled `basic` dashboard-auth plugin (verified live 09-07: unauth GET
+  # serves the sign-in page; HERMES_DASHBOARD_BASIC_AUTH_{USERNAME,PASSWORD,
+  # SECRET} already in hermes-bee-env-glen.age; real usage logged from the
+  # thinkpad 09-06). No --insecure (a no-op since the June 2026 hardening)
+  # and no --skip-build: the `hermes` wrapper exports HERMES_WEB_DIST at
+  # the nix store's prebuilt web_dist, so no npm ever runs and the UI
+  # follows each hermes-agent deploy.
+  systemd.services.hermes-dashboard = {
+    description = "Hermes Web Dashboard (Nebula 10.10.0.12:9121)";
+    wantedBy = [ "multi-user.target" ];
+    # The unit binds the Nebula IP directly; like every such socket it can
+    # lose the boot race on 26.05 (see modules/dsh.nix) — order after the
+    # nebula unit and drag it along on nebula restarts.
+    after = [
+      "network-online.target"
+      "hermes-agent.service"
+      "nebula@homelab.service"
+    ];
+    bindsTo = [ "nebula@homelab.service" ];
+    partOf = [ "nebula@homelab.service" ];
+    environment = {
+      HERMES_HOME = "/var/lib/hermes/.hermes";
+      HOME = "/home/crussell";
+      # user-session env for systemd-run --user --scope — identical to
+      # hermes-agent/hermes-serve (the dashboard's embedded chat can
+      # dispatch background work the same way).
+      XDG_RUNTIME_DIR = "/run/user/1000";
+      DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
+      # bash + node in PATH: same rationale as hermes-serve (terminal-tool
+      # shell resolution; npm/node for optional MCP children like
+      # server-github, which the transient instance spawned via npx).
+      PATH = lib.mkForce
+        "/run/wrappers/bin:${pkgs.bashInteractive}/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
+      SHELL = "${pkgs.bashInteractive}/bin/bash";
+    };
+    serviceConfig = {
+      Type = "simple";
+      User = "crussell";
+      # primary group = passwd group, hermes supplementary — shadow 4.19
+      # newuidmap rule, same as hermes-agent/hermes-serve (2026-09-07).
+      Group = "users";
+      SupplementaryGroups = [ "hermes" ];
+      ExecStart =
+        "/run/current-system/sw/bin/hermes dashboard --host 10.10.0.12 --port 9121 --no-open";
       EnvironmentFile = [ config.age.secrets.hermes-bee-env-glen.path ];
       Restart = "on-failure";
       RestartSec = 5;

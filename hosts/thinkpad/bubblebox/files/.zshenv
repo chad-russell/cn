@@ -47,6 +47,9 @@ export GIO_EXTRA_MODULES=
 #                                                      remapped for hermes'
 #                                                      OpenAI-compatible
 #                                                      provider resolver)
+#   (hermes-thinkpad-env.age retired 2026-09-08 HML-9: the thinkpad agent
+#    install is long gone — desktop talks to bee over SSH. Drop-in slot
+#    kept: re-create the .age file and the decrypt loop picks it up again.)
 #
 # NOTE: this only covers shells + their children. GUI apps launched directly
 #       by the compositor (niri/COSMIC `spawn`, not from a terminal) read the
