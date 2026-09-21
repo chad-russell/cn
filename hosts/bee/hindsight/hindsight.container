@@ -11,13 +11,18 @@ ContainerName=hindsight
 # ~9 GB image — image updates are manual (podman pull + unit restart);
 # podman never re-pulls a pinned local :latest on its own.
 #
-# LLM: GLM flash family via OpenRouter (rides the household
-# openrouter-api-key — value renamed to HINDSIGHT_API_LLM_API_KEY inside
-# secrets/hindsight-env.age). `~`-prefixed alias = always-latest GLM flash
-# (OpenRouter alias, verified against openrouter.ai/api/v1/models).
+# LLM: glm-5.3-flash via the Z.AI coding-plan subscription
+# (https://api.z.ai/api/coding/paas/v4 — OpenAI-compatible; same route
+# dsh uses as zai-coding). Switched 2026-09-22 from OpenRouter
+# (~z-ai/glm-flash-latest, same underlying model) after it billed $7.05
+# in its first day at $0.075/$0.25 per M tokens; the plan endpoint is $0
+# marginal. Key = zai-api-key value renamed to HINDSIGHT_API_LLM_API_KEY
+# inside secrets/hindsight-env.age. Verified live 2026-09-22: system+user
+# calls fine; the endpoint rejects system-ONLY message lists (error 1214)
+# — hindsight prompts always carry a user message and retry on failure.
 Environment=HINDSIGHT_API_LLM_PROVIDER=openai
-Environment=HINDSIGHT_API_LLM_BASE_URL=https://openrouter.ai/api/v1
-Environment=HINDSIGHT_API_LLM_MODEL=~z-ai/glm-flash-latest
+Environment=HINDSIGHT_API_LLM_BASE_URL=https://api.z.ai/api/coding/paas/v4
+Environment=HINDSIGHT_API_LLM_MODEL=glm-5.3-flash
 # Stable worker identity across restarts — without it, tasks in flight at
 # shutdown stay parked under the dead container-ID worker and need admin-CLI
 # surgery (upstream installation.md "Set a stable HINDSIGHT_API_WORKER_ID").
