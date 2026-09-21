@@ -42,6 +42,13 @@
     ];
 
     exclude = [
+      # Podman IMAGE layers under the rootless storage root — re-pullable,
+      # and the hindsight full image alone is ~9 GB (would re-upload into
+      # every nightly NAS+S3 snapshot on each image update). Named VOLUMES
+      # (.../storage/volumes, incl. hindsight's pg0 data) do NOT match this
+      # pattern and stay backed up.
+      "/home/crussell/.local/share/containers/storage/overlay*"
+
       # Home-dir node modules (rebuildable). Deliberately NOT a blanket
       # pattern: /var/lib/dsh/profiles/glen/node_modules holds the only
       # copies of the @glen plugin sources + vendored dsh-relay — those

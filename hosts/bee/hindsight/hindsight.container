@@ -1,0 +1,53 @@
+[Unit]
+Description=hindsight (ghcr.io/vectorize-io/hindsight) - agent memory API+MCP on Nebula 10.10.0.12:8888, UI :9999
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/vectorize-io/hindsight:latest
+ContainerName=hindsight
+# Full (not slim) image: embeddings (BGE) + reranker (MiniLM) run locally
+# in-container, so the ONLY external dependency is the extraction LLM.
+# ~9 GB image — image updates are manual (podman pull + unit restart);
+# podman never re-pulls a pinned local :latest on its own.
+#
+# LLM: GLM flash family via OpenRouter (rides the household
+# openrouter-api-key — value renamed to HINDSIGHT_API_LLM_API_KEY inside
+# secrets/hindsight-env.age). `~`-prefixed alias = always-latest GLM flash
+# (OpenRouter alias, verified against openrouter.ai/api/v1/models).
+Environment=HINDSIGHT_API_LLM_PROVIDER=openai
+Environment=HINDSIGHT_API_LLM_BASE_URL=https://openrouter.ai/api/v1
+Environment=HINDSIGHT_API_LLM_MODEL=~z-ai/glm-flash-latest
+# Stable worker identity across restarts — without it, tasks in flight at
+# shutdown stay parked under the dead container-ID worker and need admin-CLI
+# surgery (upstream installation.md "Set a stable HINDSIGHT_API_WORKER_ID").
+Environment=HINDSIGHT_API_WORKER_ID=hindsight-bee
+# HINDSIGHT_API_LLM_API_KEY + HINDSIGHT_CP_ACCESS_KEY (UI gate).
+# agenix file, owner crussell (proton-pass-env precedent for user-readable
+# secrets); /run/agenix is world-traversable so the user quadlet can read it.
+EnvironmentFile=/run/agenix/hindsight-env
+# Embedded PostgreSQL (pg0) wants a real /dev/shm — upstream docker run
+# uses --shm-size=1g; rootless podman's default is far smaller.
+PodmanArgs=--shm-size=1g
+# Nebula-only listeners, like filebrowser (D-017): never LAN-exposed; the
+# UI/API for other machines goes through bees Caddy
+# (hindsight.internal.crussell.io / hindsight-ui.internal.crussell.io).
+PublishPort=10.10.0.12:8888:8888
+PublishPort=10.10.0.12:9999:9999
+# Named volume → ~/.local/share/containers/storage/volumes/hindsight-data
+# (inside bee's restic path; the 9 GB image layers are excluded from backup
+# separately in backup.nix). Container user hindsight (UID 1000) owns the
+# volume via podman's userns mapping — upstream-recommended over a bind
+# mount, which would need host-uid chown gymnastics.
+Volume=hindsight-data:/home/hindsight/.pg0
+
+[Service]
+Restart=always
+RestartSec=5
+# First start pulls ~9 GB; the systemd default 90s would kill mid-pull.
+# (Pre-pull manually when convenient: runuser -u crussell -- podman pull
+# ghcr.io/vectorize-io/hindsight:latest)
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=default.target

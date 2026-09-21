@@ -54,6 +54,9 @@ in {
     # Static artifact host (artifacts.internal.crussell.io) — dsh skills
     # `artifacts` + `design` publish into ~/artifacts; this serves them
     ./artifacts.nix
+    # Hindsight agent-memory server (hindsight.internal.crussell.io) —
+    # API+MCP :8888, UI :9999, rootless quadlet; coding agents connect here.
+    ./hindsight.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
       # https://dsh.internal.crussell.io via bees Caddy (route in
