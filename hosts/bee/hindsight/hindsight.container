@@ -23,11 +23,29 @@ ContainerName=hindsight
 Environment=HINDSIGHT_API_LLM_PROVIDER=openai
 Environment=HINDSIGHT_API_LLM_BASE_URL=https://api.z.ai/api/coding/paas/v4
 Environment=HINDSIGHT_API_LLM_MODEL=glm-5.3-flash
+# The coding plan rate-limits bursts (HTTP 429 code 1302 "Rate limit
+# reached for requests") — hindsight's worker fans out far wider than an
+# interactive plan allows. Three mitigations (2026-09-22):
+#   1. Fold mental-model refresh triggers: no more than one automatic
+#      refresh per bank per hour (default 0 = refresh per trigger, which
+#      queued 4-5 concurrent full-reflect pipelines on one bank).
+#   2. Serialize refresh LLM calls + cap concurrent reflects at 2.
+#   3. Failover member: same model on OpenRouter (per-token) absorbs
+#      overflow when the plan is saturated — bounded spend, identical
+#      model. STRATEGY + member key live in hindsight-env.age.
+Environment=HINDSIGHT_API_MENTAL_MODEL_MIN_REFRESH_INTERVAL_SECONDS=3600
+Environment=HINDSIGHT_API_MENTAL_MODEL_REFRESH_LLM_MAX_CONCURRENT=1
+Environment=HINDSIGHT_API_ADMISSION_REFLECT_MAX_IN_FLIGHT=2
+Environment=HINDSIGHT_API_ADMISSION_REFLECT_MAX_WAIT_MS=30000
+Environment=HINDSIGHT_API_LLM_1_PROVIDER=openai
+Environment=HINDSIGHT_API_LLM_1_BASE_URL=https://openrouter.ai/api/v1
+Environment=HINDSIGHT_API_LLM_1_MODEL=z-ai/glm-5.3-flash
 # Stable worker identity across restarts — without it, tasks in flight at
 # shutdown stay parked under the dead container-ID worker and need admin-CLI
 # surgery (upstream installation.md "Set a stable HINDSIGHT_API_WORKER_ID").
 Environment=HINDSIGHT_API_WORKER_ID=hindsight-bee
-# HINDSIGHT_API_LLM_API_KEY + HINDSIGHT_CP_ACCESS_KEY (UI gate).
+# HINDSIGHT_API_LLM_API_KEY (plan) + HINDSIGHT_API_LLM_1_API_KEY
+# (OpenRouter failover) + HINDSIGHT_API_LLM_STRATEGY + CP key (UI gate).
 # agenix file, owner crussell (proton-pass-env precedent for user-readable
 # secrets); /run/agenix is world-traversable so the user quadlet can read it.
 EnvironmentFile=/run/agenix/hindsight-env
