@@ -1,0 +1,22 @@
+# Hindsight agent-memory server (bee — rootless quadlet hindsight.service,
+# hosts/bee/hindsight.nix). API :8888 serves the data plane incl. the
+# per-bank MCP endpoint (http(s)://hindsight.internal.crussell.io/mcp/{bank}/)
+# used by every wired coding agent. flush_interval -1: MCP streamable HTTP
+# rides SSE — without unbuffered flushing, server-sent events queue in Caddy
+# and agent tool calls stall.
+@hindsight host hindsight.internal.crussell.io
+handle @hindsight {
+    reverse_proxy 10.10.0.12:8888 {
+        flush_interval -1
+    }
+}
+
+# Control-plane UI (bee :9999) — bank browser, entities, query playground.
+# Auth is Hindsight's own HINDSIGHT_CP_ACCESS_KEY gate; caddy only
+# terminates TLS.
+@hindsight-ui host hindsight-ui.internal.crussell.io
+handle @hindsight-ui {
+    reverse_proxy 10.10.0.12:9999 {
+        flush_interval -1
+    }
+}
