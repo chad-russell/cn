@@ -7,8 +7,9 @@ in {
   "openrouter-api-key.age".publicKeys = [ crussell ];
 
   # ── Hindsight agent-memory server on bee ───────────────────────
-  # HINDSIGHT_API_LLM_API_KEY (same OpenRouter key, renamed for the
-  # container) + HINDSIGHT_CP_ACCESS_KEY (UI gate). Deployed 0400
+  # HINDSIGHT_API_LLM_API_KEY (zai-api-key value, renamed for the
+  # container — coding-plan endpoint since 2026-09-22) +
+  # HINDSIGHT_CP_ACCESS_KEY (UI gate). Deployed 0400
   # owner=crussell so the rootless user quadlet can read it
   # (hosts/bee/hindsight.nix).
   "hindsight-env.age".publicKeys = [ crussell ];
