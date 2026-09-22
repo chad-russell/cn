@@ -252,10 +252,16 @@ in {
   # Non-nix pieces this unit depends on (imperative, refreshed by hand):
   #   ~/.local/share/bubblebox-ci/bin/{bubblebox,bubblebox-fuse}
   #     plain release builds (FHS binaries — run under nix-ld above);
-  #     re-copy from a thinkpad release build after engine changes.
+  #     re-copy from a bee container build (~/Code/bubblebox
+  #     target-bookworm/release/ — see the bubblebox wiki Build-and-Run)
+  #     after engine changes.
   #   ~/src/bubblebox-pkgs
-  #     the package source checkout; rsync'd from the thinkpad checkout for
-  #     now (bubblebox-pkgs has no git remote yet) — re-rsync to update.
+  #     git clone of chad/bubblebox-pkgs (origin on git.crussell.io);
+  #     nightly.sh `git pull --ff-only` keeps it current — push commits
+  #     before expecting the CI to see them.
+  # NOTE: non-login PATHs lack /run/wrappers/bin (setuid fusermount3) —
+  #   the engine resolves the wrapper itself since bubblebox 8d59009 and
+  #   pkgs tools/nightly.sh prepends it; don't strip that hardening.
   # Linger keeps crussell's user manager (and thus this timer) alive without
   # an SSH session.
   users.users.crussell.linger = true;
