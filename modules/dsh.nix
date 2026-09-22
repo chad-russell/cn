@@ -295,6 +295,9 @@ in {
     age.secrets.openrouter-api-key.file = ../secrets/openrouter-api-key.age;
     # FORGEJO_TOKEN for glen's tool shells (tea / git.crussell.io API).
     age.secrets.forgejo-token.file = ../secrets/forgejo-token.age;
+    # 9router gateway Bearer key (dashboard-minted, name "dsh") for the
+    # settings.yaml "ninerouter" provider → http://10.10.0.12:20128/v1.
+    age.secrets.ninerouter-dsh-key.file = ../secrets/ninerouter-dsh-key.age;
 
     # ── State + seed ───────────────────────────────────────────────
     systemd.tmpfiles.rules = [ "d /var/lib/dsh 0700 crussell users -" ];
@@ -342,6 +345,7 @@ in {
           config.age.secrets.gloo-api-key.path
           config.age.secrets.openrouter-api-key.path
           config.age.secrets.forgejo-token.path
+          config.age.secrets.ninerouter-dsh-key.path
         ];
         Restart = "on-failure";
         RestartSec = "5";
