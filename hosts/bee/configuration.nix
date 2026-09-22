@@ -57,6 +57,10 @@ in {
     # Hindsight agent-memory server (hindsight.internal.crussell.io) —
     # API+MCP :8888, UI :9999, rootless quadlet; coding agents connect here.
     ./hindsight.nix
+    # 9router AI provider gateway (9router.internal.crussell.io) —
+    # OpenAI-compatible :20128, rootless quadlet; dsh + future projects
+    # point at it instead of configuring providers per-tool.
+    ./ninerouter.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
       # https://dsh.internal.crussell.io via bees Caddy (route in
