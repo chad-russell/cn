@@ -1,0 +1,12 @@
+# 9router AI provider gateway (bee — rootless quadlet ninerouter.service,
+# hosts/bee/ninerouter.nix). Dashboard + OpenAI-compatible API on
+# :20128. Dashboard login requires this HTTPS route (the quadlet sets
+# AUTH_COOKIE_SECURE=true); API calls use Bearer keys and work over the
+# Nebula bind directly too. flush_interval -1: chat completions stream
+# via SSE (same requirement as hindsight's MCP endpoint).
+@ninerouter host 9router.internal.crussell.io
+handle @ninerouter {
+    reverse_proxy 10.10.0.12:20128 {
+        flush_interval -1
+    }
+}

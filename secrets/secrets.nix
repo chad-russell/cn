@@ -15,6 +15,14 @@ in {
   # (hosts/bee/hindsight.nix).
   "hindsight-env.age".publicKeys = [ crussell ];
 
+  # ── 9router AI provider gateway on bee ────────────────────────
+  # JWT_SECRET (dashboard cookie signing), INITIAL_PASSWORD (first
+  # dashboard login only — upstream default is 123456),
+  # API_KEY_SECRET + MACHINE_ID_SALT (upstream defaults are public
+  # strings). All randomly generated at creation. owner=crussell so the
+  # rootless user quadlet can read it (hosts/bee/ninerouter.nix).
+  "ninerouter-env.age".publicKeys = [ crussell ];
+
   # ── Z.AI API key (opencode) ───────────────────
   "zai-api-key.age".publicKeys = [ crussell ];
 

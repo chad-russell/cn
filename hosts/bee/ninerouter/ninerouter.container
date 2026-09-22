@@ -1,0 +1,63 @@
+[Unit]
+Description=ninerouter (ghcr.io/decolua/9router) - AI provider gateway, OpenAI-compatible API + dashboard on Nebula 10.10.0.12:20128
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/decolua/9router:latest
+ContainerName=ninerouter
+# 9router (github.com/decolua/9router): one OpenAI-compatible endpoint
+# fronting OAuth providers (Cursor cu/*, OpenAI Codex cx/*), API-key
+# providers (OpenRouter, GLM, ...) and free tiers. The household provider
+# hub — dsh and future projects configure providers ONCE here and point
+# at http://10.10.0.12:20128/v1.
+#
+# Image updates are manual (podman pull + unit restart), like hindsight —
+# podman never re-pulls a pinned local :latest on its own.
+#
+# Auth posture:
+# - REQUIRE_API_KEY: every /v1/* call needs a Bearer key minted in the
+#   dashboard (belt-and-suspenders on top of the Nebula-only bind).
+# - AUTH_COOKIE_SECURE: dashboard sessions are only usable over the HTTPS
+#   Caddy route (https://9router.internal.crussell.io) — plain-HTTP
+#   dashboard access over the Nebula IP will NOT carry the login cookie.
+#   API calls (Bearer) work over either.
+# - BASE_URL: absolute URLs the server builds (cloud-sync jobs, links)
+#   point at the internal hostname.
+Environment=DATA_DIR=/app/data
+Environment=REQUIRE_API_KEY=true
+Environment=AUTH_COOKIE_SECURE=true
+Environment=BASE_URL=https://9router.internal.crussell.io
+# JWT_SECRET (dashboard cookie signing), INITIAL_PASSWORD (first login
+# only — upstream default is 123456), API_KEY_SECRET + MACHINE_ID_SALT
+# (upstream defaults are public strings in the README). All randomly
+# generated at secret creation.
+# agenix file, owner crussell (hindsight-env precedent for user quadlets;
+# /run/agenix is world-traversable so the rootless service can read it).
+EnvironmentFile=/run/agenix/ninerouter-env
+# Nebula-only listener, like hindsight/filebrowser: never LAN-exposed;
+# dashboard ingress for other machines goes through bees Caddy
+# (9router.internal.crussell.io).
+PublishPort=10.10.0.12:20128:20128
+# OpenAI Codex OAuth redirects to localhost:1455 — 9router listens there
+# during the login flow. Loopback publish so an SSH tunnel from a laptop
+# (ssh -L 1455:localhost:1455 bee) completes the headless handshake.
+# Inert the rest of the time. Verify at first OAuth; drop if the
+# dashboard uses a paste-code flow instead.
+PublishPort=127.0.0.1:1455:1455
+# Named volume → ~/.local/share/containers/storage/volumes/ninerouter-data
+# (inside bee's restic backup path; image layers excluded in backup.nix).
+# SQLite at /app/data/db/data.sqlite holds providers, OAuth tokens, API
+# keys and usage — i.e. everything that must survive recreation.
+Volume=ninerouter-data:/app/data
+
+[Service]
+Restart=always
+RestartSec=5
+# First start pulls the image (~1-2 GB Next.js app); default 90s could
+# kill mid-pull. (Pre-pull manually when convenient: runuser -u crussell
+# -- podman pull ghcr.io/decolua/9router:latest)
+TimeoutStartSec=15min
+
+[Install]
+WantedBy=default.target
