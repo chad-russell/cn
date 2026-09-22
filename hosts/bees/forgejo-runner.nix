@@ -28,7 +28,10 @@
     # PATH for :host jobs — the job shell sees exactly these (+ actions
     # tooling), NOT bees's systemPackages, so keep the list explicit.
     # Deploy jobs (deploy.yml) additionally need ssh/sudo/nixos-rebuild/
-    # systemd-run.
+    # systemd-run. The bubblebox block (2026-09-22, DESIGN-gitops.md §4 in
+    # bubblebox-pkgs) covers tools/verify.sh + tools/nightly.sh + the
+    # engine's shelled-out deps (mountpoint, tar, grep) for CI on this
+    # runner.
     hostPackages = with pkgs; [
       bash
       coreutils
@@ -43,12 +46,31 @@
       sudo
       nixos-rebuild
       systemd # systemd-run (detached bees self-switch in deploy.yml)
+      # ── bubblebox CI (verify/nightly/publish workflows) ──
+      podman # package builds (rootless; subuid already configured)
+      python3 # verify.sh smoke/gate helpers (tomllib)
+      composefs # mkcomposefs + composefs-info (engine store primitives)
+      bubblewrap # sandbox runtime for smoke runs
+      fuse3 # fusermount3 (setuid wrapper is resolved by the engine ≥8d59009)
+      util-linux # mountpoint (staleness probes)
+      findutils
+      gnutar
+      gnugrep
     ];
     settings = { log.level = "info"; };
   };
 
   age.secrets.forgejo-runner-token-bees.file =
     ../../secrets/forgejo-runner-token-bees.age;
+
+  # composefs + bubblewrap are runtime deps of the bubblebox CI jobs this
+  # runner now serves (DESIGN-gitops.md §4): the engine's store/descriptor
+  # primitives and the sandbox runtime for smoke runs. Installed system-wide
+  # (not just hostPackages) so interactive debugging on bees has them too.
+  environment.systemPackages = with pkgs; [
+    composefs
+    bubblewrap
+  ];
 
   # CI deploys (deploy.yml) run the daemon and its :host job shells as
   # crussell — the module default DynamicUser can build but has no SSH
