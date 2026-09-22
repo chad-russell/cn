@@ -23,6 +23,14 @@ in {
   # rootless user quadlet can read it (hosts/bee/ninerouter.nix).
   "ninerouter-env.age".publicKeys = [ crussell ];
 
+  # ── 9router API key for dsh (bee) ─────────────────────────────
+  # NINEROUTER_API_KEY — Bearer key minted in the 9router dashboard
+  # (name "dsh"), consumed by dsh-web via EnvironmentFile in
+  # modules/dsh.nix (provider "ninerouter" → 10.10.0.12:20128).
+  # Separate file from ninerouter-env.age (the container's own secret)
+  # per consumer — openrouter-api-key/hindsight-env precedent.
+  "ninerouter-dsh-key.age".publicKeys = [ crussell ];
+
   # ── Z.AI API key (opencode) ───────────────────
   "zai-api-key.age".publicKeys = [ crussell ];
 
