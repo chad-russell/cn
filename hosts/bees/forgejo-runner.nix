@@ -56,6 +56,7 @@
       findutils
       gnutar
       gnugrep
+      gzip # tar -czf shells out to gzip (build-portable.sh artifact packing)
     ];
     settings = { log.level = "info"; };
   };
