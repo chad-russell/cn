@@ -114,6 +114,16 @@
     "d /pool/surveillance          0755 crussell users -"
   ];
 
+  # ── Photos data group (NFS ownership contract) ────────────────────
+  # /pool/photos is owned immich(991):photos(985) — dirs 2770 (setgid,
+  # so new files inherit the group no matter who writes them), files
+  # 0640. The gid IS the NFS contract (sec=sys is numeric): pinned
+  # identically in hosts/bees/immich-native.nix, and the immich-server
+  # quadlet carries GroupAdd=985. crussell membership keeps local
+  # admin + the SMB force-user path reading the dataset.
+  users.groups.photos.gid = 985;
+  users.users.crussell.extraGroups = [ "photos" ];
+
   # ── Extra packages ───────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     btrfs-progs

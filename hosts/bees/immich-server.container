@@ -25,6 +25,14 @@ User=991:993
 # Supplementary gid 992 (redis-immich): read/write access to the
 # /run/redis-immich/redis.sock (socket is redis-immich:redis-immich 0660).
 GroupAdd=992
+# Supplementary gid 985 (photos): the media data group. /mnt/photos is
+# owned immich(991):photos(985) on nas (dirs 2770 setgid, files 0640);
+# the gid is pinned in hosts/nas/configuration.nix AND
+# hosts/bees/immich-native.nix. Declared here on purpose — this file is
+# the container's identity, and the 2026-09-06 cutover broke thumbnails
+# for 17 days by dropping the native service's implicit `users` group
+# membership instead of declaring the dependency.
+GroupAdd=985
 # v3.1.0 removed the IMMICH_MACHINE_LEARNING_URL env var; machineLearning
 # .urls defaults to http://immich-machine-learning:3003 in DB config.
 # Alias that hostname to loopback so the default resolves under host
