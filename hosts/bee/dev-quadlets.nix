@@ -154,14 +154,26 @@ in {
         gpl|polymer|buildspace|hummingbird|storyhub|openbible|qrcode) svc="$proj-dev-app" ;;
         *) echo "usage: qd <gpl|polymer|buildspace|hummingbird|storyhub|openbible|qrcode|hb|sh|ob|qr> <up|down|restart|status|logs|migrate|rebuild>" >&2; exit 1 ;;
       esac
+      wait_qrcode_http() {
+        for _ in $(seq 1 60); do
+          curl --fail --silent --max-time 2 http://127.0.0.1:3000/healthz >/dev/null 2>&1 && return 0
+          sleep 1
+        done
+        echo "qrcode app did not become healthy within 60s" >&2
+        return 1
+      }
       case "$cmd" in
-        up)      systemctl --user start "$svc" ;;
+        up)      systemctl --user start "$svc"
+                 [ "$proj" != "qrcode" ] || wait_qrcode_http ;;
         down)    if [ "$proj" = "qrcode" ]; then
-                   systemctl --user stop "$svc" qrcode-dev-db qrcode-dev-rustfs
+                   systemctl --user stop "$svc"
+                   systemctl --user stop qrcode-dev-db qrcode-dev-rustfs
+                   systemctl --user reset-failed "$svc" >/dev/null 2>&1 || true
                  else
                    systemctl --user stop "$svc"
                  fi ;;
-        restart) systemctl --user restart "$svc" ;;
+        restart) systemctl --user restart "$svc"
+                 [ "$proj" != "qrcode" ] || wait_qrcode_http ;;
         status)  case "$proj" in
                    hummingbird) systemctl --user status "$svc" "$proj-dev-db" ;;
                    qrcode) systemctl --user status "$svc" qrcode-dev-db qrcode-dev-rustfs ;;
@@ -180,7 +192,8 @@ in {
                  podman exec qrcode-quadlet-db pg_isready -U payload -d payload >/dev/null
                  podman exec qrcode-quadlet-db psql -U payload -d payload -c "DELETE FROM payload_migrations WHERE name='dev';" >/dev/null 2>&1 || true
                  (cd "$repo" && corepack pnpm build)
-                 systemctl --user restart "$svc" ;;
+                 systemctl --user restart "$svc"
+                 wait_qrcode_http ;;
         *) echo "unknown command: $cmd (up|down|restart|status|logs|migrate|rebuild)" >&2; exit 1 ;;
       esac
     '')
