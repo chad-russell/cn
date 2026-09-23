@@ -19,9 +19,11 @@ ContainerName=mastra
 # container. Only units carrying AutoUpdate= are touched by the nightly
 # timer — mastra is the only opt-in on bees.
 AutoUpdate=registry
-# No auth provider — internal-only route (Chad's call: Mastra auth is
-# optional; every route + Studio is open, gated by the overlay itself).
-Environment=MASTRACODE_AUTH_DISABLED=1
+# Auth: SimpleAuth via FACTORY_SIMPLE_AUTH_TOKEN (in the env file below).
+# Factory's board routes 401 without a tenant, so auth-off mode can't drive
+# the UI; instead bees Caddy injects the token as the Authorization header
+# on every proxied request (mastra.caddy) — the overlay remains the real
+# gate and the browser never handles credentials.
 Environment=NODE_ENV=production
 Environment=MASTRACODE_PUBLIC_URL=https://mastra.internal.crussell.io
 # Local execution: agent coding sessions check repos out under the sandbox
@@ -30,8 +32,8 @@ Environment=FACTORY_SANDBOX_PROVIDER=local
 Environment=MASTRACODE_LOCAL_SANDBOX_ROOT=/data/sandboxes
 Environment=TZ=America/New_York
 # DATABASE_URL (→ mastra-postgres), FACTORY_CREDENTIAL_ENCRYPTION_KEY,
-# GITHUB_APP_WEBHOOK_SECRET (stable state-signing secret until the GitHub
-# App is wired — see secrets.nix).
+# FACTORY_SIMPLE_AUTH_TOKEN, GITHUB_APP_WEBHOOK_SECRET (stable state-signing
+# secret until the GitHub App is wired — see secrets.nix).
 EnvironmentFile=/run/agenix/factory-env
 Network=mastra.network
 # Loopback only — bees Caddy (host network) fronts this at
@@ -39,8 +41,9 @@ Network=mastra.network
 PublishPort=127.0.0.1:8094:4111
 Volume=mastra_sandboxes:/data/sandboxes
 # Server exposes GET /health (mastra-server convention); curl is baked into
-# the image for exactly this.
-HealthCmd=curl --fail --silent --output /dev/null http://127.0.0.1:4111/health
+# the image for exactly this. With auth on, /health needs the bearer token —
+# expanded from the env file by the healthcheck shell.
+HealthCmd=curl --fail --silent --output /dev/null -H "Authorization: Bearer $FACTORY_SIMPLE_AUTH_TOKEN" http://127.0.0.1:4111/health
 HealthInterval=30s
 HealthRetries=3
 HealthStartPeriod=60s
