@@ -23,6 +23,8 @@
       "/var/lib/qBittorrent"
       "/var/lib/ntfy-sh"
       "/var/lib/datenight"
+      # QRCode.Bible crowd QA votes (SQLite database + WAL).
+      "/var/lib/qrcode-qa"
       "/var/lib/redis-immich"
 
       # Container volumes (Caddy certs, etc.)

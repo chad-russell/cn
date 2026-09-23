@@ -49,6 +49,10 @@
       reverse_proxy 10.10.0.6:7890
     '';
 
+    virtualHosts."qrcode-qa.crussell.io".extraConfig = ''
+      reverse_proxy 10.10.0.6:7891
+    '';
+
     virtualHosts."trello.crussell.io".extraConfig = ''
       # Kan (kan.bn) on bees — gated with HTTP basic auth (bcrypt) as an
       # outer layer; Kan's own account login is the inner layer.
