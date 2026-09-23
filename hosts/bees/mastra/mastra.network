@@ -1,0 +1,6 @@
+[Unit]
+Description=Mastra Factory — internal network
+
+[Network]
+# Bridge network; DNS names = container names (mastra, mastra-postgres).
+Driver=bridge

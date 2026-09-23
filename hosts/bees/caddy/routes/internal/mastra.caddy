@@ -1,0 +1,17 @@
+# Mastra Factory (bees quadlet — mastra.internal.crussell.io)
+#
+# Factory UI + API at /, Studio at /studio, served by the same Node server
+# on 127.0.0.1:8094 (quadlet hosts/bees/mastra/mastra.container). Live agent
+# sessions stream server-sent events, so flush_interval -1 pushes chunks as
+# they're produced, and the 360s read_timeout (beszel.caddy / dashboard
+# precedent) keeps long agent turns and WebSockets alive.
+
+@mastra host mastra.internal.crussell.io
+handle @mastra {
+    reverse_proxy 127.0.0.1:8094 {
+        flush_interval -1
+        transport http {
+            read_timeout 360s
+        }
+    }
+}

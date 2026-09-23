@@ -65,6 +65,15 @@ in {
   # POSTGRES_PASSWORD, POSTGRES_URL, BETTER_AUTH_SECRET, KAN_ADMIN_API_KEY.
   "kan-env.age".publicKeys = [ crussell ];
 
+  # ── Mastra Factory on bees — mastra.internal.crussell.io ─────────
+  # Env file for the mastra/mastra-postgres quadlets (hosts/bees/mastra.nix):
+  # POSTGRES_PASSWORD + DATABASE_URL (dedicated pgvector container),
+  # FACTORY_CREDENTIAL_ENCRYPTION_KEY (base64 32B — encrypts stored
+  # provider/integration credentials; losing it makes them unreadable),
+  # GITHUB_APP_WEBHOOK_SECRET (stable state-signing secret until the
+  # GitHub App is wired, then its real webhook secret).
+  "factory-env.age".publicKeys = [ crussell ];
+
   # ── Proton Pass agent token for bee ("Glen" vault) ───────────────
   # PROTON_PASS_PERSONAL_ACCESS_TOKEN (hermes-bee agent, 6m expiry — renew via
   # pass-cli agent renew) + PROTON_PASS_ENCRYPTION_KEY (env key provider for

@@ -336,6 +336,7 @@ Source files:
 - `hosts/bees/thinkpad-registry.nix` + `zot.container` — zot OCI registry (thinkpad host images) + daily build/publish service
 - `hosts/bees/ntfy.nix`, `datenight.nix`
 - `hosts/bees/services.nix` + `*.container` — linkding, papra
+- `hosts/bees/mastra.nix` + `mastra/` — Mastra Factory quadlets (image built from vendored `mastra/factory` template + pgvector Postgres; `mastra.internal.crussell.io`; decisions + deltas in the module header)
 - `hosts/bees/backup.nix` — Restic backup to S3
 - `*.container` files — jellyfin, jellyseerr, sonarr, radarr, prowlarr, qbittorrent, linkding, papra
 
@@ -358,6 +359,8 @@ Live systemd services:
 - `postgresql.service` — Immich DB
 - `redis-immich.service`
 - `beszel.service` — Beszel monitoring hub, `127.0.0.1:8091` (8091 not its default 8090, which ntfy uses)
+- `mastra.service` — Mastra Factory (Factory UI + Studio), podman quadlet, `127.0.0.1:8094`; `mastra-image-build.service` builds its image on change
+- `mastra-postgres.service` — pgvector Postgres for Factory (mastra network only)
 
 Storage:
 
@@ -391,6 +394,7 @@ clients reach bees directly over the overlay, bypassing the gateway.
 Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
 - `services.caddy` — linkding, papra, ntfy, dsh, trades, nsfw, files, lane, lane-hooks, wankbank
+- `mastra.caddy` — Mastra Factory (`mastra.internal.crussell.io` → `127.0.0.1:8094`, streaming: flush_interval -1 + 360s read_timeout)
 - `media.caddy` — qBittorrent, Sonarr, Radarr, Prowlarr, Jellyseerr, Jellyfin internal
 - `beszel.caddy` — Beszel hub (`beszel.internal.crussell.io` → `127.0.0.1:8091`, incl. WebSocket)
 
