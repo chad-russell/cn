@@ -14,7 +14,7 @@
 # drop, so they are a no-op against the existing DB; extensions already
 # installed persist (verify post-cutover per runbook §1.5).
 #
-# Ids: immich = 991:993 and nas-photos gid = 1000 — pinned below (FACTS.md);
+# Ids: immich = 991:993 and photos gid = 985 — pinned below;
 # redis-immich = 992 stays module-held (see the pin block comment).
 #
 # → Once this is live, disable Immich's built-in backup in the admin UI
@@ -26,23 +26,28 @@ let
   dumpDir = "/mnt/photos/backups";
   pg = config.services.postgresql.package;
 in {
-  # ── Id reservations (FACTS.md: immich 991:993, nas-photos gid 1000) ──
+  # ── Id reservations (immich 991:993, photos gid 985) ─────────────
   # The nixpkgs immich module declared the immich user/group with
   # auto-allocated ids (mutableUsers persisted them as 991/993 on bees).
   # With the module gone, pin them so nothing can re-allocate the ids:
-  # the quadlets hardcode User=991:993 (PG peer auth and NFS ownership
-  # are numeric — /mnt/photos root is immich:immich 700) and A2's NFS
-  # uid/gid mapping references gid 1000. Values match the live
-  # /etc/passwd + /etc/group entries, so the first switch is a no-op.
-  # (redis-immich needs no pin: services.redis below keeps its group
-  # declared, so its mutableUsers gid reservation persists.)
+  # the quadlets hardcode User=991:993 (PG peer auth is numeric).
+  #
+  # photos(985) is the media data group: /pool/photos on nas is owned
+  # immich(991):photos(985) — dirs 2770 setgid, files 0640 (2026-09-23
+  # redesign; before that it was crussell:users 1000:100, readable only
+  # via an implicit `users` supplementary-group membership that the
+  # 2026-09-06 quadlet cutover silently dropped → 17 days of broken
+  # thumbnails). The gid IS the NFS contract (sec=sys is numeric): it is
+  # pinned identically on nas (hosts/nas/configuration.nix), which also
+  # puts nas's crussell (SMB force-user) in the group. The immich-server
+  # quadlet carries the matching GroupAdd=985.
   users.users.immich = {
     uid = 991;
     isSystemUser = true;
     group = "immich";
   };
   users.groups.immich.gid = 993;
-  users.groups.nas-photos.gid = 1000;
+  users.groups.photos.gid = 985;
 
   # ── Survivors the immich module used to own (RUNBOOK §3c) ──────────
   services.postgresql = {
