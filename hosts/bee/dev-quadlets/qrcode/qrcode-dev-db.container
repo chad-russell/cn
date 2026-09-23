@@ -1,0 +1,25 @@
+# PostgreSQL 17 for the QRCode.Bible local migration/review stack.
+[Unit]
+Description=QRCode.Bible dev stack — PostgreSQL
+
+[Container]
+Image=docker.io/library/postgres:17
+ContainerName=qrcode-quadlet-db
+Network=qrcode-dev.network
+NetworkAlias=qrcode-db
+Environment=POSTGRES_PASSWORD=payload
+Environment=POSTGRES_USER=payload
+Environment=POSTGRES_DB=payload
+PublishPort=5572:5432
+ShmSize=512m
+HealthCmd=pg_isready -U payload -d payload
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=12
+Volume=qrcode-dev-db.volume:/var/lib/postgresql/data
+Label=io.biblica.project=qrcode-bible
+
+[Service]
+TimeoutStartSec=180
+Restart=on-failure
+RestartSec=3

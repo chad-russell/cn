@@ -71,6 +71,13 @@ let
     "openbible/openbible-dev-db.container"
     "openbible/openbible-dev-minio.container"
     "openbible/openbible-dev-app.container"
+    # qrcode (QRCode.Bible production-build review stack; RustFS 1.0 S3)
+    "qrcode/qrcode-dev.network"
+    "qrcode/qrcode-dev-db.volume"
+    "qrcode/qrcode-dev-rustfs.volume"
+    "qrcode/qrcode-dev-db.container"
+    "qrcode/qrcode-dev-rustfs.container"
+    "qrcode/qrcode-dev-app.container"
   ];
 
   # dev-server.sh for each project (bind-mount source, NOT a quadlet unit).
@@ -84,6 +91,8 @@ let
     "storyhub/dev-server.sh"
     "storyhub/storyhub-dev.Containerfile"
     "openbible/dev-server.sh"
+    "qrcode/dev-server.sh"
+    "qrcode/migrate-from-adhoc.sh"
   ];
 
   # Everything that goes under /etc/dev-quadlets/ (rel paths below, prefixed at
@@ -134,28 +143,45 @@ in {
   #    per-project copies). Raw `systemctl --user` always works too.
   environment.systemPackages = [
     (pkgs.writeShellScriptBin "qd" ''
-      # qd <gpl|polymer|buildspace|hummingbird|storyhub|openbible|hb|sh> <up|down|restart|status|logs>
+      # qd <gpl|polymer|buildspace|hummingbird|storyhub|openbible|qrcode|hb|sh|ob|qr> <up|down|restart|status|logs|migrate|rebuild>
       set -euo pipefail
       proj="''${1:-}"; cmd="''${2:-up}"
       case "$proj" in
         hb) proj="hummingbird" ;; sh) proj="storyhub" ;;
+        ob) proj="openbible" ;; qr) proj="qrcode" ;;
       esac
       case "$proj" in
-        gpl|polymer|buildspace|hummingbird|storyhub|openbible) svc="$proj-dev-app" ;;
-        *) echo "usage: qd <gpl|polymer|buildspace|hummingbird|storyhub|openbible|hb|sh> <up|down|restart|status|logs>" >&2; exit 1 ;;
+        gpl|polymer|buildspace|hummingbird|storyhub|openbible|qrcode) svc="$proj-dev-app" ;;
+        *) echo "usage: qd <gpl|polymer|buildspace|hummingbird|storyhub|openbible|qrcode|hb|sh|ob|qr> <up|down|restart|status|logs|migrate|rebuild>" >&2; exit 1 ;;
       esac
       case "$cmd" in
         up)      systemctl --user start "$svc" ;;
-        down)    systemctl --user stop "$svc" ;;
-        restart) systemctl --user restart "$svc" ;;
-        # Hummingbird has no minio — only show db+minio if they exist.
-        status)  if [ "$proj" = "hummingbird" ]; then
-                   systemctl --user status "$svc" "$proj-dev-db"
+        down)    if [ "$proj" = "qrcode" ]; then
+                   systemctl --user stop "$svc" qrcode-dev-db qrcode-dev-rustfs
                  else
-                   systemctl --user status "$svc" "$proj-dev-db" "$proj-dev-minio"
+                   systemctl --user stop "$svc"
                  fi ;;
+        restart) systemctl --user restart "$svc" ;;
+        status)  case "$proj" in
+                   hummingbird) systemctl --user status "$svc" "$proj-dev-db" ;;
+                   qrcode) systemctl --user status "$svc" qrcode-dev-db qrcode-dev-rustfs ;;
+                   *) systemctl --user status "$svc" "$proj-dev-db" "$proj-dev-minio" ;;
+                 esac ;;
         logs)    journalctl --user -u "$svc" -f ;;
-        *) echo "unknown command: $cmd (up|down|restart|status|logs)" >&2; exit 1 ;;
+        migrate) [ "$proj" = "qrcode" ] || { echo "migrate is only available for qrcode" >&2; exit 1; }
+                 /etc/dev-quadlets/qrcode/migrate-from-adhoc.sh ;;
+        rebuild) [ "$proj" = "qrcode" ] || { echo "rebuild is only available for qrcode" >&2; exit 1; }
+                 repo=/home/crussell/Gloo/360-biblica-qr-codes/.worktrees/qrcode-dev
+                 systemctl --user start qrcode-dev-db qrcode-dev-rustfs
+                 for _ in $(seq 1 60); do
+                   podman exec qrcode-quadlet-db pg_isready -U payload -d payload >/dev/null 2>&1 && break
+                   sleep 1
+                 done
+                 podman exec qrcode-quadlet-db pg_isready -U payload -d payload >/dev/null
+                 podman exec qrcode-quadlet-db psql -U payload -d payload -c "DELETE FROM payload_migrations WHERE name='dev';" >/dev/null 2>&1 || true
+                 (cd "$repo" && corepack pnpm build)
+                 systemctl --user restart "$svc" ;;
+        *) echo "unknown command: $cmd (up|down|restart|status|logs|migrate|rebuild)" >&2; exit 1 ;;
       esac
     '')
   ];

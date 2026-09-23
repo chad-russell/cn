@@ -1,0 +1,39 @@
+# RustFS 1.0.0 for the QRCode.Bible local migration/review stack.
+#
+# Pinned by manifest digest (1.0.0 GA, amd64) so a mutable tag cannot change
+# the storage engine unexpectedly. Credentials/ports intentionally match the
+# retired MinIO sidecar so the product repo's S3 config and presigned URLs do
+# not change. Data is copied through S3 APIs; MinIO's on-disk layout is never
+# reused.
+[Unit]
+Description=QRCode.Bible dev stack — RustFS 1.0 S3
+
+[Container]
+Image=docker.io/rustfs/rustfs@sha256:ba0a1b53e36f321c0d46f3867104abef169f7bc59c467c664ddac87e7ddc9a8b
+ContainerName=qrcode-quadlet-rustfs
+Network=qrcode-dev.network
+NetworkAlias=qrcode-rustfs
+Environment=RUSTFS_ACCESS_KEY=minio
+Environment=RUSTFS_SECRET_KEY=payload123456
+Environment=RUSTFS_ADDRESS=:9000
+Environment=RUSTFS_CONSOLE_ADDRESS=:9001
+Environment=RUSTFS_CONSOLE_ENABLE=true
+Environment=RUSTFS_REGION=us-east-1
+Environment=RUSTFS_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://10.10.0.12:3000
+Environment=RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS=http://localhost:9017,http://10.10.0.12:9017
+Environment=RUSTFS_OBS_LOGGER_LEVEL=warn
+Environment=RUSTFS_HEALTH_ENDPOINT_ENABLE=true
+PublishPort=9016:9000
+PublishPort=9017:9001
+Volume=qrcode-dev-rustfs.volume:/data
+Exec=/data
+HealthCmd=curl --fail --silent http://127.0.0.1:9000/health/ready
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=24
+Label=io.biblica.project=qrcode-bible
+
+[Service]
+TimeoutStartSec=180
+Restart=on-failure
+RestartSec=3
