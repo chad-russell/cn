@@ -9,13 +9,16 @@
 # The old anonymous volumes and stopped containers are retained for rollback.
 set -euo pipefail
 
-OLD_APP=qrcode-c3-app
-OLD_DB=qrcode-c3-pg
-OLD_S3=qrcode-c3-minio
-NEW_DB_VOLUME=systemd-qrcode-dev-db
-NEW_S3_VOLUME=systemd-qrcode-dev-rustfs
-MIGRATE_DB=qrcode-migrate-db
-MIGRATE_S3=qrcode-migrate-rustfs
+OLD_APP="${OLD_APP:-qrcode-c3-app}"
+OLD_DB="${OLD_DB:-qrcode-c3-pg}"
+OLD_S3="${OLD_S3:-qrcode-c3-minio}"
+NEW_DB_VOLUME="${NEW_DB_VOLUME:-systemd-qrcode-dev-db}"
+NEW_S3_VOLUME="${NEW_S3_VOLUME:-systemd-qrcode-dev-rustfs}"
+MIGRATE_DB="${MIGRATE_DB:-qrcode-migrate-db}"
+MIGRATE_S3="${MIGRATE_S3:-qrcode-migrate-rustfs}"
+RUSTFS_PORT="${RUSTFS_PORT:-9026}"
+VERIFY_ONLY="${VERIFY_ONLY:-0}"
+QUIESCE_SOURCE="${QUIESCE_SOURCE:-1}"
 RUSTFS_IMAGE='docker.io/rustfs/rustfs@sha256:ba0a1b53e36f321c0d46f3867104abef169f7bc59c467c664ddac87e7ddc9a8b'
 work="$(mktemp -d)"
 success=0
@@ -48,8 +51,12 @@ done
 
 if podman container exists "$OLD_APP" && [ "$(podman inspect "$OLD_APP" --format '{{.State.Running}}')" = true ]; then
   app_was_running=1
-  echo "==> stopping old app to quiesce DB/S3 writes"
-  podman stop -t 20 "$OLD_APP" >/dev/null
+  if [ "$QUIESCE_SOURCE" = 1 ]; then
+    echo "==> stopping old app to quiesce DB/S3 writes"
+    podman stop -t 20 "$OLD_APP" >/dev/null
+  else
+    echo "==> VERIFY ONLY: source app remains running; final cutover will quiesce writes"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -94,21 +101,21 @@ echo "==> starting RustFS 1.0 migration target"
 podman rm -f "$MIGRATE_S3" >/dev/null 2>&1 || true
 podman run -d --name "$MIGRATE_S3" --network host \
   -e RUSTFS_ACCESS_KEY=minio -e RUSTFS_SECRET_KEY=payload123456 \
-  -e RUSTFS_ADDRESS=:9026 -e RUSTFS_CONSOLE_ADDRESS=:9027 \
-  -e RUSTFS_CONSOLE_ENABLE=true -e RUSTFS_REGION=us-east-1 \
+  -e "RUSTFS_ADDRESS=:$RUSTFS_PORT" -e RUSTFS_CONSOLE_ENABLE=false \
+  -e RUSTFS_REGION=us-east-1 \
   -v "$NEW_S3_VOLUME:/data" "$RUSTFS_IMAGE" /data >/dev/null
 for _ in $(seq 1 60); do
-  code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:9026/health/ready || true)"
+  code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$RUSTFS_PORT/health/ready" || true)"
   [ "$code" = 200 ] && break
   sleep 1
 done
-curl --fail --silent http://127.0.0.1:9026/health/ready >/dev/null
+curl --fail --silent "http://127.0.0.1:$RUSTFS_PORT/health/ready" >/dev/null
 
 # The old MinIO image contains mc. host.containers.internal reaches RustFS on
 # the rootless host network from the old container's pasta network.
-podman exec "$OLD_S3" sh -lc '
+podman exec -e "RUSTFS_PORT=$RUSTFS_PORT" "$OLD_S3" sh -lc '
   mc alias set src http://127.0.0.1:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null
-  mc alias set dst http://host.containers.internal:9026 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null
+  mc alias set dst "http://host.containers.internal:${RUSTFS_PORT}" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null
   mc mb --ignore-existing dst/qrcodes-media >/dev/null
   mc mirror --overwrite --remove src/qrcodes-media dst/qrcodes-media
 '
@@ -121,6 +128,12 @@ diff -u "$work/src-objects" "$work/dst-objects"
 src_objects="$(wc -l < "$work/src-objects")"
 src_bytes="$(awk -F '\t' '{s+=$2} END{print s+0}' "$work/src-objects")"
 echo "==> S3 parity: $src_objects objects / $src_bytes bytes"
+
+if [ "$VERIFY_ONLY" = 1 ]; then
+  success=1
+  echo "==> VERIFY ONLY complete — source stack untouched; target volumes retained for inspection"
+  exit 0
+fi
 
 # Stop source services only after both parity checks pass. Keep source
 # containers and anonymous volumes for instant rollback. Release target volumes
