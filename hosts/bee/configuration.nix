@@ -202,6 +202,17 @@ in {
   # ── nix-ld — run dynamically-linked foreign binaries (npm/bun globals) ─
   programs.nix-ld.enable = true;
 
+  # ── SSH client: drop systemd-ssh-proxy include ─────────────────────
+  # nixpkgs defaults this on, emitting `Include <systemd store
+  # path>/…/20-systemd-ssh-proxy.conf` into /etc/ssh/ssh_config. The
+  # root-owned store file trips OpenSSH's include security check inside
+  # user namespaces (root maps to nobody), so every sandboxed agent
+  # shell's ssh fails with "Bad owner or permissions" (2026-09-23; DSH
+  # agent shells pushed git only via `ssh -F /dev/null`). The fragment
+  # only adds machine/*, unix/*, vsock/* ProxyCommand aliases for
+  # machined-registered containers/VMs — nothing here uses those.
+  programs.ssh.systemd-ssh-proxy.enable = false;
+
   # ── Dev tools ───────────────────────────────────────────────────
   environment.systemPackages = [
     pkgs.git
