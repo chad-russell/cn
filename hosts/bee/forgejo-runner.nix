@@ -25,9 +25,22 @@
     name = "bee";
     url = "https://git.crussell.io";
     tokenFile = config.age.secrets.forgejo-runner-token.path;
-    labels = [ "ubuntu-latest:host" ];
+    # seddit-rust: chad/seddit's CI (the sdt gates — containerized
+    # cargo via the podman API socket). The job env points sdt at the
+    # ROOTFUL socket (ci.yml: SDT_CONTAINER_HOST) and the unit's
+    # supplementary group below grants socket access.
+    labels = [ "seddit-rust:host" "ubuntu-latest:host" ];
+    # podman + the sdt tooling: jobs drive containers through
+    # /run/podman/podman.sock (0660 root:podman).
+    hostPackages = with pkgs; [ bash coreutils curl gitMinimal nodejs wget podman ];
     settings = { log.level = "info"; };
   };
+
+  # Socket access for the (DynamicUser) runner: the podman group owns
+  # the rootful socket. SupplementaryGroups is the sanctioned shape for
+  # shared groups on dynamic users (the primary Group must stay the
+  # passwd one or rootless podman dies — nix gotcha).
+  systemd.services.gitea-runner-bee.serviceConfig.SupplementaryGroups = [ "podman" ];
 
   age.secrets.forgejo-runner-token.file =
     ../../secrets/forgejo-runner-token.age;
