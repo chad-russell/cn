@@ -1,0 +1,55 @@
+[Unit]
+Description=Mastra Factory — Factory UI + Studio + agent server
+# A healthy DB must be up first; the image is pulled from zot (CI-built by
+# the chad/mastra-factory repo, see below).
+Requires=mastra-postgres.service
+After=mastra-postgres.service
+# Always trying to be up: no restart-rate limiting (deliberate — the unit
+# should keep relaunching through crash loops rather than give up).
+StartLimitIntervalSec=0
+
+[Container]
+# Built and published by the chad/mastra-factory Forgejo repo's CI
+# (Factory server template with --studio; pushes :latest + :sha-<git-sha>
+# to the zot registry on bees). :latest rides podman-auto-update nightly
+# (AutoUpdate=registry below); roll back by pointing Image= at a sha- tag.
+Image=10.10.0.6:5000/chad/mastra-factory:latest
+ContainerName=mastra
+# Podman auto-update pulls this image when :latest moves and recreates the
+# container. Only units carrying AutoUpdate= are touched by the nightly
+# timer — mastra is the only opt-in on bees.
+AutoUpdate=registry
+# No auth provider — internal-only route (Chad's call: Mastra auth is
+# optional; every route + Studio is open, gated by the overlay itself).
+Environment=MASTRACODE_AUTH_DISABLED=1
+Environment=NODE_ENV=production
+Environment=MASTRACODE_PUBLIC_URL=https://mastra.internal.crussell.io
+# Local execution: agent coding sessions check repos out under the sandbox
+# volume, inside this container (git + node baked into the image).
+Environment=FACTORY_SANDBOX_PROVIDER=local
+Environment=MASTRACODE_LOCAL_SANDBOX_ROOT=/data/sandboxes
+Environment=TZ=America/New_York
+# DATABASE_URL (→ mastra-postgres), FACTORY_CREDENTIAL_ENCRYPTION_KEY,
+# GITHUB_APP_WEBHOOK_SECRET (stable state-signing secret until the GitHub
+# App is wired — see secrets.nix).
+EnvironmentFile=/run/agenix/factory-env
+Network=mastra.network
+# Loopback only — bees Caddy (host network) fronts this at
+# mastra.internal.crussell.io.
+PublishPort=127.0.0.1:8094:4111
+Volume=mastra_sandboxes:/data/sandboxes
+# Server exposes GET /health (mastra-server convention); curl is baked into
+# the image for exactly this.
+HealthCmd=curl --fail --silent --output /dev/null http://127.0.0.1:4111/health
+HealthInterval=30s
+HealthRetries=3
+HealthStartPeriod=60s
+HealthTimeout=5s
+Notify=healthy
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

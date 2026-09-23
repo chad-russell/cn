@@ -24,6 +24,7 @@
     ./kan.nix
     # Lane (Plane CE) retired 2026-09-08 — Hermes kanban is the source of
     # truth; 13 lane-* containers decommissioned (archive on NAS).
+    ./mastra.nix
     ./llama-server.nix
     ./comfyui.nix
     ./backup.nix

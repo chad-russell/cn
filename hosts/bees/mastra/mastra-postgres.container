@@ -1,0 +1,40 @@
+[Unit]
+Description=Mastra Factory — PostgreSQL 18 + pgvector
+After=network-online.target
+Wants=network-online.target
+# Always trying to be up: no restart-rate limiting (deliberate, Chad asked
+# for an always-up service). Restart=always + RestartSec below.
+StartLimitIntervalSec=0
+
+[Container]
+# pgvector build of the official postgres image — Factory's PgVector (agent
+# recall/memory) needs the `vector` extension. Version follows the template's
+# docker-compose.yml (pgvector/pgvector:pg18).
+Image=docker.io/pgvector/pgvector:pg18
+ContainerName=mastra-postgres
+# POSTGRES_PASSWORD comes from the agenix env file (/run/agenix/factory-env).
+Environment=POSTGRES_DB=mastra
+Environment=POSTGRES_USER=mastra
+Environment=TZ=America/New_York
+EnvironmentFile=/run/agenix/factory-env
+# postgres:18+ images require the mount at /var/lib/postgresql (data lives in
+# a version-specific subdirectory to support pg_upgrade) — matches the
+# template's docker-compose.yml.
+Volume=mastra_postgres_data:/var/lib/postgresql
+# No PublishPort — reachable only inside the mastra network.
+Network=mastra.network
+# Not considered started until the DB accepts connections, so mastra.service
+# (After/Requires this unit) never races a booting DB.
+HealthCmd=pg_isready -U mastra -d mastra
+HealthInterval=5s
+HealthRetries=12
+HealthStartPeriod=10s
+HealthTimeout=3s
+Notify=healthy
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
