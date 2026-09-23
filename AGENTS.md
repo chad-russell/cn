@@ -359,7 +359,7 @@ Live systemd services:
 - `postgresql.service` — Immich DB
 - `redis-immich.service`
 - `beszel.service` — Beszel monitoring hub, `127.0.0.1:8091` (8091 not its default 8090, which ntfy uses)
-- `mastra.service` — Mastra Factory (Factory UI + Studio), podman quadlet, `127.0.0.1:8094`, `AutoUpdate=registry` (nightly podman-auto-update at 04:10); image = `10.10.0.6:5000/chad/mastra-factory:latest` from zot
+- `mastra.service` — Mastra Factory (Factory UI + Studio), podman quadlet, `127.0.0.1:8094`, `AutoUpdate=registry` (nightly podman-auto-update at 04:10); image = `10.10.0.6:5000/chad/mastra-factory:latest` from zot. Auth = SimpleAuth single-user token injected by the caddy route (overlay is the gate); board routes 401 without it, so don't drop the header injection
 - `mastra-postgres.service` — pgvector Postgres for Factory (mastra network only)
 
 Storage:

@@ -38,9 +38,12 @@
 # streaming agent sessions).
 #
 # Decisions (2026-09-23, Chad):
-#   - No auth provider: MASTRACODE_AUTH_DISABLED=1. Mastra auth is optional
-#     and the route is internal-only (public DNS → Nebula 10.10.0.6); the
-#     overlay is the gate. Revisit if the route ever leaves the overlay.
+#   - Auth via core SimpleAuth on FACTORY_SIMPLE_AUTH_TOKEN (single local
+#     user). Factory's board routes hard-require an auth tenant — auth-off
+#     mode 401s the whole UI — but the browser never sees the token: the
+#     mastra.caddy route injects it as the Authorization header on every
+#     proxied request, so the Nebula overlay remains the real gate. The
+#     SimpleAuth wiring is "cn delta 3" in chad/mastra-factory.
 #   - Sandboxes: FACTORY_SANDBOX_PROVIDER=local — agent sessions check repos
 #     out inside the container under the mastra_sandboxes volume (git, node,
 #     openssh, curl baked into the image). Follow-up: explore self-hosted
@@ -54,6 +57,8 @@
 #   POSTGRES_PASSWORD, DATABASE_URL (→ mastra-postgres:5432),
 #   FACTORY_CREDENTIAL_ENCRYPTION_KEY (base64 32B — losing it makes stored
 #   provider credentials unreadable; see factory docs on rotation),
+#   FACTORY_SIMPLE_AUTH_TOKEN (also read by the caddy container for the
+#   header injection — caddy.container has this same EnvironmentFile),
 #   GITHUB_APP_WEBHOOK_SECRET (stable state-signing secret; becomes the real
 #   webhook secret when the GitHub App lands).
 #
@@ -109,12 +114,14 @@
   };
 
   # Alert if the server stops answering its health endpoint (the unit's own
-  # Restart=always handles crash loops; this catches "down for good").
+  # Restart=always handles crash loops; this catches "down for good"). Goes
+  # through Caddy so the SimpleAuth header injection applies — a direct
+  # loopback hit would 401 now that auth is on.
   homelab.freshnessChecks.mastra = {
     description = "Mastra Factory (mastra.internal.crussell.io)";
     extraPath = [ pkgs.curl ];
     checkCommand = ''
-      code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8094/health || echo 000)
+      code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://mastra.internal.crussell.io/health || echo 000)
       echo "GET /health → $code"
       [ "$code" = "200" ]
     '';

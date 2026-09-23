@@ -66,10 +66,13 @@ in {
   "kan-env.age".publicKeys = [ crussell ];
 
   # ── Mastra Factory on bees — mastra.internal.crussell.io ─────────
-  # Env file for the mastra/mastra-postgres quadlets (hosts/bees/mastra.nix):
+  # Env file for the mastra/mastra-postgres quadlets AND the caddy
+  # container (header injection; hosts/bees/mastra.nix):
   # POSTGRES_PASSWORD + DATABASE_URL (dedicated pgvector container),
   # FACTORY_CREDENTIAL_ENCRYPTION_KEY (base64 32B — encrypts stored
   # provider/integration credentials; losing it makes them unreadable),
+  # FACTORY_SIMPLE_AUTH_TOKEN (SimpleAuth single-user token; caddy injects
+  # it as the Authorization header on mastra.internal requests),
   # GITHUB_APP_WEBHOOK_SECRET (stable state-signing secret until the
   # GitHub App is wired, then its real webhook secret).
   "factory-env.age".publicKeys = [ crussell ];

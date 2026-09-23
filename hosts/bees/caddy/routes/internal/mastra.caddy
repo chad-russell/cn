@@ -5,10 +5,18 @@
 # sessions stream server-sent events, so flush_interval -1 pushes chunks as
 # they're produced, and the 360s read_timeout (beszel.caddy / dashboard
 # precedent) keeps long agent turns and WebSockets alive.
+#
+# Auth: the app runs SimpleAuth (FACTORY_SIMPLE_AUTH_TOKEN, single local
+# user) and its board routes 401 without a tenant. The browser never sees
+# credentials — this route injects the token as the Authorization header on
+# every proxied request; the Nebula overlay is the real access gate. The
+# {env.*} placeholder resolves from the caddy container's environment
+# (EnvironmentFile=/run/agenix/factory-env in caddy.container).
 
 @mastra host mastra.internal.crussell.io
 handle @mastra {
     reverse_proxy 127.0.0.1:8094 {
+        header_up Authorization "Bearer {env.FACTORY_SIMPLE_AUTH_TOKEN}"
         flush_interval -1
         transport http {
             read_timeout 360s
