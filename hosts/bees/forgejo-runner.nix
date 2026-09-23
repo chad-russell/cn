@@ -68,10 +68,7 @@
   # runner now serves (DESIGN-gitops.md §4): the engine's store/descriptor
   # primitives and the sandbox runtime for smoke runs. Installed system-wide
   # (not just hostPackages) so interactive debugging on bees has them too.
-  environment.systemPackages = with pkgs; [
-    composefs
-    bubblewrap
-  ];
+  environment.systemPackages = with pkgs; [ composefs bubblewrap ];
 
   # CI deploys (deploy.yml) run the daemon and its :host job shells as
   # crussell — the module default DynamicUser can build but has no SSH
