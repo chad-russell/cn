@@ -22,19 +22,6 @@
               "mostRecentlyPushedCount": 3
             }
           ]
-        },
-        {
-          "repositories": ["chad/mastra-factory"],
-          "deleteUntagged": true,
-          "keepTags": [
-            {
-              "patterns": ["^latest$"]
-            },
-            {
-              "patterns": ["^sha-"],
-              "mostRecentlyPushedCount": 5
-            }
-          ]
         }
       ]
     }

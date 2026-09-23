@@ -12,9 +12,6 @@ Volume=/var/lib/bubblebox-cache:/srv/bubblebox-cache:ro
 Volume=caddy_data:/data
 Volume=caddy_config:/config
 EnvironmentFile=/run/agenix/aws-env
-# The mastra.caddy route injects the Factory SimpleAuth token via
-# {env.FACTORY_SIMPLE_AUTH_TOKEN} — that env comes from this file.
-EnvironmentFile=/run/agenix/factory-env
 
 [Service]
 Restart=always
