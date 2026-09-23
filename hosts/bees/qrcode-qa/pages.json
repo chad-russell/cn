@@ -1,0 +1,582 @@
+[
+  {
+    "slug": "akuapem-twi",
+    "title": "Akuapem Twi"
+  },
+  {
+    "slug": "alas-kluet",
+    "title": "Alas-Kluet Bible"
+  },
+  {
+    "slug": "amharic",
+    "title": "Amharic"
+  },
+  {
+    "slug": "cebuano",
+    "title": "Ang Pulong sa Dios"
+  },
+  {
+    "slug": "arabic",
+    "title": "Arabic"
+  },
+  {
+    "slug": "asante-twi",
+    "title": "Asante Twi"
+  },
+  {
+    "slug": "asha-paintings",
+    "title": "asha-paintings"
+  },
+  {
+    "slug": "asha-paintings-ukrainian",
+    "title": "asha-paintings-ukrainian"
+  },
+  {
+    "slug": "bengali",
+    "title": "Bengali"
+  },
+  {
+    "slug": "estudio",
+    "title": "Biblia de Estudio"
+  },
+  {
+    "slug": "bsb",
+    "title": "Biblica Study Bible"
+  },
+  {
+    "slug": "biblicatestapp",
+    "title": "biblicatestapp"
+  },
+  {
+    "slug": "burmese-bible-web",
+    "title": "Burmese Bible Web"
+  },
+  {
+    "slug": "burmese",
+    "title": "Burmese Bible ခေတ်သစ်​မြန်မာ သမ္မာကျမ်း"
+  },
+  {
+    "slug": "cars",
+    "title": "CARS"
+  },
+  {
+    "slug": "carsa",
+    "title": "CARSA"
+  },
+  {
+    "slug": "carst",
+    "title": "CARST"
+  },
+  {
+    "slug": "chichewa",
+    "title": "Chichewa"
+  },
+  {
+    "slug": "chimborazo-highland-quichua",
+    "title": "Chimborazo Highland Quichua"
+  },
+  {
+    "slug": "chinese",
+    "title": "Chinese"
+  },
+  {
+    "slug": "croatian",
+    "title": "Croatian"
+  },
+  {
+    "slug": "ctbg-concept",
+    "title": "ctbg-concept"
+  },
+  {
+    "slug": "ctbg_bgd",
+    "title": "ctbg_bgd"
+  },
+  {
+    "slug": "ctbg_com_w6",
+    "title": "ctbg_com_w6"
+  },
+  {
+    "slug": "ctbg_cub_w7",
+    "title": "ctbg_cub_w7"
+  },
+  {
+    "slug": "ctbg_horn",
+    "title": "ctbg_horn"
+  },
+  {
+    "slug": "ctbg_ibib",
+    "title": "ctbg_ibib"
+  },
+  {
+    "slug": "ctbg_ind",
+    "title": "ctbg_ind"
+  },
+  {
+    "slug": "ctbg_ira",
+    "title": "ctbg_ira"
+  },
+  {
+    "slug": "ctbg_maghreg_w7",
+    "title": "ctbg_maghreb_w7"
+  },
+  {
+    "slug": "ctbg_mar_w7",
+    "title": "ctbg_mar_w7"
+  },
+  {
+    "slug": "ctbg_mmr",
+    "title": "ctbg_mmr"
+  },
+  {
+    "slug": "ctbg_nic_w5",
+    "title": "ctbg_nic_w5"
+  },
+  {
+    "slug": "ctbg_nigeria",
+    "title": "ctbg_nigeria"
+  },
+  {
+    "slug": "ctbg_pak",
+    "title": "ctbg_pak"
+  },
+  {
+    "slug": "ctbg_pak_w5",
+    "title": "ctbg_pak_w5"
+  },
+  {
+    "slug": "ctbg_punj_w5",
+    "title": "ctbg_punj_w5"
+  },
+  {
+    "slug": "ctbg_sahel_w6",
+    "title": "ctbg_sahel_w6"
+  },
+  {
+    "slug": "ctbg_uzb_w5",
+    "title": "ctbg_uzb_w5"
+  },
+  {
+    "slug": "czech",
+    "title": "Czech"
+  },
+  {
+    "slug": "danish",
+    "title": "Danish"
+  },
+  {
+    "slug": "dlt",
+    "title": "Deep Link Test"
+  },
+  {
+    "slug": "dlt2",
+    "title": "Deep Link Test 2"
+  },
+  {
+    "slug": "dholuo",
+    "title": "Dholuo"
+  },
+  {
+    "slug": "kiswahili_appselect",
+    "title": "Download Now"
+  },
+  {
+    "slug": "dutch",
+    "title": "Dutch"
+  },
+  {
+    "slug": "estonian",
+    "title": "Estonian"
+  },
+  {
+    "slug": "ewe",
+    "title": "Ewe"
+  },
+  {
+    "slug": "feedback-survey",
+    "title": "Feedback Survey"
+  },
+  {
+    "slug": "finnish",
+    "title": "Finnish"
+  },
+  {
+    "slug": "gayo",
+    "title": "Gayo Bible"
+  },
+  {
+    "slug": "gbagyi",
+    "title": "Gbagyi"
+  },
+  {
+    "slug": "german",
+    "title": "German"
+  },
+  {
+    "slug": "hebrew",
+    "title": "Hebrew"
+  },
+  {
+    "slug": "hijazi-arabic",
+    "title": "Hijazi Arabic"
+  },
+  {
+    "slug": "hiligaynon",
+    "title": "Hiligaynon"
+  },
+  {
+    "slug": "urdu_apps",
+    "title": "Holy Bible, ‪Urdu Contemporary Version™"
+  },
+  {
+    "slug": "hungarian",
+    "title": "Hungarian"
+  },
+  {
+    "slug": "ibibio",
+    "title": "Ibibio Contemporary Bible"
+  },
+  {
+    "slug": "icelandic",
+    "title": "Icelandic"
+  },
+  {
+    "slug": "igbo",
+    "title": "Igbo"
+  },
+  {
+    "slug": "indonesian",
+    "title": "Indonesian"
+  },
+  {
+    "slug": "italian",
+    "title": "Italian"
+  },
+  {
+    "slug": "japanese",
+    "title": "Japanese"
+  },
+  {
+    "slug": "javanese",
+    "title": "Javanese Bible"
+  },
+  {
+    "slug": "kannada",
+    "title": "Kannada"
+  },
+  {
+    "slug": "kikuyu",
+    "title": "Kikuyu"
+  },
+  {
+    "slug": "kirundi",
+    "title": "Kirundi Bible App"
+  },
+  {
+    "slug": "kiswahili-neno-web",
+    "title": "Kiswahili Neno Web"
+  },
+  {
+    "slug": "kiswahili",
+    "title": "Kiswahili Neno: Maandiko Matakatifu"
+  },
+  {
+    "slug": "n26",
+    "title": "Kiswahili Neno: Maandiko Matakatifu"
+  },
+  {
+    "slug": "kiyombe",
+    "title": "Kiyombe"
+  },
+  {
+    "slug": "korean",
+    "title": "Korean"
+  },
+  {
+    "slug": "kurdish",
+    "title": "Kurdish"
+  },
+  {
+    "slug": "ctbg_tgo",
+    "title": "La Bible dans votre langue !"
+  },
+  {
+    "slug": "french",
+    "title": "La Bible du Semeur"
+  },
+  {
+    "slug": "lao",
+    "title": "Lao"
+  },
+  {
+    "slug": "lingala",
+    "title": "Lingala"
+  },
+  {
+    "slug": "lithuanian",
+    "title": "Lithuanian"
+  },
+  {
+    "slug": "hausa",
+    "title": "Littafi Mai Tsarki, Sabon Rai Don Kowa"
+  },
+  {
+    "slug": "luganda",
+    "title": "Luganda"
+  },
+  {
+    "slug": "malay-riau",
+    "title": "Malay Riau Bible"
+  },
+  {
+    "slug": "malayalam",
+    "title": "Malayalam"
+  },
+  {
+    "slug": "mmr",
+    "title": "Myanmar QR code"
+  },
+  {
+    "slug": "ndebele-2",
+    "title": "Ndebele"
+  },
+  {
+    "slug": "nepali",
+    "title": "Nepali"
+  },
+  {
+    "slug": "nirv",
+    "title": "New International Reader's Version"
+  },
+  {
+    "slug": "nfc-arabic",
+    "title": "NFC Arabic"
+  },
+  {
+    "slug": "nfcdemo",
+    "title": "NFC Card Demo"
+  },
+  {
+    "slug": "nfc-spanish",
+    "title": "NFC Spanish BSB"
+  },
+  {
+    "slug": "nfc-ukraine",
+    "title": "NFC Ukraine"
+  },
+  {
+    "slug": "niv-apple",
+    "title": "NIV Apple App"
+  },
+  {
+    "slug": "north-levantine",
+    "title": "North Levantine"
+  },
+  {
+    "slug": "norwegian",
+    "title": "Norwegian"
+  },
+  {
+    "slug": "portuguese-nvi",
+    "title": "Nova Versão Internacional"
+  },
+  {
+    "slug": "oromo",
+    "title": "Oromo"
+  },
+  {
+    "slug": "oromo-ethiopic",
+    "title": "Oromo Ethiopic"
+  },
+  {
+    "slug": "persian",
+    "title": "Persian"
+  },
+  {
+    "slug": "polish",
+    "title": "Polish"
+  },
+  {
+    "slug": "portuguese-o-livro",
+    "title": "Portuguese O Livro"
+  },
+  {
+    "slug": "punjabi-bible-web",
+    "title": "Punjabi Bible Web"
+  },
+  {
+    "slug": "r4lfarsi",
+    "title": "Reach4Life Farsi"
+  },
+  {
+    "slug": "r4l-french",
+    "title": "Reach4Life French"
+  },
+  {
+    "slug": "r4l-moz-portuguese",
+    "title": "Reach4Life Mozambique Portuguese"
+  },
+  {
+    "slug": "r4l-nepali",
+    "title": "Reach4Life Nepali"
+  },
+  {
+    "slug": "r4lportuguese-android",
+    "title": "Reach4Life Portuguese Android"
+  },
+  {
+    "slug": "reach4life-shona",
+    "title": "Reach4Life Shona"
+  },
+  {
+    "slug": "r4l-somali",
+    "title": "Reach4Life Somali"
+  },
+  {
+    "slug": "romanian",
+    "title": "Romanian"
+  },
+  {
+    "slug": "russian",
+    "title": "Russian"
+  },
+  {
+    "slug": "serbian",
+    "title": "Serbian"
+  },
+  {
+    "slug": "shona",
+    "title": "Shona Bible"
+  },
+  {
+    "slug": "sinhala",
+    "title": "Sinhala"
+  },
+  {
+    "slug": "slovak",
+    "title": "Slovak"
+  },
+  {
+    "slug": "slovenian",
+    "title": "Slovenian"
+  },
+  {
+    "slug": "somali-cushitic",
+    "title": "Somali Cushitic"
+  },
+  {
+    "slug": "spanish",
+    "title": "Spanish"
+  },
+  {
+    "slug": "spanish-nvi",
+    "title": "Spanish NVI"
+  },
+  {
+    "slug": "spanish-nvi-castellano",
+    "title": "Spanish NVI Castellano"
+  },
+  {
+    "slug": "study-bible",
+    "title": "Study Bible"
+  },
+  {
+    "slug": "sumi-naga",
+    "title": "Sumi Naga"
+  },
+  {
+    "slug": "swedish",
+    "title": "Swedish"
+  },
+  {
+    "slug": "tagalog",
+    "title": "Tagalog"
+  },
+  {
+    "slug": "tamil",
+    "title": "Tamil"
+  },
+  {
+    "slug": "tamil-sri-lankan",
+    "title": "Tamil Sri Lankan Bible"
+  },
+  {
+    "slug": "telugu",
+    "title": "Telugu"
+  },
+  {
+    "slug": "test",
+    "title": "Test"
+  },
+  {
+    "slug": "test-2",
+    "title": "Test"
+  },
+  {
+    "slug": "thai",
+    "title": "Thai"
+  },
+  {
+    "slug": "tswana",
+    "title": "Tswana"
+  },
+  {
+    "slug": "turkish",
+    "title": "Turkish"
+  },
+  {
+    "slug": "ukrainian",
+    "title": "UkrainianНовий Завіт і Книга Псалмів, Новий Переклад УкраїнськоюUkrainian"
+  },
+  {
+    "slug": "urbana",
+    "title": "Urbana"
+  },
+  {
+    "slug": "u25",
+    "title": "Urbana 25 App"
+  },
+  {
+    "slug": "urdu",
+    "title": "Urdu Bible"
+  },
+  {
+    "slug": "vietnamese",
+    "title": "Vietnamese"
+  },
+  {
+    "slug": "yoruba",
+    "title": "Yoruba"
+  },
+  {
+    "slug": "russian-bible-print",
+    "title": "Святая Библия"
+  },
+  {
+    "slug": "libyanarabic",
+    "title": "الإنجيل المقدس"
+  },
+  {
+    "slug": "chhattisgarhi",
+    "title": "पबितर बाईबल, समकालीन छत्तीसगढ़ी अनुवाद"
+  },
+  {
+    "slug": "nepali_apps",
+    "title": "पवित्र बाइबल, नेपाली समकालीन संस्करण"
+  },
+  {
+    "slug": "marathi",
+    "title": "पवित्रशास्त्र, मराठी समकालीन आवृत्ती"
+  },
+  {
+    "slug": "hindi",
+    "title": "हिंदी समकालीन संस्करण"
+  },
+  {
+    "slug": "punjabi",
+    "title": "ਨਵਾਂ ਨੇਮ, ਪੰਜਾਬੀ ਮੌਜੂਦਾ ਤਰਜਮਾ"
+  },
+  {
+    "slug": "telugu_apps",
+    "title": "తెలుగు సమకాలీన అనువాదం"
+  }
+]

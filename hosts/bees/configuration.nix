@@ -18,6 +18,7 @@
     ./immich-quadlet.nix
     ./ntfy.nix
     ./datenight.nix
+    ./qrcode-qa.nix
     ./caddy.nix
     ./services.nix
     ./kan.nix
