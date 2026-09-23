@@ -1,0 +1,36 @@
+# QRCode.Bible production-build review app on bee.
+#
+# Iteration loop:
+#   edit/import in the stable product worktree
+#   qd qrcode rebuild     # host pnpm build, then restart this unit
+#
+# Host network is deliberate: the product `.env` uses localhost:5572/9016,
+# presigned S3 URLs must remain browser-reachable through the laptop tunnel,
+# and the running app is reached directly over Nebula at bee:3000 for public QA.
+[Unit]
+Description=QRCode.Bible dev stack — production-build review app
+Requires=qrcode-dev-db.container qrcode-dev-rustfs.container
+BindsTo=qrcode-dev-db.container qrcode-dev-rustfs.container
+After=qrcode-dev-db.container qrcode-dev-rustfs.container
+
+[Container]
+Image=docker.io/library/node@sha256:713cfbf4a0ac19f40e1bb9919893e126b74a5c8cf5d0623c9f89515c8f74c6fa
+ContainerName=qrcode-quadlet-app
+Network=host
+User=0
+WorkingDir=/home/crussell/Gloo/360-biblica-qr-codes/.worktrees/qrcode-dev
+Volume=/home/crussell/Gloo/360-biblica-qr-codes:/home/crussell/Gloo/360-biblica-qr-codes
+Volume=/etc/dev-quadlets/qrcode/dev-server.sh:/usr/local/bin/qrcode-dev-server.sh:ro
+EnvironmentFile=/home/crussell/Gloo/360-biblica-qr-codes/.worktrees/qrcode-dev/.env
+Environment=NODE_ENV=production
+Environment=HOSTNAME=0.0.0.0
+Exec=/usr/local/bin/qrcode-dev-server.sh
+Label=io.biblica.project=qrcode-bible
+
+[Service]
+TimeoutStartSec=240
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

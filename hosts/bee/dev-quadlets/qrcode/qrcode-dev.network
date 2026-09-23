@@ -1,0 +1,6 @@
+# Podman network for the QRCode.Bible local migration/review stack.
+[Unit]
+Description=QRCode.Bible dev stack — podman network
+
+[Network]
+Label=io.biblica.project=qrcode-bible

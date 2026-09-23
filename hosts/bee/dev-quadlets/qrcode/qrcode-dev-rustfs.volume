@@ -1,0 +1,7 @@
+# Persistent RustFS S3 data for the QRCode.Bible local stack.
+# Default volume name: systemd-qrcode-dev-rustfs
+[Unit]
+Description=QRCode.Bible dev stack — RustFS data
+
+[Volume]
+Label=io.biblica.project=qrcode-bible

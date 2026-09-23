@@ -1,4 +1,4 @@
-# bee remote dev stacks — podman user-quadlets (gpl, polymer, buildspace, hummingbird, storyhub, openbible)
+# bee remote dev stacks — podman user-quadlets (gpl, polymer, buildspace, hummingbird, storyhub, openbible, qrcode)
 
 This mirrors the **thinkpad's** rootless user-quadlet dev setup onto `bee`, so
 you can use bee as a remote dev machine for the Gloo/buildspace/Wycliffe
@@ -20,7 +20,7 @@ thinkpad.
 ```
 ~/Gloo/360-gpl, ~/Gloo/360-polymer, ~/Gloo/360-hummingbird, ~/Gloo/open-bible, ~/buildspace
                                               cloned product repos on bee
-~/.../hosts/bee/dev-quadlets/{gpl,polymer,buildspace,hummingbird,storyhub,openbible}/
+~/.../hosts/bee/dev-quadlets/{gpl,polymer,buildspace,hummingbird,storyhub,openbible,qrcode}/
 ├── *.network / *.volume / *.container              quadlet input files
 ├── *.build / *.Containerfile                        storyhub custom image build
 ├── dev-server.sh                                   PID 1 of each app container
@@ -51,6 +51,7 @@ user manager (and the user podman socket) is always up.
 | hummingbird | `devcontainers/javascript-node:24` | postgres:16 | — | `3000` (web), `8000` (api) |
 | storyhub | `localhost/storyhub-dev:latest` (custom build) | postgres:16 | minio | `3001` (web), `8001` (worker), `9000` (minio API), `9001` (minio console) |
 | openbible | `devcontainers/javascript-node:22` | postgres:17 | minio | `3000` (web), `9876` (api), `9000` (minio API), `9001` (minio console) |
+| qrcode | `node:24-slim` (pinned digest) | postgres:17 | **RustFS 1.0.0** | `3000` (web), `9016` (S3 API), `9017` (RustFS console) |
 
 All app containers run as **root (UID 0) inside the container** — in
 rootless podman that maps to crussell on the host, so bind-mount artifacts
@@ -135,6 +136,7 @@ qd gpl down            # stops app + db + minio (PartOf= cascade)
 #            qd hummingbird ... (or: qd hb ...)
 #            qd storyhub ...   (or: qd sh ...)
 #            qd openbible ...
+#            qd qrcode ... (or: qd qr ...)
 ```
 
 **2. Open the tunnel from your laptop** and browse `localhost`:
@@ -148,6 +150,7 @@ cjust dev-tunnel buildspace   # 8 ports: 3000,3002–3006,3008,3010
 cjust dev-tunnel hummingbird  # http://localhost:3000 (web) + http://localhost:8000 (api)
 cjust dev-tunnel storyhub     # http://localhost:3001 (web) + :8001 + :9000 + :9001
 cjust dev-tunnel openbible    # http://localhost:3000 (web) + :9876 (api) + :9000/:9001 (minio)
+cjust dev-tunnel qrcode       # http://localhost:3000 (web) + :9016/:9017 (RustFS)
 ```
 
 Ctrl-C closes a tunnel. `cjust dev-tunnel <project>` forwards the **same** ports
@@ -160,7 +163,8 @@ bee also runs the former buzz-relay (which used to own bee's `:3000` and `:5000`
 the dev stacks publish on **offset host ports** on bee that never collide with
 each other (the buzz-relay is gone): gpl `:3006`, polymer `:3100`/`:3101`, buildspace
 `:32xx`, hummingbird `:3300`/`:3308`, storyhub `:3301`/`:3309`/`:3390`/`:3391`,
-openbible `:3400`/`:3401`/`:3402`/`:3403`.
+openbible `:3400`/`:3401`/`:3402`/`:3403`. QRCode is the dedicated review
+stack and publishes directly on bee `:3000`/`:9016`/`:9017` (web/S3/console).
 The `cjust dev-tunnel` (and `cjust dev-up`) re-maps those onto the
 thinkpad-standard localhost ports (`:3000`, `:3006`, …) so nothing in the apps or
 your muscle memory changes. Because the projects use disjoint host-port
@@ -224,6 +228,11 @@ podman exec storyhub-quadlet-app bash -lc 'cd /workspace && pnpm --filter storyh
 # openbible — migrations + seed run automatically on every start (see the
 # Open.Bible notes above); nothing extra needed. Re-seed manually if desired:
 podman exec openbible-quadlet-app pnpm --filter @open-bible/web seed
+
+# qrcode — one-time migration from the old ad-hoc stack, then normal use:
+qd qrcode migrate            # pg_dump/restore + MinIO→RustFS S3 mirror + parity checks
+qd qrcode up                 # normally already enabled/running after migration
+qd qrcode rebuild            # host pnpm build, then restart only the app unit
 ```
 
 (MinIO buckets are created automatically by each `dev-server.sh`.)
@@ -255,10 +264,13 @@ qd sh restart
 
 ## How it behaves (by design)
 
-- **No auto-start on boot.** No unit has an `[Install]` section → nothing is
-  enabled; stacks run only when you `start` them.
-- **Dev server is PID 1, no auto-restart.** If a dev server crashes, the
-  container stops so you can read the logs and `restart` it — no restart loop.
+- **Most stacks are on-demand.** GPL/Polymer/Buildspace/Hummingbird/StoryHub/
+  Open.Bible have no `[Install]` section and run only when started. **QRCode is
+  the exception:** its one-time `qd qrcode migrate` enables the review app at
+  boot, and the app Requires DB + RustFS; this keeps the shared QA URL stable.
+- **Compiler dev servers are PID 1 with no restart loop.** QRCode is different:
+  it runs a prebuilt production server with `Restart=on-failure`, so crashes are
+  recovered automatically while `qd qrcode rebuild` remains the edit loop.
 - **DB + MinIO data persist** in the `systemd-<project>-dev-db` /
   `systemd-<project>-dev-minio` volumes across stop/start.
 - **Coexists with the former buzz-relay quadlets** on bee (removed 2026-08-20; the port-offset scheme remains) — completely

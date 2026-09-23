@@ -1,0 +1,7 @@
+# Persistent PostgreSQL data for the QRCode.Bible local stack.
+# Default volume name: systemd-qrcode-dev-db
+[Unit]
+Description=QRCode.Bible dev stack — PostgreSQL data
+
+[Volume]
+Label=io.biblica.project=qrcode-bible
