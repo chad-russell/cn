@@ -32,7 +32,15 @@
     labels = [ "seddit-rust:host" "ubuntu-latest:host" ];
     # podman + the sdt tooling: jobs drive containers through
     # /run/podman/podman.sock (0660 root:podman).
-    hostPackages = with pkgs; [ bash coreutils curl gitMinimal nodejs wget podman ];
+    hostPackages = with pkgs; [
+      bash
+      coreutils
+      curl
+      gitMinimal
+      nodejs
+      wget
+      podman
+    ];
     settings = { log.level = "info"; };
   };
 
@@ -40,7 +48,8 @@
   # the rootful socket. SupplementaryGroups is the sanctioned shape for
   # shared groups on dynamic users (the primary Group must stay the
   # passwd one or rootless podman dies — nix gotcha).
-  systemd.services.gitea-runner-bee.serviceConfig.SupplementaryGroups = [ "podman" ];
+  systemd.services.gitea-runner-bee.serviceConfig.SupplementaryGroups =
+    [ "podman" ];
 
   age.secrets.forgejo-runner-token.file =
     ../../secrets/forgejo-runner-token.age;
