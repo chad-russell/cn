@@ -191,6 +191,10 @@ in {
                  done
                  podman exec qrcode-quadlet-db pg_isready -U payload -d payload >/dev/null
                  podman exec qrcode-quadlet-db psql -U payload -d payload -c "DELETE FROM payload_migrations WHERE name='dev';" >/dev/null 2>&1 || true
+                 # Payload content imports happen outside Next's request context,
+                 # so cached SSG/RSC data can otherwise survive a rebuild and
+                 # render stale DB versions. Keep build artifacts, clear data cache.
+                 rm -rf "$repo/.next/cache"
                  (cd "$repo" && corepack pnpm build)
                  systemctl --user restart "$svc"
                  wait_qrcode_http ;;
