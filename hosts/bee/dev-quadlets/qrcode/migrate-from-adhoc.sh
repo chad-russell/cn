@@ -140,6 +140,6 @@ fi
 # from the temporary migration containers BEFORE the managed units mount them.
 podman stop -t 20 "$OLD_DB" "$OLD_S3" >/dev/null
 podman rm -f "$MIGRATE_DB" "$MIGRATE_S3" >/dev/null
-systemctl --user enable --now qrcode-dev-app.service
+systemctl --user start qrcode-dev-app.service
 success=1
-echo "==> migration complete — old containers stopped (not removed); qrcode-dev-app enabled + running"
+echo "==> migration complete — old containers stopped (not removed); qrcode-dev-app running + boot-linked"
