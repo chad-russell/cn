@@ -333,10 +333,10 @@ Source files:
 - `hosts/bees/immich-quadlet.nix` — Immich server + ML quadlets (wired at cutover)
 - `hosts/bees/immich-native.nix` — native postgres + redis-immich + nightly pg_dump + freshness check
 - `hosts/bees/beszel.nix` — Beszel monitoring hub
-- `hosts/bees/thinkpad-registry.nix` + `zot.container` — zot OCI registry (thinkpad host images) + daily build/publish service
+- `hosts/bees/thinkpad-registry.nix` + `zot.container` — zot OCI registry (thinkpad host images + `chad/mastra-factory` images; retention policies per repo in `zot-config.json`) + daily build/publish service
 - `hosts/bees/ntfy.nix`, `datenight.nix`
 - `hosts/bees/services.nix` + `*.container` — linkding, papra
-- `hosts/bees/mastra.nix` + `mastra/` — Mastra Factory quadlets (image built from vendored `mastra/factory` template + pgvector Postgres; `mastra.internal.crussell.io`; decisions + deltas in the module header)
+- `hosts/bees/mastra.nix` + `mastra/` — Mastra Factory quadlets (pulls the CI-built image from zot; source project + image pipeline live in the `chad/mastra-factory` Forgejo repo; `mastra.internal.crussell.io`; decisions in the module header)
 - `hosts/bees/backup.nix` — Restic backup to S3
 - `*.container` files — jellyfin, jellyseerr, sonarr, radarr, prowlarr, qbittorrent, linkding, papra
 
@@ -359,7 +359,7 @@ Live systemd services:
 - `postgresql.service` — Immich DB
 - `redis-immich.service`
 - `beszel.service` — Beszel monitoring hub, `127.0.0.1:8091` (8091 not its default 8090, which ntfy uses)
-- `mastra.service` — Mastra Factory (Factory UI + Studio), podman quadlet, `127.0.0.1:8094`; `mastra-image-build.service` builds its image on change
+- `mastra.service` — Mastra Factory (Factory UI + Studio), podman quadlet, `127.0.0.1:8094`, `AutoUpdate=registry` (nightly podman-auto-update at 04:10); image = `10.10.0.6:5000/chad/mastra-factory:latest` from zot
 - `mastra-postgres.service` — pgvector Postgres for Factory (mastra network only)
 
 Storage:

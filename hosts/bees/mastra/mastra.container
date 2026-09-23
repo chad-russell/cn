@@ -1,19 +1,24 @@
 [Unit]
 Description=Mastra Factory — Factory UI + Studio + agent server
-# Image build (oneshot) and a healthy DB must both complete first.
-Requires=mastra-image-build.service mastra-postgres.service
-After=mastra-image-build.service mastra-postgres.service
+# A healthy DB must be up first; the image is pulled from zot (CI-built by
+# the chad/mastra-factory repo, see below).
+Requires=mastra-postgres.service
+After=mastra-postgres.service
 # Always trying to be up: no restart-rate limiting (deliberate — the unit
 # should keep relaunching through crash loops rather than give up).
 StartLimitIntervalSec=0
 
 [Container]
-# Built by mastra-image-build.service from hosts/bees/mastra/factory/
-# (the vendored Mastra Factory server template) via hosts/bees/mastra/
-# Containerfile. Bump by committing project changes — the builder's podman
-# cache only rebuilds layers whose inputs changed.
-Image=localhost/mastra-factory:latest
+# Built and published by the chad/mastra-factory Forgejo repo's CI
+# (Factory server template with --studio; pushes :latest + :sha-<git-sha>
+# to the zot registry on bees). :latest rides podman-auto-update nightly
+# (AutoUpdate=registry below); roll back by pointing Image= at a sha- tag.
+Image=10.10.0.6:5000/chad/mastra-factory:latest
 ContainerName=mastra
+# Podman auto-update pulls this image when :latest moves and recreates the
+# container. Only units carrying AutoUpdate= are touched by the nightly
+# timer — mastra is the only opt-in on bees.
+AutoUpdate=registry
 # No auth provider — internal-only route (Chad's call: Mastra auth is
 # optional; every route + Studio is open, gated by the overlay itself).
 Environment=MASTRACODE_AUTH_DISABLED=1
