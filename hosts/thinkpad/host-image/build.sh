@@ -18,8 +18,8 @@
 set -euo pipefail
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ---- config (keep in sync with switch.sh) -----------------------------
-FEDORA_MAJOR_VERSION="44"
+# ---- config (single source: ./version) ---------------------------------
+. "${SELF_DIR}/version"
 IMAGE="localhost/host-image-thinkpad:${FEDORA_MAJOR_VERSION}"
 
 # ---- per-build version (lets `bootc upgrade` detect a rebuild) ----------

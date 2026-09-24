@@ -63,10 +63,11 @@ Currently:
 ```text
 host-image/
 ├── Containerfile
+├── version       # FEDORA_MAJOR_VERSION — the single place it's declared
 ├── etc-hosts     # baked /etc/hosts (COPY — RUN is runtime-masked); flake-checked
 ├── nebula-hosts  # the same Nebula fragment alone (flake-checked, hosts-sync)
 ├── build.sh      # break-glass LOCAL build (normal flow builds on bees)
-├── switch.sh     # one-time adopt of the bees registry reference
+├── switch.sh     # one-time adopt of the bees registry reference (:stable)
 ├── upgrade.sh    # routine pull-from-registry + stage (bootc upgrade)
 └── README.md
 ```
@@ -75,12 +76,15 @@ host-image/
 
 bees builds + publishes this image daily (`thinkpad-image-build.timer`, see
 `hosts/bees/thinkpad-registry.nix`) to its zot registry at
-`10.10.0.6:5000/cn/thinkpad-host:44` (Nebula-only, plain HTTP inside the
-tunnel). Zot retention keeps the rolling `:44` plus the last 3 immutable
-`44-<sha>-<ts>` tags and GCs the rest.
+`10.10.0.6:5000/cn/thinkpad-host:stable` (Nebula-only, plain HTTP inside the
+tunnel). Zot retention keeps the rolling `:stable` plus the last 3 immutable
+`<fedora>-<sha>-<ts>` tags (version-free patterns — a Fedora bump never
+touches the boot reference or retention) and GCs the rest. The Fedora major
+version lives in exactly one place: `host-image/version`.
 
 ```bash
-# one-time: adopt the registry image (from a stock or local-flow host)
+# one-time: adopt the registry image (from a stock or local-flow host, or
+# re-run once to move a pre-2026-09-24 host from the old :<fedora> ref)
 cjust image-switch
 systemctl reboot
 
@@ -118,7 +122,7 @@ different bootc references — moving between them is always a `switch.sh`
 Registry builds (normal flow):
 
 ```text
-10.10.0.6:5000/cn/thinkpad-host:44
+10.10.0.6:5000/cn/thinkpad-host:stable
 ```
 
 Local builds (break-glass) use:
@@ -145,4 +149,4 @@ Both stamp the booted system with:
 - `bootc switch` is for first adoption or changing image references.
 - `bootc upgrade` is the routine command after rebuilding the same reference.
 - Rebuilds are detected by a unique OCI label per build (see build.sh), so
-  `upgrade` never no-ops on a rebuilt `:44`.
+  `upgrade` never no-ops on a rebuilt `:stable`.

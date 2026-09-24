@@ -5,17 +5,21 @@
 #
 # Flow: thinkpad-image-build.timer (daily ~05:10) → thinkpad-image-build.service
 #   → git pull ~/Code/cn → podman build hosts/thinkpad/host-image/Containerfile
-#   → push to 10.10.0.6:5000/cn/thinkpad-host:{44, 44-<sha>-<ts>}
+#   → push to 10.10.0.6:5000/cn/thinkpad-host:{stable, <fedora>-<sha>-<ts>}
 # On the thinkpad: `cjust image-upgrade` → `bootc upgrade` pulls only the
 # changed layers and stages the deployment; it goes live on next reboot.
 #
-# zot retention (zot-config.json): keeps the rolling :44 forever and the last
-# 3 immutable 44-* tags; everything else is GC'd (blobs reclaimed hourly-ish).
+# zot retention (zot-config.json): keeps the rolling :stable forever and the
+# last 3 immutable <fedora>-* tags (any version); everything else is GC'd
+# (blobs reclaimed hourly-ish). Patterns are deliberately VERSION-FREE
+# (2026-09-24): the pre-:stable scheme anchored them to ^44$, so a Fedora
+# major bump would have GC'd every new-version tag within a day. The version
+# now lives in exactly one place: hosts/thinkpad/host-image/version.
 # TAG PATTERNS ARE UNANCHORED GO REGEX (retention/matcher.go), NOT globs: the
 # original ["44"]/["44-*"] kept EVERYTHING — "44" substring-matches every
 # "44-…" tag, first-match-wins bound them all to the rule-less policy
 # (observed 2026-09-17: 39 tags accumulating, 31G, every log line
-# "retained by patterns policy"). Always anchor: "^44$" / "^44-".
+# "retained by patterns policy"). Always anchor: "^stable$" / "^[0-9]+-".
 
 { config, lib, pkgs, ... }:
 

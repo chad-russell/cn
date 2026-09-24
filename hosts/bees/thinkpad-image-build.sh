@@ -5,11 +5,18 @@
 # cn repo, builds hosts/thinkpad/host-image/Containerfile with root podman
 # (--pull=newer so Fedora base/dnf updates ride along even without repo
 # changes), and pushes to zot as:
-#   10.10.0.6:5000/cn/thinkpad-host:44            (rolling — what think boots)
-#   10.10.0.6:5000/cn/thinkpad-host:44-<sha>-<ts> (immutable history; zot
-#                                                  retention keeps last 3)
+#   10.10.0.6:5000/cn/thinkpad-host:stable             (rolling — version-
+#   10.10.0.6:5000/cn/thinkpad-host:<fedora>-<sha>-<ts> neutral; what think
+#                                                       boots; zot keeps it)
+#   (immutable history; zot retention keeps the last 3, any version)
 #
-# The rolling :44 always exists (pushed first), so a crash mid-publish can
+# The rolling :stable is version-neutral ON PURPOSE: a Fedora major bump
+# changes only hosts/thinkpad/host-image/version (the single source, sourced
+# below) — never the boot reference or the zot retention patterns. (The old
+# scheme rolling on :44 with retention anchored to ^44$ would have GC'd every
+# version-45 tag within a day of a bump.)
+#
+# The rolling :stable always exists (pushed first), so a crash mid-publish can
 # never leave think's bootc reference dangling.
 #
 # Triggered daily by thinkpad-image-build.timer (~05:10 America/New_York,
@@ -18,9 +25,9 @@
 set -euo pipefail
 
 REPO=/home/crussell/Code/cn
-FEDORA_MAJOR_VERSION="44"
+. "${REPO}/hosts/thinkpad/host-image/version"   # FEDORA_MAJOR_VERSION, single source
 REGISTRY="10.10.0.6:5000"
-IMAGE="${REGISTRY}/cn/thinkpad-host:${FEDORA_MAJOR_VERSION}"
+IMAGE="${REGISTRY}/cn/thinkpad-host:stable"
 
 # ---- repo sync (ff-only; the build must reflect a real origin/main state) --
 # git runs AS crussell (repo owner) via runuser: root's git would trip

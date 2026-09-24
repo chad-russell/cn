@@ -1,0 +1,10 @@
+# Fedora major version this host image tracks — the single place it's
+# declared. Consumed by:
+#   - build.sh            (local break-glass build: base tag + local tags)
+#   - bees thinkpad-image-build.sh (base tag + immutable registry tags)
+# The Containerfile takes it as a build-arg (its ARG default is only a
+# fallback), and the REGISTRY ROLLING REF is version-neutral (:stable) so a
+# Fedora bump never has to touch the boot reference or zot retention — the
+# 2026-09-24 trap: retention patterns anchored to ^44$ would have GC'd every
+# tag of version 45 within a day of a bump.
+FEDORA_MAJOR_VERSION=44

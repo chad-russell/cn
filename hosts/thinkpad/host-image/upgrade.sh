@@ -5,7 +5,7 @@
 # and applies NEW CONTENT of that SAME reference:
 #   - registry reference (the normal path since switch.sh adopted it):
 #       bootc upgrade → pulls only the changed layers of
-#       10.10.0.6:5000/cn/thinkpad-host:44 from bees's zot registry over
+#       10.10.0.6:5000/cn/thinkpad-host:stable from bees's zot registry over
 #       Nebula and stages the new deployment. Diff-only: a version-stamp-only
 #       rebuild is a few MB; a Fedora-update rebuild is typically tens-hundreds.
 #   - containers-storage reference (break-glass local flow, still works):

@@ -297,7 +297,7 @@ RUN printf 'crussell ALL=(root) NOPASSWD: /usr/bin/bootc upgrade ""\n' \
 #   - as an OCI LABEL, which lives in the image *config* and therefore changes
 #     the image's MANIFEST/CONFIG DIGEST on every build. That digest is exactly
 #     what `bootc upgrade` compares against the booted image, so a rebuilt
-#     `:44` is always detected as new and gets deployed (see README, "switch
+#     `:stable` is always detected as new and gets deployed (see README, "switch
 #     once, upgrade thereafter"). Without the label, a rebuild that reuses
 #     podman's layer cache has an identical manifest digest and `bootc upgrade`
 #     correctly — but uselessly — reports "No update available".
