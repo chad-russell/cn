@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# thinkpad-image-update — consumer side of the host-image pipeline.
+#
+# bees builds + publishes cn/thinkpad-host daily (hosts/bees/
+# thinkpad-registry.nix). This script is think's counterpart, run daily by
+# thinkpad-image-update.timer (bubblebox [[units]]):
+#   1. stage the latest build — `bootc upgrade`, stage-only; reboots stay
+#      manual (a staged deployment applies on the next reboot).
+#   2. alert ntfy (homelab-alerts) when the BOOTED image lags the registry
+#      by more than LAG_THRESHOLD_DAYS. Founding symptom (2026-09-24): a
+#      22-day booted lag while bees built daily — a producer with no
+#      consumer. Every freshness check in the fleet lives on a NixOS host;
+#      this is the one check that lives on the laptop.
+#
+# PRIVILEGE: `sudo -n /usr/bin/bootc upgrade` via the image-baked sudoers
+# grant (Containerfile step 3.8 — NOPASSWD for exactly that command, no
+# arguments). Until that grant reaches the BOOTED image (one manual
+# `cjust image-upgrade` + reboot after this lands), staging is skipped with
+# a note and this degrades to a lag-check-only run; the alert text then
+# points at `cjust image-upgrade` instead.
+#
+# ALERT MODEL (silent when healthy, like the fleet freshness checks):
+#   - registry unreachable (away from home / Nebula down) → silent skip
+#   - lag ≤ threshold → silent
+#   - lag > threshold → ONE ping per new registry version (the state file
+#     remembers the last version we alerted about; the same stale build
+#     doesn't re-ping every day)
+set -euo pipefail
+
+REGISTRY="10.10.0.6:5000"
+REPO="cn/thinkpad-host"
+TAG="44"            # rolling tag (becomes :stable with the version-neutral re-tag)
+NTFY="https://ntfy.internal.crussell.io/homelab-alerts"
+LAG_THRESHOLD_DAYS=7
+VERSION_FILE="/usr/lib/host-image-thinkpad-version"
+STATE_DIR="$HOME/.local/state/thinkpad-image-update"
+STATE_FILE="$STATE_DIR/last-alerted"
+
+need() { command -v "$1" >/dev/null 2>&1 || { echo "missing dependency: $1" >&2; exit 1; }; }
+need curl; need jq; need sudo
+
+# IMAGE_VERSION=44-<sha>-<YYYYMMDD-HHMMSS>
+booted_version() { sed -n 's/^IMAGE_VERSION=//p' "$VERSION_FILE"; }
+
+# The rolling tag's org.opencontainers.image.version label (the same stamp
+# build.sh / bees's build script write), via the registry v2 API: manifest →
+# config blob → Labels. No skopeo needed — curl + jq ship in the image.
+registry_version() {
+  local manifest digest
+  manifest=$(curl -fsSL --max-time 15 \
+      -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
+      "http://${REGISTRY}/v2/${REPO}/manifests/${TAG}") || return 1
+  digest=$(jq -er '.config.digest' <<<"$manifest") || return 1
+  curl -fsSL --max-time 15 "http://${REGISTRY}/v2/${REPO}/blobs/${digest}" \
+    | jq -er '.config.Labels["org.opencontainers.image.version"] // empty' || return 1
+}
+
+# Build-stamp date (UTC) → epoch seconds. Non-zero return on parse failure.
+stamp_ts() {
+  local stamp="${1##*-}" d t    # last dash-field: YYYYMMDD-HHMMSS
+  [[ "$stamp" =~ ^[0-9]{8}-[0-9]{6}$ ]] || return 1
+  d="${stamp:0:8}"; t="${stamp:9:6}"
+  date -u -d "${d:0:4}-${d:4:2}-${d:6:2} ${t:0:2}:${t:2:2}:${t:4:2}" +%s
+}
+
+BOOTED="$(booted_version)" || { echo "ERROR: cannot read $VERSION_FILE" >&2; exit 1; }
+REG="$(registry_version)" || {
+  echo "==> registry ${REGISTRY} unreachable — skipping (normal away from home)"
+  exit 0
+}
+echo "==> booted:   ${BOOTED}"
+echo "==> registry: ${REG}"
+
+# ---- 1. stage the latest build (only when there IS something newer) --------
+STAGED=no
+if [ "$BOOTED" != "$REG" ]; then
+  if out=$(sudo -n /usr/bin/bootc upgrade 2>&1); then
+    echo "==> bootc upgrade: staged (applies on next reboot)"
+    echo "$out" | sed 's/^/    /'
+    STAGED=yes
+  else
+    echo "==> staging unavailable (sudo -n /usr/bin/bootc upgrade failed):"
+    echo "$out" | sed 's/^/    /'
+    echo "    The NOPASSWD grant ships with the next image (Containerfile 3.8);"
+    echo "    until it reaches the booted image: cjust image-upgrade"
+  fi
+else
+  echo "==> booted == registry — nothing to stage"
+fi
+
+# ---- 2. lag check -----------------------------------------------------------
+if [ "$BOOTED" = "$REG" ]; then
+  echo "==> healthy"
+  exit 0
+fi
+bts=$(stamp_ts "$BOOTED") || { echo "==> can't parse booted stamp — skipping alert"; exit 0; }
+rts=$(stamp_ts "$REG") || { echo "==> can't parse registry stamp — skipping alert"; exit 0; }
+lag=$(( (rts - bts) / 86400 ))
+if (( lag <= LAG_THRESHOLD_DAYS )); then
+  echo "==> ${lag}d behind (≤ ${LAG_THRESHOLD_DAYS}d threshold) — silent"
+  exit 0
+fi
+mkdir -p "$STATE_DIR"
+if [ "$(cat "$STATE_FILE" 2>/dev/null || true)" = "$REG" ]; then
+  echo "==> ${lag}d behind, already alerted for ${REG} — silent"
+  exit 0
+fi
+
+if [ "$STAGED" = yes ]; then
+  action="reboot to apply the staged deployment"
+else
+  action="run 'cjust image-upgrade', then reboot"
+fi
+echo "==> ALERT: ${lag}d behind — pinging ${NTFY}"
+curl -fsS \
+  -H "Title: think host image ${lag}d behind" \
+  -H "Tags: hourglass_flowing_sand" \
+  -d "booted ${BOOTED} vs registry ${REG} — ${action}. (Daily stage + lag check: thinkpad-image-update.timer)" \
+  "$NTFY" >/dev/null
+echo "$REG" > "$STATE_FILE"

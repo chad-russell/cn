@@ -5,8 +5,8 @@ Minimal bootc-based Fedora host image for this machine.
 ## Purpose
 
 `host-image/` is for host-level choices that should truly be part of the base
-OS image — including the compositors (`niri` and Hyprland), which ship directly
-here rather than in a separate payload layer. (The old desktoppak
+OS image — including the compositor (`niri`) and our desktop shell, which ship
+directly here rather than in a separate payload layer. (The old desktoppak
 per-user-bwrap payload approach was retired 2026-09-01; `cjust
 desktoppak-purge` removes its live-host leftovers.)
 
@@ -14,8 +14,9 @@ desktoppak-purge` removes its live-host leftovers.)
 
 Currently:
 
-- removes `toolbox`
-- installs `distrobox`
+- installs `distrobox` (the base image's `toolbox` stays too — both coexist;
+  the "swap" this README claimed for weeks never actually removed toolbox,
+  and 2026-09-24 made coexistence the intent)
 - installs the desktop stack:
   - `niri` + `xwayland-satellite` (from `yalter/niri`) — the compositor
   - our **niri-caelestia-shell** fork (built from source at a pinned commit,
@@ -39,10 +40,16 @@ Currently:
     host-native because `cjust` must work before any sandbox is set up
   - `nodejs` + `npm` — used by `cjust hermes-desktop-build` (the hermes
     desktop app builds with npm; prefix `~/.local`)
-  - `oh-my-posh` — prompt renderer; hooks the interactive shell in `~/.zshrc`.
-    Host-native because it runs on every prompt render and can't pay a
-    per-invocation sandbox spawn
+  - (NOT `oh-my-posh` — that one is bubblebox-managed, see
+    `../bubblebox/profile.toml`; the image only ships what `cjust` needs
+    before any sandbox exists)
 - disables SELinux for this personal-laptop setup
+- bakes a narrow sudoers grant (step 3.8): NOPASSWD for bare
+  `sudo /usr/bin/bootc upgrade` — nothing else. The bubblebox user timer
+  `thinkpad-image-update.timer` (hosts/thinkpad/bubblebox/units/) uses it to
+  stage the latest bees build daily (stage-only; reboots stay manual) and to
+  ping ntfy `homelab-alerts` when the booted image lags the registry by more
+  than 7 days.
 - bakes the Nebula overlay hostnames into `/usr/etc/hosts` (step 3.7):
   the same fragment generated from `lib/host-meta.nix` that
   `modules/nebula-hosts.nix` gives the NixOS fleet (see
@@ -63,9 +70,11 @@ Currently:
 ```text
 host-image/
 ├── Containerfile
-├── build.sh     # break-glass LOCAL build (normal flow builds on bees)
-├── switch.sh    # one-time adopt of the bees registry reference
-├── upgrade.sh   # routine pull-from-registry + stage (bootc upgrade)
+├── etc-hosts     # baked /etc/hosts (COPY — RUN is runtime-masked); flake-checked
+├── nebula-hosts  # the same Nebula fragment alone (flake-checked, hosts-sync)
+├── build.sh      # break-glass LOCAL build (normal flow builds on bees)
+├── switch.sh     # one-time adopt of the bees registry reference
+├── upgrade.sh    # routine pull-from-registry + stage (bootc upgrade)
 └── README.md
 ```
 
@@ -90,6 +99,13 @@ systemctl reboot
 cjust image-rebuild
 systemctl reboot
 ```
+
+Since 2026-09-24 the routine path is also AUTOMATIC: the bubblebox user timer
+`thinkpad-image-update.timer` runs daily (plus once per boot) and stages the
+latest build + checks lag — see `../bubblebox/files/.local/bin/thinkpad-image-update`.
+`cjust image-upgrade` remains the manual "right now" path; the reboot that
+applies anything staged is always yours. If the booted image falls >7 days
+behind the registry, you'll get an ntfy ping on `homelab-alerts`.
 
 ## Lifecycle — break-glass (local, while bees/Nebula is down)
 

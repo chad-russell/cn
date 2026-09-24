@@ -1,0 +1,8 @@
+[Unit]
+Description=Stage latest bees host image + ntfy lag check
+# See bubblebox/files/.local/bin/thinkpad-image-update — the consumer side
+# of the daily build on bees (hosts/bees/thinkpad-registry.nix).
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/thinkpad-image-update
