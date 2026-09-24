@@ -1,11 +1,17 @@
 # PR gate for chad/cn — runs on the bees `nix-host` runner.
 #
-# Two checks, fast-fail order:
+# Checks, fast-fail order:
 #   1. treefmt --ci  (nixfmt-classic; same command as AGENTS.md)
 #   2. nix flake check — the flake's checks BUILD every host toplevel
 #      (flake.nix checks.<host> = config.system.build.toplevel), so this
 #      is a real build gate, not just eval. bees's persistent /nix/store
 #      makes it incremental.
+#   3. thinkpad-image (parallel job) — build the bootc Containerfile and
+#      run the shared thinkpad-image-verify.sh gates against it, so a
+#      Containerfile-breaking PR is caught at review time instead of by
+#      the 05:10 nightly's ntfy failure ping. Uses the same dedicated
+#      btrfs build store as the nightly (warm layer cache; the job runs
+#      as crussell, so podman goes through sudo with the wrapper path).
 #
 # Checkout is plain git over HTTPS with the job's GITHUB_TOKEN (works
 # for any runner identity; repo is private). On pull_request,
@@ -39,3 +45,40 @@ jobs:
 
       - name: Flake check (builds all host toplevels)
         run: nix flake check
+
+  thinkpad-image:
+    runs-on: nix-host
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        run: |
+          set -eu
+          git init -q .
+          git remote add origin "https://${GITHUB_ACTOR:-x-access-token}:${{ secrets.GITHUB_TOKEN }}@git.crussell.io/chad/cn.git"
+          git fetch --depth 1 origin "+${GITHUB_REF}:"
+          git checkout --detach FETCH_HEAD
+
+      # /run/wrappers/bin/sudo: the job shell's PATH doesn't include the
+      # NixOS setuid wrappers (bare `sudo` fails with a misleading
+      # ownership error). Same store as the nightly via the storage conf;
+      # constant IMAGE_VERSION keeps no-change PRs fully layer-cached.
+      - name: Build thinkpad host image
+        run: |
+          set -eu
+          /run/wrappers/bin/sudo -n env CONTAINERS_STORAGE_CONF=/etc/thinkpad-build-storage.conf \
+            podman build \
+              --pull=newer \
+              --build-arg IMAGE_VERSION=ci-check \
+              -t cn-thinkpad-host:ci-check \
+              -f hosts/thinkpad/host-image/Containerfile \
+              hosts/thinkpad/host-image
+
+      - name: Verify image (shared gates with the nightly)
+        run: |
+          set -eu
+          /run/wrappers/bin/sudo -n env CONTAINERS_STORAGE_CONF=/etc/thinkpad-build-storage.conf \
+            bash hosts/bees/thinkpad-image-verify.sh cn-thinkpad-host:ci-check
+
+      - name: Clean up build image
+        if: always()
+        run: /run/wrappers/bin/sudo -n env CONTAINERS_STORAGE_CONF=/etc/thinkpad-build-storage.conf podman rmi cn-thinkpad-host:ci-check >/dev/null 2>&1 || true
