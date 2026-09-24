@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# thinkpad-image-health — post-boot sanity gate for the host image.
+#
+# bees verifies the image at BUILD time (hosts/bees/thinkpad-image-build.sh
+# post-build gates); this is the BOOT-time counterpart. Runs once per boot
+# via thinkpad-image-health.service (user unit, WantedBy=default.target —
+# with linger that's at boot, login or not). Asserts the load-bearing
+# artifacts the build gates checked still exist in the BOOTED deployment:
+# a missing session or shell file means the booted image is broken, and the
+# recovery is `bootc rollback` + reboot.
+#
+# NO AUTO-ROLLBACK, on purpose: a false positive (e.g. a check racing the
+# session) would boot-loop the host between two deployments. Recovery stays
+# human-triggered — this gate's job is to make sure you KNOW within minutes
+# of booting, not to act for you.
+#
+# Silent when healthy (household watchdog philosophy). On failure: ntfy ping
+# to homelab-alerts listing every failed check — on every boot while broken,
+# because it IS still broken until rolled back.
+set -euo pipefail
+
+NTFY="https://ntfy.internal.crussell.io/homelab-alerts"
+
+# Let the session and shell settle before judging them (the unit fires at
+# user-manager start; niri + caelestia-shell come up seconds later).
+sleep 90
+
+failed=()
+check() {  # check <description> <path>
+  [ -e "$2" ] || failed+=("$1: $2 missing")
+}
+
+check "image version stamp" /usr/lib/host-image-thinkpad-version
+check "niri session" /usr/share/wayland-sessions/niri.desktop
+check "shell QML" /etc/xdg/quickshell/niri-caelestia-shell/shell.qml
+check "shell plugin" /usr/lib64/qt6/qml/Caelestia/qmldir
+check "zot registry drop-in" /etc/containers/registries.conf.d/10-homelab-registry.conf
+
+# The shell unit only runs under the niri session; "failed" (not merely
+# inactive) after the settle delay means it crashed through its restarts.
+if systemctl --user is-failed caelestia-shell.service >/dev/null 2>&1; then
+  failed+=("caelestia-shell.service failed (journalctl --user -u caelestia-shell)")
+fi
+
+if [ "${#failed[@]}" -eq 0 ]; then
+  echo "==> post-boot health: OK"
+  exit 0
+fi
+
+printf '==> post-boot health: FAILED\n%s\n' "${failed[@]}"
+curl -fsS \
+  -H "Title: think post-boot health FAILED" \
+  -H "Tags: rotating_light" -H "Priority: high" \
+  -d "Booted image failed its post-boot checks:
+$(printf '%s\n' "${failed[@]}")
+Recovery: bootc rollback, then reboot." \
+  "$NTFY" >/dev/null
+exit 1
