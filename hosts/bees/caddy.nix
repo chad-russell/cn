@@ -22,6 +22,47 @@
   # Note: must NOT set mode on a directory source, otherwise Nix's
   # setup-etc.pl tries to copy() instead of symlink, which fails for dirs.
   environment.etc."caddy/routes".source = ./caddy/routes;
+  environment.etc."caddy/Dockerfile" = {
+    source = ./caddy/Dockerfile;
+    mode = "0644";
+  };
+
+  # Build localhost/caddy-route53:latest from /etc/caddy/Dockerfile when
+  # the image is missing or the Dockerfile's hash changed. Until
+  # 2026-09-24 the image was a hand-built artifact with no source in
+  # the repo — after a bees disk loss (restic excludes container image
+  # layers, assuming images are pullable; this one isn't) the internal
+  # TLS ingress was unrebuildable. Boot-ordered before caddy.service so
+  # a reinstall's first boot builds the image before Caddy starts.
+  systemd.services.caddy-image-build = {
+    description = "Build localhost/caddy-route53 from the repo Dockerfile";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    before = [ "caddy.service" ];
+    wantedBy = [ "multi-user.target" ];
+    path = with pkgs; [ podman coreutils gnused ];
+    onFailure = [ "ntfy-failure@caddy-image-build.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      # A background rebuild must never compete with real load.
+      Nice = 10;
+      IOSchedulingClass = "idle";
+    };
+    script = ''
+      set -euo pipefail
+      MARKER=/var/lib/caddy-image-dockerfile-hash
+      HASH="$(sha256sum /etc/caddy/Dockerfile | cut -d' ' -f1)"
+      if [ "$(cat "$MARKER" 2>/dev/null)" = "$HASH" ] \
+         && podman image inspect localhost/caddy-route53:latest >/dev/null 2>&1; then
+        echo "caddy image up to date ($(podman image inspect --format '{{.Id}}' localhost/caddy-route53:latest | cut -c1-19))"
+        exit 0
+      fi
+      echo "building localhost/caddy-route53:latest from /etc/caddy/Dockerfile"
+      podman build -t localhost/caddy-route53:latest /etc/caddy/
+      printf '%s' "$HASH" > "$MARKER"
+      echo "build complete, marker updated"
+    '';
+  };
 
   system.activationScripts.caddy-volumes = lib.stringAfter [ "users" ] ''
     ${pkgs.podman}/bin/podman volume create caddy_data 2>/dev/null || true
@@ -51,8 +92,14 @@
   system.activationScripts.caddy-restart-on-config-change =
     lib.stringAfter [ "etc" ] ''
       MARKER=/var/lib/caddy-config-generation
-      CURRENT="$(readlink -f /etc/caddy/routes) $(sha256sum /etc/caddy/Caddyfile | cut -d' ' -f1)"
+      CURRENT="$(readlink -f /etc/caddy/routes) $(sha256sum /etc/caddy/Caddyfile | cut -d' ' -f1) $(sha256sum /etc/caddy/Dockerfile | cut -d' ' -f1)"
       if [ -n "$CURRENT" ] && [ "$CURRENT" != "$(cat "$MARKER" 2>/dev/null)" ]; then
+        # A changed Dockerfile means the image must be rebuilt BEFORE
+        # caddy restarts onto it — systemctl start on the oneshot build
+        # unit waits for completion.
+        if [ "$(sha256sum /etc/caddy/Dockerfile | cut -d' ' -f1)" != "$(cat /var/lib/caddy-image-dockerfile-hash 2>/dev/null)" ]; then
+          ${pkgs.systemd}/bin/systemctl start caddy-image-build.service
+        fi
         # daemon-reload FIRST: route/Caddyfile edits only need a restart, but
         # QUADLET unit changes (e.g. a new Volume= in caddy.container) are
         # invisible to a restart until systemd re-reads the unit — without

@@ -49,4 +49,43 @@
     mkdir -p /var/lib/kan
     chmod 755 /var/lib/kan
   '';
+
+  # Nightly logical dump of Kan's Postgres. Restic covers the live PG
+  # data dir only via the container volume (a running-Postgres copy can
+  # restore torn); a pg_dump is independently restorable — the same
+  # discipline as immich-db-dump. Dumps land in /var/lib/kan/backups
+  # (already a restic path via /var/lib/kan), newest 14 kept.
+  systemd.services.kan-db-dump = {
+    description = "Kan Postgres logical dump";
+    path = with pkgs; [ podman gzip coreutils ];
+    requires = [ "kan-postgres.service" ];
+    after = [ "kan-postgres.service" ];
+    onFailure = [ "ntfy-failure@kan-db-dump.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      User = "root";
+    };
+    script = ''
+      set -euo pipefail
+      mkdir -p /var/lib/kan/backups
+      ts="$(date -u +%Y%m%dT%H%M%SZ)"
+      out="/var/lib/kan/backups/kan-pgdump-$ts.sql.gz"
+      podman exec kan-postgres pg_dump -U kan kan_db | gzip -c > "$out.tmp"
+      mv "$out.tmp" "$out"
+      chmod 600 "$out"
+      # Keep the newest 14 dumps; drop anything older.
+      ls -1t /var/lib/kan/backups/kan-pgdump-*.sql.gz 2>/dev/null | tail -n +15 | xargs -r rm -f --
+    '';
+  };
+
+  systemd.timers.kan-db-dump = {
+    description = "Nightly Kan Postgres dump";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      # 03:07 — after the 03:01 immich dump, before the 05:00 restic window.
+      OnCalendar = "*-*-* 03:07:00";
+      Persistent = true;
+      RandomizedDelaySec = "10min";
+    };
+  };
 }
