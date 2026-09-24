@@ -221,6 +221,9 @@ agent-authored changes. Mechanics:
   email, so Forgejo links the avatar).
 - `tea` on bee still carries a `chad` login in `~/.config/tea` (outside
   agent sandboxes) — agents use the API directly; Chad owns the tea config.
+- **Chad reviews every PR before merge (2026-09-24).** Agents open PRs and
+  watch checks — never merge, never self-approve. After his merge, the
+  deploy/image-build follow-up is agent work again.
 
 Infrastructure changes go through Forgejo Actions (`.forgejo/workflows/`):
 

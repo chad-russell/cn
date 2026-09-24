@@ -333,7 +333,7 @@ Examples:
 - `host-image/` ships the desktop stack: niri (compositor) + our
   niri-caelestia-shell fork (desktop shell, built at a pinned commit), plus
   the small set of host-resident tools (just, fzf, nodejs/npm for the hermes
-  desktop build; oh-my-posh is bubblebox-managed, not image-borne).
+  desktop build).
 - Dev tools live in bubblebox sandboxes, not on the host image.
 - AI coding agents don't run on this host: the hermes agent lives on bee
   (this host runs only the desktop GUI, built off-host by
