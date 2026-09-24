@@ -29,7 +29,8 @@ set -euo pipefail
 
 REGISTRY="10.10.0.6:5000"
 REPO="cn/thinkpad-host"
-TAG="44"            # rolling tag (becomes :stable with the version-neutral re-tag)
+TAG="stable"        # version-neutral rolling tag (immutable tags carry the
+                    # Fedora version; a bump never touches this reference)
 NTFY="https://ntfy.internal.crussell.io/homelab-alerts"
 LAG_THRESHOLD_DAYS=7
 VERSION_FILE="/usr/lib/host-image-thinkpad-version"
@@ -76,9 +77,14 @@ echo "==> registry: ${REG}"
 STAGED=no
 if [ "$BOOTED" != "$REG" ]; then
   if out=$(sudo -n /usr/bin/bootc upgrade 2>&1); then
-    echo "==> bootc upgrade: staged (applies on next reboot)"
-    echo "$out" | sed 's/^/    /'
-    STAGED=yes
+    if grep -qi 'no update' <<<"$out"; then
+      echo "==> bootc upgrade: no update for the BOOT REF (host may still be"
+      echo "    on the pre-:stable ref — one-time fix: cjust image-switch)"
+    else
+      echo "==> bootc upgrade: staged (applies on next reboot)"
+      echo "$out" | sed 's/^/    /'
+      STAGED=yes
+    fi
   else
     echo "==> staging unavailable (sudo -n /usr/bin/bootc upgrade failed):"
     echo "$out" | sed 's/^/    /'
@@ -110,7 +116,7 @@ fi
 if [ "$STAGED" = yes ]; then
   action="reboot to apply the staged deployment"
 else
-  action="run 'cjust image-upgrade', then reboot"
+  action="run 'cjust image-upgrade' (one-time 'cjust image-switch' if this host still boots the pre-:stable ref), then reboot"
 fi
 echo "==> ALERT: ${lag}d behind — pinging ${NTFY}"
 curl -fsS \

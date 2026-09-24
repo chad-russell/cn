@@ -678,7 +678,7 @@ hermes-icon:
 # ═══════════════════════════════════════════════════════════════════════════
 #
 # The NORMAL flow is registry-driven, built on bees:
-#   bees builds + publishes 10.10.0.6:5000/cn/thinkpad-host:44 daily
+#   bees builds + publishes 10.10.0.6:5000/cn/thinkpad-host:stable daily
 #   (thinkpad-image-build.timer, hosts/bees/thinkpad-registry.nix), keeping
 #   the last 3 immutable tags. `cjust image-rebuild` triggers a build NOW;
 #   `cjust image-upgrade` pulls the diff and stages it; reboot applies.
@@ -711,7 +711,7 @@ image-rebuild:
 image-switch:
     {{ justfile_directory() }}/host-image/switch.sh
 
-# Routine: pull the latest :44 from bees's registry + stage a new deployment.
+# Routine: pull the latest :stable from bees's registry + stage a new deployment.
 # (sudo) Downloads only changed layers. Reboot to go live.
 [group('host image')]
 image-upgrade:

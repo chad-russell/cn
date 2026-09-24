@@ -62,7 +62,7 @@ compositor stack, and `nodejs`/`npm` for the hermes desktop build). See
 
 The image is built **on bees** (daily `thinkpad-image-build.timer` + on-demand
 `cjust image-rebuild`) and published to bees's zot registry
-(`10.10.0.6:5000/cn/thinkpad-host:44`, Nebula-only). `cjust image-upgrade`
+(`10.10.0.6:5000/cn/thinkpad-host:stable`, Nebula-only). `cjust image-upgrade`
 pulls only the changed layers and stages the new deployment; it goes live on
 the next reboot. The bubblebox timer `thinkpad-image-update.timer` automates
 the routine path (daily stage + ntfy lag alert; see

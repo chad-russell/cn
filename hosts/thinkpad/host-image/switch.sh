@@ -2,11 +2,16 @@
 # Adopt the bees-built registry image as the host's boot image — the ONE-TIME
 # command to move the thinkpad onto registry-driven updates:
 #
-#   bootc switch --transport registry 10.10.0.6:5000/cn/thinkpad-host:44
+#   bootc switch --transport registry 10.10.0.6:5000/cn/thinkpad-host:stable
 #
-# After this, `bootc upgrade` (cjust image-upgrade) re-resolves :44 from the
-# registry over Nebula and pulls only changed layers. The local build.sh flow
-# remains the break-glass path while bees or Nebula is down.
+# The rolling tag is version-neutral ON PURPOSE (2026-09-24): a Fedora major
+# bump changes only hosts/thinkpad/host-image/version, never this reference
+# or the zot retention patterns. Hosts still on the old :<fedora> rolling
+# ref (pre-2026-09-24) re-run this script once to move to :stable.
+#
+# After this, `bootc upgrade` (cjust image-upgrade) re-resolves :stable from
+# the registry over Nebula and pulls only changed layers. The local build.sh
+# flow remains the break-glass path while bees or Nebula is down.
 #
 # Prereq: bees's thinkpad-image-build.service has run at least once (it runs
 # daily at ~05:10, or trigger it: `cjust image-rebuild`). Verify the image is
@@ -20,9 +25,8 @@
 #   build stamps a unique OCI label.
 set -euo pipefail
 
-FEDORA_MAJOR_VERSION="44"
 REGISTRY="10.10.0.6:5000"
-IMAGE="${REGISTRY}/cn/thinkpad-host:${FEDORA_MAJOR_VERSION}"
+IMAGE="${REGISTRY}/cn/thinkpad-host:stable"
 
 # Sanity: the image must exist in the registry (and Nebula must be up).
 echo "==> checking ${IMAGE} in the registry ..."
@@ -31,8 +35,8 @@ curl -fsSL --max-time 10 "http://${REGISTRY}/v2/" >/dev/null || {
   exit 1
 }
 curl -fsSL "http://${REGISTRY}/v2/cn/thinkpad-host/tags/list" \
-  | grep -q "\"${FEDORA_MAJOR_VERSION}\"" || {
-  echo "ERROR: tag :${FEDORA_MAJOR_VERSION} not in the registry yet." >&2
+  | grep -q '"stable"' || {
+  echo "ERROR: tag :stable not in the registry yet." >&2
   echo "       Trigger a build first:  cjust image-rebuild   (or wait for the daily timer)" >&2
   exit 1
 }
@@ -65,7 +69,7 @@ After reboot, verify which build you're on:
   bootc status     # image reference should show registry transport
 
 From now on, routine updates are:
-  cjust image-upgrade      # pull :44 diff from bees + stage (reboot to apply)
+  cjust image-upgrade      # pull :stable diff from bees + stage (reboot to apply)
 
 If the new image is broken, the previous deployment is still there — roll back:
   bootc rollback     # then: systemctl reboot
