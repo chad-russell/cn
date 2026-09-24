@@ -96,8 +96,24 @@ jobs:
           # /run/wrappers/bin/sudo is the setuid wrapper — the nix-store
           # sudo in the runner job's PATH lacks the setuid bit (fix for the
           # 2026-09-16 "sudo must be owned by uid 0" job failure).
+          #
+          # REGISTER THE GENERATION BEFORE SWITCHING. nixos-rebuild does
+          # `nix-env -p .../system --set` before switch-to-configuration;
+          # a bare switch skips it, which broke three things at once
+          # (observed live 2026-09-24: profile generations frozen at
+          # 2026-09-14 while /run/current-system moved with every deploy):
+          #   - `nixos-rebuild --rollback` (documented recovery) silently
+          #     reverts ~10 days of deployments, not one
+          #   - boot entries derive from system-*-link generations, so a
+          #     plain REBOOT reverted bees to the last registered config
+          #   - unregistered closures were GC-eligible
+          # Absolute nix-env: transient units have a minimal PATH.
+          TOPLEVEL="$(readlink -f /tmp/cn-ci-bees-toplevel)"
+          /run/wrappers/bin/sudo systemd-run --wait --collect --unit=cn-ci-set-profile-bees \
+            /run/current-system/sw/bin/nix-env \
+              -p /nix/var/nix/profiles/system --set "$TOPLEVEL"
           /run/wrappers/bin/sudo systemd-run --wait --collect --unit=cn-ci-switch-bees \
-            /tmp/cn-ci-bees-toplevel/bin/switch-to-configuration switch
+            "$TOPLEVEL/bin/switch-to-configuration" switch
           rm -f /tmp/cn-ci-bees-toplevel
 
       - name: Verify switched hosts
