@@ -25,7 +25,6 @@
 set -euo pipefail
 
 REPO=/home/crussell/Code/cn
-. "${REPO}/hosts/thinkpad/host-image/version"   # FEDORA_MAJOR_VERSION, single source
 REGISTRY="10.10.0.6:5000"
 IMAGE="${REGISTRY}/cn/thinkpad-host:stable"
 
@@ -42,6 +41,12 @@ fi
 git_as fetch origin
 git_as reset --hard origin/main
 echo "==> building from $(git_as rev-parse --short HEAD) $(git_as log -1 --format=%cd --date=short)"
+
+# FEDORA_MAJOR_VERSION, single source — sourced AFTER the sync above, which
+# is what brings this file into existence on a checkout that predates it
+# (the first post-fc86dc6 run failed exactly this way: line-28 source of a
+# file the pre-merge checkout didn't have yet).
+. "${REPO}/hosts/thinkpad/host-image/version"
 
 # ---- version stamp: sha + UTC timestamp (unique per build, same scheme as
 # the thinkpad-local build.sh; --dirty flag if the tree wasn't clean — cannot
