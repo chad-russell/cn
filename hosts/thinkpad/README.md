@@ -56,15 +56,19 @@ single source of truth.
 ### `host-image/`
 A minimal bootc-managed host image. It is intentionally small: host-level
 choices that truly belong in the base OS (convenience packages, disabling
-SELinux, removing `toolbox`, adding `distrobox`, the compositors, and
-`nodejs`/`npm` for the hermes desktop build). See `host-image/README.md`.
+SELinux, adding `distrobox` — the base image's `toolbox` stays — the niri
+compositor stack, and `nodejs`/`npm` for the hermes desktop build). See
+`host-image/README.md`.
 
 The image is built **on bees** (daily `thinkpad-image-build.timer` + on-demand
 `cjust image-rebuild`) and published to bees's zot registry
 (`10.10.0.6:5000/cn/thinkpad-host:44`, Nebula-only). `cjust image-upgrade`
 pulls only the changed layers and stages the new deployment; it goes live on
-the next reboot. Local `./build.sh` remains as the break-glass path. See
-`hosts/bees/thinkpad-registry.nix` for the registry + build service.
+the next reboot. The bubblebox timer `thinkpad-image-update.timer` automates
+the routine path (daily stage + ntfy lag alert; see
+`bubblebox/files/.local/bin/thinkpad-image-update`). Local `./build.sh`
+remains as the break-glass path. See `hosts/bees/thinkpad-registry.nix` for
+the registry + build service.
 
 ### `nebula/`
 Rootful Podman/Quadlet-based Nebula VPN setup.
@@ -328,8 +332,8 @@ Examples:
 
 - `host-image/` ships the desktop stack: niri (compositor) + our
   niri-caelestia-shell fork (desktop shell, built at a pinned commit), plus
-  the small set of host-resident tools (just, fzf, oh-my-posh, nodejs/npm for
-  the hermes desktop build).
+  the small set of host-resident tools (just, fzf, nodejs/npm for the hermes
+  desktop build; oh-my-posh is bubblebox-managed, not image-borne).
 - Dev tools live in bubblebox sandboxes, not on the host image.
 - AI coding agents don't run on this host: the hermes agent lives on bee
   (this host runs only the desktop GUI, built off-host by

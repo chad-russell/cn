@@ -103,6 +103,12 @@ dst = ".local/bin/hermes-desktop"
 [[files]]
 dst = ".local/bin/buzz-desktop"
 
+# think host-image consumer: daily `bootc upgrade` stage + ntfy lag alert
+# (the sudoers grant it relies on is baked into the image — Containerfile
+# step 3.8). Full story in the script header.
+[[files]]
+dst = ".local/bin/thinkpad-image-update"
+
 [[files]]
 dst = ".local/share/applications/buzz.desktop"
 
@@ -141,4 +147,14 @@ enable = true
 # turns a startup-race crash into a 1s blip. See the unit header.
 [[units]]
 name = "caelestia-shell"
+enable = true
+
+# think host-image pipeline consumer (see .local/bin/thinkpad-image-update):
+# stages the latest bees build daily and pings ntfy when the booted image
+# lags the registry by >7 days. Service declared for the timer's Unit=.
+[[units]]
+name = "thinkpad-image-update.service"
+
+[[units]]
+name = "thinkpad-image-update.timer"
 enable = true
