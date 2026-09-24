@@ -1,0 +1,95 @@
+# Weekly nixpkgs lock bump — keeps the fleet's security delta bounded.
+#
+# Until 2026-09-24 the lock moved only by hand and sat at 2026-07-29
+# (~2 months): every host — including the PUBLIC gateway (Caddy,
+# Forgejo, sshd) — was missing two months of security fixes, and
+# nothing reminded anyone. This workflow is that reminder, with the
+# validation already done:
+#
+#   1. `nix flake update nixpkgs` on current main
+#   2. `nix flake check` — the same real build gate as PR CI (builds
+#      every host toplevel, incremental on bees's store), so the bump
+#      arrives pre-validated
+#   3. push branch flakebot/nixpkgs-<date> (Glen as author) and try to
+#      open the PR via the job token — on this Forgejo build that API
+#      call is best-effort; if it fails, the ntfy ping says the branch
+#      is ready and a human opens the PR
+#   4. ping ntfy cn-ci either way
+#
+# Merging the PR rolls out via deploy.yml's drift detection (a lock
+# bump affects every host). NOTE: no workflow here has used `schedule`
+# before — if this Forgejo build ignores it, nothing will fire on
+# Mondays; the workflow_dispatch trigger is the manual fallback and the
+# first missed Monday is the signal to fall back to a glen-driven bump.
+#
+# Reboots/rollbacks stay Chad's call: the PR waits for review like any
+# other.
+name: update-flake
+
+on:
+  schedule:
+    # Mondays 09:23 UTC (~05:23 America/New_York) — after the weekend's
+    # nixpkgs churn has settled.
+    - cron: "23 9 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  bump:
+    runs-on: nix-host
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        run: |
+          set -eu
+          git init -q .
+          git remote add origin "https://${GITHUB_ACTOR:-x-access-token}:${{ secrets.GITHUB_TOKEN }}@git.crussell.io/chad/cn.git"
+          git fetch --depth 1 origin "+${GITHUB_REF}:"
+          git checkout --detach FETCH_HEAD
+
+      - name: Update the nixpkgs input
+        id: bump
+        run: |
+          set -eu
+          OLD="$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock | cut -c1-12)"
+          nix flake update nixpkgs
+          if git diff --quiet flake.lock; then
+            echo "nixpkgs already current (${OLD}) — nothing to do"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          NEW="$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock | cut -c1-12)"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "old=$OLD" >> "$GITHUB_OUTPUT"
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          echo "nixpkgs: ${OLD} -> ${NEW}"
+
+      - name: Validate (flake check builds every host)
+        if: steps.bump.outputs.changed == 'true'
+        run: nix flake check
+
+      - name: Push branch and try to open PR
+        if: steps.bump.outputs.changed == 'true'
+        run: |
+          set -eu
+          BRANCH="flakebot/nixpkgs-$(date -u +%Y%m%d)"
+          git config user.name "Glen"
+          git config user.email "glen@noreply.git.crussell.io"
+          git add flake.lock
+          git commit -m "flake.lock: weekly nixpkgs bump (${{ steps.bump.outputs.old }} -> ${{ steps.bump.outputs.new }})"
+          git push origin "HEAD:refs/heads/${BRANCH}"
+
+          TITLE="flake.lock: weekly nixpkgs bump (${{ steps.bump.outputs.old }} -> ${{ steps.bump.outputs.new }})"
+          BODY="Automated weekly bump, validated by nix flake check on the runner. Merging rolls out to every host via deploy.yml drift detection."
+          if curl -fsS -X POST "https://git.crussell.io/api/v1/repos/chad/cn/pulls" \
+               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+               -H "Content-Type: application/json" \
+               -d "{\"base\":\"main\",\"head\":\"${BRANCH}\",\"title\":\"${TITLE}\",\"body\":\"${BODY}\"}"; then
+            curl -fsS -H "Title: nixpkgs bump PR ready" \
+              -d "Weekly nixpkgs bump validated and PR opened (${BRANCH})." \
+              https://ntfy.internal.crussell.io/cn-ci >/dev/null || true
+          else
+            echo "job-token PR creation failed (expected on this Forgejo build)"
+            curl -fsS -H "Title: nixpkgs bump branch ready" \
+              -d "Weekly bump validated and pushed as ${BRANCH} — open the PR manually (job token can't)." \
+              https://ntfy.internal.crussell.io/cn-ci >/dev/null || true
+          fi
