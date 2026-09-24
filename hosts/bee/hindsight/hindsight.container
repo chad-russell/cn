@@ -27,13 +27,16 @@ ContainerName=hindsight
 Environment=HINDSIGHT_API_LLM_PROVIDER=openai
 Environment=HINDSIGHT_API_LLM_BASE_URL=https://openrouter.ai/api/v1
 Environment=HINDSIGHT_API_LLM_MODEL=deepseek/deepseek-v4-flash
-# Burst throttles kept from the plan experiment (2026-09-22) — they cut
-# request volume and cost wherever the LLM lives: fold automatic
-# mental-model refreshes to 1/hour per bank (default 0 = refresh per
-# trigger, which queued 4-5 concurrent full-reflect pipelines per bank),
-# serialize refresh LLM calls, cap concurrent reflects at 2.
-Environment=HINDSIGHT_API_MENTAL_MODEL_MIN_REFRESH_INTERVAL_SECONDS=3600
+# Cost controls (2026-09-24): the refresh floor is PER MENTAL MODEL, not
+# per bank. Active banks held 33 models, so a one-hour floor still allowed
+# hundreds of delta/retraction calls per day. Refresh each model at most daily,
+# serialize its LLM work, bound deliberate reflects to three iterations, and
+# avoid paying repeated attempts when a provider call fails. Admission limits
+# protect interactive use but do not themselves reduce total token volume.
+Environment=HINDSIGHT_API_MENTAL_MODEL_MIN_REFRESH_INTERVAL_SECONDS=86400
 Environment=HINDSIGHT_API_MENTAL_MODEL_REFRESH_LLM_MAX_CONCURRENT=1
+Environment=HINDSIGHT_API_REFLECT_MAX_ITERATIONS=3
+Environment=HINDSIGHT_API_LLM_MAX_RETRIES=1
 Environment=HINDSIGHT_API_ADMISSION_REFLECT_MAX_IN_FLIGHT=2
 Environment=HINDSIGHT_API_ADMISSION_REFLECT_MAX_WAIT_MS=30000
 # Stable worker identity across restarts — without it, tasks in flight at
