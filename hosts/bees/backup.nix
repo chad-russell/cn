@@ -26,6 +26,9 @@
       # QRCode.Bible crowd QA votes (SQLite database + WAL).
       "/var/lib/qrcode-qa"
       "/var/lib/redis-immich"
+      # Beszel hub (SQLite: users, tokens, alert config, history) —
+      # without this a bees rebuild loses the whole monitoring setup.
+      "/var/lib/beszel"
 
       # Container volumes (Caddy certs, etc.)
       "/var/lib/containers/storage/volumes"
