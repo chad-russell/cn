@@ -42,6 +42,13 @@
     source = ./thinkpad-image-build.sh;
     mode = "0755";
   };
+  # Shared post-build gates (hosts/sessions/shell artifacts) — run by the
+  # nightly build BEFORE publishing, and by the ci.yml `thinkpad-image` PR
+  # job straight from the PR checkout, so pre-merge and nightly can't drift.
+  environment.etc."thinkpad-image-verify.sh" = {
+    source = ./thinkpad-image-verify.sh;
+    mode = "0755";
+  };
   environment.etc."thinkpad-build-storage.conf" = {
     source = ./thinkpad-build-storage.conf;
     mode = "0644";
