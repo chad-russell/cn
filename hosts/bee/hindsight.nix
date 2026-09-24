@@ -20,7 +20,24 @@
 # (hosts/bees/caddy/routes/internal/hindsight.caddy)
 { config, lib, pkgs, ... }:
 
-{
+let
+  # Cost-first coding-agent policy. DSH's persistent Hindsight plugin reads this
+  # once per workspace; other supported harnesses read the same file per hook.
+  # Deliberate recall/reflect/ingest tools remain available, but automatic
+  # transcript extraction and background synthesis are disabled.
+  codingAgentConfig = pkgs.writeText "hindsight-coding-agent.json"
+    (builtins.toJSON {
+      serverMode = "self-hosted";
+      apiUrl = "http://10.10.0.12:8888";
+      autoReflect = false;
+      reflectBudget = "low";
+      pageTriggerType = "manual";
+      autoSeed = false;
+      codebaseSurvey = false;
+      gitIngest = "message";
+      retainSessions = false;
+    });
+in {
   # LLM key (OpenRouter GLM flash) + UI access key. Owner crussell so the
   # rootless user quadlet can read it (proton-pass-env group-readable
   # precedent; /run/agenix is world-traversable, files are not).
@@ -35,6 +52,11 @@
     mode = "0444";
   };
 
+  environment.etc."hindsight/coding-agent.json" = {
+    source = codingAgentConfig;
+    mode = "0444";
+  };
+
   system.activationScripts.hindsight-quadlet =
     lib.stringAfter [ "users" "etc" ] ''
       dest="/home/crussell/.config/containers/systemd"
@@ -42,6 +64,16 @@
       chown crussell:users "$dest"
       ln -sfn "/etc/hindsight/hindsight.container" "$dest/hindsight.container"
       chown -h crussell:users "$dest/hindsight.container"
+
+      # Keep the coding-agent client policy declarative alongside the server.
+      # The config directory already exists on the live host, but create it for
+      # fresh installs and replace only the file managed by this module.
+      agent_config_dir="/home/crussell/.hindsight"
+      mkdir -p "$agent_config_dir"
+      chown crussell:users "$agent_config_dir"
+      ln -sfn "/etc/hindsight/coding-agent.json" \
+        "$agent_config_dir/coding-agent.json"
+      chown -h crussell:users "$agent_config_dir/coding-agent.json"
 
       uid="$(id -u crussell 2>/dev/null || true)"
       if [ -n "$uid" ] && [ -d "/run/user/$uid" ]; then
