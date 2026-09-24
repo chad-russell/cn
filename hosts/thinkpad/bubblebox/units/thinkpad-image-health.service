@@ -1,0 +1,12 @@
+[Unit]
+Description=Post-boot health gate for the host image
+# See bubblebox/files/.local/bin/thinkpad-image-health — the boot-time
+# counterpart of bees's build-time image gates. Silent when healthy.
+
+[Service]
+Type=oneshot
+# no ExecStartPost noise: the script sleeps ~90s to let the session settle
+ExecStart=%h/.local/bin/thinkpad-image-health
+
+[Install]
+WantedBy=default.target

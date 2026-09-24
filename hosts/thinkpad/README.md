@@ -66,7 +66,11 @@ The image is built **on bees** (daily `thinkpad-image-build.timer` + on-demand
 pulls only the changed layers and stages the new deployment; it goes live on
 the next reboot. The bubblebox timer `thinkpad-image-update.timer` automates
 the routine path (daily stage + ntfy lag alert; see
-`bubblebox/files/.local/bin/thinkpad-image-update`). Local `./build.sh`
+`bubblebox/files/.local/bin/thinkpad-image-update`), and
+`thinkpad-image-health.service` gates every boot — it asserts the booted
+image's load-bearing artifacts (session, shell, version stamp) and pings
+ntfy if one is missing. Recovery stays manual by design:
+`bootc rollback` + reboot. Local `./build.sh`
 remains as the break-glass path. See `hosts/bees/thinkpad-registry.nix` for
 the registry + build service.
 

@@ -109,6 +109,12 @@ dst = ".local/bin/buzz-desktop"
 [[files]]
 dst = ".local/bin/thinkpad-image-update"
 
+# Post-boot sanity gate — the boot-time counterpart of bees's build-time
+# image gates. Silent when healthy; ntfy ping (with rollback hint) when the
+# booted image is missing its load-bearing artifacts.
+[[files]]
+dst = ".local/bin/thinkpad-image-health"
+
 [[files]]
 dst = ".local/share/applications/buzz.desktop"
 
@@ -157,4 +163,11 @@ name = "thinkpad-image-update.service"
 
 [[units]]
 name = "thinkpad-image-update.timer"
+enable = true
+
+# Post-boot health gate (see .local/bin/thinkpad-image-health): runs once
+# per boot, asserts the booted image's load-bearing artifacts, pings ntfy
+# on failure. No auto-rollback by design — see the script header.
+[[units]]
+name = "thinkpad-image-health.service"
 enable = true
