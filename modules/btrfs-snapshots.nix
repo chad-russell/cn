@@ -20,41 +20,8 @@ let
   cfg = config.services.btrfs-snapshots;
   btrfsProgs = pkgs.btrfs-progs;
 
-  # Find the mount point for a given subvolume name.
-  # We look at fileSystems to find where the subvolume is mounted.
-  # The device is the same for all subvolumes on btrfs.
-  findDevice = subvol:
-    let
-      fs = lib.findSingle (fs:
-        fs.fsType == "btrfs" && fs.options != null
-        && lib.any (o: lib.hasPrefix "subvol=${subvol}" o) fs.options) null null
-        config.fileSystems;
-    in if fs == null then null else fs.device;
-
-  # Take a snapshot of a subvolume
-  snapshotScript = pkgs.writeShellScript "btrfs-snapshot" ''
-    set -euo pipefail
-
-    SUBVOL="$1"
-    DEVICE="$2"
-    MOUNTPOINT="$3"
-    SNAPDIR="/.snapshots/$SUBVOL"
-    TIMESTAMP=$(date +%Y-%m-%d_%H%M%S)
-    SNAPNAME="$TIMESTAMP"
-
-    # Ensure snapshot directory exists
-    mkdir -p "$MOUNTPOINT/$SNAPDIR"
-
-    # Create read-only snapshot
-    ${btrfsProgs}/bin/btrfs subvolume snapshot -r "$MOUNTPOINT/$SNAPDIR/../../" "$MOUNTPOINT/$SNAPDIR/$SNAPNAME" \
-      || ${btrfsProgs}/bin/btrfs subvolume snapshot -r "$MOUNTPOINT" "$MOUNTPOINT/.snapshots/$SUBVOL/$SNAPNAME"
-
-    echo "Created snapshot: $SNAPDIR/$SNAPNAME"
-  '';
-
-  # Actually, let's do this more simply: snapshot a subvolume by path
-  # The subvolume is mounted at some path; we create the snapshot relative
-  # to the btrfs top-level subvolume (subvolid=5).
+  # Snapshot a subvolume by path, relative to the btrfs top-level
+  # subvolume (subvolid=5), via a temporary mount.
   takeSnapshot = pkgs.writeShellScript "btrfs-take-snapshot" ''
     set -euo pipefail
 
@@ -98,8 +65,7 @@ let
       exit 0
     fi
 
-    # List snapshots oldest-first, delete everything beyond KEEP_DAILY
-    COUNT=$(${btrfsProgs}/bin/btrfs subvolume list -o "$SNAPDIR" 2>/dev/null | wc -l || echo 0)
+    # List snapshots newest-first, delete everything beyond KEEP_DAILY
     SNAPSHOTS=$(ls -1r "$SNAPDIR" 2>/dev/null || true)
 
     TOTAL=$(echo "$SNAPSHOTS" | grep -c . || true)
@@ -116,7 +82,12 @@ let
     done
   '';
 
-  # Combined script for all subvolumes
+  # Combined script for all subvolumes. Failures PROPAGATE: a subvolume
+  # that fails to snapshot or prune increments FAILED and the run exits
+  # non-zero at the end, so the service enters "failed" and (where the
+  # host provides the template) OnFailure alerts fire. The old
+  # `|| echo "WARNING"` form swallowed every failure — the local rollback
+  # layer could stop for weeks with exit 0 and nothing watching.
   snapshotAll = pkgs.writeShellScript "btrfs-snapshot-all" ''
     set -euo pipefail
 
@@ -126,15 +97,24 @@ let
     SUBVOLUMES=("$@")
 
     echo "=== btrfs snapshot run: $(date) ==="
+    FAILED=0
 
     for subvol in "''${SUBVOLUMES[@]}"; do
       echo "--- Snapshotting $subvol ---"
-      ${takeSnapshot} "$subvol" "$DEVICE" || echo "WARNING: Failed to snapshot $subvol"
+      if ! ${takeSnapshot} "$subvol" "$DEVICE"; then
+        echo "ERROR: Failed to snapshot $subvol" >&2
+        FAILED=$((FAILED + 1))
+        continue
+      fi
       echo "--- Pruning $subvol (keeping $KEEP_DAILY daily) ---"
-      ${pruneSnapshots} "$subvol" "$DEVICE" "$KEEP_DAILY" || echo "WARNING: Failed to prune $subvol"
+      if ! ${pruneSnapshots} "$subvol" "$DEVICE" "$KEEP_DAILY"; then
+        echo "ERROR: Failed to prune $subvol" >&2
+        FAILED=$((FAILED + 1))
+      fi
     done
 
-    echo "=== btrfs snapshot run complete ==="
+    echo "=== btrfs snapshot run complete ($FAILED failures) ==="
+    [ "$FAILED" -eq 0 ]
   '';
 
 in {
@@ -181,6 +161,12 @@ in {
 
     systemd.services.btrfs-snapshots = {
       description = "Btrfs Snapshot & Prune";
+      # Alert on failure where the host provides the freshness-checks
+      # ntfy-failure@ template (bees/nas do); absent elsewhere, the
+      # dependency is simply skipped.
+      onFailure =
+        lib.optionals (config.systemd.units ? "ntfy-failure@.service")
+          [ "ntfy-failure@btrfs-snapshots.service" ];
       path = [ btrfsProgs pkgs.util-linux ];
       serviceConfig = {
         Type = "oneshot";

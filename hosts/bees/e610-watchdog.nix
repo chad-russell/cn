@@ -73,12 +73,19 @@
       fi
 
       if [ "$FAILCOUNT" -ge 10 ]; then
-        # One reboot per outage episode. If we already rebooted for
-        # this boot-id's episode and the network is STILL dead, a warm
-        # reboot doesn't clear it — give up (human power-cycle needed).
+        # One reboot per outage episode. The marker's mere EXISTENCE
+        # means "we already rebooted for this episode" — comparing
+        # boot_ids can't work: the marker is written pre-reboot, so
+        # after the reboot the ids never match and the guard never
+        # trips (observed in review 2026-09-24: with a persisted
+        # FAILS >= 10 and a warm reboot that didn't recover the NIC,
+        # the old code re-rebooted every ~5 min forever). The episode
+        # ends only when the network RECOVERS (the success branch
+        # clears both FAILS and the marker), so a fresh outage after
+        # recovery gets its one reboot again.
         BOOTID=$(cat /proc/sys/kernel/random/boot_id)
-        if [ -f "$EPISODE" ] && [ "$(cat "$EPISODE")" = "$BOOTID" ]; then
-          echo "e610-watchdog: already rebooted this episode ($BOOTID) and network is still dead — giving up, needs power-cycle"
+        if [ -f "$EPISODE" ]; then
+          echo "e610-watchdog: already rebooted this episode (marker boot $(cat "$EPISODE"), now $BOOTID) and network is still dead — giving up, needs power-cycle"
           logger -t e610-watchdog "REBOOT DID NOT RECOVER — needs power-cycle"
           exit 0
         fi
