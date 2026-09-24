@@ -1,10 +1,8 @@
 # Custom Fedora Silverblue image for the ThinkPad — "bluefin-style".
 #
 # A thin layer over stock Silverblue. The active host-level changes:
-#   - add `distrobox` (the base image's `toolbox` STAYS — 2026-09-24 decision:
-#     it can't hurt next to distrobox/podman. The "swap toolbox for distrobox"
-#     this header claimed for weeks never actually removed toolbox; the docs
-#     now say what the image does.)
+#   - add `distrobox` (the base image's `toolbox` stays — deliberate,
+#     2026-09-24: it can't hurt next to distrobox/podman).
 #   - install the compositor stack (niri + our shell fork) from COPRs.
 #     (desktoppak, the old per-user bwrap payload layer, was retired
 #     2026-09-01 — the normal bootc/image path won; see host-image/README.md.)
@@ -33,15 +31,15 @@
 ARG FEDORA_MAJOR_VERSION=44
 FROM quay.io/fedora-ostree-desktops/silverblue:${FEDORA_MAJOR_VERSION}
 
-# ---- 1. The swap that wasn't: toolbox stays, distrobox added ------------
+# ---- 1. distrobox added (toolbox stays) ---------------------------------
 # `dnf5 install` pulls distrobox from the Fedora repos; the base image's
 # `toolbox` is intentionally left in place (harmless alongside
-# distrobox/podman — see header). The cache mounts persist the dnf cache
-# across rebuilds so repeated builds are fast (finpilot/lina-bh pattern).
+# distrobox/podman). The cache mounts persist the dnf cache across
+# rebuilds so repeated builds are fast (finpilot/lina-bh pattern).
 #
 # NOTE: this does NOT change the bespoke dev container in ../toolbox (that one
 # stays a plain podman create with a separate $HOME). distrobox here just gives
-# the `distrobox` CLI on the host for ad-hoc containers, replacing `toolbox`.
+# the `distrobox` CLI on the host for ad-hoc containers, alongside `toolbox`.
 #
 # `just` and `fzf` are host-native on purpose: they back the `cjust` task menu
 # (hosts/thinkpad/Justfile + the cjust function in bubblebox/files/.zshrc). Like

@@ -14,9 +14,8 @@ desktoppak-purge` removes its live-host leftovers.)
 
 Currently:
 
-- installs `distrobox` (the base image's `toolbox` stays too — both coexist;
-  the "swap" this README claimed for weeks never actually removed toolbox,
-  and 2026-09-24 made coexistence the intent)
+- installs `distrobox` (the base image's `toolbox` stays too — deliberate,
+  2026-09-24: it can't hurt next to distrobox/podman)
 - installs the desktop stack:
   - `niri` + `xwayland-satellite` (from `yalter/niri`) — the compositor
   - our **niri-caelestia-shell** fork (built from source at a pinned commit,
@@ -28,9 +27,6 @@ Currently:
     come from Fedora proper + three COPRs (`errornointernet/quickshell`,
     `celestelove/{libcava,app2unit}`, and `gmanka/caelestia` for fonts +
     materialyoucolor only — caelestia-shell itself is NOT installed).
-  - Hyprland + Caelestia-shell **removed** 2026-09-02 — the trial concluded;
-    niri + our fork won. `mineiro/hyprland` and `peterwu/rendezvous` COPRs
-    dropped, satty/dart-sass dropped with them.
   - COSMIC: **soft-removed** 2026-09-01 (not in active use; revisit in a few
     months). Restore = un-comment the cosmic lines in the Containerfile +
     `cjust image-rebuild` + `cjust cosmic-restore`. Settings stay backed up
@@ -40,9 +36,6 @@ Currently:
     host-native because `cjust` must work before any sandbox is set up
   - `nodejs` + `npm` — used by `cjust hermes-desktop-build` (the hermes
     desktop app builds with npm; prefix `~/.local`)
-  - (NOT `oh-my-posh` — that one is bubblebox-managed, see
-    `../bubblebox/profile.toml`; the image only ships what `cjust` needs
-    before any sandbox exists)
 - disables SELinux for this personal-laptop setup
 - bakes a narrow sudoers grant (step 3.8): NOPASSWD for bare
   `sudo /usr/bin/bootc upgrade` — nothing else. The bubblebox user timer
