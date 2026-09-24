@@ -8,6 +8,10 @@ Requires=postgresql.service redis-immich.service
 # podman-system-generator output (same trap as caddy) — [Unit] lines in
 # the .container file land in the generated unit instead.
 OnFailure=ntfy-failure@immich-server.service
+# RestartSec=5 + default StartLimitBurst=5/10s can never trip the start
+# limit, so the OnFailure above was unreachable for crash loops. See the
+# matching comment in caddy.container.
+StartLimitIntervalSec=60
 
 [Container]
 Image=ghcr.io/immich-app/immich-server:v3.1.0

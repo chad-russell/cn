@@ -2,6 +2,12 @@
 Description=Caddy Reverse Proxy (SSL termination + Route53 DNS challenge)
 After=network-online.target
 Wants=network-online.target
+# Crash-loop alerting: with RestartSec=5 and systemd's DEFAULT
+# StartLimitBurst=5/10s, five starts can never land inside the window,
+# the limit is unreachable, and OnFailure never fires — the unit just
+# flaps silently forever. Widen the window so it can.
+StartLimitIntervalSec=60
+OnFailure=ntfy-failure@caddy.service
 
 [Container]
 Image=localhost/caddy-route53:latest

@@ -39,6 +39,13 @@
     # Used for notification links and agent-config generation in the UI.
     environment.APP_URL = "https://beszel.internal.crussell.io";
 
+    # Crash-loop alerting (RestartSec=5 + default StartLimitBurst=5/10s
+    # can never trip the limit — see the matching comment in
+    # caddy.container): widen the window so entering "failed" — and thus
+    # OnFailure — is reachable, and wire the alert.
+    startLimitIntervalSec = 60;
+    onFailure = [ "ntfy-failure@beszel.service" ];
+
     serviceConfig = {
       ExecStart =
         "${pkgs.beszel}/bin/beszel-hub serve --http 127.0.0.1:8091 --dir /var/lib/beszel";
