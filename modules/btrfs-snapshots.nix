@@ -164,9 +164,8 @@ in {
       # Alert on failure where the host provides the freshness-checks
       # ntfy-failure@ template (bees/nas do); absent elsewhere, the
       # dependency is simply skipped.
-      onFailure =
-        lib.optionals (config.systemd.units ? "ntfy-failure@.service")
-          [ "ntfy-failure@btrfs-snapshots.service" ];
+      onFailure = lib.optionals (config.systemd.units ? "ntfy-failure@.service")
+        [ "ntfy-failure@btrfs-snapshots.service" ];
       path = [ btrfsProgs pkgs.util-linux ];
       serviceConfig = {
         Type = "oneshot";
