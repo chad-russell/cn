@@ -65,9 +65,12 @@ Built as `hosts/nas/rustfs.{nix,container}` — a podman quadlet rather than
 the upstream `services.rustfs` NixOS module, per the 2026-09-25 decision to
 standardize new services on podman/quadlet. Design notes for the record:
 
-- Data under `/pool/rustfs` (btrfs RAID1 underneath), multi-directory pool
-  `d0..d3` — SNSD unsupported and EC across directories adds bitrot
-  protection on top of btrfs's disk redundancy. (as planned)
+- Data under `/pool/rustfs` (btrfs RAID1 underneath), **single path** —
+  the planned multi-directory EC pool is IMPOSSIBLE on one filesystem:
+  rustfs hard-requires each erasure-set directory on a distinct physical
+  disk ([FATAL] "local erasure endpoints must use distinct physical
+  disks", hit live 2026-09-25 with d0..d3 on the one btrfs fs). btrfs
+  RAID1 is the redundancy; EC across one device adds nothing.
 - Creds via agenix — one env file `rustfs-env.age` (RUSTFS_ACCESS_KEY +
   RUSTFS_SECRET_KEY together) rather than two separate files; bound to
   Nebula `10.10.0.3:9000` only via `PublishPort=10.10.0.3:9000:9000`.

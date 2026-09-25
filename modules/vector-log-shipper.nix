@@ -58,6 +58,10 @@ let
       .INVOCATION_ID, .CONTAINER_ID, .CONTAINER_ID_FULL, .CONTAINER_TAG,
       .CONTAINER_NAME,
     ])
+
+    # OpenObserve's JSON ingest reads _timestamp in epoch MICROseconds;
+    # without it, events land at ingest time.
+    ._timestamp = to_int(to_unix_timestamp(.timestamp) * 1000000) ?? to_int(now() * 1000000)
   '';
 in {
   options.services.homelab-log-shipper = {
@@ -65,10 +69,14 @@ in {
 
     endpoint = lib.mkOption {
       type = lib.types.str;
-      default = "http://10.10.0.6:5080/api/default";
+      default = "http://10.10.0.6:5080";
       description = ''
-        OTLP/HTTP base endpoint (Vector appends /v1/logs). Includes the
-        org path: OpenObserve serves OTLP at /api/<org>/v1/logs.
+        OpenObserve base URL. The sink posts JSON events to
+        <endpoint>/api/default/default/_json — OpenObserve's documented
+        Vector integration path (basic auth = root user). The nixpkgs
+        vector 0.55 `opentelemetry` sink's HTTP variant has an unstable
+        cross-version schema (type/protocol/uri/encoding churn hit
+        during the 2026-09-25 bring-up); the plain http sink is stable.
       '';
     };
 
@@ -79,54 +87,67 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    services.vector = {
-      enable = true;
-      journaldAccess = true;
-      settings = {
-        sources.journald = {
-          type = "journald";
-        } // lib.optionalAttrs (cfg.excludeUnits != [ ]) {
-          exclude_units = cfg.excludeUnits;
-        };
+  config = lib.mkMerge [
+    # Importing the module opts the host in (beszel-agent pattern) — the
+    # fleet ships its journal unless a host explicitly disables it.
+    { services.homelab-log-shipper.enable = lib.mkDefault true; }
 
-        transforms.journald_remap = {
-          type = "remap";
-          inputs = [ "journald" ];
-          source = remap;
-        };
+    (lib.mkIf cfg.enable {
+      services.vector = {
+        enable = true;
+        journaldAccess = true;
+        settings = {
+          sources.journald = {
+            type = "journald";
+          } // lib.optionalAttrs (cfg.excludeUnits != [ ]) {
+            exclude_units = cfg.excludeUnits;
+          };
 
-        sinks.openobserve = {
-          type = "otlp";
-          inputs = [ "journald_remap" ];
-          endpoint = cfg.endpoint;
-          protocol = "http";
-          compression = "gzip";
-          auth = {
-            strategy = "basic";
-            user = "\${ZO_ROOT_USER_EMAIL}";
-            password = "\${ZO_ROOT_USER_PASSWORD}";
+          transforms.journald_remap = {
+            type = "remap";
+            inputs = [ "journald" ];
+            source = remap;
           };
-          batch = {
-            max_bytes = 4000000;
-            timeout_secs = 10;
+
+          sinks.openobserve = {
+            # Plain http sink → OpenObserve's JSON ingest (their documented
+            # Vector integration). See the endpoint option for why not the
+            # `opentelemetry` sink.
+            type = "http";
+            inputs = [ "journald_remap" ];
+            uri = cfg.endpoint + "/api/default/default/_json";
+            method = "post";
+            compression = "gzip";
+            encoding.codec = "json";
+            auth = {
+              strategy = "basic";
+              # ${VAR:-default} keeps the nixpkgs module's build-time
+              # `vector validate` green (no env at build); the real values
+              # come from the EnvironmentFile at runtime.
+              user = "\${ZO_ROOT_USER_EMAIL:-vector-validate}";
+              password = "\${ZO_ROOT_USER_PASSWORD:-vector-validate}";
+            };
+            batch = {
+              max_bytes = 4000000;
+              timeout_secs = 10;
+            };
+            buffer = {
+              type = "disk";
+              max_size = 268435488; # 256 MiB — survive OpenObserve downtime
+            };
+            request.retry_max_duration_secs = 30;
           };
-          buffer = {
-            type = "disk";
-            max_size = 268435488; # 256 MiB — survive OpenObserve downtime
-          };
-          request.retry_max_duration_secs = 30;
         };
       };
-    };
 
-    age.secrets.openobserve-env.file = ../secrets/openobserve-env.age;
+      age.secrets.openobserve-env.file = ../secrets/openobserve-env.age;
 
-    # The nixpkgs vector module has no environmentFile option; attach the
-    # agenix file directly so ${ZO_ROOT_USER_*} resolve at runtime.
-    # systemd reads EnvironmentFile as root, so this also works for the
-    # module's non-root vector user.
-    systemd.services.vector.serviceConfig.EnvironmentFile =
-      config.age.secrets.openobserve-env.path;
-  };
+      # The nixpkgs vector module has no environmentFile option; attach the
+      # agenix file directly so ${ZO_ROOT_USER_*} resolve at runtime.
+      # systemd reads EnvironmentFile as root, so this also works for the
+      # module's non-root vector user.
+      systemd.services.vector.serviceConfig.EnvironmentFile =
+        config.age.secrets.openobserve-env.path;
+    })
+  ];
 }
