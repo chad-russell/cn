@@ -15,17 +15,19 @@
 # with bees' quadlet). Vector buffers to disk, so logs survive OpenObserve
 # or Nebula downtime (bounded at 256 MiB, then backpressure).
 #
-# VALIDATION GOTCHA (2026-09-25): the nixpkgs module's build-time
-# `vector validate` derivation does NOT compile the VRL remap — three
-# broken remaps passed `nix flake check` and failed at runtime (exit 78,
-# which also aborts switch-to-configuration with exit 4 mid-activation).
-# The real gate: render `nix eval --raw ...config.services.vector.package`
-# from THIS FLAKE, convert `...config.services.vector.settings --json`
-# to TOML, and run THAT binary's `vector validate --no-environment` on
-# it. Do NOT use `nix shell nixpkgs#vector` — the registry nixpkgs
-# carries a NEWER vector whose VRL dialect accepts what 26.05's 0.55
-# rejects (float arithmetic fallibility differs; caught live after a
-# registry-binary validation passed a config the fleet's binary refused).
+# VALIDATION GOTCHA (2026-09-25): vector 0.55.0's `validate` subcommand
+# is LAXER than run-mode compilation — three broken remaps passed both
+# the nixpkgs build-time derivation AND `vector validate`, then failed
+# at unit start (exit 78, which aborts switch-to-configuration with
+# exit 4 mid-activation). The real gate, in order:
+#   1. nix eval --raw ...config.services.vector.package  (THIS flake's
+#      pin — never `nix shell nixpkgs#vector`, the registry carries a
+#      newer, laxer dialect)
+#   2. render ...config.services.vector.settings --json → TOML
+#   3. run THAT binary with `--config` for a few seconds (with dummy
+#      ZO_* env): config-compile errors appear before runtime resource
+#      errors (data_dir/buffer perms failures in a sandbox are FINE —
+#      they prove compilation passed).
 #
 # Usage in a host config:
 #
@@ -92,10 +94,12 @@ let
     del(.CONTAINER_NAME)
 
     # OpenObserve's JSON ingest reads _timestamp in epoch MICROseconds;
-    # without it, events land at ingest time. Keep every step infallible
-    # for the 26.05-pinned vector 0.55: floats are fallible there (both
-    # to_unix_timestamp and to_int of a float), ints are not.
-    ts_secs = to_int(to_unix_timestamp(.timestamp) ?? now()) ?? 0
+    # without it, events land at ingest time. Dialect notes for 0.55:
+    # timestamp*int is fallible (float math) — but to_int(timestamp) is
+    # infallible, and the compiler REJECTS a ?? on an infallible
+    # expression (E651). `vector validate` accepts both wrong forms —
+    # run-mode compilation is stricter (see header).
+    ts_secs = to_int(to_unix_timestamp(.timestamp) ?? now())
     ._timestamp = ts_secs * 1000000
   '';
 in {
