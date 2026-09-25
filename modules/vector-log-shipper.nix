@@ -59,14 +59,14 @@ let
     cn = to_string(.CONTAINER_NAME) ?? ""
 
     pri = to_int(.PRIORITY) ?? 6
-    if pri <= 3 {
-      lv = "ERROR"
+    lv = if pri <= 3 {
+      "ERROR"
     } else if pri == 4 {
-      lv = "WARNING"
+      "WARNING"
     } else if pri <= 6 {
-      lv = "INFO"
+      "INFO"
     } else {
-      lv = "DEBUG"
+      "DEBUG"
     }
 
     # OpenObserve's JSON ingest reads _timestamp in epoch MICROseconds.
