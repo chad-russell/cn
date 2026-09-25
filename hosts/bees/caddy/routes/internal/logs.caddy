@@ -1,0 +1,7 @@
+# Central logging — OpenObserve quadlet on bees (10.10.0.6:5080,
+# published on the Nebula IP only). Caddy runs Network=host, so it
+# reaches the published overlay port directly.
+@logs host logs.internal.crussell.io
+handle @logs {
+    reverse_proxy 10.10.0.6:5080
+}

@@ -21,6 +21,10 @@
     ./qrcode-qa.nix
     ./caddy.nix
     ./services.nix
+    # Central log search (openobserve quadlet, 10.10.0.6:5080, fed by the
+    # fleet-wide Vector shipper; parquet in RustFS on nas)
+    ./openobserve.nix
+    ../../modules/vector-log-shipper.nix
     ./kan.nix
     # Lane (Plane CE) retired 2026-09-08 — Hermes kanban is the source of
     # truth; 13 lane-* containers decommissioned (archive on NAS).

@@ -68,6 +68,8 @@ in {
       services.dsh.enable = true;
     }
     ../../modules/beszel-agent.nix
+    # Journald → OpenObserve shipper (central logs on bees)
+    ../../modules/vector-log-shipper.nix
     ./dev-quadlets.nix
     # ./searxng.nix      # retired 2026-09-03 — every upstream engine except
     #                      # bing had flagged this IP (google 403, ddg/startpage
