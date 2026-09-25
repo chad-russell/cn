@@ -26,9 +26,15 @@
   homelab.freshnessChecks.bees-logs = {
     description = "bees openobserve health";
     extraPath = [ pkgs.curl ];
+    environmentFile = config.age.secrets.openobserve-env.path;
     checkCommand = ''
-      code=$(curl -s -o /dev/null -w '%{http_code}' http://10.10.0.6:5080/health)
-      echo "openobserve /health -> $code"
+      # v1.0.4's /health answers 401 unauthenticated — probe the real
+      # API with the root creds instead: proves process + auth + API.
+      creds=$(grep -E '^ZO_ROOT_USER_(EMAIL|PASSWORD)=' "$CREDENTIALS_DIRECTORY/openobserve-env" 2>/dev/null || grep -E '^ZO_ROOT_USER_(EMAIL|PASSWORD)=' /run/agenix/openobserve-env)
+      u=$(echo "$creds" | grep EMAIL | cut -d= -f2-)
+      p=$(echo "$creds" | grep PASSWORD | cut -d= -f2-)
+      code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 -u "$u:$p" http://10.10.0.6:5080/api/default/streams)
+      echo "openobserve /api/default/streams -> $code"
       [ "$code" = "200" ]
     '';
   };
