@@ -16,12 +16,16 @@
 # or Nebula downtime (bounded at 256 MiB, then backpressure).
 #
 # VALIDATION GOTCHA (2026-09-25): the nixpkgs module's build-time
-# `vector validate` derivation does NOT compile the VRL remap — two
+# `vector validate` derivation does NOT compile the VRL remap — three
 # broken remaps passed `nix flake check` and failed at runtime (exit 78,
 # which also aborts switch-to-configuration with exit 4 mid-activation).
-# The real gate: `nix eval ...config.services.vector.settings --json`,
-# convert to TOML, then `vector validate --no-environment` with the
-# nixpkgs vector binary against that file.
+# The real gate: render `nix eval --raw ...config.services.vector.package`
+# from THIS FLAKE, convert `...config.services.vector.settings --json`
+# to TOML, and run THAT binary's `vector validate --no-environment` on
+# it. Do NOT use `nix shell nixpkgs#vector` — the registry nixpkgs
+# carries a NEWER vector whose VRL dialect accepts what 26.05's 0.55
+# rejects (float arithmetic fallibility differs; caught live after a
+# registry-binary validation passed a config the fleet's binary refused).
 #
 # Usage in a host config:
 #
@@ -88,10 +92,11 @@ let
     del(.CONTAINER_NAME)
 
     # OpenObserve's JSON ingest reads _timestamp in epoch MICROseconds;
-    # without it, events land at ingest time. (to_unix_timestamp is
-    # fallible — bind it with ?? before doing arithmetic.)
-    ts = to_unix_timestamp(.timestamp) ?? now()
-    ._timestamp = to_int(ts * 1000000)
+    # without it, events land at ingest time. Keep every step infallible
+    # for the 26.05-pinned vector 0.55: floats are fallible there (both
+    # to_unix_timestamp and to_int of a float), ints are not.
+    ts_secs = to_int(to_unix_timestamp(.timestamp) ?? now()) ?? 0
+    ._timestamp = ts_secs * 1000000
   '';
 in {
   options.services.homelab-log-shipper = {
