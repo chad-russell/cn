@@ -95,10 +95,14 @@
       CURRENT="$(readlink -f /etc/caddy/routes) $(sha256sum /etc/caddy/Caddyfile | cut -d' ' -f1) $(sha256sum /etc/caddy/Dockerfile | cut -d' ' -f1)"
       if [ -n "$CURRENT" ] && [ "$CURRENT" != "$(cat "$MARKER" 2>/dev/null)" ]; then
         # A changed Dockerfile means the image must be rebuilt BEFORE
-        # caddy restarts onto it — systemctl start on the oneshot build
-        # unit waits for completion.
+        # caddy restarts onto it. --wait is load-bearing: a plain
+        # `systemctl start` on a oneshot only QUEUES the job and returns
+        # immediately — on the first run (2026-09-24) the restart raced
+        # the build, caddy flapped once, and the (newly reachable)
+        # OnFailure alerted for an outage we caused mid-deploy. --wait
+        # blocks until the build unit finishes.
         if [ "$(sha256sum /etc/caddy/Dockerfile | cut -d' ' -f1)" != "$(cat /var/lib/caddy-image-dockerfile-hash 2>/dev/null)" ]; then
-          ${pkgs.systemd}/bin/systemctl start caddy-image-build.service
+          ${pkgs.systemd}/bin/systemctl start --wait caddy-image-build.service
         fi
         # daemon-reload FIRST: route/Caddyfile edits only need a restart, but
         # QUADLET unit changes (e.g. a new Volume= in caddy.container) are
