@@ -41,66 +41,51 @@ let
   cfg = config.services.homelab-log-shipper;
 
   remap = ''
-    .message = to_string(.MESSAGE) ?? ""
-    .host = to_string(._HOSTNAME) ?? ""
+    # 0.55 journald schema (empirically confirmed live 2026-09-25): the
+    # source HOISTS MESSAGE→.message and _HOSTNAME→.host into Vector's
+    # standard schema — those caps fields do NOT exist on the event.
+    # Other journal fields keep their CAPS names (.PRIORITY,
+    # ._SYSTEMD_UNIT, .CONTAINER_NAME, ...). Reading .MESSAGE/._HOSTNAME
+    # and assigning to .message/.host CLOBBERS good values with "".
+    #
+    # Strategy: capture what we keep, then REPLACE the event wholesale —
+    # no del() list to maintain against journal field drift.
+    m = to_string(.message) ?? ""
+    h = to_string(.host) ?? ""
 
     u = to_string(._SYSTEMD_UNIT) ?? to_string(.SYSLOG_IDENTIFIER) ?? "unknown"
-    .unit = replace(u, r'\.service$', "")
+    u = replace(u, r'\.service$', "")
 
-    if exists(.CONTAINER_NAME) {
-      .container = to_string(.CONTAINER_NAME) ?? ""
-    }
+    cn = to_string(.CONTAINER_NAME) ?? ""
 
     pri = to_int(.PRIORITY) ?? 6
     if pri <= 3 {
-      .level = "ERROR"
+      lv = "ERROR"
     } else if pri == 4 {
-      .level = "WARNING"
+      lv = "WARNING"
     } else if pri <= 6 {
-      .level = "INFO"
+      lv = "INFO"
     } else {
-      .level = "DEBUG"
+      lv = "DEBUG"
     }
 
-    # Drop raw journald metadata — the fields above are the queryable set.
-    # (This VRL's del() takes ONE path per call, not an array.)
-    del(.MESSAGE)
-    del(.PRIORITY)
-    del(._HOSTNAME)
-    del(._SYSTEMD_UNIT)
-    del(._COMM)
-    del(._PID)
-    del(._BOOT_ID)
-    del(._MACHINE_ID)
-    del(._RUNTIME_SCOPE)
-    del(._TRANSPORT)
-    del(._UID)
-    del(._GID)
-    del(._CAP_EFFECTIVE)
-    del(._SELINUX_CONTEXT)
-    del(._SOURCE_REALTIME_TIMESTAMP)
-    del(.__REALTIME_TIMESTAMP)
-    del(.__MONOTONIC_TIMESTAMP)
-    del(.SYSLOG_FACILITY)
-    del(.SYSLOG_IDENTIFIER)
-    del(.CODE_FILE)
-    del(.CODE_LINE)
-    del(.CODE_FUNC)
-    del(.ERRNO)
-    del(.INVOCATION_ID)
-    del(.CONTAINER_ID)
-    del(.CONTAINER_ID_FULL)
-    del(.CONTAINER_TAG)
-    del(.CONTAINER_NAME)
-
-    # OpenObserve's JSON ingest reads _timestamp in epoch MICROseconds;
-    # without it, events land at ingest time. Dialect notes for 0.55:
-    # timestamp*int is fallible (float math) — but to_int(timestamp) is
-    # infallible, and the compiler REJECTS a ?? on an infallible
-    # expression (E651). `vector validate` accepts both wrong forms —
-    # run-mode compilation is stricter (see header).
+    # OpenObserve's JSON ingest reads _timestamp in epoch MICROseconds.
+    # Infallible chain for the 0.55 dialect: to_int(timestamp) cannot
+    # fail (E651 fires if you coalesce it), timestamp*int can.
     ts_secs = to_int(to_unix_timestamp(.timestamp) ?? now())
-    ._timestamp = ts_secs * 1000000
+
+    . = {
+      "message": m,
+      "host": h,
+      "unit": u,
+      "level": lv,
+      "_timestamp": ts_secs * 1000000,
+      "timestamp": to_string(.timestamp) ?? "",
+    }
+
+    if cn != "" {
+      .container = cn
+    }
   '';
 in {
   options.services.homelab-log-shipper = {
