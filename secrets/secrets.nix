@@ -104,6 +104,11 @@ in {
   # bees quadlet in hosts/bees/openobserve.nix) plus
   # ZO_S3_ACCESS_KEY / ZO_S3_SECRET_KEY. The S3 values DUPLICATE
   # rustfs-env.age below — rotate both files together.
+  # PASSWORD POLICY (boot-enforced, 2026-09-25 lesson): OpenObserve
+  # rejects weak ZO_ROOT_USER_PASSWORD at startup (8-128 chars,
+  # lower+upper+digit+special) — the failure surfaces as the misleading
+  # panic "backend job init failed: channel closed". Generated values
+  # must guarantee all four character classes.
   "openobserve-env.age".publicKeys = [ crussell ];
 
   # rustfs-env: RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY for the shared
