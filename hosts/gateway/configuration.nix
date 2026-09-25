@@ -22,6 +22,9 @@
     ../../modules/base-server.nix
     ../../modules/freshness-checks.nix
     ../../modules/beszel-agent.nix
+    # Journald → OpenObserve shipper (central logs on bees; ships out
+    # over Nebula like the beszel agent)
+    ../../modules/vector-log-shipper.nix
     # NOTE: Do NOT import nebula-client.nix — this host IS a lighthouse.
     # Nebula is configured manually below with lighthouse/relay overrides.
   ];

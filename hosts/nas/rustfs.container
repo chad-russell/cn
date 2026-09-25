@@ -1,0 +1,45 @@
+# RustFS — shared S3-compatible object store on nas (2026-09-25).
+#
+# This is the shared NAS instance that docs/rustfs-migration/PLAN.md
+# deferred behind a trigger rule (survives stack teardown / >1 consumer /
+# operational weight): central logging is that trigger. First consumer:
+# OpenObserve on bees (bucket `openobserve`, parquet only).
+#
+# Image: pinned to the SAME digest as the proven qrcode-dev sidecar
+# (RustFS 1.0.0, amd64). PLAN.md's `rustfs/rustfs:1.0.1` tag does not
+# exist on Docker Hub (verified via registry API 2026-09-25); 1.0.0 is
+# the newest stable.
+#
+# Data: multi-directory pool under /pool/rustfs (btrfs RAID1 underneath)
+# — single-path SNSD is not supported. Console disabled; debug via
+# awscli (see rustfs-bucket-init.service in rustfs.nix) or a temporary
+# PublishPort for the console port.
+[Unit]
+Description=RustFS S3 object storage (shared homelab instance)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/rustfs/rustfs@sha256:ba0a1b53e36f321c0d46f3867104abef169f7bc59c467c664ddac87e7ddc9a8b
+ContainerName=rustfs
+Environment=RUSTFS_VOLUMES=/data/d0,/data/d1,/data/d2,/data/d3
+Environment=RUSTFS_ADDRESS=:9000
+Environment=RUSTFS_REGION=us-east-1
+Environment=RUSTFS_CONSOLE_ENABLE=false
+Environment=RUSTFS_HEALTH_ENDPOINT_ENABLE=true
+EnvironmentFile=/run/agenix/rustfs-env
+PublishPort=10.10.0.3:9000:9000
+Volume=/pool/rustfs:/data
+HealthCmd=curl --fail --silent http://127.0.0.1:9000/health/ready
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=30
+HealthStartPeriod=20s
+
+[Service]
+TimeoutStartSec=180
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

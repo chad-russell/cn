@@ -97,6 +97,20 @@ in {
   # (work provider). Historical name kept to avoid re-encrypting.
   "hermes-bee-env-glen.age".publicKeys = [ crussell ];
 
+  # ── Central logging: OpenObserve (bees) + RustFS (nas) ──────────
+  # openobserve-env: ZO_ROOT_USER_EMAIL / ZO_ROOT_USER_PASSWORD (UI
+  # login AND OTLP basic auth for every Vector shipper — consumed on
+  # all four NixOS hosts via modules/vector-log-shipper.nix and by the
+  # bees quadlet in hosts/bees/openobserve.nix) plus
+  # ZO_S3_ACCESS_KEY / ZO_S3_SECRET_KEY. The S3 values DUPLICATE
+  # rustfs-env.age below — rotate both files together.
+  "openobserve-env.age".publicKeys = [ crussell ];
+
+  # rustfs-env: RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY for the shared
+  # nas instance (hosts/nas/rustfs.nix). Values mirrored as ZO_S3_* in
+  # openobserve-env.age.
+  "rustfs-env.age".publicKeys = [ crussell ];
+
   # ── Hermes WebUI on bee ─────────────────────────────────────────
   # HERMES_WEBUI_PASSWORD for the web login gate at
   # https://hermes.internal.crussell.io (routed by bees Caddy to bee).

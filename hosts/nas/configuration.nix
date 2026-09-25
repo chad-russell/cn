@@ -36,8 +36,13 @@
     ./nfs-exports.nix
     ./samba.nix
     ./btrfs-maintenance.nix
+    # Shared RustFS S3 (10.10.0.3:9000) — the deferred shared instance
+    # from docs/rustfs-migration/PLAN.md; central logging fired the
+    # trigger. First consumer: OpenObserve on bees.
+    ./rustfs.nix
     ../../modules/nebula-client.nix
     ../../modules/beszel-agent.nix
+    ../../modules/vector-log-shipper.nix
     ../../modules/wol-enable.nix
   ];
 

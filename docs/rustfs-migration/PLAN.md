@@ -57,22 +57,30 @@ throwaway, and losing the volume costs an afternoon at most.
 Everything MinIO currently in scope fails all three tests → sidecar swap only.
 The shared instance is **designed, deferred, and trigger-driven** (see below).
 
-## Deferred design: shared RustFS on the NAS (do NOT build yet)
+## Deferred design: shared RustFS on the NAS — **BUILT 2026-09-25**
 
-When a trigger fires (candidates: a second restic target besides AWS, a
-cross-project artifact/media store, hindsight attachments, immich cold tier):
+The trigger fired: **central logging** (needs survival, is consumed by all
+four hosts via OpenObserve on bees, and carries agenix creds + monitoring).
+Built as `hosts/nas/rustfs.{nix,container}` — a podman quadlet rather than
+the upstream `services.rustfs` NixOS module, per the 2026-09-25 decision to
+standardize new services on podman/quadlet. Design notes for the record:
 
-- `services.rustfs` via the upstream NixOS module on **nas**, data under
-  `/pool/rustfs` (btrfs RAID1 underneath). Multi-directory pool
-  (`/pool/rustfs/d{0..3}`) rather than single-path SNSD — SNSD cannot be
-  expanded in place later (topology rules), and EC across directories adds
-  bitrot/corruption protection on top of btrfs's disk redundancy.
-- Creds via **agenix** (`rustfs-access-key.age` / `rustfs-secret-key.age`),
-  never in the store. Bind to Nebula `10.10.0.3` only; add
-  `rustfs.internal.crussell.io` on bees Caddy if a browser/UI need appears.
-- Restic coverage for `/pool/rustfs` metadata + the agenix secrets.
-- Consumers get per-service access keys, not the root pair (the one piece of
-  hygiene the sidecar world skipped because creds were throwaway).
+- Data under `/pool/rustfs` (btrfs RAID1 underneath), multi-directory pool
+  `d0..d3` — SNSD unsupported and EC across directories adds bitrot
+  protection on top of btrfs's disk redundancy. (as planned)
+- Creds via agenix — one env file `rustfs-env.age` (RUSTFS_ACCESS_KEY +
+  RUSTFS_SECRET_KEY together) rather than two separate files; bound to
+  Nebula `10.10.0.3:9000` only via `PublishPort=10.10.0.3:9000:9000`.
+- Restic coverage for `/pool/rustfs`: **still deferred** — nas has no
+  restic job (it IS the backup target host); btrfs RAID1 is the current
+  protection. Revisit if the store grows beyond logs.
+- Per-service access keys: **still deferred** — OpenObserve uses the root
+  pair (values mirrored in `openobserve-env.age` as `ZO_S3_*`; rotate both
+  files together). Mint per-service keys when a second consumer appears.
+
+Original candidate triggers (second restic target, artifact store, hindsight
+attachments, immich cold tier) remain open for future consumers — point them
+at `10.10.0.3:9000`, don't spawn new sidecars.
 
 ## The swap recipe (identical for every sidecar)
 
@@ -87,7 +95,10 @@ Volume=openbible-dev-minio.volume:/data
 Exec=server /data --console-address :9001
 
 # after (RustFS) — same creds, same ports, same alias
-Image=docker.io/rustfs/rustfs:1.0.1
+# (1.0.1 below does NOT exist on Docker Hub — verified via registry API
+#  2026-09-25; 1.0.0 is the newest stable. Pin by digest like
+#  hosts/nas/rustfs.container does.)
+Image=docker.io/rustfs/rustfs:1.0.0
 Environment=RUSTFS_ACCESS_KEY=minio
 Environment=RUSTFS_SECRET_KEY=password
 Environment=RUSTFS_VOLUMES=/data

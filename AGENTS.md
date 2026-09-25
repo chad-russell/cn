@@ -47,6 +47,7 @@ Last validated via SSH: **2026-09-09**.
 │   │   ├── beszel.nix         # Beszel monitoring hub
 │   │   ├── ntfy.nix, datenight.nix
 │   │   ├── services.nix
+│   │   ├── openobserve.nix    # central log search (quadlet :5080)
 │   │   ├── backup.nix         # Restic backup to S3
 │   │   └── *.container        # linkding, papra, jellyfin, jellyseerr, sonarr, radarr, prowlarr, qbittorrent
 │   ├── gateway/               # Hetzner Cloud VPS: public TLS ingress
@@ -58,6 +59,7 @@ Last validated via SSH: **2026-09-09**.
 │   │   ├── disk-config.nix
 │   │   ├── nfs-exports.nix
 │   │   ├── samba.nix
+│   │   ├── rustfs.nix        # shared RustFS S3 (10.10.0.3:9000)
 │   │   └── btrfs-maintenance.nix
 │   ├── homeassistant/         # HAOS operational docs + helper scripts + Nebula add-on
 │   │   ├── addons/nebula/     # Local HAOS add-on: Nebula VPN client
@@ -87,6 +89,7 @@ Last validated via SSH: **2026-09-09**.
 │   ├── nebula-hosts.nix       # /etc/hosts entries for Nebula overlay names (generated from lib/host-meta.nix)
 │   ├── dsh.nix                # DeepSeek Harness (dsh) web UI on bee
 │   ├── beszel-agent.nix       # Beszel agent (default-on for importers)
+│   ├── vector-log-shipper.nix # journald→OpenObserve Vector agent (default-on)
 │   ├── restic-backup.nix      # Shared restic backup job builder
 │   ├── btrfs-snapshots.nix    # Btrfs snapshot management
 │   ├── buzz-harness.nix       # Buzz agent harness (disabled on bee, replaced by Hermes)
@@ -152,10 +155,10 @@ Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 26.05 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich. |
+| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 26.05 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich, OpenObserve (central logs). |
 | `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 26.05 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), Hermes Agent gateway (retiring), dsh web UI, filebrowser quadlet, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
 | `think`          | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Resolves Nebula overlay names via baked `/usr/etc/hosts` (Containerfile step 3.7). Not a NixOS deploy target. |
-| `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 26.05 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance.                                                                                                                               |
+| `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 26.05 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance. Shared RustFS S3 (`10.10.0.3:9000`, logs parquet).                                                                                                                               |
 | `homeassistant` | `192.168.20.51`   | `10.10.0.51`                          | HAOS        | `hosts/homeassistant/` add-on + docs | Home Assistant OS. Nebula via local add-on.                                                                                                                                                        |
 | `gateway`       | `178.156.171.212` | `10.10.0.2`                           | NixOS 26.05 | `hosts/gateway/`                     | Hetzner Cloud VPS: **Caddy public TLS ingress** for `*.crussell.io` (HTTP-01, reverse-proxies to backends over Nebula). Nebula lighthouse/relay.                                                   |
 
@@ -339,6 +342,9 @@ Source files:
 - `hosts/bees/thinkpad-registry.nix` + `zot.container` — zot OCI registry (thinkpad host images; retention policies per repo in `zot-config.json`) + daily build/publish service
 - `hosts/bees/ntfy.nix`, `datenight.nix`
 - `hosts/bees/services.nix` + `*.container` — linkding, papra
+- `hosts/bees/openobserve.nix` + `openobserve.container` — central log
+  search (single-node, parquet in RustFS on nas, fed by the fleet-wide
+  Vector shipper; UI at `logs.internal.crussell.io`)
 - `hosts/bees/backup.nix` — Restic backup to S3
 - `*.container` files — jellyfin, jellyseerr, sonarr, radarr, prowlarr, qbittorrent, linkding, papra
 
@@ -350,6 +356,12 @@ Live systemd services:
 - `datenight.service` — port `7890`
 - `linkding.service` — publishes `30080 -> 9090`
 - `papra.service` — publishes `30083 -> 1221`
+- `openobserve.service` — podman quadlet, OpenObserve central log search on
+  Nebula `10.10.0.6:5080` only → `https://logs.internal.crussell.io`
+  (`hosts/bees/openobserve.nix`; OTLP ingest from every host's Vector
+  shipper, parquet in RustFS on nas; runbook = `logs` skill chad/skills)
+- `vector.service` — journald→OpenObserve shipper
+  (`modules/vector-log-shipper.nix`)
 - `jellyfin.service` — `8096`
 - `sonarr.service` — `8989`
 - `radarr.service` — `7878`
@@ -461,6 +473,8 @@ Running services:
 - Restic backup (daily S3 backup via `hosts/bee/backup.nix`)
 - `dsh-web.service` — DeepSeek Harness web UI (`modules/dsh.nix`): loopback `:3080` → `dsh-web-proxy` socket on Nebula `10.10.0.12:3080` → bees Caddy `https://dsh.internal.crussell.io`. Default model `zai-coding/glm-5.3` (personal coding plan; replaces opencode, retired 2026-09-02). `codex` CLI also installed for work-lane delegation. `DSH_HOME` (`/var/lib/dsh`) is a **local git repo** (no remote): agents commit config changes in place after each edit — hand-maintained files only (`sessions/`, `storages/`, `relay/`, `.credentials.yaml` are gitignored, restic covers them; see `modules/dsh.nix` header).
 - Beszel agent (default-on via `modules/beszel-agent.nix`)
+- `vector.service` — journald→OpenObserve shipper
+  (`modules/vector-log-shipper.nix`, central logs live on bees)
 - `artifacts-server.service` — static artifact host (`hosts/bee/artifacts.nix` + `artifacts-server.py`, 2026-09-14): serves `~/artifacts` on Nebula `10.10.0.12:8910` → bees Caddy `https://artifacts.internal.crussell.io` (route `hosts/bees/caddy/routes/internal/artifacts.caddy`). Files + folders + generated catalog (`index.html` reads `manifest.json`) + vendored `/assets/` (JetBrains Mono, mermaid) + JSON API (`POST /-/delete`, `/-/reindex`) for the catalog's delete buttons. Published by the dsh `artifacts` skill (`publish-artifact`, shim at `~/.local/bin/`); design governed by the dsh `design` skill. Replaced the hermes-era `python -m http.server` user unit (off-repo, retired same day). Keep-forever retention (no GC — old links must not rot); `~/artifacts` is inside bee's restic backup.
 
 bee is podman-only (no Docker daemon). Deploy with `nix run .#deploy -- bee`

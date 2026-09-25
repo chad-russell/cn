@@ -1,0 +1,47 @@
+# OpenObserve — central log search for the homelab (2026-09-25).
+#
+# Single-node mode with parquet data in the shared RustFS instance on nas
+# (10.10.0.3:9000, hosts/nas/rustfs.container). The named volume below holds
+# only WAL + SQLite metadata and rides bees' existing
+# /var/lib/containers/storage/volumes restic path (image layers excluded).
+#
+# Ingest: Vector agents on every host (modules/vector-log-shipper.nix) ship
+# journald via OTLP/HTTP → :5080/api/default/v1/logs (basic auth = root
+# user). UI/API: https://logs.internal.crussell.io (bees Caddy route).
+#
+# Image: pinned by digest (v1.0.4 multi-arch index, fetched 2026-09-25).
+# Memory: ZO_MEMORY_CACHE_MAX_SIZE (MB) caps the querier file cache — the
+# upstream default is 50% of host RAM, unacceptable on shared bees — and
+# ZO_MEM_TABLE_MAX_SIZE bounds memtables the same way.
+[Unit]
+Description=OpenObserve central log search (OTLP ingest + UI)
+After=network-online.target
+Wants=network-online.target
+# Widen the start-limit window so OnFailure can actually fire (caddy
+# precedent: 5 restarts can never land inside the 10s default window).
+StartLimitIntervalSec=60
+OnFailure=ntfy-failure@openobserve.service
+
+[Container]
+Image=public.ecr.aws/zinclabs/openobserve@sha256:d4a878fac1f6c56003764f7f2a1625668917388f167e222c8c810de3f54c56ba
+ContainerName=openobserve
+Environment=ZO_DATA_DIR=/data
+Environment=ZO_LOCAL_MODE_STORAGE=s3
+Environment=ZO_S3_PROVIDER=minio
+Environment=ZO_S3_SERVER_URL=http://10.10.0.3:9000
+Environment=ZO_S3_BUCKET_NAME=openobserve
+Environment=ZO_S3_REGION=us-east-1
+Environment=ZO_MEMORY_CACHE_MAX_SIZE=1024
+Environment=ZO_MEM_TABLE_MAX_SIZE=256
+Environment=ZO_COMPACT_DATA_RETENTION_DAYS=365
+Environment=ZO_TELEMETRY=false
+EnvironmentFile=/run/agenix/openobserve-env
+PublishPort=10.10.0.6:5080:5080
+Volume=openobserve_data:/data
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
