@@ -104,6 +104,13 @@
   # (enabled by default in modules/beszel-agent.nix)
   services.beszel-agent.extraFilesystems = [ "/pool" ];
 
+  # Beszel shells out to smartctl for drive health. The agent stays
+  # unprivileged, with only disk-group read access to block devices.
+  systemd.services.beszel-agent = {
+    path = [ pkgs.smartmontools ];
+    serviceConfig.SupplementaryGroups = [ "disk" ];
+  };
+
   # ── Pool directory structure ─────────────────────────────────────
   # Ensure subdirectories exist in each btrfs subvolume.
   systemd.tmpfiles.rules = [
