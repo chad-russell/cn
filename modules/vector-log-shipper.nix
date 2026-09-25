@@ -15,6 +15,14 @@
 # with bees' quadlet). Vector buffers to disk, so logs survive OpenObserve
 # or Nebula downtime (bounded at 256 MiB, then backpressure).
 #
+# VALIDATION GOTCHA (2026-09-25): the nixpkgs module's build-time
+# `vector validate` derivation does NOT compile the VRL remap — two
+# broken remaps passed `nix flake check` and failed at runtime (exit 78,
+# which also aborts switch-to-configuration with exit 4 mid-activation).
+# The real gate: `nix eval ...config.services.vector.settings --json`,
+# convert to TOML, then `vector validate --no-environment` with the
+# nixpkgs vector binary against that file.
+#
 # Usage in a host config:
 #
 #   imports = [ ../../modules/vector-log-shipper.nix ];
@@ -49,19 +57,41 @@ let
     }
 
     # Drop raw journald metadata — the fields above are the queryable set.
-    del([
-      .MESSAGE, .PRIORITY, ._HOSTNAME, ._SYSTEMD_UNIT, ._COMM, ._PID,
-      ._BOOT_ID, ._MACHINE_ID, ._RUNTIME_SCOPE, ._TRANSPORT, ._UID, ._GID,
-      ._CAP_EFFECTIVE, ._SELINUX_CONTEXT, ._SOURCE_REALTIME_TIMESTAMP,
-      .__REALTIME_TIMESTAMP, .__MONOTONIC_TIMESTAMP, .SYSLOG_FACILITY,
-      .SYSLOG_IDENTIFIER, .CODE_FILE, .CODE_LINE, .CODE_FUNC, .ERRNO,
-      .INVOCATION_ID, .CONTAINER_ID, .CONTAINER_ID_FULL, .CONTAINER_TAG,
-      .CONTAINER_NAME,
-    ])
+    # (This VRL's del() takes ONE path per call, not an array.)
+    del(.MESSAGE)
+    del(.PRIORITY)
+    del(._HOSTNAME)
+    del(._SYSTEMD_UNIT)
+    del(._COMM)
+    del(._PID)
+    del(._BOOT_ID)
+    del(._MACHINE_ID)
+    del(._RUNTIME_SCOPE)
+    del(._TRANSPORT)
+    del(._UID)
+    del(._GID)
+    del(._CAP_EFFECTIVE)
+    del(._SELINUX_CONTEXT)
+    del(._SOURCE_REALTIME_TIMESTAMP)
+    del(.__REALTIME_TIMESTAMP)
+    del(.__MONOTONIC_TIMESTAMP)
+    del(.SYSLOG_FACILITY)
+    del(.SYSLOG_IDENTIFIER)
+    del(.CODE_FILE)
+    del(.CODE_LINE)
+    del(.CODE_FUNC)
+    del(.ERRNO)
+    del(.INVOCATION_ID)
+    del(.CONTAINER_ID)
+    del(.CONTAINER_ID_FULL)
+    del(.CONTAINER_TAG)
+    del(.CONTAINER_NAME)
 
     # OpenObserve's JSON ingest reads _timestamp in epoch MICROseconds;
-    # without it, events land at ingest time.
-    ._timestamp = to_int(to_unix_timestamp(.timestamp) * 1000000) ?? to_int(now() * 1000000)
+    # without it, events land at ingest time. (to_unix_timestamp is
+    # fallible — bind it with ?? before doing arithmetic.)
+    ts = to_unix_timestamp(.timestamp) ?? now()
+    ._timestamp = to_int(ts * 1000000)
   '';
 in {
   options.services.homelab-log-shipper = {
