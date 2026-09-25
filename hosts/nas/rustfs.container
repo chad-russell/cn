@@ -10,10 +10,14 @@
 # exist on Docker Hub (verified via registry API 2026-09-25); 1.0.0 is
 # the newest stable.
 #
-# Data: multi-directory pool under /pool/rustfs (btrfs RAID1 underneath)
-# — single-path SNSD is not supported. Console disabled; debug via
-# awscli (see rustfs-bucket-init.service in rustfs.nix) or a temporary
-# PublishPort for the console port.
+# Data: SINGLE path /data = /pool/rustfs (btrfs RAID1 underneath is the
+# redundancy). The original plan was a multi-directory EC pool, but rustfs
+# requires every erasure-set directory on a DISTINCT physical disk
+# ([FATAL] "local erasure endpoints must use distinct physical disks" —
+# hit live 2026-09-25 with d0..d3 all on the one btrfs fs), and EC across
+# a single device adds nothing over btrfs's own mirroring. Same
+# single-path shape as the proven qrcode sidecar (Exec=/data).
+# Console disabled; debug via awscli (rustfs-bucket-init in rustfs.nix).
 [Unit]
 Description=RustFS S3 object storage (shared homelab instance)
 After=network-online.target
@@ -22,7 +26,6 @@ Wants=network-online.target
 [Container]
 Image=docker.io/rustfs/rustfs@sha256:ba0a1b53e36f321c0d46f3867104abef169f7bc59c467c664ddac87e7ddc9a8b
 ContainerName=rustfs
-Environment=RUSTFS_VOLUMES=/data/d0,/data/d1,/data/d2,/data/d3
 Environment=RUSTFS_ADDRESS=:9000
 Environment=RUSTFS_REGION=us-east-1
 Environment=RUSTFS_CONSOLE_ENABLE=false
@@ -30,6 +33,7 @@ Environment=RUSTFS_HEALTH_ENDPOINT_ENABLE=true
 EnvironmentFile=/run/agenix/rustfs-env
 PublishPort=10.10.0.3:9000:9000
 Volume=/pool/rustfs:/data
+Exec=/data
 HealthCmd=curl --fail --silent http://127.0.0.1:9000/health/ready
 HealthInterval=10s
 HealthTimeout=5s

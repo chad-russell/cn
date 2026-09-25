@@ -22,13 +22,11 @@
   # Multi-directory pool per PLAN.md (single-path SNSD unsupported). The
   # rustfs image runs as 10001:10001, so the bind-mounted pool dirs carry
   # that numeric uid/gid (tmpfiles accepts numeric ids without a user).
-  systemd.tmpfiles.rules = [
-    "d /pool/rustfs     0755 10001 10001 -"
-    "d /pool/rustfs/d0  0755 10001 10001 -"
-    "d /pool/rustfs/d1  0755 10001 10001 -"
-    "d /pool/rustfs/d2  0755 10001 10001 -"
-    "d /pool/rustfs/d3  0755 10001 10001 -"
-  ];
+  # Single data path (multi-dir EC pools need distinct physical disks —
+  # see rustfs.container header). The rustfs image runs as 10001:10001,
+  # so the bind-mounted pool dir carries that numeric uid/gid (tmpfiles
+  # accepts numeric ids without a user entry).
+  systemd.tmpfiles.rules = [ "d /pool/rustfs 0755 10001 10001 -" ];
 
   # S3 API on the Nebula IP only (published 10.10.0.3:9000). NFS opens
   # 2049 the same way; the only listener on 9000 is the overlay-bound
