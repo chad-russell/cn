@@ -4,7 +4,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=ghcr.io/decolua/9router:latest
+Image=ghcr.io/decolua/9router:0.5.91
 ContainerName=ninerouter
 # 9router (github.com/decolua/9router): one OpenAI-compatible endpoint
 # fronting OAuth providers (Cursor cu/*, OpenAI Codex cx/*), API-key
@@ -12,8 +12,15 @@ ContainerName=ninerouter
 # hub — dsh and future projects configure providers ONCE here and point
 # at http://10.10.0.12:20128/v1.
 #
-# Image updates are manual (podman pull + unit restart), like hindsight —
-# podman never re-pulls a pinned local :latest on its own.
+# Image: pinned to an upstream release tag (not :latest), so updates are a
+# reviewable one-line PR — bump the tag, and the post-merge bee deploy
+# daemon-reloads the quadlet; systemd restarts the unit and podman pulls the
+# new tag while recreating the container. (:latest would never re-pull on
+# its own — an update would be an invisible manual podman pull + restart,
+# and the version would not be visible in the repo.)
+#
+# Release notes: https://github.com/decolua/9router/releases (ghcr tags drop
+# the leading "v": release v0.5.91 → tag 0.5.91).
 #
 # Auth posture:
 # - REQUIRE_API_KEY: every /v1/* call needs a Bearer key minted in the
@@ -56,7 +63,7 @@ Restart=always
 RestartSec=5
 # First start pulls the image (~1-2 GB Next.js app); default 90s could
 # kill mid-pull. (Pre-pull manually when convenient: runuser -u crussell
-# -- podman pull ghcr.io/decolua/9router:latest)
+# -- podman pull ghcr.io/decolua/9router:<pinned tag>)
 TimeoutStartSec=15min
 
 [Install]
