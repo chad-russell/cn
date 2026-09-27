@@ -110,14 +110,14 @@
   services.beszel-agent.extraFilesystems = [ "/pool" ];
 
   # Beszel shells out to smartctl for drive health. The agent stays
-  # unprivileged, with disk-group device access and only CAP_SYS_RAWIO for
-  # ATA SMART pass-through.
+  # unprivileged, with disk-group device access plus the capabilities needed
+  # for ATA pass-through and NVMe admin SMART queries.
   systemd.services.beszel-agent = {
     path = [ pkgs.smartmontools ];
     serviceConfig = {
       SupplementaryGroups = [ "disk" ];
-      AmbientCapabilities = [ "CAP_SYS_RAWIO" ];
-      CapabilityBoundingSet = [ "CAP_SYS_RAWIO" ];
+      AmbientCapabilities = [ "CAP_SYS_ADMIN" "CAP_SYS_RAWIO" ];
+      CapabilityBoundingSet = [ "CAP_SYS_ADMIN" "CAP_SYS_RAWIO" ];
     };
   };
 
