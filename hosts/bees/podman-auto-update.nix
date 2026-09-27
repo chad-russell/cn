@@ -23,6 +23,8 @@
       "podman auto-update (system quadlets with AutoUpdate=registry)";
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
+    # ntfy-failure@ template from modules/freshness-checks.nix
+    onFailure = [ "ntfy-failure@podman-auto-update.service" ];
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${pkgs.podman}/bin/podman auto-update";
