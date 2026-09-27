@@ -8,8 +8,10 @@ Image=ghcr.io/vectorize-io/hindsight:latest
 ContainerName=hindsight
 # Full (not slim) image: embeddings (BGE) + reranker (MiniLM) run locally
 # in-container, so the ONLY external dependency is the extraction LLM.
-# ~9 GB image — image updates are manual (podman pull + unit restart);
-# podman never re-pulls a pinned local :latest on its own.
+# ~9 GB image — AutoUpdate=registry + the nightly `podman auto-update`
+# user timer (hosts/bee/podman-auto-update.nix) track :latest (podman
+# alone never re-pulls a cached tag); pulls are rare but big.
+AutoUpdate=registry
 #
 # LLM: deepseek/deepseek-v4-flash via OpenRouter ($0.055/M in, $0.111/M
 # out, 1M ctx — ~1/3 the cost of glm-5.3-flash per token). Picked by a

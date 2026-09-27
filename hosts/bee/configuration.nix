@@ -61,6 +61,9 @@ in {
     # OpenAI-compatible :20128, rootless quadlet; dsh + future projects
     # point at it instead of configuring providers per-tool.
     ./ninerouter.nix
+    # Nightly podman auto-update for rootless quadlets that set
+    # AutoUpdate=registry (ninerouter, hindsight, filebrowser)
+    ./podman-auto-update.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
       # https://dsh.internal.crussell.io via bees Caddy (route in

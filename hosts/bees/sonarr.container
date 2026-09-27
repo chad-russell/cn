@@ -4,7 +4,11 @@ After=network-online.target mnt-media.mount
 Wants=network-online.target
 
 [Container]
-Image=lscr.io/linuxserver/sonarr:version-4.0.17.2952
+# Float on :latest — AutoUpdate=registry + nightly podman auto-update
+# (hosts/bees/podman-auto-update.nix) track linuxserver's current build.
+# (App migrations are forward-only; rollback = retag the old version.)
+Image=lscr.io/linuxserver/sonarr:latest
+AutoUpdate=registry
 ContainerName=sonarr
 # linuxserver convention: the app runs as PUID:PGID. PUID is the sonarr uid
 # (274, carried over from the native NixOS module); PGID is the media group

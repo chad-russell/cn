@@ -5,6 +5,9 @@ Wants=network-online.target
 
 [Container]
 Image=docker.io/sissbruecker/linkding:latest
+# AutoUpdate=registry + nightly podman auto-update
+# (hosts/bees/podman-auto-update.nix) track the floating tag.
+AutoUpdate=registry
 ContainerName=linkding
 Environment=LD_CSRF_TRUSTED_ORIGINS=https://linkding.internal.crussell.io
 Environment=LD_DISABLE_BACKGROUND_TASKS=False

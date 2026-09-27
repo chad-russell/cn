@@ -8,6 +8,10 @@ After=kan-migrate.service
 
 [Container]
 Image=ghcr.io/kanbn/kan:latest
+# AutoUpdate=registry + nightly podman auto-update
+# (hosts/bees/podman-auto-update.nix) track the floating tag.
+# (kan-migrate is a oneshot unit — not labeled; kan-postgres stays pinned.)
+AutoUpdate=registry
 ContainerName=kan-web
 # Secrets (POSTGRES_URL, BETTER_AUTH_SECRET, KAN_ADMIN_API_KEY,
 # POSTGRES_PASSWORD) come from the agenix env file.

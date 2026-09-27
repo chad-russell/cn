@@ -4,7 +4,10 @@ After=network-online.target mnt-media.mount
 Wants=network-online.target
 
 [Container]
-Image=lscr.io/linuxserver/qbittorrent:version-5.1.4-r3
+# Float on :latest — AutoUpdate=registry + nightly podman auto-update
+# (hosts/bees/podman-auto-update.nix) track linuxserver's current build.
+Image=lscr.io/linuxserver/qbittorrent:latest
+AutoUpdate=registry
 ContainerName=qbittorrent
 # linuxserver convention: app runs as PUID:PGID. PUID is the qbittorrent uid
 # (992, carried over from the native NixOS module); PGID is the media group

@@ -3,6 +3,10 @@ Description=filebrowser (gtstef/filebrowser) — web file manager, Nebula 10.10.
 
 [Container]
 Image=docker.io/gtstef/filebrowser:stable
+# :stable is a floating branch tag; AutoUpdate=registry + the nightly
+# `podman auto-update` user timer (hosts/bee/podman-auto-update.nix)
+# pull + restart when upstream moves it.
+AutoUpdate=registry
 # Run as container-root: under rootless podman that IS crussell (uid 1000),
 # which is what the old manual container did — the image's named `filebrowser`
 # user maps to a shifted host uid that cannot read the 0660 config, and
