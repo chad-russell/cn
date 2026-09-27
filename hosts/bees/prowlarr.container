@@ -4,7 +4,11 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=lscr.io/linuxserver/prowlarr:version-2.3.5.5327
+# Float on :latest — AutoUpdate=registry + nightly podman auto-update
+# (hosts/bees/podman-auto-update.nix) track linuxserver's current build.
+# (App migrations are forward-only; rollback = retag the old version.)
+Image=lscr.io/linuxserver/prowlarr:latest
+AutoUpdate=registry
 ContainerName=prowlarr
 # linuxserver convention: the app runs as PUID:PGID. PUID is the prowlarr uid
 # (993, carried over from the native NixOS module); PGID is the media group

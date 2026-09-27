@@ -5,6 +5,9 @@ Wants=network-online.target
 
 [Container]
 Image=ghcr.io/papra-hq/papra:latest
+# AutoUpdate=registry + nightly podman auto-update
+# (hosts/bees/podman-auto-update.nix) track the floating tag.
+AutoUpdate=registry
 ContainerName=papra
 EnvironmentFile=/var/lib/papra/auth.env
 Environment=APP_BASE_URL=https://papra.internal.crussell.io

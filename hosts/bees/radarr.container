@@ -4,7 +4,11 @@ After=network-online.target mnt-media.mount
 Wants=network-online.target
 
 [Container]
-Image=lscr.io/linuxserver/radarr:version-6.1.1.10360
+# Float on :latest — AutoUpdate=registry + nightly podman auto-update
+# (hosts/bees/podman-auto-update.nix) track linuxserver's current build.
+# (App migrations are forward-only; rollback = retag the old version.)
+Image=lscr.io/linuxserver/radarr:latest
+AutoUpdate=registry
 ContainerName=radarr
 # linuxserver convention: the app runs as PUID:PGID. PUID is the radarr uid
 # (275, carried over from the native NixOS module); PGID is the media group

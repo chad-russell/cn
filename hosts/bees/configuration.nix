@@ -26,6 +26,10 @@
     ./openobserve.nix
     ../../modules/vector-log-shipper.nix
     ./kan.nix
+    # Nightly podman auto-update for system quadlets that set
+    # AutoUpdate=registry (linkding, papra, kan, sonarr, radarr,
+    # prowlarr, qbittorrent); unlabeled quadlets are never touched
+    ./podman-auto-update.nix
     # Lane (Plane CE) retired 2026-09-08 — Hermes kanban is the source of
     # truth; 13 lane-* containers decommissioned (archive on NAS).
     ./llama-server.nix
