@@ -18,20 +18,21 @@ buildNpmPackage rec {
   pname = "dsh";
   # npm scope dir must match: @deepseek-ai/dsh
   packageName = "@deepseek-ai/dsh";
-  version = "0.1.5-rc.3";
+  version = "0.2.0-rc.2";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/${packageName}/-/dsh-${version}.tgz";
-    hash = "sha256-SXfSkjOlkopO8cFuRL3BnXe7848Wgj1U7IfFsBmIML8=";
+    hash = "sha256-vSeEfERc1opWWsH5HAa7vMdjnvkwcfZ4u1nF66/ziFk=";
   };
 
   # Generated via npm install --package-lock-only (see header comment).
   # The npm tarball ships no lockfile; inject ours in postPatch.
-  # 0.1.5 declares devDependencies on unpublished experimental packages
+  # 0.1.5 declared devDependencies on unpublished experimental packages
   # (e.g. @deepseek-ai/dsh-experimental-code-runtime-python -> 404); the
   # prebuilt dist needs only the production tree, so strip devDeps at
-  # build time and ship a prod-only lockfile (generated 2026-09-11 with
-  # `npm install --package-lock-only` over the stripped package.json).
+  # build time and ship a prod-only lockfile (0.2.0-rc.2's tarball ships
+  # no devDependencies at all, so the strip is now a harmless no-op;
+  # lockfile regenerated 2026-10-01 the same way).
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
     # 0.1.5 declares devDependencies on unpublished experimental packages
@@ -48,7 +49,7 @@ buildNpmPackage rec {
     mv package.json.stripped package.json
   '';
 
-  npmDepsHash = "sha256-oqn1Fg9emgdhz5/5PXzgPT/Hw4bE/aUoqZWFkuwGa1E=";
+  npmDepsHash = "sha256-80NndyRPP6EsLOgT+73No/ln3GrpcvbFW+/CRFpNTa8=";
 
   # Prebuilt distribution — no compile step, no scripts to run.
   npmInstallFlags = [ "--ignore-scripts" ];
