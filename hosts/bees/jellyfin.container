@@ -4,7 +4,7 @@ After=network-online.target mnt-media.mount
 Wants=network-online.target
 
 [Container]
-Image=jellyfin/jellyfin:10.11.8
+Image=jellyfin/jellyfin:12.1
 ContainerName=jellyfin
 User=995:994
 GroupAdd=2000
