@@ -17,11 +17,11 @@
 #
 # Env overrides:
 #   IMMICH_URL    default http://127.0.0.1:2283/api
-#   IMMICH_EXPECT_VERSION  default 3.1.0 (rollback verification: set 2.7.5)
+#   IMMICH_EXPECT_VERSION  default 3.2.4 (rollback verification: set 2.7.5)
 #   IMMICH_VERIFY_BASELINE  baseline counts (json '{"albums":N,"assets":N}') — skips state file
 #
-# Endpoints verified against the immich v3.1.0 OpenAPI spec
-# (open-api/immich-openapi-specs.json @ tag v3.1.0): /server/ping /server/version
+# Endpoints verified against the immich v3.2.4 OpenAPI spec
+# (open-api/immich-openapi-specs.json @ tag v3.2.4): /server/ping /server/version
 # /auth/login /auth/validateToken /users/me /albums /assets (POST/DELETE)
 # /albums/{id}/assets /search/smart.
 #
@@ -33,7 +33,7 @@ set -uo pipefail
 
 IMMICH_URL="${IMMICH_URL:-http://127.0.0.1:2283/api}"
 API="${IMMICH_URL%/}"
-EXPECT_VERSION="${IMMICH_EXPECT_VERSION:-3.1.0}"
+EXPECT_VERSION="${IMMICH_EXPECT_VERSION:-3.2.4}"
 IMMICH_EMAIL="${IMMICH_EMAIL:-}"
 IMMICH_PASSWORD="${IMMICH_PASSWORD:-}"
 IMMICH_API_KEY="${IMMICH_API_KEY:-}"
@@ -113,7 +113,7 @@ first_active_unit() { # prints the first matching active unit name, else empty
 
 TOKEN_HEADER=""
 
-CUTOVER_MODE=1; [ "$EXPECT_VERSION" = "3.1.0" ] || CUTOVER_MODE=0   # 0 = module/rollback mode
+CUTOVER_MODE=1; [ "$EXPECT_VERSION" = "3.2.4" ] || CUTOVER_MODE=0   # 0 = module/rollback mode
 
 ## 1. Service units ──────────────────────────────────────────────────────────
 header "systemd units"
@@ -156,8 +156,8 @@ if [ -n "$PODMAN_BIN" ]; then
   if [ -n "$SC" ]; then
     IMG="$(sudo -n "$PODMAN_BIN" inspect -f '{{.Config.Image}}' "$c" 2>/dev/null || echo '?')"
     RUN="$(sudo -n "$PODMAN_BIN" inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo '?')"
-    case "$IMG" in *:v3.1.0) ok image "$SC running $IMG ($RUN)" ;;
-      *) bad image "$SC image is '$IMG' — expected ghcr.io/immich-app/*:v3.1.0 (pin D1)" ;;
+    case "$IMG" in *:v3.2.4) ok image "$SC running $IMG ($RUN)" ;;
+      *) bad image "$SC image is '$IMG' — expected ghcr.io/immich-app/*:v3.2.4 (pin D1)" ;;
     esac
   else bad containers "no server container among: ${SERVER_CONTAINERS[*]}"
   fi
