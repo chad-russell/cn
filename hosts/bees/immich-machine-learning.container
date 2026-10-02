@@ -4,7 +4,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=ghcr.io/immich-app/immich-machine-learning:v3.1.0
+Image=ghcr.io/immich-app/immich-machine-learning:v3.2.4
 ContainerName=immich-machine-learning
 # Host network per PLAN D2. Loopback-only bind: upstream documents the ML
 # service as an internal API with no auth whatsoever — never expose it.
