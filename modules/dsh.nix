@@ -88,52 +88,67 @@ let
     # 2026-10-01: opus/sonnet -> 5.5, gpt-5.x -> 6 (astra/luna/sol). All
     # five ids verified HTTP 200 against platform.ai.gloo.com (gpt-6-sol
     # works again — the 2026-09-23 rejection is gone). Sizing from
-    # 9router /v1/models capabilities. haiku-4.5 kept (still the newest
-    # haiku on the platform).
+    # 9router /v1/models capabilities. Vision: `input = [ "text"
+    # "image" ]` on every vision-capable row — a custom route's models
+    # default to text-only otherwise. Flags sourced from 9router
+    # capabilities, pi-ai's pinned OpenRouter catalog (exact vendor ids),
+    # and tiny-image probes against the platform (haiku-4.5 and
+    # mistral-large-3 answered live). qwen-3.7-max and qwen-3-coder
+    # REMOVED — the platform returns "model is not available" — replaced
+    # by the live qwen-3.8 pair (3.8-max vision, 3.8-flash text).
     {
       id = "gloo-anthropic-claude-opus-5.5";
       contextWindow = 1000000;
       maxTokens = 128000;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-anthropic-claude-sonnet-5.5";
       contextWindow = 1000000;
       maxTokens = 128000;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-anthropic-claude-haiku-4.5";
       contextWindow = 200000;
       maxTokens = 64000;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-openai-gpt-6-astra";
       contextWindow = 1050000;
       maxTokens = 128000;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-openai-gpt-6-luna";
       contextWindow = 1050000;
       maxTokens = 128000;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-openai-gpt-6-sol";
       contextWindow = 1050000;
       maxTokens = 128000;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-google-gemini-3.5-flash";
       contextWindow = 1048576;
       maxTokens = 65536;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-google-gemini-3.1-pro";
       contextWindow = 1048576;
       maxTokens = 65536;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-google-gemini-2.5-pro";
       contextWindow = 1048576;
       maxTokens = 65536;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-deepseek-v4-pro";
@@ -149,21 +164,24 @@ let
       id = "gloo-xai-grok-4.5";
       contextWindow = 500000;
       maxTokens = 4096;
+      input = [ "text" "image" ];
     }
     {
-      id = "gloo-qwen-3.7-max";
+      id = "gloo-qwen-3.8-max";
       contextWindow = 1000000;
       maxTokens = 65536;
+      input = [ "text" "image" ];
     }
     {
-      id = "gloo-qwen-3-coder";
+      id = "gloo-qwen-3.8-flash";
       contextWindow = 262144;
-      maxTokens = 65536;
+      maxTokens = 64000;
     }
     {
       id = "gloo-kimi-k3";
       contextWindow = 1048576;
       maxTokens = 131072;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-z-ai-glm-5.2";
@@ -174,11 +192,13 @@ let
       id = "gloo-minimax-m3";
       contextWindow = 524288;
       maxTokens = 512000;
+      input = [ "text" "image" ];
     }
     {
       id = "gloo-mistral-large-3";
       contextWindow = 262144;
       maxTokens = 4096;
+      input = [ "text" "image" ];
     }
   ];
 
@@ -248,6 +268,9 @@ let
               id = "glm-5.3-flash";
               contextWindow = 1048576;
               maxTokens = 131072;
+              # image input per pi-ai zai catalog (inputLimits present);
+              # live-verified with a tiny image 2026-10-01
+              input = [ "text" "image" ];
               reasoningEfforts.low = "low";
               reasoningEfforts.high = "high";
               reasoningEfforts.max = "max";
