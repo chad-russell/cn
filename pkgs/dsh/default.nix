@@ -12,7 +12,7 @@
 #   npx npm@10 install --package-lock-only --ignore-scripts
 # in the tarball dir, commit both together.
 
-{ lib, buildNpmPackage, fetchurl, makeWrapper, nodejs }:
+{ lib, bashInteractive, buildNpmPackage, fetchurl, makeWrapper, nodejs }:
 
 buildNpmPackage rec {
   pname = "dsh";
@@ -55,9 +55,29 @@ buildNpmPackage rec {
   npmInstallFlags = [ "--ignore-scripts" ];
   dontNpmBuild = true;
 
+  # dsh 0.2.0 boots its plugin resolver through node-addon-require-builtin,
+  # a native addon whose runtime machine-code probe only recognizes
+  # official nodejs.org builds — it aborts every nixpkgs-built Node at boot
+  # (nixpkgs#565667, deepseek-harness discussion #1873):
+  #   "Unsupported/no-getter (x64 sysv getter is not a recognized ...)".
+  # Restore upstream's own pre-0.2.0 behavior (vendor/loader internal.ts):
+  # when --expose-internals is in argv (our wrapper always adds it), plain
+  # require() of the internal module works on ANY Node build — the native
+  # addon stays as the flag-less fallback. Patches the single wrapper every
+  # call site funnels through (app-boot + worker bootstrap). Single-line
+  # pattern/replacement: nix '' strings mangle multi-line patterns
+  # (indent stripping; plain \n is a literal backslash-n).
   postInstall = ''
     # bin already points at lib/bin.js; ensure executable
     chmod +x $out/lib/node_modules/${packageName}/lib/bin.js
+
+    substituteInPlace $out/lib/node_modules/${packageName}/node_modules/node-addon-require-builtin/lib/index.js \
+      --replace-fail 'return api.requireBuiltin(moduleId);' 'if (process.execArgv.includes("--expose-internals")) { try { return require(moduleId); } catch {} } return api.requireBuiltin(moduleId);'
+
+    # NixOS has no /bin/bash (numtide/llm-agents.nix issue #8086) — terminal
+    # sessions would fail to spawn.
+    substituteInPlace $out/lib/node_modules/${packageName}/node_modules/@deepseek-ai/dsh-terminal-bash/lib/index.js \
+      --replace-fail '"/bin/bash"' '"${lib.getExe bashInteractive}"'
   '';
 
   # `dsh web` requires Node's --expose-internals flag (the Cordis HMR
