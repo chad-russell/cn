@@ -31,12 +31,19 @@
 #     openrouter       catalog route — inherits pi-ai's full OpenRouter
 #                      model catalog; personal fallback provider
 #
-# Settings lifecycle: DSH_HOME=/var/lib/dsh is seeded ONCE with
-# settings.yaml (providers + default model). Thereafter the file belongs
-# to the running UI (dsh rewrites it when models change in Settings →
-# Models) — do not edit while the service is running. Re-seeding after a
-# catalog change means: stop dsh-web + dsh-seed, remove settings.yaml,
-# activate (dsh-seed's ConditionPathExists gate re-opens).
+# Settings lifecycle (dsh 0.2.0): DSH_HOME=/var/lib/dsh is seeded ONCE
+# with settings.yaml (providers + default model) on a fresh home. On next
+# start dsh 0.2.0's Settings plugin IMPORTS that file into the active
+# profile's Cordis patch (profiles/glen/cordis.patch.yml) and renames it
+# settings.yaml.imported — thereafter the PATCH is the live catalog
+# (watched + hot-reloaded by the loader; also where GUI Settings edits
+# persist), maintained as part of the DSH_HOME git repo. The seed's
+# ConditionPathExists gate must check BOTH names: settings.yaml is always
+# absent after the import, so a gate on it alone would re-seed on every
+# reboot/unit-restart, and the 0.2.0 import would then clobber live patch
+# edits with the (stale) seed copy. The catalogs below are the
+# fresh-home bootstrap copy — keep them in sync with the live patch when
+# models change.
 #
 #   Change tracking (2026-09-13+): /var/lib/dsh is a LOCAL git repo
 #   (branch main, no remote). The hand-maintained subset — AGENTS.md,
@@ -78,18 +85,18 @@ let
   # match exists; sensible defaults otherwise. These are advisory
   # sizing, not hard caps.
   glooModels = [
+    # 2026-10-01: opus/sonnet -> 5.5, gpt-5.x -> 6 (astra/luna/sol). All
+    # five ids verified HTTP 200 against platform.ai.gloo.com (gpt-6-sol
+    # works again — the 2026-09-23 rejection is gone). Sizing from
+    # 9router /v1/models capabilities. haiku-4.5 kept (still the newest
+    # haiku on the platform).
     {
-      id = "gloo-anthropic-claude-opus-5";
+      id = "gloo-anthropic-claude-opus-5.5";
       contextWindow = 1000000;
       maxTokens = 128000;
     }
     {
-      id = "gloo-anthropic-claude-opus-4.8";
-      contextWindow = 1000000;
-      maxTokens = 128000;
-    }
-    {
-      id = "gloo-anthropic-claude-sonnet-4.6";
+      id = "gloo-anthropic-claude-sonnet-5.5";
       contextWindow = 1000000;
       maxTokens = 128000;
     }
@@ -99,28 +106,18 @@ let
       maxTokens = 64000;
     }
     {
-      id = "gloo-openai-gpt-5.5";
+      id = "gloo-openai-gpt-6-astra";
       contextWindow = 1050000;
       maxTokens = 128000;
     }
     {
-      id = "gloo-openai-gpt-5.4";
+      id = "gloo-openai-gpt-6-luna";
       contextWindow = 1050000;
       maxTokens = 128000;
     }
     {
-      id = "gloo-openai-gpt-5.2";
-      contextWindow = 400000;
-      maxTokens = 128000;
-    }
-    {
-      id = "gloo-openai-gpt-5.1";
-      contextWindow = 400000;
-      maxTokens = 128000;
-    }
-    {
-      id = "gloo-openai-gpt-5.3-codex";
-      contextWindow = 400000;
+      id = "gloo-openai-gpt-6-sol";
+      contextWindow = 1050000;
       maxTokens = 128000;
     }
     {
@@ -211,14 +208,24 @@ let
             input = [ "text" "image" ];
           }];
         };
-        # Hand-declared Z.AI coding-plan route (pi-ai ships a z-ai.json
-        # but not a coding-endpoint one; pi-ai's z-ai also keys off
-        # ZAI_API_KEY/GLM_API_KEY env names, not ZHIPU_API_KEY). Endpoint
-        # compat verified 2026-09-02 against the live API: developer role,
-        # max_completion_tokens, and OpenAI tools all accepted → default
-        # OpenAI shaping, NO compat overrides. Quirk: the endpoint
+        # Hand-declared Z.AI coding-plan route (pi-ai ships a zai catalog
+        # keyed to ZAI_API_KEY/GLM_API_KEY env names, not ZHIPU_API_KEY,
+        # and our route key is "zai-coding", which the catalog does not
+        # know — so no catalog defaults apply and everything is spelled
+        # out here). Wire compat: pi-ai's URL detection recognizes
+        # api.z.ai (thinkingFormat "zai", max_tokens, no developer role);
+        # developer role, max_completion_tokens, and OpenAI tools all
+        # additionally verified accepted 2026-09-02. Quirk: the endpoint
         # rejects system/developer-ONLY message lists with error 1214 —
         # harmless for pi-ai, which always sends a user message.
+        #
+        # Thinking effort (2026-10-01, live-verified): glm-5.3 and
+        # glm-5.3-flash accept reasoning_effort low/high/max with
+        # thinking {type: "enabled"}; "off" is NOT honored server-side
+        # (thinking.type = disabled still emits reasoning_content), so it
+        # is not offered. compat.supportsReasoningEffort is REQUIRED —
+        # pi-ai's zai detection force-disables it. glm-5-turbo has no
+        # effort levels (pi-ai zai catalog) and stays non-reasoning.
         zai-coding = {
           displayName = "Z.AI coding plan (personal)";
           api = "openai-completions";
@@ -232,11 +239,19 @@ let
               id = "glm-5.3";
               contextWindow = 1048576;
               maxTokens = 131072;
+              reasoningEfforts.low = "low";
+              reasoningEfforts.high = "high";
+              reasoningEfforts.max = "max";
+              compat.supportsReasoningEffort = true;
             }
             {
               id = "glm-5.3-flash";
               contextWindow = 1048576;
               maxTokens = 131072;
+              reasoningEfforts.low = "low";
+              reasoningEfforts.high = "high";
+              reasoningEfforts.max = "max";
+              compat.supportsReasoningEffort = true;
             }
             {
               id = "glm-5-turbo";
@@ -312,7 +327,15 @@ in {
         User = "crussell";
         Group = "users";
       };
-      unitConfig.ConditionPathExists = "!/var/lib/dsh/settings.yaml";
+      # Both names must be absent: after dsh 0.2.0 imports settings.yaml
+      # into the profile patch it renames the file to settings.yaml.imported
+      # — gating on settings.yaml alone would re-seed (and re-import,
+      # clobbering live patch config) on every restart. See the settings
+      # lifecycle note above.
+      unitConfig.ConditionPathExists = [
+        "!/var/lib/dsh/settings.yaml"
+        "!/var/lib/dsh/settings.yaml.imported"
+      ];
       script = ''
         install -D -m 0600 ${seedSettings} /var/lib/dsh/settings.yaml
       '';
