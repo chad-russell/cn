@@ -20,7 +20,7 @@
     agenix = {
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.home-manager.follows = "home-manager";
+      # (no home-manager follows: agenix dropped that input 2026-09-30)
     };
 
     # ── Hermes Agent (gateway on bee) ─────────────────────────────

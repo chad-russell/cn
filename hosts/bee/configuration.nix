@@ -443,7 +443,8 @@ in {
           "fal"
           "feishu"
           "firecrawl"
-          "hindsight"
+          # ("hindsight" dropped 2026-10-01: upstream removed the extra, and
+          # the new strict resolver fails eval on unknown groups.)
           "honcho"
           "messaging"
           "modal"
