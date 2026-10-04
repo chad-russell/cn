@@ -1,0 +1,14 @@
+# sweatshop previews (docs/0016 in ~/ss/sweatshop) — dev servers running
+# in sweatshop sandboxes, one flat label each under the existing wildcard
+# cert: https://pv-<slug>.internal.crussell.io. sweatshop's preview proxy
+# (published by its ./dev on bee's Nebula IP, 10.10.0.12:3301) routes by
+# Host to the right sandbox container, WebSockets included (HMR).
+# No auth on purpose: Nebula/LAN only — never route these publicly.
+
+@previews header_regexp Host ^pv-[a-z0-9-]+\.internal\.crussell\.io$
+handle @previews {
+    reverse_proxy 10.10.0.12:3301 {
+        # Dev servers hold streams open (HMR, SSE): flush immediately.
+        flush_interval -1
+    }
+}
