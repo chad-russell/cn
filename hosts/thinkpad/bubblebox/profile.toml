@@ -25,14 +25,19 @@ packages = [
 
 # Registries: when present, apply is PROFILE-AUTHORITATIVE — it resolves using
 # ONLY these (no separate `source add`/`cache add` step needed). Empty → fall
-# back to sources.toml/caches.toml. The `local` path points at the bubblebox-pkgs
-# source repo (a separate git repo on disk, mirroring how a real external package
-# source would be consumed); flip to `kind = "git"` + `url = "..."` to dogfood
-# the published flow.
+# back to sources.toml/caches.toml.
+#
+# 2026-10-06 — flipped to the published git source to dogfood the
+# external-consumer flow: `apply` shallow-clones it under the bubblebox data
+# dir on first use (channel.toml inside registers the bees cache as a
+# substituent automatically). After new packages merge upstream, refresh with
+# `bubblebox source update personal`; cache pulls need nothing (package
+# indexes resolve from the [[cache]] below). ~/Code/bubblebox-pkgs stays as
+# the contribution/publish checkout (cjust bubblebox-publish).
 [[source]]
 name = "personal"
-kind = "local"
-path = "~/Code/bubblebox-pkgs"
+kind = "git"
+url = "git+https://git.crussell.io/chad/bubblebox-pkgs.git"
 
 # Binary cache: thinkpad-built packages published to bees (`cjust
 # bubblebox-publish`), served by caddy at the internal wildcard above. With
