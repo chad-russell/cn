@@ -39,6 +39,13 @@
       "/home/crussell/artifacts"
 
       "/home/crussell/.local/share/containers"
+
+      # sweatshop (http://bee:3300, sweatshop.nix): sqlite db + WAL, the
+      # Workflow SDK local world (in-flight runs, gates, hooks), and
+      # data/backups/ (pre-deploy snapshots + the 23:00 nightly.db, a
+      # guaranteed-consistent copy). db + -wal travel together — SQLite
+      # recovers the pair; a bare .db loses committed transactions.
+      "/home/crussell/ss/sweatshop/data"
     ];
 
     exclude = [

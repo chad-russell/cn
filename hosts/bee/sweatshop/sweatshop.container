@@ -1,0 +1,54 @@
+[Unit]
+Description=sweatshop - personal software factory (Next.js production build), http://bee:3300 + preview proxy 10.10.0.12:3301
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+# The image is built locally from the sweatshop repo's Containerfile.dev
+# (node 24 + docker-cli + git); `./dev build` in ~/ss/sweatshop rebuilds it.
+# No AutoUpdate: it is not in a registry.
+Image=localhost/sweatshop-dev
+# Name kept from the ./dev era: sweatshop's sandbox-gc client and the
+# claude bridge reach the app by this name on sweatshop-harness.
+ContainerName=sweatshop-dev
+# Rootless podman maps container root to crussell, so writes into the
+# bind-mounted checkout (data/, .next/) land crussell-owned (the same model
+# as ./dev and the dev-quadlets).
+User=0
+WorkingDir=/workspace
+# The deploy checkout. It moves only through its own scripts/deploy.sh
+# (stop, build, migrate, start); this unit just serves the build in it.
+Volume=/home/crussell/ss/sweatshop:/workspace
+# node_modules lives in a named volume so the host tree stays clean;
+# shared with the repo's ./dev exec, which runs the build and gate.
+Volume=sweatshop-node-modules:/workspace/node_modules
+# Host rootless podman socket: sandboxes, service containers and previews
+# are sibling containers on host podman (no nesting).
+Volume=%t/podman/podman.sock:/var/run/docker.sock
+# Private bridge shared with sandboxes (claude bridge, preview proxy,
+# sandbox services reach each other by container name). Never published.
+Network=sweatshop-harness.network
+# App on 3300 (host 3000 is taken on bee); preview proxy on the Nebula IP
+# only, where bees' Caddy forwards pv-*.internal.crussell.io.
+PublishPort=3300:3000
+PublishPort=10.10.0.12:3301:3001
+# Model and git credentials (gitignored, 0600, in the checkout). The
+# sweatshop Secrets entity is the long-term home for these.
+EnvironmentFile=/home/crussell/ss/sweatshop/.env.local
+Environment=NODE_ENV=production
+# Workflow SDK local world beside the db (backed up), not in .next/. BOTH
+# are required: withWorkflow() overwrites WORKFLOW_LOCAL_DATA_DIR to
+# .next/workflow-data whenever WORKFLOW_TARGET_WORLD is unset.
+Environment=WORKFLOW_TARGET_WORLD=local
+Environment=WORKFLOW_LOCAL_DATA_DIR=/workspace/data/workflow-data
+Entrypoint=npx
+Exec=next start -p 3000
+
+[Service]
+Restart=always
+RestartSec=5
+# A cold start only loads the existing build; deploys build before start.
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
