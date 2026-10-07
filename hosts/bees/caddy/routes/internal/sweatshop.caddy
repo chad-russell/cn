@@ -1,0 +1,15 @@
+# sweatshop (bee — ~/ss/sweatshop, the personal software factory).
+# sweatshop.service (user quadlet ~/.config/containers/systemd/
+# sweatshop.container) serves the production build on bee 0.0.0.0:3300
+# (host 3000 is taken); bees Caddy terminates TLS (wildcard
+# *.internal.crussell.io) and proxies sweatshop.internal.crussell.io
+# to bee over Nebula. Chats stream (SSE) and run views poll — flush
+# immediately. No auth on purpose: LAN/Nebula only — never route
+# publicly.
+
+@sweatshop host sweatshop.internal.crussell.io
+handle @sweatshop {
+    reverse_proxy 10.10.0.12:3300 {
+        flush_interval -1
+    }
+}
