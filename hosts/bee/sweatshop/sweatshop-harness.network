@@ -1,0 +1,8 @@
+[Unit]
+Description=sweatshop-harness - private podman bridge shared by sweatshop and its sandboxes
+
+[Network]
+# Same name the repo's ./dev has always created, so existing sandboxes and
+# service containers stay attached. Membership is the boundary: nothing on
+# it is published to the LAN except the app's own PublishPort lines.
+NetworkName=sweatshop-harness

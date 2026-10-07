@@ -57,6 +57,9 @@ in {
     # Hindsight agent-memory server (hindsight.internal.crussell.io) —
     # API+MCP :8888, UI :9999, rootless quadlet; coding agents connect here.
     ./hindsight.nix
+    # sweatshop software factory (http://bee:3300) — rootless quadlet serving
+    # a production build of ~/ss/sweatshop; deploys via its scripts/deploy.sh.
+    ./sweatshop.nix
     # 9router AI provider gateway (9router.internal.crussell.io) —
     # OpenAI-compatible :20128, rootless quadlet; dsh + future projects
     # point at it instead of configuring providers per-tool.
