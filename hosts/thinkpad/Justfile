@@ -977,6 +977,31 @@ dev-up project:
     echo "==> stack up; opening tunnel (Ctrl-C to close) …"
     exec just --justfile "{{ justfile_directory() }}/Justfile" dev-tunnel "$proj"
 
+# Open the dsh web UI with a fresh login. dsh-web mints a new launch token on
+# every restart and a browser without its cookie gets "dsh web authentication
+# required"; this pulls the current token from bee's journal (the
+# 127.0.0.1:3080 URL dsh prints at startup) and opens it on the Caddy hostname.
+# The ?token= visit sets an auth cookie for that hostname only, so after the
+# first visit the bare URL works until dsh-web restarts.
+# Open dsh web with the current launch token (`print` = just echo the URL).
+[group('bee')]
+dsh-url mode="open":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    BEE="${BEE:-crussell@10.10.0.12}"
+    token="$(ssh -o IdentitiesOnly=yes "$BEE" \
+      "journalctl -u dsh-web -b --no-pager | grep -o 'token=[A-Za-z0-9_-]*' | tail -1")"
+    if [ -z "$token" ]; then
+      echo "no launch token in bee's dsh-web journal (is dsh-web running?)" >&2
+      exit 1
+    fi
+    url="https://dsh.internal.crussell.io/?${token}"
+    case "{{ mode }}" in
+      open)  echo "==> opening $url"; xdg-open "$url" >/dev/null 2>&1 & ;;
+      print) echo "$url" ;;
+      *)     echo "usage: cjust dsh-url [open|print]" >&2; exit 1 ;;
+    esac
+
 # ═══════════════════════════════════════════════════════════════════════════
 # gloo team VM — shared team Hermes on hermes.dev.360.gloo.com (AWS)
 # ═══════════════════════════════════════════════════════════════════════════
