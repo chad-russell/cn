@@ -1,0 +1,15 @@
+[Unit]
+Description=Daily bubblebox drift + update check
+
+[Timer]
+# Same shape as thinkpad-image-update.timer (daily + boot retry, Persistent
+# for a laptop that sleeps through calendar windows), offset so the two
+# don't run together.
+OnCalendar=daily
+OnBootSec=35min
+Persistent=true
+RandomizedDelaySec=30m
+Unit=thinkpad-bubblebox-check.service
+
+[Install]
+WantedBy=timers.target

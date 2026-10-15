@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# thinkpad-bubblebox-check — daily drift + update check for the bubblebox
+# user layer (the `nixos-rebuild dry-build` / `nix flake update --dry-run`
+# analog), run by thinkpad-bubblebox-check.timer (bubblebox [[units]]).
+#
+# Two read-only questions, both via `bubblebox plan --json` (no pulls, no store
+# writes, no systemctl — it never changes the machine):
+#   1. DRIFT   `plan`           — does the live system match the committed
+#              profile.toml + profile.lock? (an un-applied profile edit, a
+#              managed symlink someone replaced, a disabled unit, a lock that
+#              references packages the cache no longer has)
+#   2. UPDATES `plan --refresh` — has bubblebox-pkgs CI published newer builds
+#              than the lock pins? (→ `cjust bubblebox-upgrade`)
+#
+# Applying stays manual on purpose: the lock is a committed artifact, so an
+# upgrade is a reviewed `cjust bubblebox-upgrade` + commit, not a silent
+# background mutation.
+#
+# ALERT MODEL (silent when healthy, like thinkpad-image-update):
+#   - cache unreachable (away from home / Nebula down) → silent skip
+#   - nothing to do → silent
+#   - drift / updates / plan failure → ONE ntfy ping per distinct state (a
+#     fingerprint of the plan is remembered; the same pending set doesn't
+#     re-ping daily, a NEW CI build or new drift does)
+set -euo pipefail
+
+BB="${BUBBLEBOX_BIN:-$HOME/.local/bin/bubblebox}"
+CACHE="https://bubblebox.internal.crussell.io"
+NTFY="https://ntfy.internal.crussell.io/homelab-alerts"
+STATE_DIR="$HOME/.local/state/thinkpad-bubblebox-check"
+
+need() { command -v "$1" >/dev/null 2>&1 || { echo "missing dependency: $1" >&2; exit 1; }; }
+need curl; need jq; need sha256sum
+[ -x "$BB" ] || { echo "missing bubblebox engine at $BB (cjust bubblebox-install)" >&2; exit 1; }
+mkdir -p "$STATE_DIR"
+
+# notify <key> <fingerprint> <title> <tags> <body> — once per fingerprint.
+notify() {
+  local key="$1" fp="$2" title="$3" tags="$4" body="$5" f="$STATE_DIR/$1"
+  if [ "$(cat "$f" 2>/dev/null || true)" = "$fp" ]; then
+    echo "==> ${key}: already alerted for this state — silent"
+    return 0
+  fi
+  echo "==> ALERT (${key}): ${title}"
+  curl -fsS -H "Title: ${title}" -H "Tags: ${tags}" -d "${body}" "$NTFY" >/dev/null
+  echo "$fp" > "$f"
+}
+# A cleared condition forgets its fingerprint, so a recurrence pings again.
+clear_state() { rm -f "$STATE_DIR/$1"; }
+
+if ! curl -fsS --max-time 10 -o /dev/null "${CACHE}/index/rg"; then
+  echo "==> cache ${CACHE} unreachable — skipping (normal away from home)"
+  exit 0
+fi
+
+# plan_json <args...> → JSON on stdout; non-zero + stderr text on failure.
+plan_json() {
+  local out rc=0
+  out=$("$BB" -q plan --json "$@" 2>"$STATE_DIR/.stderr") || rc=$?
+  # plan exits 1 when inputs are unresolved but still prints the report.
+  if [ -n "$out" ] && jq -e . >/dev/null 2>&1 <<<"$out"; then
+    printf '%s' "$out"; return 0
+  fi
+  cat "$STATE_DIR/.stderr" >&2
+  return "${rc:-1}"
+}
+
+# Human summary of a plan report (one line per section that has content).
+summarize() {
+  jq -r '
+    [ (if (.packages.update|length)>0 then "update: " + ([.packages.update[].name]|join(" ")) else empty end),
+      (if (.packages.add|length)>0    then "add: "    + ([.packages.add[].name]|join(" "))    else empty end),
+      (if (.packages.remove|length)>0 then "remove: " + ([.packages.remove[].name]|join(" ")) else empty end),
+      (if (.unresolved|length)>0      then "UNRESOLVED: " + ([.unresolved[].package]|join(" ")) else empty end),
+      (if ([.files[]|select(.action!="keep")]|length)>0 then "files: " + ([.files[]|select(.action!="keep")|"\(.action) \(.dst)"]|join(", ")) else empty end),
+      (if ([.units.files[]|select(.action!="keep")]|length)>0 then "units: " + ([.units.files[]|select(.action!="keep")|"\(.action) \(.dst)"]|join(", ")) else empty end),
+      (if (.units.enable|length)>0 then "enable: " + (.units.enable|join(" ")) else empty end),
+      (if (.wrappers.add|length)>0 then "wrappers+: " + (.wrappers.add|join(" ")) else empty end),
+      (if (.wrappers.remove|length)>0 then "wrappers-: " + (.wrappers.remove|join(" ")) else empty end)
+    ] | join("\n")'
+}
+fingerprint() { jq -cS '{packages, unresolved, files: [.files[]|select(.action!="keep")], units, wrappers}' | sha256sum | cut -c1-16; }
+
+# ---- 1. drift: live system vs the committed profile + lock ------------------
+if drift=$(plan_json); then
+  if [ "$(jq -r .changes <<<"$drift")" = true ] || [ "$(jq '.unresolved|length' <<<"$drift")" != 0 ]; then
+    s=$(summarize <<<"$drift")
+    echo "==> drift:"; sed 's/^/    /' <<<"$s"
+    notify drift "$(fingerprint <<<"$drift")" "think bubblebox: system drifted from profile" "warning" \
+      "Live state differs from hosts/thinkpad/bubblebox (profile.toml + lock):
+${s}
+Fix: cjust bubblebox-apply (preview: cjust bubblebox-plan)"
+  else
+    echo "==> drift: none (at generation $(jq -r '.current_generation[0:12]' <<<"$drift"))"
+    clear_state drift
+  fi
+else
+  err=$(tail -3 "$STATE_DIR/.stderr")
+  notify plan-error "$(sha256sum <<<"$err" | cut -c1-16)" "think bubblebox: plan failed" "x" \
+    "bubblebox plan errored:
+${err}"
+  exit 1
+fi
+clear_state plan-error
+
+# ---- 2. updates: has CI published newer builds than the lock pins? ----------
+if upd=$(plan_json --refresh); then
+  n=$(jq '(.packages.update|length) + (.packages.add|length)' <<<"$upd")
+  if [ "$n" != 0 ]; then
+    s=$(jq -r '[.packages.update[].name, .packages.add[].name] | join(" ")' <<<"$upd")
+    echo "==> updates (${n}): ${s}"
+    notify updates "$(jq -cS '[.packages.update[] | {name, to}]' <<<"$upd" | sha256sum | cut -c1-16)" \
+      "think bubblebox: ${n} update(s) available" "package" \
+      "New CI builds: ${s}
+Take them: cjust bubblebox-upgrade, then commit hosts/thinkpad/bubblebox/profile.lock"
+  else
+    echo "==> updates: none"
+    clear_state updates
+  fi
+else
+  echo "==> plan --refresh failed (non-fatal; drift check above passed):"
+  sed 's/^/    /' "$STATE_DIR/.stderr"
+fi
+echo "==> healthy"
