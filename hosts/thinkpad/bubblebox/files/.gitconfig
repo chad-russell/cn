@@ -1,0 +1,11 @@
+# Managed by bubblebox [[files]] (hosts/thinkpad/bubblebox). gh is the
+# credential helper for github.com (bubblebox package).
+[user]
+	email = chaddouglasrussell@gmail.com
+	name = Chad Russell
+[credential "https://github.com"]
+	helper =
+	helper = !/var/home/crussell/.local/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !/var/home/crussell/.local/bin/gh auth git-credential

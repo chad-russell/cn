@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ghostty
+Comment=Autostart Ghostty — content mirrors .local/share/applications/ghostty.desktop ([[files]]; keep in sync)
+Exec=/var/home/crussell/.local/bin/ghostty
+Icon=utilities-terminal
+Terminal=false
+X-GNOME-Autostart-enabled=true
