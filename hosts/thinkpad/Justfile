@@ -724,24 +724,51 @@ image-switch:
 image-upgrade:
     {{ justfile_directory() }}/host-image/upgrade.sh
 
+# One-time, AFTER rebooting into an image with the baked units (3.9): remove
+# the /etc copies the old install.sh flow left behind — /etc SHADOWS /usr, so
+# until they're gone the baked quadlets/timers aren't the ones running.
+# Safe post-reboot: identical content, and the baked versions are already
+# active. Removes: quadlet copies, restic timers, ntfy template, the
+# hand-made nebula wants symlink (the image ships its own).
+[group('host image')]
+image-adopt-units:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for f in \
+        /etc/containers/systemd/nebula.container \
+        /etc/containers/systemd/tailscale.container \
+        /etc/containers/systemd/restic-backup.container \
+        /etc/containers/systemd/restic-check.container \
+        /etc/systemd/system/restic-backup.timer \
+        /etc/systemd/system/restic-check.timer \
+        "/etc/systemd/system/restic-ntfy-failure@.service" \
+        /etc/systemd/system/multi-user.target.wants/nebula.service; do
+      if [ -e "$f" ] || [ -L "$f" ]; then sudo rm -f "$f" && echo "removed $f"; fi
+    done
+    sudo systemctl daemon-reload
+    echo "==> baked units now authoritative (host-image/quadlets + systemd/)"
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # system
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Build + seed + install the Nebula Quadlet (idempotent). See nebula/setup.sh.
+# Build the nebula image + (re)seed its config volume (idempotent). The
+# Quadlet itself ships in the host image; after re-seeding, restart with
+# `sudo systemctl restart nebula`.
 [group('system')]
 nebula:
     {{ justfile_directory() }}/nebula/setup.sh
 
-# Build image + seed creds + init S3 repo + install the restic backup Quadlets
-# and timers (daily backup + weekly check). S3-only; see backup/README.md.
-# Idempotent — re-run after editing backup/excludes or pulling changes.
+# Build the restic image + seed creds + init the S3 repo (daily backup +
+# weekly check timers ship in the host image). S3-only; see backup/README.md.
+# Idempotent — re-run after editing backup/excludes.
 [group('system')]
 backup:
     {{ justfile_directory() }}/backup/setup.sh
 
-# Pull image + install the on-demand Tailscale Quadlet. NOT enabled at boot
-# and NOT started by setup — start it manually when needed:
+# Pull the upstream image (the on-demand Tailscale Quadlet ships in the host
+# image, NOT enabled at boot). Start it manually when needed:
 #   sudo systemctl start tailscale
 #   sudo podman exec tailscale tailscale up   # first time only (browser auth)
 # See tailscale/README.md. Idempotent.
@@ -749,39 +776,25 @@ backup:
 tailscale:
     {{ justfile_directory() }}/tailscale/setup.sh
 
-# Enable inbound SSH on the thinkpad (for remote access over Nebula from bee/
-# bees). Idempotent. (sudo)
+# Authorize this host's own ed25519 pub key for inbound SSH (remote access
+# over Nebula from bee/bees). Idempotent. The SAME keypair lives on bee and
+# bees. The key-only-auth drop-in + `systemctl enable sshd` ship in the HOST
+# IMAGE (host-image/etc/ssh/sshd_config.d/, Containerfile 3.9) — this
+# recipe is only the per-host authorized_keys state.
 #
-# - Installs an /etc/ssh/sshd_config.d drop-in forcing key-only auth.
-# - Authorizes this host's own ed25519 pub key (the SAME keypair lives on bee
-#   and bees, so all three hosts can log in here).
-# - Enables + starts the system sshd. openssh-server ships in the Silverblue
-#   base image (no host-image change), and `systemctl enable` persists in /etc
-#   across bootc upgrades, so this survives image rebuilds + reboots.
-#
-# Why key-only: crussell has a password set, and sshd binds to ALL interfaces
+# Why key-only (baked): crussell has a password set, and sshd binds to ALL interfaces
 # (Nebula 10.10.0.10 + LAN/WiFi). Disabling password auth avoids opening a new
 # LAN brute-force surface and matches the gateway posture. To allow password
 # auth again, delete /etc/ssh/sshd_config.d/10-key-only.conf and restart sshd.
 #
 # Connect from bee/bees over Nebula:
 #   ssh -o IdentitiesOnly=yes crussell@10.10.0.10
+# Authorize the shared ed25519 key only (per-host key STATE — the key-only
+# drop-in and `systemctl enable sshd` ship in the host image, Containerfile 3.9).
 [group('system')]
 ssh:
     #!/usr/bin/env bash
     set -euo pipefail
-    # 1. Harden: key-only auth drop-in (read by sshd after sshd_config).
-    dropin=/etc/ssh/sshd_config.d/10-key-only.conf
-    sudo install -d -m 755 "$(dirname "$dropin")"
-    printf '%s\n' \
-      '# Managed by `cjust ssh` (hosts/thinkpad/Justfile). Key-only auth.' \
-      'PasswordAuthentication no' \
-      'KbdInteractiveAuthentication no' \
-      'PermitRootLogin no' \
-      | sudo tee "$dropin" >/dev/null
-    sudo chmod 644 "$dropin"
-    echo "  wrote $dropin (PasswordAuthentication no)"
-    # 2. Authorize the shared ed25519 key (same keypair on bee/bees/think).
     install -d -m 700 "$HOME/.ssh"
     pub="$HOME/.ssh/id_ed25519.pub"
     auth="$HOME/.ssh/authorized_keys"
@@ -792,9 +805,7 @@ ssh:
     else
       echo "  WARN: $pub missing — no key added (install one manually)" >&2
     fi
-    # 3. Enable + start the system sshd.
-    sudo systemctl enable --now sshd.service
-    echo "==> sshd enabled. Connect over Nebula:"
+    echo "==> key authorized. Connect over Nebula:"
     echo "    ssh -o IdentitiesOnly=yes crussell@10.10.0.10"
     sudo ss -tlnp 2>/dev/null | grep ':22 ' || true
 

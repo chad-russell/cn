@@ -60,6 +60,12 @@ Currently:
 
 ## Files
 
+(`quadlets/`, `systemd/`, `etc/`, `tmpfiles.d/` are the SYSTEM services
+layer — nebula/tailscale/restic units, the sshd key-only drop-in, and user
+linger — baked in by Containerfile step 3.9. The canonical unit sources live
+HERE; the per-service dirs (`../nebula/`, `../backup/`, `../tailscale/`) keep
+only their container-image builds and one-time secret seeding.)
+
 ```text
 host-image/
 ├── Containerfile

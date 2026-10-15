@@ -291,6 +291,34 @@ RUN printf 'crussell ALL=(root) NOPASSWD: /usr/bin/bootc upgrade ""\n' \
     && chmod 0440 /etc/sudoers.d/90-bootc-upgrade \
     && visudo -cf /etc/sudoers.d/90-bootc-upgrade
 
+# ---- 3.9. system services baked from this repo --------------------------
+# The nebula/tailscale/restic units are part of the SYSTEM layer now: quadlet
+# sources + timers + the ntfy template ship in the image (their dirs under
+# hosts/thinkpad/ keep only the container-image builds and the one-time
+# secret seeding — volumes and /etc/restic-backup are host state, not image
+# state). This replaces the sudo install.sh copies into /etc, which could
+# drift from the repo and vanish on a reinstall.
+COPY quadlets/ /usr/share/containers/systemd/
+COPY systemd/ /usr/lib/systemd/system/
+# sshd: key-only drop-in. Ships in /etc — bootc snapshots build-time /etc as
+# the default configuration (same as the etc-hosts COPY below; /usr/etc is a
+# bootc implementation detail and `bootc container lint` rejects it).
+# Replaces `cjust ssh`'s imperative write; authorized_keys stays a recipe
+# (it's per-host key state).
+COPY etc/ /etc/
+# User linger: bubblebox user units run before any login (tmpfiles.d).
+COPY tmpfiles.d/ /usr/lib/tmpfiles.d/
+# nebula autostart: quadlet units are GENERATED at boot (no unit file exists
+# at build time, so `systemctl enable` can't work) — bake the wants symlink
+# to the generator output. Same mechanism install.sh used (proven on this
+# host); the generator runs before multi-user.target evaluates its wants.
+# tailscale stays on-demand (no symlink) by design — see its quadlet header.
+RUN mkdir -p /etc/systemd/system/multi-user.target.wants \
+    && ln -s /run/systemd/generator/nebula.service \
+        /etc/systemd/system/multi-user.target.wants/nebula.service
+# Real units enable normally (offline in the build root — bootc-blessed).
+RUN systemctl enable restic-backup.timer restic-check.timer sshd.service
+
 # ---- 4. build identity (lets `bootc upgrade` detect a rebuild) ----------
 # Each build injects a unique IMAGE_VERSION (git SHA + timestamp; see
 # build.sh) two ways:

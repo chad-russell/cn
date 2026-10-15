@@ -6,7 +6,9 @@
 #   sudo systemctl status nebula
 #   sudo journalctl -u nebula -f
 #
-# Auto-starts at boot (WantedBy=multi-user.target + enabled by install.sh).
+# Auto-starts at boot: the image bakes a multi-user.target.wants symlink to
+# the generated unit (Containerfile step 3.9 — quadlet units are generated
+# at boot, so they can't be `systemctl enable`d at build time).
 # On failure it restarts; an explicit `systemctl stop` is NOT overridden.
 #
 # Why rootful + host network: Nebula creates the `nebula0` TUN device and
