@@ -31,17 +31,19 @@ packages = [
 # Anything else installed is reported as "unmanaged" and left alone
 # (prune = false). Updates stay with flatpak (`flatpak update --user`).
 #
-# Adopted 2026-10-15 from think's system installation, minus:
-#   com.slack.Slack       — duplicate; the bubblebox `slack` package wins
-# and with the 14 Fedora-remote GNOME apps switched to the same ids from
-# flathub (Fedora's OCI remote lives in the system installation only; they
-# came from the installer's first boot, NOT the image, so a reinstall would
-# otherwise lose them).
+# Adopted 2026-10-15 from think's system installation, with the 14
+# Fedora-remote GNOME apps switched to the same ids from flathub (Fedora's OCI
+# remote lives in the system installation only; they came from the
+# installer's first boot, NOT the image, so a reinstall would otherwise lose
+# them).
 [flatpak]
 remotes.flathub = "https://dl.flathub.org/repo/flathub.flatpakrepo"
 apps = [
   # browsers + comms
-  "app.zen_browser.zen", "com.google.Chrome", "dev.vencord.Vesktop", "us.zoom.Zoom",
+  # (com.slack.Slack is the DESKTOP app; the bubblebox `slack` package above
+  #  is the unrelated Slack developer CLI — not a duplicate.)
+  "app.zen_browser.zen", "com.google.Chrome", "com.slack.Slack", "dev.vencord.Vesktop",
+  "us.zoom.Zoom",
   "org.localsend.localsend_app",
   # security / vpn
   "com.onepassword.OnePassword", "me.proton.Pass", "com.protonvpn.www",
