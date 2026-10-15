@@ -23,6 +23,44 @@ packages = [
 # (built into the host image, Containerfile step 2.5; notifications, panels,
 # lock, brightness/volume all come from the fork now).
 
+# ── Flatpak apps ([flatpak], bubblebox ≥ 0.4.0) ──────────────────────────────
+# Declarative flatpaks in the PER-USER installation (no root/polkit; app data
+# in ~/.var/app is per-user either way, so moving from the old system
+# installation keeps logins/settings). `apply` installs missing apps, heals
+# manual uninstalls, and uninstalls only apps a previous generation declared.
+# Anything else installed is reported as "unmanaged" and left alone
+# (prune = false). Updates stay with flatpak (`flatpak update --user`).
+#
+# Adopted 2026-10-15 from think's system installation, minus:
+#   com.slack.Slack       — duplicate; the bubblebox `slack` package wins
+# and with the 14 Fedora-remote GNOME apps switched to the same ids from
+# flathub (Fedora's OCI remote lives in the system installation only; they
+# came from the installer's first boot, NOT the image, so a reinstall would
+# otherwise lose them).
+[flatpak]
+remotes.flathub = "https://dl.flathub.org/repo/flathub.flatpakrepo"
+apps = [
+  # browsers + comms
+  "app.zen_browser.zen", "com.google.Chrome", "dev.vencord.Vesktop", "us.zoom.Zoom",
+  "org.localsend.localsend_app",
+  # security / vpn
+  "com.onepassword.OnePassword", "me.proton.Pass", "com.protonvpn.www",
+  # dev + making
+  "dev.zed.Zed", "com.bambulab.BambuStudio", "org.inkscape.Inkscape",
+  "org.onlyoffice.desktopeditors", "com.usebottles.bottles", "org.gnome.Boxes",
+  # system tools
+  "com.github.tchx84.Flatseal", "io.github.kolunmi.Bazaar", "io.missioncenter.MissionCenter",
+  "net.nokyan.Resources", "dev.edfloreshz.CosmicTweaks", "io.github.getnf.embellish",
+  "page.tesk.Refine",
+  # media
+  "io.github.nokse22.high-tide", "org.gnome.Showtime", "studio.planetpeanut.Bobby",
+  # GNOME core apps (were Fedora-remote system flatpaks)
+  "org.gnome.Calculator", "org.gnome.Characters", "org.gnome.Extensions", "org.gnome.Logs",
+  "org.gnome.Loupe", "org.gnome.NautilusPreviewer", "org.gnome.Papers", "org.gnome.Snapshot",
+  "org.gnome.TextEditor", "org.gnome.Weather", "org.gnome.baobab", "org.gnome.clocks",
+  "org.gnome.font-viewer", "org.fedoraproject.MediaWriter",
+]
+
 # Registries: when present, apply is PROFILE-AUTHORITATIVE — it resolves using
 # ONLY these (no separate `source add`/`cache add` step needed). Empty → fall
 # back to sources.toml/caches.toml.
