@@ -17,7 +17,7 @@
 packages = [
   "age", "age-keygen", "aws", "bat", "dust", "eza", "fastfetch", "fd", "gh", "htop",
   "nvim", "oh-my-posh", "pnpm", "psql", "rg", "rust-dev", "sops", "slack", "terraform",
-  "tokei", "vicinae", "witr", "ghostty", "wezterm", "yazi", "zoxide",
+  "tokei", "uv", "vicinae", "witr", "ghostty", "wezterm", "yazi", "zoxide",
 ]
 # noctalia removed 2026-09-02 — replaced by the niri-caelestia-shell fork
 # (built into the host image, Containerfile step 2.5; notifications, panels,
