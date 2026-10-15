@@ -13,6 +13,11 @@ and VM images are excluded via `excludes`.
 
 ## Files
 
+(The Quadlets + timers + ntfy template live in `../host-image/` now —
+`quadlets/` and `systemd/` — baked into the image by Containerfile step 3.9.
+The entries below that moved are marked; `backup/` keeps the image build,
+secret seeding, and repo init.)
+
 ```text
 backup/
 ├── image/                        # tiny restic image (clears entrypoint for shell chaining)
@@ -25,7 +30,6 @@ backup/
 ├── restic-ntfy-failure@.service  # host-curl ntfy notifier (OnFailure from above)
 ├── excludes                      # what NOT to back up (the lever for S3 data volume)
 ├── seed.sh                       # decrypt creds from repo -> /etc/restic-backup
-├── install.sh                    # install units + enable timers
 └── setup.sh                      # build + seed + init + install (the entry point)
 ```
 

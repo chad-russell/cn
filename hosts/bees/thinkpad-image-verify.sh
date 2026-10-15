@@ -76,4 +76,51 @@ do
 done
 echo "    niri-caelestia-shell artifacts verified"
 
+# ---- gate 4: baked system services (Containerfile step 3.9) --------------
+# COPY is silent on failure (same rationale as gate 1): assert the system
+# layer landed — quadlets, timers, the ntfy template, the sshd drop-in, the
+# linger tmpfiles, and the nebula boot-enablement symlink.
+echo "==> verifying baked system services in ${IMAGE}"
+for artifact in \
+  "${VERIFY_MNT}/usr/share/containers/systemd/nebula.container" \
+  "${VERIFY_MNT}/usr/share/containers/systemd/tailscale.container" \
+  "${VERIFY_MNT}/usr/share/containers/systemd/restic-backup.container" \
+  "${VERIFY_MNT}/usr/share/containers/systemd/restic-check.container" \
+  "${VERIFY_MNT}/usr/lib/systemd/system/restic-backup.timer" \
+  "${VERIFY_MNT}/usr/lib/systemd/system/restic-check.timer" \
+  "${VERIFY_MNT}/usr/lib/systemd/system/restic-ntfy-failure@.service" \
+  "${VERIFY_MNT}/etc/ssh/sshd_config.d/10-key-only.conf" \
+  "${VERIFY_MNT}/usr/lib/tmpfiles.d/thinkpad-linger.conf"; do
+  if [ ! -f "${artifact}" ]; then
+    echo "ERROR: ${artifact} missing from ${IMAGE}" >&2
+    echo "  Containerfile step 3.9 (baked system services) did not land" >&2
+    exit 1
+  fi
+done
+# nebula enablement: wants symlink to the generator output (quadlet units are
+# generated at boot, so enablement can only be a symlink).
+NEBULA_WANT="${VERIFY_MNT}/etc/systemd/system/multi-user.target.wants/nebula.service"
+if [ ! -L "${NEBULA_WANT}" ] \
+   || [ "$(readlink "${NEBULA_WANT}")" != "/run/systemd/generator/nebula.service" ]; then
+  echo "ERROR: ${NEBULA_WANT} missing or not pointing at the generator output" >&2
+  exit 1
+fi
+# restic timers + sshd enabled at build time (systemctl enable in the build).
+# Where enablement symlinks land depends on the base layout (/etc → usr/etc
+# symlink vs real dir) — accept either.
+want_exists() { # <unit> <dir-under-systemd>
+  local base
+  for base in "${VERIFY_MNT}/usr/etc/systemd/system" "${VERIFY_MNT}/etc/systemd/system"; do
+    [ -e "${base}/${1}" ] || [ -L "${base}/${1}" ] && return 0
+  done
+  return 1
+}
+want_exists "timers.target.wants/restic-backup.timer" \
+  || { echo "ERROR: restic-backup.timer not enabled in ${IMAGE}" >&2; exit 1; }
+want_exists "timers.target.wants/restic-check.timer" \
+  || { echo "ERROR: restic-check.timer not enabled in ${IMAGE}" >&2; exit 1; }
+want_exists "multi-user.target.wants/sshd.service" \
+  || { echo "ERROR: sshd.service not enabled in ${IMAGE}" >&2; exit 1; }
+echo "    baked system services verified (quadlets, timers, sshd, linger)"
+
 echo "==> thinkpad-image-verify: all gates passed for ${IMAGE}"

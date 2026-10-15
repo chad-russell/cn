@@ -9,7 +9,7 @@ host.
 .
 ├── host-image/     # minimal bootc host image
 ├── nebula/         # Nebula VPN container/service
-├── backup/         # restic S3 backup Quadlet + timers (daily backup, weekly check)
+├── backup/         # restic S3 backup (units in host-image/; image build + seeding here)
 ├── wycliffe-vpn/   # on-demand GlobalProtect wrapper
 └── bubblebox/      # declarative host profile (packages + dotfiles + units)
     ├── profile.toml   # desired package set + [[files]] + [[units]] declarations
@@ -106,7 +106,9 @@ remains as the break-glass path. See `hosts/bees/thinkpad-registry.nix` for
 the registry + build service.
 
 ### `nebula/`
-Rootful Podman/Quadlet-based Nebula VPN setup.
+Rootful Podman/Quadlet-based Nebula VPN setup. The Quadlet ships in the host
+image (`host-image/quadlets/`); this dir keeps the container image build and
+one-time secret seeding (`setup.sh`).
 
 ### Nebula overlay hostnames
 

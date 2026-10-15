@@ -18,7 +18,7 @@ pattern already established for VPNs on this machine.
 Tailscale usage on this host is occasional. Nebula is the always-on homelab
 overlay (auto-starts, auto-restarts); Tailscale is for ad-hoc external access
 and is started/stopped manually. Because the unit has no `[Install]` section
-and `install.sh` does not run `systemctl enable`, it contributes zero cost at
+and nothing runs `systemctl enable` on it, it contributes zero cost at
 boot — nothing runs until `sudo systemctl start tailscale`.
 
 ## Auth model: browser, cached
@@ -117,8 +117,10 @@ Release notes: https://github.com/tailscale/tailscale/releases
 ## Files
 
 - `tailscale.container` — the rootful Quadlet unit (no `[Install]` by design).
-- `install.sh` — install the unit + `daemon-reload`. Does NOT enable/start.
-- `setup.sh` — pull image + run `install.sh` (the `cjust tailscale` entry point).
+- (the Quadlet itself ships in the HOST IMAGE — `host-image/quadlets/
+  tailscale.container`, baked with no boot enablement; there is no
+  install step anymore)
+- `setup.sh` — pull the upstream image (the `cjust tailscale` entry point).
 
 ## Notes / gotchas
 
