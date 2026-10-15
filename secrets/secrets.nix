@@ -83,6 +83,16 @@ in {
   # make both runners churn. Same generator on gateway.
   "forgejo-runner-token-bees.age".publicKeys = [ crussell ];
 
+  # ── Sweatshop host channel (0043) SSH key ──────────────────────
+  # Dedicated ed25519 key for sweatshop's exec tool (repo docs/0043):
+  # the app holds NO credential secrets itself — env names point at
+  # this agenix file, mounted into the sweatshop container by
+  # hosts/bee/sweatshop.nix. One key authorized on every NixOS host
+  # (modules/base-server.nix); per-host env vars (HOST_BEE_SSH_KEY_FILE
+  # …) all reference the same mounted file. Revocation = remove the
+  # authorized_keys entry + rekey.
+  "sweatshop-host-key.age".publicKeys = [ crussell ];
+
   # ── Forgejo API token (tea, git.crussell.io) ───────────────────
   # FORGEJO_TOKEN (single line) — scoped write:repository, write:issue,
   # read:issue, write:user, read:user. Exported to login shells by the

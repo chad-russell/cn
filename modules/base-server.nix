@@ -18,6 +18,9 @@
     extraGroups = [ "wheel" ];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpNEpdHo8X0L9rgsJ+8fuXA4DodZftJaCd3Q6eCrVsw crussell@fedora"
+      # sweatshop host channel (0043) — the exec tool's key, held by the
+      # sweatshop container via agenix (secrets/sweatshop-host-key.age).
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBLt72E0awK3uHMNMSTuAn747/HQed+ZZZcrqdLtbv2r sweatshop host channel (bee)"
     ];
     initialPassword = "changeme";
   };

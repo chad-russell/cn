@@ -35,6 +35,15 @@ PublishPort=10.10.0.12:3301:3001
 # Model and git credentials (gitignored, 0600, in the checkout). The
 # sweatshop Secrets entity is the long-term home for these.
 EnvironmentFile=/home/crussell/ss/sweatshop/.env.local
+# 0043 host channel: the exec tool's SSH key (agenix, crussell-owned on
+# the host). One key authorized on every NixOS host; each HOST_<NAME>_…
+# var names it for that host's registry entry (vars without a matching
+# project_hosts row are inert).
+Volume=/run/agenix/sweatshop-host-key:/run/agenix/sweatshop-host-key:ro
+Environment=HOST_BEE_SSH_KEY_FILE=/run/agenix/sweatshop-host-key
+Environment=HOST_BEES_SSH_KEY_FILE=/run/agenix/sweatshop-host-key
+Environment=HOST_NAS_SSH_KEY_FILE=/run/agenix/sweatshop-host-key
+Environment=HOST_GATEWAY_SSH_KEY_FILE=/run/agenix/sweatshop-host-key
 Environment=NODE_ENV=production
 # Workflow SDK local world beside the db (backed up), not in .next/. BOTH
 # are required: withWorkflow() overwrites WORKFLOW_LOCAL_DATA_DIR to
