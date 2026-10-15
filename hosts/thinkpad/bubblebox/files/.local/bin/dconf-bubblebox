@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# dconf-bubblebox — inspect the declared dconf layer (bubblebox [[files]]).
+#
+# The declared keyfile (~/.config/dconf/bubblebox.d/*) is compiled into a
+# file-db UNDER the user-db (see ~/.config/dconf/bubblebox.profile), so for
+# every declared key the user-db is either:
+#   - unset                → the declared default is live          (ok)
+#   - set, == declared     → redundant copy; hides future edits    (shadow)
+#   - set, != declared     → a deliberate local override            (override)
+#
+#   dconf-bubblebox status   list shadow + override keys (exit 1 if any override)
+#   dconf-bubblebox adopt    reset every SHADOW key so the declared default
+#                            shows through (never touches overrides)
+#   dconf-bubblebox accept <key>  reset ONE override → take the declared value
+#
+# Values are compared by normalizing BOTH sides through `dconf compile` +
+# `dconf dump` (GVariant text has many spellings of one value: uint32 0 vs 0,
+# @as [] vs [], quote styles).
+set -euo pipefail
+
+KEYDIR="${HOME}/.config/dconf/bubblebox.d"
+cmd="${1:-status}"
+
+[ -d "$KEYDIR" ] || { echo "no declared keyfiles at $KEYDIR" >&2; exit 2; }
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+
+# norm <keyfile-dir> → "path/key=value" lines in canonical GVariant text.
+norm() {
+  local db="$tmp/n.$RANDOM"
+  dconf compile "$db" "$1"
+  # Read the compiled db in isolation (a profile with only this file-db).
+  printf 'file-db:%s\n' "$db" > "$db.profile"
+  DCONF_PROFILE="$db.profile" dconf dump / | awk '
+    /^\[/ { sec=substr($0,2,length($0)-2); next }
+    /=/   { i=index($0,"="); print "/" sec "/" substr($0,1,i-1) "=" substr($0,i+1) }'
+}
+
+declared="$(norm "$KEYDIR" | sort)"
+
+# User-db values for the declared keys only: read through a profile holding
+# ONLY the user-db, so neither the file-db nor system dbs answer for an unset
+# key (an empty DCONF_PROFILE file reads nothing at all — don't use /dev/null).
+printf 'user-db:user\n' > "$tmp/user.profile"
+mkdir -p "$tmp/user.d"
+{
+  while IFS='=' read -r path _; do
+    v="$(DCONF_PROFILE="$tmp/user.profile" dconf read "$path" 2>/dev/null || true)"
+    [ -n "$v" ] || continue
+    sec="${path%/*}"; sec="${sec#/}"; key="${path##*/}"
+    printf '[%s]\n%s=%s\n\n' "$sec" "$key" "$v"
+  done <<<"$declared"
+} > "$tmp/user.d/00"
+user="$( [ -s "$tmp/user.d/00" ] && norm "$tmp/user.d" | sort || true )"
+
+shadow=(); override=()
+while IFS= read -r line; do
+  [ -n "$line" ] || continue
+  path="${line%%=*}"; uval="${line#*=}"
+  dval="$(grep -F -- "${path}=" <<<"$declared" | head -1)"; dval="${dval#*=}"
+  if [ "$uval" = "$dval" ]; then shadow+=("$path"); else override+=("$path"$'\t'"$uval"$'\t'"$dval"); fi
+done <<<"$user"
+
+case "$cmd" in
+  status)
+    echo "declared keys: $(grep -c . <<<"$declared")"
+    echo "shadowed (user-db copy == declared; run 'dconf-bubblebox adopt'): ${#shadow[@]}"
+    for p in "${shadow[@]}"; do echo "  = $p"; done
+    echo "overridden (local value differs from declared): ${#override[@]}"
+    for o in "${override[@]}"; do IFS=$'\t' read -r p u d <<<"$o"; echo "  ~ $p  local=$u  declared=$d"; done
+    [ "${#override[@]}" -eq 0 ]
+    ;;
+  adopt)
+    # Only safe once the declared layer is LIVE in this session — otherwise a
+    # reset falls through to the schema default until the next login.
+    if [ "${DCONF_PROFILE:-}" != "${HOME}/.config/dconf/bubblebox.profile" ] \
+       || ! systemctl --user show-environment | grep -qx "DCONF_PROFILE=${HOME}/.config/dconf/bubblebox.profile"; then
+      echo "refusing: DCONF_PROFILE isn't the bubblebox profile in this session yet." >&2
+      echo "  log out and back in after 'cjust bubblebox-apply', then re-run." >&2
+      exit 3
+    fi
+    backup="${HOME}/.config/dconf/user.pre-adopt.$(date +%Y%m%d-%H%M%S)"
+    cp "${HOME}/.config/dconf/user" "$backup"; echo "user-db backed up to $backup"
+    for p in "${shadow[@]}"; do dconf reset "$p"; echo "reset $p"; done
+    echo "adopted ${#shadow[@]} key(s); ${#override[@]} override(s) left alone"
+    ;;
+  accept)
+    key="${2:?usage: dconf-bubblebox accept /path/to/key}"
+    grep -qF -- "${key}=" <<<"$declared" || { echo "$key is not declared" >&2; exit 2; }
+    dconf reset "$key"; echo "reset $key → declared $(dconf read "$key")"
+    ;;
+  *) echo "usage: dconf-bubblebox [status|adopt|accept <key>]" >&2; exit 2 ;;
+esac

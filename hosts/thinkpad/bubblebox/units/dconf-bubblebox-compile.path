@@ -1,0 +1,13 @@
+[Unit]
+Description=Recompile declared dconf defaults when the keyfile changes
+
+[Path]
+# `apply` swaps the keyfile symlink to a new store blob (rename over it),
+# which PathChanged on the file itself catches. Directory-level watches miss
+# in-place symlink swaps. `cjust bubblebox-apply` also starts the compile
+# explicitly, so this is the belt to that braces.
+PathChanged=%h/.config/dconf/bubblebox.d/00-thinkpad
+Unit=dconf-bubblebox-compile.service
+
+[Install]
+WantedBy=default.target

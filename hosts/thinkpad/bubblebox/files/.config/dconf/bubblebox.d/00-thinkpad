@@ -1,0 +1,96 @@
+# Declared GNOME/GTK settings for think — compiled into a dconf file-db that
+# sits UNDER the user-db (see ../bubblebox.profile): these are DEFAULTS. A
+# change made in Settings lands in the user-db and wins; `dconf reset <key>`
+# falls back to the value here. Removing a key here removes the default.
+#
+# Edit → `cjust bubblebox-apply` (re-links this file; the
+# dconf-bubblebox-compile path unit recompiles the db automatically).
+# Format: dconf keyfile (GVariant text values) — `dconf dump /path/` emits it.
+# Curate deliberately: preferences only, never app state (window sizes,
+# timestamps, per-app portal grants, notification bookkeeping).
+
+[org/gnome/desktop/interface]
+accent-color='blue'
+color-scheme='default'
+cursor-size=24
+cursor-theme='Bibata-Modern-Ice'
+gtk-theme='adw-gtk3-dark'
+icon-theme='Papirus-Dark'
+show-battery-percentage=true
+
+[org/gnome/desktop/input-sources]
+sources=[('xkb', 'us')]
+xkb-options=['caps:swapescape']
+
+[org/gnome/desktop/wm/preferences]
+button-layout=':minimize,maximize,close'
+resize-with-right-button=true
+
+[org/gnome/desktop/wm/keybindings]
+switch-input-source=@as []
+switch-input-source-backward=@as []
+switch-to-workspace-left=['<Control><Super>h']
+switch-to-workspace-right=['<Control><Super>l']
+
+[org/gnome/shell/keybindings]
+show-screenshot-ui=['<Shift><Super>p']
+
+[org/gnome/settings-daemon/plugins/media-keys]
+custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']
+
+[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0]
+binding='<Super>space'
+command='vicinae toggle'
+name='Vicinae Toggle'
+
+[org/gnome/desktop/notifications]
+show-banners=false
+
+[org/gnome/desktop/privacy]
+report-technical-problems=false
+
+[org/gnome/desktop/session]
+idle-delay=uint32 0
+
+[org/gnome/settings-daemon/plugins/power]
+idle-dim=false
+power-saver-profile-on-low-battery=false
+sleep-inactive-ac-type='nothing'
+sleep-inactive-battery-type='nothing'
+
+[org/gnome/settings-daemon/plugins/color]
+night-light-enabled=true
+
+[org/gnome/system/location]
+enabled=true
+
+[org/gnome/shell]
+enabled-extensions=['background-logo@fedorahosted.org', 'caffeine@patapon.info']
+disabled-extensions=['apps-menu@gnome-shell-extensions.gcampax.github.com', 'window-list@gnome-shell-extensions.gcampax.github.com']
+favorite-apps=['app.zen_browser.zen.desktop', 'ghostty.desktop', 'org.gnome.Nautilus.desktop', 'com.slack.Slack.desktop', 'dev.zed.Zed.desktop', 'io.github.kolunmi.Bazaar.desktop', 'org.gnome.TextEditor.desktop']
+
+[org/gnome/shell/extensions/caffeine]
+cli-toggle=true
+user-enabled=true
+
+[org/gnome/nautilus/preferences]
+default-folder-viewer='list-view'
+
+[org/gtk/gtk4/settings/file-chooser]
+show-hidden=true
+sort-directories-first=false
+
+[org/gtk/settings/file-chooser]
+show-hidden=false
+sort-directories-first=false
+
+[org/gnome/Ptyxis]
+audible-bell=false
+font-name='Hack Nerd Font Mono 13'
+new-tab-position='next'
+restore-session=false
+use-system-font=false
+
+[org/gnome/Ptyxis/Shortcuts]
+move-next-tab='<Alt>braceright'
+move-previous-tab='<Alt>braceleft'
