@@ -80,6 +80,19 @@ dst = ".config/environment.d/10-bubblebox.conf"
 [[files]]
 dst = ".config/environment.d/caelestia.conf"
 
+# Declared dconf defaults: a keyfile compiled into a file-db layered UNDER the
+# user-db via DCONF_PROFILE (Settings changes still win; `dconf reset` falls
+# back to the declared value). See .config/dconf/bubblebox.d/00-thinkpad.
+[[files]]
+dst = ".config/environment.d/20-dconf.conf"
+
+[[files]]
+dst = ".config/dconf/bubblebox.profile"
+
+[[files]]
+dst = ".config/dconf/bubblebox.d"
+kind = "dir"
+
 [[files]]
 dst = ".config/niri/config.kdl"
 
@@ -127,6 +140,10 @@ dst = ".local/bin/thinkpad-image-health"
 # new CI builds; never applies). Full story in the script header.
 [[files]]
 dst = ".local/bin/thinkpad-bubblebox-check"
+# dconf declared-layer inspector: status (shadowed/overridden keys), adopt
+# (reset shadow copies so declared defaults show through), accept <key>.
+[[files]]
+dst = ".local/bin/dconf-bubblebox"
 
 [[files]]
 dst = ".local/share/applications/buzz.desktop"
@@ -192,4 +209,15 @@ name = "thinkpad-bubblebox-check.service"
 
 [[units]]
 name = "thinkpad-bubblebox-check.timer"
+enable = true
+
+# Compiles .config/dconf/bubblebox.d → ~/.local/state/dconf/bubblebox (the
+# file-db in bubblebox.profile): at login, and on keyfile change via the path
+# unit. `cjust bubblebox-apply` also triggers it directly.
+[[units]]
+name = "dconf-bubblebox-compile.service"
+enable = true
+
+[[units]]
+name = "dconf-bubblebox-compile.path"
 enable = true

@@ -121,4 +121,23 @@ else
   echo "==> plan --refresh failed (non-fatal; drift check above passed):"
   sed 's/^/    /' "$STATE_DIR/.stderr"
 fi
+
+# ---- 3. dconf: declared defaults the user-db overrides ---------------------
+# (dconf-bubblebox status exits 1 when a declared key carries a DIFFERENT
+# local value — a Settings tweak that diverges from the repo. Shadow copies
+# (same value) are reported but don't alert: `dconf-bubblebox adopt` clears
+# them after the first login with the bubblebox profile.)
+if [ -x "$HOME/.local/bin/dconf-bubblebox" ] && [ -d "$HOME/.config/dconf/bubblebox.d" ]; then
+  if out=$("$HOME/.local/bin/dconf-bubblebox" status 2>&1); then
+    echo "==> dconf: no overrides ($(sed -n 's/^shadowed.*: //p' <<<"$out") shadowed)"
+    clear_state dconf
+  else
+    ov=$(grep '^  ~ ' <<<"$out" || true)
+    echo "==> dconf overrides:"; sed 's/^/  /' <<<"$ov"
+    notify dconf "$(sha256sum <<<"$ov" | cut -c1-16)" "think dconf: settings diverge from repo" "gear" \
+      "Local values differ from hosts/thinkpad/bubblebox/files/.config/dconf/bubblebox.d:
+${ov}
+Keep them: copy into the keyfile + commit. Drop them: dconf-bubblebox accept <key>"
+  fi
+fi
 echo "==> healthy"

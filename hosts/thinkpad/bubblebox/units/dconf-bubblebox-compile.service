@@ -1,0 +1,15 @@
+[Unit]
+Description=Compile declared dconf defaults (bubblebox.d keyfiles → file-db)
+# Input: ~/.config/dconf/bubblebox.d/* (bubblebox [[files]], store symlinks).
+# Output: ~/.local/state/dconf/bubblebox — the file-db in bubblebox.profile.
+# Compile to a temp name + rename so readers never mmap a half-written db.
+# ConditionPathExists: a missing db must never block login; dconf just warns.
+ConditionPathIsDirectory=%h/.config/dconf/bubblebox.d
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/mkdir -p %h/.local/state/dconf
+ExecStart=/usr/bin/sh -c 'dconf compile %h/.local/state/dconf/.bubblebox.new %h/.config/dconf/bubblebox.d && mv -f %h/.local/state/dconf/.bubblebox.new %h/.local/state/dconf/bubblebox'
+
+[Install]
+WantedBy=default.target

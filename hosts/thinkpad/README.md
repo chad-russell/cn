@@ -59,6 +59,20 @@ for **drift** (live state ≠ committed profile/lock) and `plan --refresh` for
 **updates** (CI published newer builds). One ntfy ping (homelab-alerts) per
 distinct state, silent when healthy or away from home; it never applies.
 
+**GNOME settings (dconf)** are declared in
+`bubblebox/files/.config/dconf/bubblebox.d/00-thinkpad` (a plain dconf
+keyfile of curated preferences). It is compiled into a database layered
+*under* your personal one via `DCONF_PROFILE` (environment.d), so declared
+values are **defaults**: changing something in Settings still works and wins,
+`dconf reset <key>` falls back to the repo value, and removing a key from the
+keyfile removes the default. `dconf-bubblebox status` shows declared keys
+your personal db overrides (the daily check pings when one diverges);
+`dconf-bubblebox adopt` clears redundant personal copies so the declared
+layer shows through (backup first; run once after the first login with the
+profile); `dconf-bubblebox accept <key>` drops one override. To declare a new
+setting: change it in Settings, `dconf dump /that/path/`, copy the key into the
+keyfile, `cjust bubblebox-apply`.
+
 ## Current architecture
 
 ### `host-image/`

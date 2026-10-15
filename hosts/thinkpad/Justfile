@@ -62,11 +62,8 @@ setup: bubblebox-install bubblebox-doctor bubblebox-apply
     @echo "    If host-image deps changed (just/fzf/nodejs/npm), rebuild & reboot:"
     @echo "      cjust image-rebuild && systemctl reboot"
 
-# GNOME tweak to allow for mod + <right-click> to resize, like how it works in niri or Cosmic
-[group('setup')]
-gnome-right-click-resize:
-    #!/usr/bin/env bash
-    gsettings set org.gnome.desktop.wm.preferences resize-with-right-button "true"
+# (gnome-right-click-resize retired: resize-with-right-button is declared in
+#  bubblebox/files/.config/dconf/bubblebox.d/00-thinkpad.)
 
 # Install the Papirus icon theme into the per-user icons dir and make it the
 # active icon theme for GNOME and Niri/GTK apps. Idempotent — re-running
@@ -113,9 +110,8 @@ icons:
       cp -r "${src}/${v}" "${icons_dir}/${v}"
     done
     echo "  installed -> ${icons_dir}/{Papirus,Papirus-Dark,Papirus-Light}"
-    # GNOME (and GTK apps that read dconf via gsd / xdg-desktop-portal-gnome):
-    gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
-    echo "  set gsettings org.gnome.desktop.interface icon-theme=Papirus"
+    # GNOME's icon-theme is DECLARED (dconf bubblebox.d: Papirus-Dark) — not
+    # written here, or this recipe would plant a user-db override over it.
     # Niri / GTK3 / GTK4 without a GNOME settings daemon: settings.ini is what
     # GTK actually consults for icon-theme-name in those sessions.
     for v in gtk-3.0 gtk-4.0; do
@@ -404,6 +400,7 @@ bubblebox-link-profile:
 [group('bubblebox')]
 bubblebox-apply: bubblebox-link-profile
     {{ bubblebox_bin }} apply
+    @systemctl --user start dconf-bubblebox-compile.service 2>/dev/null || true
 
 # Refresh the bubblebox-pkgs git source (entrypoint changes), re-resolve every
 # package against the bees cache index (whatever CI last published), apply,
