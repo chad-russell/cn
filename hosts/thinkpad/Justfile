@@ -356,6 +356,18 @@ bubblebox-install:
     echo "==> ${have:-none} -> ${want}  (${url})"
     curl -fsSL "${url}" | tar -xz -C "${tmp}"
     "${tmp}/${name}/install.sh" "${tmp}/${name}"
+    # Wrappers bake in the ABSOLUTE engine path, and `apply` only (re)writes
+    # wrappers for newly added roots — so re-point every existing root at the
+    # installed engine (first run: moves them off the old dev-checkout build).
+    roots=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
+    stale=""
+    for r in ${roots}; do
+      [ -f "$HOME/.local/bin/${r}" ] && stale="${stale} ${r}"
+    done
+    if [ -n "${stale}" ]; then
+      "$HOME/.local/bin/bubblebox" -q export ${stale} >/dev/null
+      echo "==> re-pointed $(echo ${stale} | wc -w) wrapper(s) at $HOME/.local/bin/bubblebox"
+    fi
 
 # Pre-flight the host: every runtime dep (bwrap, fuse3, composefs, userns,
 # FUSE server) with per-distro install hints. Non-zero exit when a required
