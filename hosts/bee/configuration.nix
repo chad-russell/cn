@@ -447,8 +447,12 @@ in {
           "feishu"
           "firecrawl"
           # ("hindsight" dropped 2026-10-01: upstream removed the extra, and
-          # the new strict resolver fails eval on unknown groups.)
-          "honcho"
+          # the new strict resolver fails eval on unknown groups.
+          # "honcho" AND "mem0" dropped 2026-10-15: memory providers left
+          # core and became catalog plugins (hermes_cli/
+          # memory_provider_migration.py _LEFT_CORE) — the agent auto-
+          # installs mem0 into HERMES_HOME/plugins on startup / `hermes
+          # update`. memory.provider = "mem0" below stays valid.
           "messaging"
           "modal"
           "parallel-web"
@@ -456,7 +460,6 @@ in {
           "vercel"
           "voice"
           "matrix"
-          "mem0"
         ];
       };
 
