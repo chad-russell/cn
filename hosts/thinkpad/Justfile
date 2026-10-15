@@ -29,17 +29,15 @@
 # Containerfile of its own to build, no error.
 bubblebox_profile := justfile_directory() + "/bubblebox/profile.toml"
 
-# bubblebox engine dir (the Rust CLI binary + fuse-mount + shared bin/). The
-# package source tree (Containerfiles + entrypoints) is a separate repo at
-# ~/Code/bubblebox-pkgs, registered via profile.toml below.
-# Hardcoded to $HOME/Code/bubblebox (deliberate — this Justfile is thinkpad-
-# specific, and the layout matches the rest of the cn repo).
-bubblebox_dir := env_var_or_default("HOME", "/tmp") + "/Code/bubblebox"
-# The Rust CLI binary (the single entry point; bash scripts are retired).
-# Build it with `cargo build --release` at the workspace root (use the dev
-# toolbox for the toolchain). Re-run `cjust bubblebox-export` after rebuilding
-# to refresh the ~/.local/bin wrappers' baked-in path.
-bubblebox_bin := bubblebox_dir + "/target/release/bubblebox"
+# bubblebox engine: the RELEASED portable build (Forgejo release tarball,
+# installed by `cjust bubblebox-install` into ~/.local/bin next to
+# bubblebox-fuse). The laptop is a pure CONSUMER — packages are built, signed,
+# and published by bubblebox-pkgs CI (publish.yml) to the bees cache; nothing
+# here builds packages by default. Bump the pin to upgrade the engine.
+# Set BUBBLEBOX_BIN to point recipes at a dev checkout build instead
+# (e.g. ~/Code/bubblebox/target/release/bubblebox).
+bubblebox_version := "0.3.0"
+bubblebox_bin := env_var_or_default("BUBBLEBOX_BIN", env_var_or_default("HOME", "/tmp") + "/.local/bin/bubblebox")
 
 # ═══════════════════════════════════════════════════════════════════════════
 # setup
@@ -59,7 +57,7 @@ bubblebox_bin := bubblebox_dir + "/target/release/bubblebox"
 # (opencode retired 2026-09-02 — coding goes through the hermes desktop app
 #  or dsh at https://dsh.internal.crussell.io.)
 [group('setup')]
-setup: bubblebox-doctor bubblebox
+setup: bubblebox-install bubblebox-doctor bubblebox-apply
     @echo "==> Setup complete."
     @echo "    If host-image deps changed (just/fzf/nodejs/npm), rebuild & reboot:"
     @echo "      cjust image-rebuild && systemctl reboot"
@@ -324,166 +322,132 @@ cosmic-restore:
 # bubblebox tools
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# bubblebox auto-mounts each tool on first run (rootless FUSE). The recipes
-# below are: init (build FUSE server, one-time), build (per-tool image +
-# composefs descriptor), export (per-tool wrapper at ~/.local/bin/).
+# The laptop CONSUMES bubblebox: the engine is a pinned release, packages
+# come from the signed bees cache (published by bubblebox-pkgs CI), and the
+# profile is applied IN PLACE from this repo — ~/.config/bubblebox/profile.toml
+# is a symlink to bubblebox/profile.toml, so files/ and units/ resolve here and
+# the engine mirrors profile.lock back next to it (commit it — the flake.lock
+# analog). Wrappers, devshells, and bare `bubblebox plan` all see the same
+# profile through the symlink.
+#
+#   cjust bubblebox-apply     realize the COMMITTED lock (reproducible; = switch)
+#   cjust bubblebox-upgrade   re-resolve against the cache, then apply (= update)
+#   cjust bubblebox-plan      dry-run of either (pass `--refresh` for upgrade)
+#
+# No ordering trap any more: nothing local builds packages, so apply can never
+# roll a fresh local build back to a stale lock.
+
+# Install (or re-install) the pinned engine release into ~/.local/bin:
+# bubblebox + bubblebox-fuse side by side (exe-adjacent FUSE resolution) plus
+# the shell helpers. Idempotent; skips the download when already at the pin.
+# Install the pinned engine release into ~/.local/bin.
+[group('bubblebox')]
+bubblebox-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    want="{{ bubblebox_version }}"
+    have="$("$HOME/.local/bin/bubblebox" --version 2>/dev/null | awk '{print $2}' || true)"
+    if [ "${have}" = "${want}" ]; then
+      echo "bubblebox ${have} already installed"; exit 0
+    fi
+    name="bubblebox-v${want}-linux-x86_64"
+    url="https://git.crussell.io/chad/bubblebox/releases/download/v${want}/${name}.tar.gz"
+    tmp="$(mktemp -d)"; trap 'rm -rf "${tmp}"' EXIT
+    echo "==> ${have:-none} -> ${want}  (${url})"
+    curl -fsSL "${url}" | tar -xz -C "${tmp}"
+    "${tmp}/${name}/install.sh" "${tmp}/${name}"
 
 # Pre-flight the host: every runtime dep (bwrap, fuse3, composefs, userns,
-# FUSE server, git/podman for builds) with per-distro install hints. Non-zero
-# exit when a required piece is missing — that's why `setup` runs it first.
+# FUSE server) with per-distro install hints. Non-zero exit when a required
+# piece is missing — that's why `setup` runs it first.
+# Check host runtime deps for bubblebox.
 [group('bubblebox')]
 bubblebox-doctor:
     {{ bubblebox_bin }} doctor
 
-# Build the FUSE server binary in a container (no host rust toolchain needed).
-# Idempotent — cargo build is incremental.
-[group('bubblebox')]
-bubblebox-init:
-    {{ bubblebox_bin }} init
-
-# Build each tool's image + composefs descriptor. With no args, builds all
-# tools from `bubblebox_tools`; with args, builds only the named tools, e.g.
-# `cjust bubblebox-build wezterm`.
-#
-# Tool source dirs resolve from the registered bubblebox SOURCE (declared in
-# bubblebox/profile.toml — profile-authoritative, so no `source add` needed).
-[group('bubblebox')]
-bubblebox-build *tools:
+# Point ~/.config/bubblebox/profile.toml at this repo's profile (idempotent).
+# Replaces the old install/rsync copy of profile.toml + files/ + units/ and the
+# copy-the-lock-back step: the engine follows the symlink and mirrors the lock.
+[private]
+bubblebox-link-profile:
     #!/usr/bin/env bash
     set -euo pipefail
-    tools="{{ tools }}"
-    if [ -z "${tools}" ]; then
-      tools=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
+    cfg="${XDG_CONFIG_HOME:-$HOME/.config}/bubblebox"
+    src="{{ justfile_directory() }}/bubblebox/profile.toml"
+    mkdir -p "${cfg}"
+    if [ "$(readlink "${cfg}/profile.toml" || true)" != "${src}" ]; then
+      ln -sfn "${src}" "${cfg}/profile.toml"
+      echo "linked ${cfg}/profile.toml -> ${src}"
+      # Leftover copies from the rsync era are dead weight now.
+      for d in files units; do
+        [ -d "${cfg}/${d}" ] && [ ! -L "${cfg}/${d}" ] \
+          && echo "note: ${cfg}/${d}/ is an unused copy from the old rsync flow; safe to delete"
+      done
     fi
-    for t in $tools; do
-      echo "==> bubblebox-build ${t}"
-      {{ bubblebox_bin }} build "$t"
-    done
 
-# Generate one wrapper per tool at ~/.local/bin/<tool>. With no args, exports
-# all tools; with args, exports only the named tools.
-# Idempotent — overwrites with the current binary path.
+# Realize the committed profile.lock: pull any missing pinned packages from the
+# cache, materialize bindings, sync ~/.local/bin wrappers, $HOME files, and
+# user units. Fresh host + committed lock = byte-identical tool set.
+# Apply the committed profile + lock (reproducible).
 [group('bubblebox')]
-bubblebox-export *tools:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    tools="{{ tools }}"
-    if [ -z "${tools}" ]; then
-      tools=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
-    fi
-    for t in $tools; do
-      {{ bubblebox_bin }} export "$t"
-    done
-    echo
-    echo "Wrappers at ~/.local/bin/ (already on PATH via bubblebox/files/.zshenv)."
-
-# Realize the declarative profile (bubblebox/profile.toml): sync it to
-# ~/.config/bubblebox/, then `bubblebox apply` — resolve inputs (local
-# descriptors for built tools, or `bubblebox apply --refresh` against a cache),
-# write/refresh profile.lock + a generation, self-migrate descriptors to the
-# Phase-1 digest-addressed layout, materialize bindings, and sync ~/.local/bin
-# wrappers. The declarative counterpart to bubblebox-build + bubblebox-export:
-# build (or pull) populates the store; apply declares what's active.
-#
-# ORDERING TRAP (hit 2026-08-26): plain `apply` realizes the CURRENT LOCK, so
-# running this between `bubblebox-build` and `bubblebox-publish` ROLLS freshly
-# built packages back to their locked (old) digests — and a publish afterwards
-# then re-seeds the cache with the old descriptors. After local rebuilds the
-# correct order is: `bubblebox-publish` FIRST, then `apply --refresh` (which
-# re-resolves floats against the just-updated cache index).
-[group('bubblebox')]
-bubblebox-apply:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    # Sync profile.toml + the files/ and units/ source trees to the config dir
-    # (bubblebox reads profile.toml from there, and resolves [[files]]/[[units]]
-    # source paths relative to it).
-    install -Dm644 "{{ justfile_directory() }}/bubblebox/profile.toml" "$HOME/.config/bubblebox/profile.toml"
-    rsync -a --delete \
-      "{{ justfile_directory() }}/bubblebox/files/" \
-      "$HOME/.config/bubblebox/files/"
-    rsync -a --delete \
-      "{{ justfile_directory() }}/bubblebox/units/" \
-      "$HOME/.config/bubblebox/units/"
+bubblebox-apply: bubblebox-link-profile
     {{ bubblebox_bin }} apply
-    # Copy the realized lock back into the repo (the flake.lock analog): it
-    # only changes when the closure actually changes, so commit it alongside
-    # profile.toml edits and a fresh host applies a byte-identical set.
-    cp -f "$HOME/.config/bubblebox/profile.lock" \
-      "{{ justfile_directory() }}/bubblebox/profile.lock"
+
+# Refresh the bubblebox-pkgs git source (entrypoint changes), re-resolve every
+# package against the bees cache index (whatever CI last published), apply,
+# and write the new lock next to profile.toml.
+# Review + commit bubblebox/profile.lock afterwards.
+# Re-resolve packages against the cache, apply, update the lock.
+[group('bubblebox')]
+bubblebox-upgrade: bubblebox-link-profile
+    {{ bubblebox_bin }} source update personal
+    {{ bubblebox_bin }} apply --refresh
+    @git -C "{{ justfile_directory() }}" diff --stat -- bubblebox/profile.lock
+
+# Read-only dry-run of apply. `cjust bubblebox-plan --refresh` previews an
+# upgrade; `--json` for machines.
+# Dry-run apply (--refresh previews an upgrade, --json for machines).
+[group('bubblebox')]
+bubblebox-plan *args: bubblebox-link-profile
+    {{ bubblebox_bin }} plan {{ args }}
 
 # Reclaim store bytes no generation/binding/mount references. Dry-run by
-# default (reclaims nothing until you prune old generations —
-# `{{ bubblebox_bin }} generations --older-than 30d`). Pass `apply` to sweep.
+# default. `cjust bubblebox-gc apply` prunes to the last 3 generations and
+# sweeps.
+# Store GC: dry-run, or `apply` to prune to 3 generations + sweep.
 [group('bubblebox')]
 bubblebox-gc *args:
     #!/usr/bin/env bash
     set -euo pipefail
     if [ "{{ args }}" = "apply" ]; then
+      echo "--- before: $({{ bubblebox_bin }} list | tail -1)"
+      {{ bubblebox_bin }} generations keep-last 3
       {{ bubblebox_bin }} gc --apply
+      echo "--- after:  $({{ bubblebox_bin }} list | tail -1)"
     else
       {{ bubblebox_bin }} gc
     fi
 
-# Rebase day: rebuild every package against the CURRENT pinned base in one
-# sitting (lockstep is what keeps cross-package blob sharing high — same-vintage
-# rpms are byte-identical and dedup), then apply, prune old generations, and
-# sweep. Run this after bumping the fedora:NN pin in bubblebox-pkgs, or
-# quarterly as hygiene. `bubblebox list` prints the deduplicated footprint
-# before/after so the win is visible.
-[group('bubblebox')]
-bubblebox-rebuild:
+# ── maintainer escape hatch (not part of setup) ─────────────────────────────
+# Packages are normally built + published by bubblebox-pkgs CI (publish.yml,
+# workflow_dispatch). These recipes build locally to test a Containerfile
+# before opening a PR. A local build is NOT published and the next
+# `bubblebox-apply` keeps the locked digest — use `bubblebox run <pkg>` (which
+# realizes the local descriptor) to try it.
+# Build named packages locally (testing only; CI publishes).
+[group('bubblebox-maint')]
+bubblebox-build *tools:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "--- before:"
-    {{ bubblebox_bin }} list | tail -1
-    {{ just_executable() }} --justfile "{{ justfile_directory() }}/Justfile" bubblebox-build
-    {{ just_executable() }} --justfile "{{ justfile_directory() }}/Justfile" bubblebox-apply
-    {{ bubblebox_bin }} generations keep-last 3
-    {{ bubblebox_bin }} gc --apply
-    echo "--- after:"
-    {{ bubblebox_bin }} list | tail -1
-
-# Publish built packages to the bees binary cache (stage-dir push + rsync;
-# served by caddy at bubblebox.internal.crussell.io — see
-# hosts/bees/caddy/routes/internal/bubblebox.caddy). With no args, publishes
-# every profile package; pass names to publish a subset.
-#
-# ORDER MATTERS: publish AFTER local builds (the cache's index becomes what
-# other hosts resolve; a stale cache would roll a freshly-built host back on
-# its next `apply --refresh`).
-[group('bubblebox')]
-bubblebox-publish *pkgs:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    pkgs="{{ pkgs }}"
-    if [ -z "${pkgs}" ]; then
-      pkgs=$(python3 -c 'import tomllib; print(" ".join(tomllib.load(open("{{ bubblebox_profile }}","rb"))["packages"]))')
+    tools="{{ tools }}"
+    if [ -z "${tools}" ]; then
+      echo "usage: cjust bubblebox-build <pkg>...  (full rebuilds happen in CI)" >&2
+      exit 2
     fi
-    pkgs_dir="${HOME}/Code/bubblebox-pkgs"
-    # Stage under BUBBLEBOX_DATA_DIR — same filesystem as the content store,
-    # so `push --stage-dir` HARDLINKS blobs instead of copying ~3 GB into
-    # /tmp (staging becomes near-instant; only the rsync to bees moves bytes).
-    stage_base="${BUBBLEBOX_DATA_DIR:-$HOME/.local/share/bubblebox}"
-    mkdir -p "${stage_base}"
-    stage="$(mktemp -d "${stage_base}/publish-stage.XXXXXX")"
-    trap 'rm -rf "${stage}"' EXIT
-    for t in ${pkgs}; do
-      ep=""
-      [ -f "${pkgs_dir}/${t}/entrypoint.toml" ] && ep="--entrypoint ${pkgs_dir}/${t}/entrypoint.toml"
-      echo "==> push ${t} ${ep}"
-      {{ bubblebox_bin }} push "${t}" --stage-dir "${stage}" ${ep}
+    for t in $tools; do
+      echo "==> bubblebox-build ${t}"
+      {{ bubblebox_bin }} build "$t"
     done
-    BEES="${BEES:-crussell@10.10.0.6}"
-    rsync -a -e "ssh -o IdentitiesOnly=yes" "${stage}/" "${BEES}:/var/lib/bubblebox-cache/"
-    echo "==> published $(echo ${pkgs} | wc -w) package(s) -> https://bubblebox.internal.crussell.io"
-
-# Init + build + apply in one shot. The thing to run on a fresh install or
-# after pulling changes that touch tool configs. (Source registration + wrapper
-# export are both handled by `apply` via the declarative profile.)
-[group('bubblebox')]
-bubblebox: bubblebox-init bubblebox-build bubblebox-apply
-    @echo "==> bubblebox: FUSE server built, tools built, profile applied."
 
 # ═══════════════════════════════════════════════════════════════════════════
 # hermes (desktop-only on this host)

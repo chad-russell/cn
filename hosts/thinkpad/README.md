@@ -39,17 +39,20 @@ the host image so it works before any sandbox is set up.
 
 ```bash
 cjust                  # fuzzy recipe chooser (just --choose)
-cjust setup            # full first-run: bubblebox (tools + dotfiles + units)
-cjust bubblebox        # build FUSE server + all tool images + apply profile
-cjust bubblebox-apply  # (re)apply the profile: dotfiles + units + package wrappers
+cjust setup              # first run: install pinned engine + doctor + apply
+cjust bubblebox-apply    # apply the committed profile + lock (tools, dotfiles, units)
+cjust bubblebox-upgrade  # pull whatever CI last published, apply, update the lock
+cjust bubblebox-plan     # dry-run (add --refresh to preview an upgrade)
 cjust status           # show host-image / bootc / bubblebox state
 cjust -l               # list all recipes
 ```
 
 Dotfiles and systemd user units are declared in `bubblebox/profile.toml` (the
 `[[files]]` and `[[units]]` sections) and realized by `cjust bubblebox-apply`.
-`cjust link` and `cjust units` are retired — the declarative profile is the
-single source of truth.
+The profile is applied **in place**: `~/.config/bubblebox/profile.toml` is a
+symlink to `bubblebox/profile.toml` here, and the engine mirrors the realized
+lock to `bubblebox/profile.lock` — commit it alongside profile edits (the
+`flake.lock` analog).
 
 ## Current architecture
 
@@ -133,10 +136,13 @@ personal config from the host `$HOME` via `writable_home` (e.g. aws reads
 below). Runtime state that's regenerable (nvim's plugin tree + undo history,
 zoxide's db) is isolated to bubblebox-owned dirs via `/persist` binds.
 
-bubblebox auto-mounts each tool on first invocation (rootless FUSE) — no
-separate prepare/mount step. `cjust bubblebox` builds the images and
-`bubblebox apply` materializes the profile, generating wrappers at
-`~/.local/bin/<tool>`, then `nvim` / `aws` / `wezterm` / etc. work transparently.
+The laptop is a pure bubblebox **consumer**: the engine is a pinned Forgejo
+release (`bubblebox_version` in the Justfile, installed by `cjust
+bubblebox-install`), and packages are built, signed, and published to the bees
+cache by bubblebox-pkgs CI — nothing builds locally by default.
+`cjust bubblebox-apply` pulls the locked packages and generates wrappers at
+`~/.local/bin/<tool>`; each tool auto-mounts on first invocation (rootless
+FUSE), then `nvim` / `aws` / `wezterm` / etc. work transparently.
 
 Current tools (defined in `~/Code/bubblebox-pkgs/`):
 
@@ -173,14 +179,17 @@ below.)
 Typical workflow:
 
 ```bash
-cjust bubblebox                # build images + apply profile (idempotent)
+cjust bubblebox-apply          # realize the committed lock (idempotent)
+cjust bubblebox-upgrade        # take new CI builds; commit profile.lock after
 nvim ~/any/file                # wrapper at ~/.local/bin/nvim -> bubblebox run nvim
 ```
 
 To add a new bubblebox tool: drop a `<name>/` subdir with a `Containerfile`
 (and, if it needs binds/env, an `entrypoint.toml`) in `~/Code/bubblebox-pkgs/`,
-add the name to `bubblebox/profile.toml`'s `packages` list, and re-run
-`cjust bubblebox`.
+open a PR (CI verifies it; dispatch `publish.yml` after merge to push it to the
+cache), then add the name to `bubblebox/profile.toml`'s `packages` list and run
+`cjust bubblebox-upgrade`. To try a Containerfile before the PR, `cjust
+bubblebox-build <name>` builds it locally.
 
 ### `hermes/` (desktop-only; agent lives on bee)
 

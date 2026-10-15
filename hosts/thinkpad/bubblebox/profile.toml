@@ -9,10 +9,10 @@
 # build. Compose deps (e.g. nvim's rg/fd) are pulled automatically via each
 # entrypoint's compose list and don't need to be listed here.
 #
-# This file is the single source of truth — hosts/thinkpad/Justfile reads it
-# directly for bubblebox-build/export/status (no separate `bubblebox_tools`
-# list to keep in sync). Forward-compatible with Phase 4 versioning
-# ("nvim:stable"); for now each entry is a bare package name. (Top-level keys
+# This file is the single source of truth, applied IN PLACE:
+# ~/.config/bubblebox/profile.toml symlinks here (cjust bubblebox-apply sets
+# it up) and the engine mirrors profile.lock next to this file.
+# Forward-compatible with Phase 4 versioning ("nvim:stable"); for now each entry is a bare package name. (Top-level keys
 # must precede the [[source]]/[[cache]] table headers — standard TOML.)
 packages = [
   "age", "age-keygen", "aws", "bat", "dust", "eza", "fastfetch", "fd", "gh", "htop",
@@ -33,20 +33,24 @@ packages = [
 # substituent automatically). After new packages merge upstream, refresh with
 # `bubblebox source update personal`; cache pulls need nothing (package
 # indexes resolve from the [[cache]] below). ~/Code/bubblebox-pkgs stays as
-# the contribution/publish checkout (cjust bubblebox-publish).
+# the contribution checkout (PRs; CI publishes).
 [[source]]
 name = "personal"
 kind = "git"
 url = "git+https://git.crussell.io/chad/bubblebox-pkgs.git"
 
-# Binary cache: thinkpad-built packages published to bees (`cjust
-# bubblebox-publish`), served by caddy at the internal wildcard above. With
-# this declared, `apply --refresh` resolves against it AND devshell
-# pull-on-entry can fetch off-host. Local descriptors win whenever the cache
+# Binary cache: packages built + signed by bubblebox-pkgs CI (publish.yml),
+# served by caddy on bees. With this declared, `apply --refresh` resolves
+# against it AND devshell pull-on-entry can fetch off-host. Local descriptors win whenever the cache
 # is unreachable or lacks a package (mixed local+cache setups keep working).
 [[cache]]
 name = "bees"
 url = "https://bubblebox.internal.crussell.io"
+# The profile's [[cache]] overrides the source's channel.toml, so the signing
+# key must be repeated here or verification is silently off. With it, index +
+# default-entrypoint signatures are MANDATORY (CI signs at publish; the key is
+# the one in bubblebox-pkgs channel.toml / `bubblebox cache public-key`).
+public_key = "10c3f915ab56866211b0f30be0fcf724962d75dbcbe00a2f2cc4541de07112f0"
 
 # ── Host-resident files (Phase B) ────────────────────────────────────────────
 # Source files live in `files/` next to this profile.toml, mirroring $HOME.

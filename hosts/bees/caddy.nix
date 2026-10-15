@@ -70,8 +70,8 @@
   '';
 
   # bubblebox binary cache dir (served by the caddy route in
-  # routes/internal/bubblebox.caddy; written by `cjust bubblebox-publish`
-  # on the thinkpad over ssh/rsync as crussell).
+  # routes/internal/bubblebox.caddy; written by bubblebox-pkgs CI
+  # (publish.yml, a local copy on the bees runner)).
   systemd.tmpfiles.settings."bubblebox-cache" = {
     "/var/lib/bubblebox-cache".d = {
       mode = "0755";
