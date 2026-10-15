@@ -36,7 +36,7 @@ bubblebox_profile := justfile_directory() + "/bubblebox/profile.toml"
 # here builds packages by default. Bump the pin to upgrade the engine.
 # Set BUBBLEBOX_BIN to point recipes at a dev checkout build instead
 # (e.g. ~/Code/bubblebox/target/release/bubblebox).
-bubblebox_version := "0.3.0"
+bubblebox_version := "0.4.0"
 bubblebox_bin := env_var_or_default("BUBBLEBOX_BIN", env_var_or_default("HOME", "/tmp") + "/.local/bin/bubblebox")
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -436,6 +436,40 @@ bubblebox-gc *args:
     else
       {{ bubblebox_bin }} gc
     fi
+
+# One-time: move flatpaks from the SYSTEM installation to the per-user one
+# declared in bubblebox/profile.toml [flatpak]. Order is safe by construction:
+#   1. `apply` installs every declared app into --user (system copies remain,
+#      so nothing is ever missing),
+#   2. then each SYSTEM app that now also exists in --user is uninstalled from
+#      the system installation (polkit prompts once; app data in ~/.var/app is
+#      shared by both installations and is NOT touched),
+#   3. system apps NOT declared are listed and left alone (decide per app:
+#      add to [flatpak] and re-run, or `flatpak uninstall --system <id>`),
+#   4. unused system runtimes are cleaned up.
+# Idempotent; safe to re-run. Needs bubblebox ≥ 0.4.0 (cjust bubblebox-install).
+# Migrate system-installation flatpaks to the declared per-user set.
+[group('bubblebox')]
+flatpak-migrate-to-user: bubblebox-apply
+    #!/usr/bin/env bash
+    set -euo pipefail
+    user_apps=$(flatpak list --user --app --columns=application | sort)
+    sys_apps=$(flatpak list --system --app --columns=application | sort)
+    dupes=$(comm -12 <(echo "${user_apps}") <(echo "${sys_apps}"))
+    left=$(comm -13 <(echo "${user_apps}") <(echo "${sys_apps}"))
+    if [ -n "${dupes}" ]; then
+      echo "==> removing $(echo "${dupes}" | wc -l) system copies now present per-user:"
+      echo "${dupes}" | sed 's/^/    /'
+      flatpak uninstall --system -y --noninteractive ${dupes}
+      flatpak uninstall --system -y --noninteractive --unused || true
+    else
+      echo "==> no system/user duplicates"
+    fi
+    if [ -n "${left}" ]; then
+      echo "==> still in the SYSTEM installation (not declared — left alone):"
+      echo "${left}" | sed 's/^/    /'
+    fi
+    echo "==> per-user: $(flatpak list --user --app --columns=application | wc -l) apps"
 
 # ── maintainer escape hatch (not part of setup) ─────────────────────────────
 # Packages are normally built + published by bubblebox-pkgs CI (publish.yml,

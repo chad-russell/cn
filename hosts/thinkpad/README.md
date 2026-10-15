@@ -73,6 +73,15 @@ profile); `dconf-bubblebox accept <key>` drops one override. To declare a new
 setting: change it in Settings, `dconf dump /that/path/`, copy the key into the
 keyfile, `cjust bubblebox-apply`.
 
+**Flatpak apps** are declared in `bubblebox/profile.toml` `[flatpak]` (the
+per-user installation). `cjust bubblebox-apply` installs missing apps and
+re-installs any you removed by hand; dropping an app from the list
+uninstalls it. Apps installed some other way are reported as "unmanaged" by
+`cjust bubblebox-plan` and left alone. Updates are still `flatpak update`.
+`cjust flatpak-migrate-to-user` is the one-time move off the old system
+installation (removes a system copy only once the user copy exists; app data
+in `~/.var/app` is shared and untouched).
+
 ## Current architecture
 
 ### `host-image/`
