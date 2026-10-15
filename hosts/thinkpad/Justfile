@@ -112,21 +112,11 @@ icons:
     echo "  installed -> ${icons_dir}/{Papirus,Papirus-Dark,Papirus-Light}"
     # GNOME's icon-theme is DECLARED (dconf bubblebox.d: Papirus-Dark) — not
     # written here, or this recipe would plant a user-db override over it.
-    # Niri / GTK3 / GTK4 without a GNOME settings daemon: settings.ini is what
-    # GTK actually consults for icon-theme-name in those sessions.
-    for v in gtk-3.0 gtk-4.0; do
-      ini="${HOME}/.config/${v}/settings.ini"
-      mkdir -p "$(dirname "${ini}")"
-      touch "${ini}"
-      if grep -q '^gtk-icon-theme-name=' "${ini}"; then
-        sed -i 's|^gtk-icon-theme-name=.*|gtk-icon-theme-name=Papirus|' "${ini}"
-      else
-        grep -q '^\[Settings\]' "${ini}" || printf '[Settings]\n' >> "${ini}"
-        printf 'gtk-icon-theme-name=Papirus\n' >> "${ini}"
-      fi
-      echo "  set ${v}/settings.ini gtk-icon-theme-name=Papirus"
-    done
-    echo "==> Papirus is now the active icon theme (GNOME + Niri/GTK)."
+    # GTK3/GTK4 settings.ini (non-GNOME sessions) are bubblebox [[files]]
+    # now (bubblebox/files/.config/gtk-{3,4}.0/settings.ini) — editing them
+    # here would clobber the managed symlinks. Change the theme there instead.
+    echo "==> Papirus installed. GNOME icon theme: dconf layer (Papirus-Dark)."
+    echo "    GTK sessions: bubblebox [[files]] gtk-{3,4}.0/settings.ini."
 
 # Cap Zen Browser's memory via a cgroup v2 soft limit, by overriding its
 # flatpak desktop file to launch through the `zen-browser` wrapper script

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Zen Browser
+Comment=Autostart Zen (per-user flatpak; Exec mirrors the flathub desktop file)
+Exec=/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=launch-script.sh app.zen_browser.zen
+Icon=app.zen_browser.zen
+Terminal=false
+X-GNOME-Autostart-enabled=true

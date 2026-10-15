@@ -73,6 +73,16 @@ profile); `dconf-bubblebox accept <key>` drops one override. To declare a new
 setting: change it in Settings, `dconf dump /that/path/`, copy the key into the
 keyfile, `cjust bubblebox-apply`.
 
+**The rest of the user layer is declared too**: `.gitconfig`,
+`mimeapps.list`, `monitors.xml`, GTK `settings.ini` (non-GNOME sessions),
+the caelestia `shell.json`, login autostart (real `.desktop` files), and the
+user flatpak overrides — all `[[files]]`, all content-identical to what the
+machine had. `~/.config/containers/containers.conf` is NOT declared: its
+`compose_providers` path (`~/.local/bin/podman-compose`) doesn't exist — dead
+config, safe to delete. The dev-project quadlets under
+`~/.config/containers/systemd/` stay symlinked by their per-project
+`install.sh` recipes (repo-tracked sources).
+
 **Flatpak apps** are declared in `bubblebox/profile.toml` `[flatpak]` (the
 per-user installation). `cjust bubblebox-apply` installs missing apps and
 re-installs any you removed by hand; dropping an app from the list

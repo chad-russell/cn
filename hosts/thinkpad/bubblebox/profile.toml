@@ -135,6 +135,44 @@ kind = "dir"
 
 [[files]]
 dst = ".config/niri/config.kdl"
+# ── more host-resident config (2026-10-15: previously hand-edited) ────────
+[[files]]
+dst = ".gitconfig"
+
+[[files]]
+dst = ".config/mimeapps.list"
+
+# GNOME monitor layout (was hand-maintained; a Containerfile comment claimed
+# it lived here long ago — now it actually does).
+[[files]]
+dst = ".config/monitors.xml"
+
+# GTK icon theme for non-GNOME sessions (GNOME itself reads the dconf layer).
+# NOTE: "Papirus" here vs dconf's Papirus-Dark — kept exactly as the machine
+# had it; flip to Papirus-Dark here if you want them to match.
+[[files]]
+dst = ".config/gtk-3.0/settings.ini"
+
+[[files]]
+dst = ".config/gtk-4.0/settings.ini"
+
+# caelestia shell preferences (bar/border/launcher). monitors/ under caelestia
+# is per-output runtime state — deliberately NOT managed.
+[[files]]
+dst = ".config/caelestia/shell.json"
+
+# Login autostart. Real files, not symlinks: the old zen symlink pointed at
+# the SYSTEM flatpak export, gone since the per-user flatpak migration.
+[[files]]
+dst = ".config/autostart/app.zen_browser.zen.desktop"
+
+[[files]]
+dst = ".config/autostart/ghostty.desktop"
+
+# User-scope flatpak overrides (host/etc access for theming).
+[[files]]
+dst = ".local/share/flatpak/overrides/global"
+
 
 # Hyprland trial (2026-09-01 → 2026-09-02) retired: hyprland.lua and the
 # session-bridge target removed with it. The niri session is now paired with
