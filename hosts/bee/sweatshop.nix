@@ -26,6 +26,15 @@ let
   checkout = "/home/crussell/ss/sweatshop";
   units = [ "sweatshop.container" "sweatshop-harness.network" ];
 in {
+  # 0043 host channel: the exec tool's SSH key, mounted read-only into
+  # the container (see sweatshop.container). owner=crussell per the
+  # hindsight.nix precedent so the rootless user quadlet can read it.
+  age.secrets.sweatshop-host-key = {
+    file = ../../secrets/sweatshop-host-key.age;
+    owner = "crussell";
+    mode = "0400";
+  };
+
   environment.etc = lib.listToAttrs (map (u: {
     name = "sweatshop/${u}";
     value = {
