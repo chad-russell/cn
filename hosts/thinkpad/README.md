@@ -54,6 +54,11 @@ symlink to `bubblebox/profile.toml` here, and the engine mirrors the realized
 lock to `bubblebox/profile.lock` — commit it alongside profile edits (the
 `flake.lock` analog).
 
+`thinkpad-bubblebox-check.timer` runs daily: a read-only `bubblebox plan`
+for **drift** (live state ≠ committed profile/lock) and `plan --refresh` for
+**updates** (CI published newer builds). One ntfy ping (homelab-alerts) per
+distinct state, silent when healthy or away from home; it never applies.
+
 ## Current architecture
 
 ### `host-image/`

@@ -123,6 +123,10 @@ dst = ".local/bin/thinkpad-image-update"
 # booted image is missing its load-bearing artifacts.
 [[files]]
 dst = ".local/bin/thinkpad-image-health"
+# bubblebox drift + update check (read-only `plan --json`; ntfy on drift or
+# new CI builds; never applies). Full story in the script header.
+[[files]]
+dst = ".local/bin/thinkpad-bubblebox-check"
 
 [[files]]
 dst = ".local/share/applications/buzz.desktop"
@@ -179,4 +183,13 @@ enable = true
 # on failure. No auto-rollback by design — see the script header.
 [[units]]
 name = "thinkpad-image-health.service"
+enable = true
+
+# Daily bubblebox drift + update check (see .local/bin/thinkpad-bubblebox-check):
+# the user-layer counterpart of thinkpad-image-update. Reports only.
+[[units]]
+name = "thinkpad-bubblebox-check.service"
+
+[[units]]
+name = "thinkpad-bubblebox-check.timer"
 enable = true

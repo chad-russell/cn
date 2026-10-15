@@ -1,0 +1,9 @@
+[Unit]
+Description=bubblebox drift + update check (read-only plan) with ntfy alert
+# See bubblebox/files/.local/bin/thinkpad-bubblebox-check. Never applies —
+# it reports; `cjust bubblebox-apply` / `bubblebox-upgrade` stay manual.
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/thinkpad-bubblebox-check
