@@ -1,5 +1,5 @@
-id = "ca6cdec35b96241379206dba4229d8eb61af44876005777a88306c471c886211"
-created_at = 1792089918
+id = "3c6877bfdaac8b2eddeac050681700acf5f081055e1825ac80f46bc8862884d6"
+created_at = 1792103340
 roots = [
     "age",
     "age-keygen",
@@ -13,6 +13,7 @@ roots = [
     "htop",
     "nvim",
     "oh-my-posh",
+    "pnpm",
     "psql",
     "rg",
     "rust-dev",
@@ -30,7 +31,7 @@ roots = [
 
 [[package]]
 name = "age"
-digest = "bd31197366d4bdfc3d838637a33f9a62deab3132119417e4f6d490ccff76e5d0"
+digest = "b5775fb19f269aaf426cf3d081161bd2d7224a5bb801a68ea575e2ac6fb84cd5"
 
 [package.origin]
 kind = "cache"
@@ -38,7 +39,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "aws"
-digest = "ef138e3835e8068c09ad953783663845847406cd33ad33ef974fe9702448c8c6"
+digest = "8f04af729e8db084c65f3a0124bf8e990a5d7d02987b7f84c74eb0f6ba182a75"
 
 [package.origin]
 kind = "cache"
@@ -46,7 +47,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "bat"
-digest = "cdc4a3d740b9cd8adfa1c8c808c22448b063bbc08b2d1d69cb477c2b853731f7"
+digest = "e00c4e29cda6083c9d899f1d8f86db01438109461b170750707b07b3918c0e78"
 
 [package.origin]
 kind = "cache"
@@ -54,7 +55,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "dust"
-digest = "0a6b1669521bd1aaabec526d7c066ed5dec388a41d9b4483e797f96373ccb6fe"
+digest = "e6f941bcefa03376a8be79bece6bee9792e4c6e02ae3c6091b764bf528cbfbc1"
 
 [package.origin]
 kind = "cache"
@@ -62,7 +63,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "eza"
-digest = "56a8a84f4b390794df818614da2f66ec81b845154ac81c29584f79f27f9b8e30"
+digest = "c3f30aa35f4225d3848fc798c1b80c0bec41c26347587439d4e97ed3a7c2a967"
 
 [package.origin]
 kind = "cache"
@@ -70,7 +71,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "fastfetch"
-digest = "c87ece669c449949291e97b82d39bf54ffdf42cd1fa234959e11451a6ad25bf8"
+digest = "a167f6147f76ba2c487f165458802f58d5c97f88d83992ec2282d513c02ecaed"
 
 [package.origin]
 kind = "cache"
@@ -78,7 +79,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "fd"
-digest = "a3145ee4292bab1b32bf5ffc968f6d967c56b365ad470e36e5b62ab2f2b7c107"
+digest = "08a0f43d9faaaccff7b6922e87c29e914af061de16a347409c33cb3b7aa995f0"
 
 [package.origin]
 kind = "cache"
@@ -86,7 +87,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "gh"
-digest = "e787540137cd8d8d37737dc12cd4a7f0812a8029201806e10f3e6d92207a2810"
+digest = "85d4d785488b8014e26d9d55aaa95428246afa661ff60141354e9d7784a3babb"
 
 [package.origin]
 kind = "cache"
@@ -94,7 +95,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "htop"
-digest = "8119a84d754afeeb8ec97febee037cdcd957d1c5a4339dcb31b8741038c07ee7"
+digest = "a0034e84c339bd37936f1d45c293105fa712dfe967ab1a2d27e92ba0a56f67e3"
 
 [package.origin]
 kind = "cache"
@@ -102,7 +103,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "nvim"
-digest = "f58329f3e59912dd28ea1784dec58409b65819110bf4ead879da3aab77159c2d"
+digest = "397853b2f9f2dc395babd976fb909d5473a0adc499392c61aab2c837a7d3e310"
 
 [package.origin]
 kind = "cache"
@@ -110,7 +111,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "rg"
-digest = "c99ec60dc23e10fb50ca25e5ca4f0af3886de50bfccf6a1ceb6a707498beb3fd"
+digest = "3909bf2e6a4b011fca5011d43938176c94eaf9cdf1a283f36b629b08bcaed80c"
 
 [package.origin]
 kind = "cache"
@@ -118,7 +119,15 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "oh-my-posh"
-digest = "9b1d6ed021b37fb5f497d62708745130f206875d54f47a4ec1631fc0bd6686ca"
+digest = "a5182e827174438b25a07f5e6822a6fdbff33eb5faec0e72eba70296a58fa29d"
+
+[package.origin]
+kind = "cache"
+url = "https://bubblebox.internal.crussell.io"
+
+[[package]]
+name = "pnpm"
+digest = "382a882ee8e9a2fabd044ab6b89af3eff97a2cb340372c394f062291fe05a981"
 
 [package.origin]
 kind = "cache"
@@ -126,7 +135,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "psql"
-digest = "66cd0bffe2934cbaab98d6724586a001ce1c13a68bbac92f0ac03bf8d8d07eef"
+digest = "98c21c499b2165bdd181f74751787b706270d21f4ec961bf2e4595f0b768f54f"
 
 [package.origin]
 kind = "cache"
@@ -134,7 +143,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "rust-dev"
-digest = "665ffd35d6a1df3da365a706a762795bd5ba2ada92a60bff84f88b8774d46b95"
+digest = "4cf2c40320e273eda22e60409827a58e700dcf89109e0cda5caa7d5759bcc7cd"
 
 [package.origin]
 kind = "cache"
@@ -142,7 +151,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "sops"
-digest = "924af15d6f27e46ab8b274d06df3efbcfb3de5d054418164150a68c0ba36f0e7"
+digest = "74bdac96bda939fb3a52b1377df6de2a4a239dc848201f2b27e696e304838772"
 
 [package.origin]
 kind = "cache"
@@ -150,7 +159,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "slack"
-digest = "bd8b275c84086ded91a1ee3d69d3dcecdbd991111b0fa7b768fc811d331f0130"
+digest = "d14bca8fb73035400c92941095fc078af3f47f4df6bb43e315bf5f033e91a4d1"
 
 [package.origin]
 kind = "cache"
@@ -158,7 +167,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "terraform"
-digest = "8c5d2d83c20b7fdbe0dacc5de670103bb0d86c38855d2449b25f4d5f512ef7ce"
+digest = "2ca745fe2ceeb952639677d2e71cc7a5b6a98663278e490139a9069c53773c87"
 
 [package.origin]
 kind = "cache"
@@ -166,7 +175,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "tokei"
-digest = "d4aa96c40913a2c0f65a1c6d4f72a2353ea3c923f261ee5d23092b6a0553b46c"
+digest = "df25369d392c672a26fe98cb56435ea7929d7e13513d52ff4496989b8277ad97"
 
 [package.origin]
 kind = "cache"
@@ -174,7 +183,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "vicinae"
-digest = "0da7fb0fb2d863410c7800732b827b0818f21dac68bdf442c762c979b5c0e715"
+digest = "2e684b08f8cfb446516ea98dc57d8bdcd7f9b81c2d21d9acfc1ac6e928f30c81"
 
 [package.origin]
 kind = "cache"
@@ -182,7 +191,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "witr"
-digest = "83b5d3db354e04f1700f19e943230d7f977bbc4e1399dbe0a6af01c58a860ffd"
+digest = "acf83421c541474c293d0553c4a00551c05d0d645fdfe7591ebaf7315223c6ef"
 
 [package.origin]
 kind = "cache"
@@ -190,7 +199,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "ghostty"
-digest = "1352255f3dce0b176864f0e8bdf2945f928fc2ce4b6e74dce31a691f29175c02"
+digest = "f4e4425e97079e2e65eea5abd295b3d343fd9fc7911cb88c3faffedb2ec387f7"
 
 [package.origin]
 kind = "cache"
@@ -198,7 +207,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "wezterm"
-digest = "d6dd5051caee66f23083e2ef70473ba6c6b9945190214b88f08be4393865c5c8"
+digest = "dc200f987587abdbc31bbb34c94b72853c59ce6488428e76e82737848eb51a34"
 
 [package.origin]
 kind = "cache"
@@ -206,7 +215,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "yazi"
-digest = "af847c9c7b3253f538b620298ac13eb7c7b9d8f0a40cc9b7c921967f120f1092"
+digest = "0cac221d19a249a43a47f1773ade947cc5220a015b7edbcbe448bef7de98abbe"
 
 [package.origin]
 kind = "cache"
@@ -214,7 +223,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "zoxide"
-digest = "1e4f4357f2cb73a4eb55882f81e4a0a591418202635361c063c72007488ab9e8"
+digest = "1a21798f748b5d6213503f36f803955bc72b458357b121794ab25898f3a4c5c0"
 
 [package.origin]
 kind = "cache"
@@ -259,6 +268,42 @@ blob = "c888022072f298cb81a6f9335dbe6f70d8899d52b2a43e5fbdce81fafacac1f1"
 [[file]]
 dst = ".config/niri/config.kdl"
 blob = "6801779648203300b4ec1d42312223b429cfc16db53fcf2eddf7df749efd50a9"
+
+[[file]]
+dst = ".gitconfig"
+blob = "dcf39f73880559f8c0dc3efa3e5f5458c6ffac27a448f3c778ae5577de266951"
+
+[[file]]
+dst = ".config/mimeapps.list"
+blob = "1dd2ebc64e0f984e63609c9284a8cb526fffbf3e060d02a7c41197bfb6fdde83"
+
+[[file]]
+dst = ".config/monitors.xml"
+blob = "b3e095b5b4d3966c9947dfef867fc7b5126f06bfaa4681cd297ec61ddb73bd23"
+
+[[file]]
+dst = ".config/gtk-3.0/settings.ini"
+blob = "e3032744abc56d213fbf55db9d31a08e9b66e15eff90403c674a75ba47675de1"
+
+[[file]]
+dst = ".config/gtk-4.0/settings.ini"
+blob = "e3032744abc56d213fbf55db9d31a08e9b66e15eff90403c674a75ba47675de1"
+
+[[file]]
+dst = ".config/caelestia/shell.json"
+blob = "93996b6161807b49a8b6d1c23b7e9f320772614e0007b7f7279cc9b78e43b881"
+
+[[file]]
+dst = ".config/autostart/app.zen_browser.zen.desktop"
+blob = "14a41dbeb4209006133419eee7840bb2fea543812809bcf674f14dc4baa05315"
+
+[[file]]
+dst = ".config/autostart/ghostty.desktop"
+blob = "a200a2fc2132972d290b430ba5b31ad9193743dde67af5cc10fcb749a5ccef8e"
+
+[[file]]
+dst = ".local/share/flatpak/overrides/global"
+blob = "5d6eea2bbc15f62c76874a306520b1a2b02ece168331b738df8e091fde7d7d90"
 
 [[file]]
 dst = ".config/ghostty/config"
