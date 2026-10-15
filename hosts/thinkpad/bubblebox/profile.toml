@@ -16,7 +16,7 @@
 # must precede the [[source]]/[[cache]] table headers — standard TOML.)
 packages = [
   "age", "age-keygen", "aws", "bat", "dust", "eza", "fastfetch", "fd", "gh", "htop",
-  "nvim", "oh-my-posh", "psql", "rg", "rust-dev", "sops", "slack", "terraform",
+  "nvim", "oh-my-posh", "pnpm", "psql", "rg", "rust-dev", "sops", "slack", "terraform",
   "tokei", "vicinae", "witr", "ghostty", "wezterm", "yazi", "zoxide",
 ]
 # noctalia removed 2026-09-02 — replaced by the niri-caelestia-shell fork

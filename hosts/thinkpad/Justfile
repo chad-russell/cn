@@ -36,7 +36,7 @@ bubblebox_profile := justfile_directory() + "/bubblebox/profile.toml"
 # here builds packages by default. Bump the pin to upgrade the engine.
 # Set BUBBLEBOX_BIN to point recipes at a dev checkout build instead
 # (e.g. ~/Code/bubblebox/target/release/bubblebox).
-bubblebox_version := "0.4.0"
+bubblebox_version := "0.4.2"
 bubblebox_bin := env_var_or_default("BUBBLEBOX_BIN", env_var_or_default("HOME", "/tmp") + "/.local/bin/bubblebox")
 
 # ═══════════════════════════════════════════════════════════════════════════

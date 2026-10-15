@@ -124,10 +124,16 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        libqalculate qalculate pavucontrol lm_sensors \
                        geoclue2 \
                        xdg-desktop-portal-gnome xdg-desktop-portal-gtk \
-                       fish jq bc curl wget ripgrep rsync \
+                       jq bc curl wget rsync \
                        xdg-user-dirs xdg-utils libnotify brightnessctl \
                        ddcutil playerctl upower nm-connection-editor \
                        breeze-icon-theme
+    # ripgrep removed 2026-10-15: duplicate of the bubblebox `rg` package
+    # (the ~/.local/bin wrapper shadows /usr/bin/rg anyway). fish removed:
+    # unused (login shell is zsh; no terminal profile or spawn references).
+    # jq/curl/wget/rsync STAY: host-image infra runs them OUTSIDE any bubblebox
+    # sandbox (thinkpad-image-update, the restic ntfy template, buzz-desktop
+    # updater, cjust recipes) and system units have no ~/.local/bin on PATH.
     # && dnf5 -y install cosmic-desktop
 
 # ---- 2.5. Build + install our niri-caelestia-shell fork ------------------
