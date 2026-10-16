@@ -12,8 +12,8 @@
 #      is silent (RUN would be runtime-masked), so grep the layer itself.
 #   2. wayland sessions — niri + hyprland-uwsm + mango present, PLAIN hyprland
 #      entry rejected (one Hyprland in GDM), cosmic absent.
-#   3. niri-caelestia-shell artifacts — a silent CMake/install failure
-#      must not ship an image whose shell is missing at next login.
+#   3. desktop shell binaries — ambxst + axctl + qs present, the retired
+#      Caelestia fork must NOT reappear (retired 2026-11).
 #
 # Usage: thinkpad-image-verify.sh <image-ref>
 # Runs wherever podman can see the image; for the dedicated btrfs build
@@ -67,22 +67,21 @@ if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/cosmic.desktop" ]; then
 fi
 echo "    wayland sessions verified: niri + hyprland-uwsm + mango (+ GNOME from base)"
 
-# ---- gate 3: niri-caelestia-shell fork artifacts -------------------------
-echo "==> verifying niri-caelestia-shell artifacts in ${IMAGE}"
-for artifact in \
-  "${VERIFY_MNT}/usr/lib64/qt6/qml/Caelestia/qmldir" \
-  "${VERIFY_MNT}/usr/lib64/qt6/qml/Caelestia/Internal/qmldir" \
-  "${VERIFY_MNT}/usr/lib64/qt6/qml/Caelestia/Services/qmldir" \
-  "${VERIFY_MNT}/usr/lib/caelestia/version" \
-  "${VERIFY_MNT}/etc/xdg/quickshell/niri-caelestia-shell/shell.qml"
-do
+# ---- gate 3: desktop shell binaries (Ambxst) ------------------------------
+echo "==> verifying desktop shell binaries in ${IMAGE}"
+for artifact in "${VERIFY_MNT}/usr/bin/ambxst" "${VERIFY_MNT}/usr/bin/axctl" "${VERIFY_MNT}/usr/bin/qs"; do
   if [ ! -f "${artifact}" ]; then
     echo "ERROR: ${artifact} missing from ${IMAGE}" >&2
-    echo "  the niri-caelestia-shell build (Containerfile step 2.5) did not land" >&2
+    echo "  Containerfile step 2.5 (Ambxst binaries) did not land" >&2
     exit 1
   fi
 done
-echo "    niri-caelestia-shell artifacts verified"
+# the retired niri-caelestia-shell fork must NOT come back by accident
+if [ -f "${VERIFY_MNT}/usr/lib64/qt6/qml/Caelestia/qmldir" ]; then
+  echo "ERROR: Caelestia plugin present in ${IMAGE} — fork was retired 2026-11" >&2
+  exit 1
+fi
+echo "    desktop shell binaries verified: ambxst + axctl + qs (fork absent)"
 
 # ---- gate 4: baked system services (Containerfile step 3.9) --------------
 # COPY is silent on failure (same rationale as gate 1): assert the system
