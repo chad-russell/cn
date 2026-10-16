@@ -1,5 +1,0 @@
-[Unit]
-Description=THI-AHA AVD userdata + adb state
-
-[Volume]
-VolumeName=thi-aha-dev-android

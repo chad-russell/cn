@@ -194,9 +194,6 @@ kind = "dir"
 [[files]]
 dst = ".local/bin/zen-browser"
 
-[[files]]
-dst = ".local/bin/hermes-desktop"
-
 # Buzz Desktop (block/buzz) updater engine — the AppImage itself lives in
 # ~/.local/share/buzz-desktop/, managed by this script, NOT here (binaries
 # are not dotfiles). See the script header for the update story.
@@ -231,9 +228,6 @@ dst = ".local/share/applications/wezterm.desktop"
 
 [[files]]
 dst = ".local/share/applications/ghostty.desktop"
-
-[[files]]
-dst = ".local/share/applications/hermes.desktop"
 
 # ── Systemd user units (Phase C) ─────────────────────────────────────────────
 # Source files live in `units/` next to this profile.toml. Replaces the old

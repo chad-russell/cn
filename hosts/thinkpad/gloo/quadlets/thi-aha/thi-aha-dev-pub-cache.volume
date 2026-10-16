@@ -1,5 +1,0 @@
-[Unit]
-Description=THI-AHA dart pub cache
-
-[Volume]
-VolumeName=thi-aha-dev-pub-cache
