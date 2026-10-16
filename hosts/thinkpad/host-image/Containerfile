@@ -129,7 +129,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        xdg-user-dirs xdg-utils libnotify brightnessctl \
                        ddcutil playerctl upower nm-connection-editor \
                        breeze-icon-theme \
-                       hyprland hyprlock hypridle hyprpaper hyprpolkitagent \
+                       hyprland hyprlock hypridle hyprpaper hyprpolkitagent hyprland-uwsm \
                        xdg-desktop-portal-hyprland \
                        hyprland-guiutils waybar
     # hyprland suite + waybar: BAKE PR (dormant until the 2026-11 compositor
