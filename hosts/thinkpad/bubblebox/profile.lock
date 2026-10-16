@@ -1,5 +1,5 @@
-id = "4b682f67774ea5aa6b4222943d49eb63dc9f0ad65b7b4bdeae71bd986a712c4a"
-created_at = 1792184249
+id = "a0326f59ce4cdd986fc33247f8ba5b721c5608c52a3df1b40ef65d9c63d4cd0a"
+created_at = 1792184582
 roots = [
     "age",
     "age-keygen",
@@ -272,7 +272,7 @@ blob = "c888022072f298cb81a6f9335dbe6f70d8899d52b2a43e5fbdce81fafacac1f1"
 
 [[file]]
 dst = ".config/niri/config.kdl"
-blob = "6922569de6ac496f70a154013b3560951f4507b659441d7bda1f8a79b79e93af"
+blob = "137f16b3031f75658923ba94b237fdff3d7068098150b7857816d543878b873f"
 
 [[file]]
 dst = ".config/hypr/hyprland.lua"
