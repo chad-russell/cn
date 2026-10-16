@@ -47,18 +47,16 @@ hl.config({
     },
 })
 
--- Hyprspace overview styling/behavior. NOTE: plugin config keys only exist
--- once the plugin is loaded — UNCOMMENT this block after running
--- `hyprpm enable Hyprspace`, else Hyprland errors on the unknown key
--- (verified live). All options in the Hyprspace README: dragAlpha,
--- showNewWorkspace, onBottom, reservedArea, exitKey, ...
--- hl.config({
---     plugin = {
---         overview = {
---             centerAligned = true, -- KDE/macOS-style centered strip
---         },
---     },
--- })
+-- Hyprspace overview styling/behavior (keys exist now that the plugin is
+-- enabled; all options in its README: dragAlpha, showNewWorkspace, onBottom,
+-- reservedArea, exitKey, overrideAnimSpeed, ...)
+hl.config({
+    plugin = {
+        overview = {
+            centerAligned = true, -- KDE/macOS-style centered strip
+        },
+    },
+})
 
 -- ── the trial's model: floating by default ────────────────────────────────
 -- APPEARANCE PAIRING: Ambxst/axctl applies look changes as LIVE keywords
