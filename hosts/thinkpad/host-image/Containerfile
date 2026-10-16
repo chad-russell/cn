@@ -203,7 +203,7 @@ RUN tar -xzf /tmp/ncs.tar.gz -C /tmp \
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y --setopt=install_weak_deps=False install \
-        meson glslang-devel glaze-devel \
+        meson glslang-devel glaze \
         gtk4-devel gtk4-layer-shell-devel libadwaita-devel \
         aquamarine-devel cairo-devel libglvnd-devel mesa-libgbm-devel \
         glib2-devel hwdata-devel hyprcursor-devel hyprgraphics-devel \
