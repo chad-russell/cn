@@ -285,14 +285,17 @@ COPY etc-hosts /etc/hosts
 # image-update.{service,timer}) that runs the consumer side of this pipeline
 # daily: stage the latest build (`bootc upgrade`, stage-only — reboots stay
 # manual) + an ntfy lag alert. A user unit has no TTY for an askpass, so the
-# staging command gets an explicit NOPASSWD grant. The trailing `""` matters:
-# WITHOUT it sudoers would allow ANY arguments to `bootc upgrade` (including
-# `--apply`, which reboots); with it, only the bare command matches — which
-# is exactly what the timer's script runs (`sudo -n /usr/bin/bootc upgrade`).
+# staging command gets an explicit NOPASSWD grant. Args are listed EXPLICITLY:
+# a Cmnd with arguments matches ONLY that exact argv, so `upgrade` alone is
+# granted and `upgrade --apply` (which reboots) still requires a password.
+# (The original grant pinned the args as `upgrade ""` — an empty-string
+# argument in the spec — which sudo listed as a valid match but never
+# honoured at exec time; the daily timer failed "a password is required"
+# from day one. Plain `upgrade` is the exact-argv form.)
 # Everything that changes the image REFERENCE (`bootc switch`, `bootc edit`)
 # stays passworded. The username is baked in: single-user personal image.
 # visudo -cf validates the file at build time, before it can brick sudo.
-RUN printf 'crussell ALL=(root) NOPASSWD: /usr/bin/bootc upgrade ""\n' \
+RUN printf 'crussell ALL=(root) NOPASSWD: /usr/bin/bootc upgrade\n' \
     > /etc/sudoers.d/90-bootc-upgrade \
     && chmod 0440 /etc/sudoers.d/90-bootc-upgrade \
     && visudo -cf /etc/sudoers.d/90-bootc-upgrade
