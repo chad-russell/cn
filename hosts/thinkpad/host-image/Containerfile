@@ -130,9 +130,10 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        ddcutil playerctl upower nm-connection-editor \
                        breeze-icon-theme \
                        hyprland hyprlock hypridle hyprpaper hyprpolkitagent \
-                       waybar
+                       hyprland-guiutils waybar
     # hyprland suite + waybar: BAKE PR (dormant until the 2026-11 compositor
-    # trial concludes) — re-added from the same mineiro COPR round 1 used.
+    # trial concludes; merged 2026-11). re-added from the same mineiro COPR round 1
+    # used; hyprland-guiutils added after the live session warned it is missing.
     # If MANGO wins the trial instead, delete these lines + step 2.7 below
     # (and the hyprland half of the verify gate). Trial runbook:
     # hosts/thinkpad/hyprland/README.md.
