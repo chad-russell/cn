@@ -111,6 +111,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     && dnf5 -y copr enable celestelove/libcava \
     && dnf5 -y copr enable celestelove/app2unit \
     && dnf5 -y copr enable peterwu/rendezvous \
+    && dnf5 -y copr enable mineiro/hyprland \
     && dnf5 -y --setopt=install_weak_deps=False install \
                        niri xwayland-satellite bibata-cursor-themes \
                        quickshell app2unit libcava libcava-devel \
@@ -127,7 +128,14 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        jq bc curl wget rsync \
                        xdg-user-dirs xdg-utils libnotify brightnessctl \
                        ddcutil playerctl upower nm-connection-editor \
-                       breeze-icon-theme
+                       breeze-icon-theme \
+                       hyprland hyprlock hypridle hyprpaper hyprpolkitagent \
+                       waybar
+    # hyprland suite + waybar: BAKE PR (dormant until the 2026-11 compositor
+    # trial concludes) — re-added from the same mineiro COPR round 1 used.
+    # If MANGO wins the trial instead, delete these lines + step 2.7 below
+    # (and the hyprland half of the verify gate). Trial runbook:
+    # hosts/thinkpad/hyprland/README.md.
     # ripgrep removed 2026-10-15: duplicate of the bubblebox `rg` package
     # (the ~/.local/bin wrapper shadows /usr/bin/rg anyway). fish removed:
     # unused (login shell is zsh; no terminal profile or spawn references).
@@ -182,6 +190,18 @@ RUN tar -xzf /tmp/ncs.tar.gz -C /tmp \
     && cmake --build /tmp/ncs-build \
     && cmake --install /tmp/ncs-build \
     && rm -rf /tmp/ncs.tar.gz /tmp/niri-caelestia-shell-566f92997d27dbce4e5315b1a35d9d143ce0db5b /tmp/ncs-build
+
+# ---- 2.7. MangoWM (B half of the 2026-11 compositor trial) ---------------
+# BAKE PR (dormant): mangowm comes from the Terra third-party repo (not a
+# COPR); terra-release is just the repo-file rpm. URL pinned deliberately —
+# the filename carries epoch:release (bump on purpose when Terra bumps).
+# mangowm pulls scenefx. Verified live from think 2026-11: mangowm
+# 0.18.1-1.fc44 + scenefx 0.5-1.fc44 in terra44. If HYPRLAND wins the
+# trial instead, delete this step (and the mango half of the verify gate).
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    dnf5 -y install 'https://repos.fyralabs.com/terra44/terra-release-0:44-10.noarch.rpm' \
+    && dnf5 -y --setopt=install_weak_deps=False install mangowm
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/

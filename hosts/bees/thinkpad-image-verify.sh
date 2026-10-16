@@ -10,8 +10,8 @@
 # What it asserts on a mounted image (fail = non-zero before publish/merge):
 #   1. baked /etc/hosts — COPY is the one Containerfile step whose failure
 #      is silent (RUN would be runtime-masked), so grep the layer itself.
-#   2. wayland sessions — niri present; cosmic/hyprland absent (soft-removed
-#      / removed — a stray COPR line would resurrect them).
+#   2. wayland sessions — niri + hyprland + mango present (compositor trial
+#      stack, 2026-11; was: niri only / hyprland rejected), cosmic absent.
 #   3. niri-caelestia-shell artifacts — a silent CMake/install failure
 #      must not ship an image whose shell is missing at next login.
 #
@@ -40,24 +40,29 @@ echo "    /etc/hosts entries verified in image layer"
 
 # ---- gate 2: wayland sessions -------------------------------------------
 echo "==> verifying wayland sessions in ${IMAGE}"
-for session in niri; do
+# niri (primary) + the two 2026-11 compositor-trial sessions. Trial runbook:
+# hosts/thinkpad/hyprland/README.md. When the trial concludes, keep only the
+# winner's line here and drop the loser's install block in the Containerfile.
+for session in niri hyprland; do
   if [ ! -f "${VERIFY_MNT}/usr/share/wayland-sessions/${session}.desktop" ]; then
     echo "ERROR: ${session}.desktop missing from ${IMAGE}" >&2
-    echo "  expected sessions: niri (GNOME ships in the base image)" >&2
+    echo "  expected sessions: niri + hyprland (GNOME ships in the base image)" >&2
     exit 1
   fi
 done
+# mango's session file name is not asserted exactly (upstream doesn't pin it
+# in docs) — match any *mango* session file instead.
+if ! ls "${VERIFY_MNT}/usr/share/wayland-sessions/" 2>/dev/null | grep -qi mango; then
+  echo "ERROR: no mango session file in ${IMAGE}" >&2
+  echo "  Containerfile step 2.7 (Terra/mangowm) did not land" >&2
+  exit 1
+fi
 if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/cosmic.desktop" ]; then
   echo "ERROR: cosmic.desktop present but COSMIC is soft-removed" >&2
   echo "  un-comment the cosmic lines in the Containerfile or drop this check" >&2
   exit 1
 fi
-if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/hyprland.desktop" ]; then
-  echo "ERROR: hyprland.desktop present but Hyprland was removed 2026-09-02" >&2
-  echo "  the mineiro/hyprland COPR line should be gone from the Containerfile" >&2
-  exit 1
-fi
-echo "    wayland sessions verified: niri (+ GNOME from base)"
+echo "    wayland sessions verified: niri + hyprland + mango (+ GNOME from base)"
 
 # ---- gate 3: niri-caelestia-shell fork artifacts -------------------------
 echo "==> verifying niri-caelestia-shell artifacts in ${IMAGE}"
