@@ -102,9 +102,11 @@ hl.config({ scrolling = { fullscreen_on_one_column = true } })
 -- ── shell + overview ──────────────────────────────────────────────────────
 hl.on("hyprland.start", function()
     -- Import the Wayland env into the systemd user manager: the bubblebox
-    -- wrappers spawn GUI apps via `systemd-run --user`, and without uwsm
-    -- nothing else does this import for a plain GDM-launched session.
-    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
+    -- wrappers spawn GUI apps via `systemd-run --user`, and vicinae/portal
+    -- children need WAYLAND_DISPLAY *and* DISPLAY (X11-defaulting Electron
+    -- apps like Slack crash without DISPLAY even though XWayland is up —
+    -- diagnosed live 2026-11). Without uwsm nothing else does this import.
+    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE DISPLAY")
     -- Start the session target FIRST: plain GDM-launched Hyprland never
     -- starts graphical-session.target (RefuseManualStart — only uwsm/desktop
     -- sessions may pull it), and xdg-desktop-portal.service has
