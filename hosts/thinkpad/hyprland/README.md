@@ -1,9 +1,11 @@
-# Hyprland round 2 — layered exploration kit
+# Hyprland round 2 + MangoWM A/B — layered exploration kit
 
-Everything needed to trial Hyprland on `think` **without image rebuilds**: a
+Everything needed to trial compositors on `think` **without image rebuilds**: a
 one-time `rpm-ostree` layer, then all iteration happens in `~/.config` where
-the compositor config hot-reloads and quickshell shells swap in ~1s. Only the
-winner ever gets baked back into `host-image/`.
+the compositor configs hot-reload and quickshell shells swap in ~1s. Only the
+winner ever gets baked back into `host-image/`. 2026-11: extended to an A/B —
+**Hyprland** answers the *shell ecosystem* question (the quickshell envs),
+**MangoWM** the *WM model* one (per-tag layouts + built-in overview, native).
 
 History: round 1 (2026-09-01 → 09-02) was image-baked via the
 `mineiro/hyprland` COPR and retired in a day; the removal notes live in
@@ -45,16 +47,20 @@ are user-programmable in Lua (`hl.layout.register`, see upstream's
 ## Phase 1 — layer once, reboot once
 
 ```bash
-sudo dnf5 copr enable mineiro/hyprland   # writes the COPR repo file under /etc/yum.repos.d
-sudo rpm-ostree install hyprland hyprlock hypridle hyprpaper hyprpolkitagent
+sudo dnf5 copr enable mineiro/hyprland    # repo file for the hyprland suite (+ waybar)
+curl -fLo /tmp/terra-release.rpm 'https://repos.fyralabs.com/terra44/terra-release-0:44-10.noarch.rpm'
+sudo rpm-ostree install /tmp/terra-release.rpm   # layer 1: enables the Terra repo file
+sudo rpm-ostree install hyprland hyprlock hypridle hyprpaper hyprpolkitagent waybar mangowm
 systemctl reboot
 ```
 
-(rpm-ostree 2026.3 — what F44 ships — has **no** `--from-latest-copr`; the
-enable-then-layer path above is the working one, verified on-host 2026-11.
-`dnf5-plugins` is already installed on think. If `dnf5 copr enable` ever
-refuses on an atomic host, fall back to dropping the repo file from
-https://copr.fedorainfracloud.org/coprs/mineiro/hyprland/ into
+(Two rpm-ostree transactions, ONE reboot: mangowm only resolves after
+terra-release's repo file is layered. Terra URL verified live from think,
+2026-11; mangowm 0.18.1 + scenefx 0.5 in `terra44`. rpm-ostree 2026.3 — what
+F44 ships — has **no** `--from-latest-copr`; the enable-then-layer path is
+the working one. `dnf5-plugins` is already installed on think. If `dnf5 copr
+enable` ever refuses on an atomic host, fall back to dropping the repo file
+from https://copr.fedorainfracloud.org/coprs/mineiro/hyprland/ into
 `/etc/yum.repos.d/` by hand.)
 
 Pick "Hyprland" at the GDM session gear. Layered packages ride on top of the
@@ -120,9 +126,9 @@ why it needs uwsm.
 ## Revert
 
 ```bash
-rpm-ostree uninstall hyprland hyprlock hypridle hyprpaper hyprpolkitagent
+rpm-ostree uninstall hyprland hyprlock hypridle hyprpaper hyprpolkitagent waybar mangowm terra-release
 systemctl reboot          # or just boot the pre-layer deployment from GRUB
-rm -rf ~/.config/hypr     # and any tasting shells under ~/.config/quickshell/
+rm -rf ~/.config/hypr ~/.config/mango   # and any tasting shells under ~/.config/quickshell/
 ```
 
 ## Endgame — if Hyprland survives the trial
@@ -150,20 +156,38 @@ One image rebuild, one bubblebox change, both familiar:
    Hyprland becomes the primary.
 
 Until then nothing here touches the image: this directory is staging only.
+A dormant **bake PR** (Containerfile: mineiro COPR hyprland suite + Terra
+mangowm, plus the flipped verify gate) is staged separately — merge it only
+when the trial has a keeper, deleting the loser's block at merge time, then
+drop the rpm-ostree layer on the next reboot.
 
-## Aside — MangoWM in the same loop
+## MangoWM session (the B half of the A/B)
 
-[MangoWM][mango] (dwl-based, 2026) implements this trial's whole wish list
-natively — **per-tag layouts** (scroller, monocle, grid, deck, master-stack,
-dwindle), a **built-in Hycov-style overview**, animations + scenefx effects,
-hot-reload TOML config with `[[rules]]`/`exec-once`, IPC. It's young (one
-main dev, small community) and the polished quickshell envs do NOT target
-it — bars are bring-your-own (waybar / generic quickshell). On Fedora it
-lives in the [Terra][terra] repo (not a COPR): same pattern — get Terra's
-repo file into `/etc/yum.repos.d/`, then `rpm-ostree install mangowm`. It
-makes a cheap second GDM session in this same exploration loop
-(`~/.config/mango/` doesn't collide with `~/.config/hypr/`): A/B the *WM
-model* on mango while the Hyprland trial A/B-s the *shell ecosystem*.
+Install is part of Phase 1 (Terra repo, `mangowm`; deps incl. scenefx come
+along). Starter config: copy the stock default and append the trial snippet —
+it sets the same model as the Hyprland skeleton (float everywhere via
+`tag_rule=id:*,open_as_floating:1`, tag 3 scroller, tag 4 monocle, built-in
+overview on Super+Tab, waybar + ghostty):
 
-[mango]: https://github.com/mangowm/mango
-[terra]: https://terrapkg.com/
+```bash
+mkdir -p ~/.config/mango
+cp /etc/mango/config.conf ~/.config/mango/config.conf
+cat ~/Code/cn/hosts/thinkpad/hyprland/mango-snippet.conf >> ~/.config/mango/config.conf
+mango -c ~/.config/mango/config.conf -p    # validate without starting
+```
+
+What to actually try (the things Hyprland can't give you natively):
+
+- **Tags, not workspaces** — view multiple tags at once (Ctrl+<num> adds).
+  Give it a full evening before judging; it inverts the workspace mental
+  model. `no_hide` keeps tags 3/4 alive.
+- **Per-tag layouts** — every tag remembers its own layout; Super+N cycles
+  scroller → monocle → tile; assign defaults per tag in the snippet.
+- **Built-in overview** — Super+Tab, live window previews across all tags,
+  jump labels, click-to-focus / right-click-to-close. No plugin needed.
+- **mmsg IPC** — `mmsg` is mango's hyprctl; window/tag state for waybar.
+
+Caveats: young project (one main dev, Discord-sized community), and **no
+quickshell envs target it** — bars are bring-your-own (waybar here). If the
+thing you end up loving is a shell (Caelestia / end-4), that's a Hyprland
+answer by definition. Docs: https://mangowm.github.io/docs
