@@ -1,5 +1,5 @@
-id = "3c6877bfdaac8b2eddeac050681700acf5f081055e1825ac80f46bc8862884d6"
-created_at = 1792103340
+id = "4b682f67774ea5aa6b4222943d49eb63dc9f0ad65b7b4bdeae71bd986a712c4a"
+created_at = 1792184249
 roots = [
     "age",
     "age-keygen",
@@ -21,6 +21,7 @@ roots = [
     "slack",
     "terraform",
     "tokei",
+    "uv",
     "vicinae",
     "witr",
     "ghostty",
@@ -182,6 +183,14 @@ kind = "cache"
 url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
+name = "uv"
+digest = "5e5c53a490a4c981ad18de75c590d84a0d4537ad213b88c7dffbe97e7968b685"
+
+[package.origin]
+kind = "cache"
+url = "https://bubblebox.internal.crussell.io"
+
+[[package]]
 name = "vicinae"
 digest = "2e684b08f8cfb446516ea98dc57d8bdcd7f9b81c2d21d9acfc1ac6e928f30c81"
 
@@ -250,10 +259,6 @@ dst = ".config/environment.d/10-bubblebox.conf"
 blob = "865538b24f82964ec4f79a4e1886f298796af3084fa075ff8fd438b1aade6f8c"
 
 [[file]]
-dst = ".config/environment.d/caelestia.conf"
-blob = "f3510893a910f3c105d1cdc5672439030ce13fbf380814bbbdc08c5c70006c97"
-
-[[file]]
 dst = ".config/environment.d/20-dconf.conf"
 blob = "afd46a9fcf2efcbfb19675dfb71aa30b28e8149f64ec94a4e92fa9d7ad3ea62e"
 
@@ -267,7 +272,11 @@ blob = "c888022072f298cb81a6f9335dbe6f70d8899d52b2a43e5fbdce81fafacac1f1"
 
 [[file]]
 dst = ".config/niri/config.kdl"
-blob = "6801779648203300b4ec1d42312223b429cfc16db53fcf2eddf7df749efd50a9"
+blob = "6922569de6ac496f70a154013b3560951f4507b659441d7bda1f8a79b79e93af"
+
+[[file]]
+dst = ".config/hypr/hyprland.lua"
+blob = "140d418cdb2393e138c0b4de30a9a065522e9e6046cc5bad23bda4b024bfae67"
 
 [[file]]
 dst = ".gitconfig"
@@ -288,10 +297,6 @@ blob = "e3032744abc56d213fbf55db9d31a08e9b66e15eff90403c674a75ba47675de1"
 [[file]]
 dst = ".config/gtk-4.0/settings.ini"
 blob = "e3032744abc56d213fbf55db9d31a08e9b66e15eff90403c674a75ba47675de1"
-
-[[file]]
-dst = ".config/caelestia/shell.json"
-blob = "93996b6161807b49a8b6d1c23b7e9f320772614e0007b7f7279cc9b78e43b881"
 
 [[file]]
 dst = ".config/autostart/app.zen_browser.zen.desktop"
@@ -406,10 +411,6 @@ dst = ".local/bin/zen-browser"
 blob = "e154842cd6b489d757daeeea9df58ea0ccc041c57d7eb411b8556e608382bece"
 
 [[file]]
-dst = ".local/bin/hermes-desktop"
-blob = "db05492583bba6f15278f923fbcbf1af4b019b5ba935e0eb5401da4fe14c8ce0"
-
-[[file]]
 dst = ".local/bin/buzz-desktop"
 blob = "b9edb59fb7ee2bc9fc8cd8e05720d4771849a124a5bfaebe7126224518e15aaa"
 
@@ -419,7 +420,7 @@ blob = "185969847a108f50467d6aa4b877279279668c4d504feb4a5e36f17f7971a752"
 
 [[file]]
 dst = ".local/bin/thinkpad-image-health"
-blob = "1934c09493d5cb70eb258bab66cd21383584122b06421af0cf6eeeb49c3863d2"
+blob = "aa3debcb2abc73e0447b51cabbdd63242cf78ebd69b97037045e54810ad419e0"
 
 [[file]]
 dst = ".local/bin/thinkpad-bubblebox-check"
@@ -441,10 +442,6 @@ blob = "3e05eb7fae2aafa8633757fbb4a89acad85c8d7a266e66d7cd24795a83db9cc6"
 dst = ".local/share/applications/ghostty.desktop"
 blob = "1512d2a7df17ca87693d33175e35648dae817ffaf30b00831447fa376b34eca7"
 
-[[file]]
-dst = ".local/share/applications/hermes.desktop"
-blob = "0a774bcb4d38d69cccc7adc6994a85b8bf924ebe4d16f4fc2095626a6ca3b6aa"
-
 [[unit]]
 name = "vicinae"
 enabled = true
@@ -461,9 +458,9 @@ enabled = true
 blob = "b5d02beb164b169177adeca2bf6e578c0e2a50f42ca9e5c510635872c39f455d"
 
 [[unit]]
-name = "caelestia-shell"
+name = "ambxst"
 enabled = true
-blob = "4a7174d504f50d91ca1255ae9c5f943085a87cde263cfe3d36954059c00493ec"
+blob = "7c2f807f9e40959d5d53bf7c1354c589597bf2ee6fe6ca4f7e9f15092f1776c4"
 
 [[unit]]
 name = "thinkpad-image-update.service"

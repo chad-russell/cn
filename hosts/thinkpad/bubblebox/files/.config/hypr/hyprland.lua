@@ -13,6 +13,13 @@
 --   * workspace 3 = scrolling tape (niri/PaperWM feel), workspace 4 = monocle
 --   * animated overview via the Hyprspace plugin or quickshell-overview
 
+-- Ambxst
+loadfile(os.getenv("HOME") .. "/.local/share/ambxst/hyprland.lua")()
+
+-- Unbind Ambxst unwanted keybinds
+hl.unbind("SUPER + Super_L")
+hl.unbind("SUPER + L")
+
 -- ghostty is a bubblebox tool: the wrapper lives at ~/.local/bin/ghostty.
 -- Use the explicit $HOME path — GDM launches Hyprland with a thin session
 -- env whose PATH may not include ~/.local/bin ($HOME expands because
@@ -59,35 +66,6 @@ hl.config({
 --         },
 --     },
 -- })
-
--- ── the trial's model: floating by default ────────────────────────────────
--- APPEARANCE PAIRING: Ambxst/axctl applies look changes as LIVE keywords
--- from ~/.local/share/ambxst/axctl.toml and never persists them here —
--- every reload of this file re-asserts whatever is declared below. So the
--- geometry values here intentionally MIRROR axctl.toml (gaps 2/4, border 2,
--- rounding 16, blur on). Change appearance in the Ambxst UI for a live
--- preview, then mirror the winner into this block (both sides must agree,
--- else you get the flash-then-revert effect). Border COLORS stay out of
--- here on purpose: axctl sets them from the live matugen palette.
-hl.config({
-    general = {
-        gaps_in = 2,
-        gaps_out = 4,
-        border_size = 2,
-        -- Fallback layout for the rare window you DO tile into a layout
-        -- workspace (everything else floats via the rule below).
-        layout = "dwindle",
-    },
-    decoration = {
-        rounding = 16,
-        blur = {
-            enabled = true,
-            size = 4,
-            passes = 2,
-        },
-    },
-    animations = { enabled = true },
-})
 
 -- Everything floats unless a later rule tiles it back in.
 hl.window_rule({
@@ -154,30 +132,33 @@ hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
 -- (string dispatch like cyclenext is gone; cycle_next({next=false}) = prev).
 hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
 hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
--- Overview: Hyprspace plugin (KZDKM) — compositor-level expo: live window
--- previews, drag windows between workspaces, touchpad swipe. Enabled with:
---   hyprpm add https://github.com/KZDKM/Hyprspace && hyprpm enable Hyprspace
--- (interactive sudo, run once in a terminal). The closure only touches the
--- plugin namespace on keypress, so this bind is safe even before enabling.
--- Same key as mango's built-in overview for A/B muscle-memory parity.
-hl.bind(mainMod .. " + TAB", function()
-    hl.plugin.overview.toggle()
+-- Overview: hymission, niri's Mod+O slot. Closures touch the plugin only on
+-- keypress, so this file still loads if the plugin is disabled.
+-- onlycurrentworkspace is the current workspace; Shift shows every workspace.
+hl.bind(mainMod .. " + O", function()
+    hl.plugin.hymission.toggle("onlycurrentworkspace")
 end)
-hl.bind(mainMod .. " + SHIFT + TAB", function()
-    hl.plugin.overview.toggle("all")
+hl.bind(mainMod .. " + SHIFT + O", function()
+    hl.plugin.hymission.toggle("forceall")
 end)
+
+hl.config({
+    plugin = {
+        hymission = {
+            selected_expand_scale = 1.0,
+            hover_expand_scale = 1.25,
+            overview_focus_follows_mouse = 0,
+        }
+    }
+})
+
 -- Launcher — same Mod+Space muscle memory as niri (vicinae daemon client).
+hl.unbind(mainMod .. " + SPACE")
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("$HOME/.local/bin/vicinae toggle"))
-hl.bind(mainMod .. " + C", hl.dsp.window.close())
+
 -- niri parity: Mod+Q is the real close key (C kept as upstream's alias)
+hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
--- Screenshot, niri's Mod+P slot: slurp an area, copy PNG to clipboard.
--- (grim/slurp/wl-clipboard are baked in the image; Shift variant saves to
--- ~/Pictures/Screenshots like niri's default path.)
-hl.bind(mainMod .. " + P", hl.dsp.exec_cmd('grim -g "$(slurp)" - | wl-copy'))
-hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd('grim -g "$(slurp)" "$HOME/Pictures/Screenshots/$(date +%F-%H%M%S).png"'))
-hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprctl dispatch exit"))
 
 -- Focus / workspaces
 hl.bind(mainMod .. " + h", hl.dsp.focus({ direction = "left" }))
@@ -195,12 +176,20 @@ hl.on("window.active", function(w)
     hl.dispatch(hl.dsp.window.alter_zorder({ mode = "top", window = w }))
     raising_focused = false
 end)
+
 -- Adjacent workspace on this monitor, including an empty one (r±1).
-hl.bind(mainMod .. " + CTRL + h", hl.dsp.focus({ workspace = "r-1" }))
-hl.bind(mainMod .. " + CTRL + l", hl.dsp.focus({ workspace = "r+1" }))
+hl.unbind(mainMod .. "+ CTRL + k")
+hl.bind(mainMod .. " + CTRL + k", hl.dsp.focus({ workspace = "r-1" }))
+
+hl.unbind(mainMod .. "+ CTRL + j")
+hl.bind(mainMod .. " + CTRL + j", hl.dsp.focus({ workspace = "r+1" }))
+
 -- Move the focused window with you.
-hl.bind(mainMod .. " + SHIFT + h", hl.dsp.window.move({ workspace = "r-1" }))
-hl.bind(mainMod .. " + SHIFT + l", hl.dsp.window.move({ workspace = "r+1" }))
+hl.unbind(mainMod .. "+ SHIFT + k")
+hl.bind(mainMod .. " + SHIFT + k", hl.dsp.window.move({ workspace = "r-1" }))
+
+hl.unbind(mainMod .. "+ SHIFT + j")
+hl.bind(mainMod .. " + SHIFT + j", hl.dsp.window.move({ workspace = "r+1" }))
 
 for i = 1, 10 do
     local key = i % 10 -- workspace 10 maps to key 0
@@ -209,24 +198,12 @@ for i = 1, 10 do
 end
 
 -- Scratchpad
-hl.bind(mainMod .. " + S", hl.dsp.workspace.toggle_special("magic"))
-hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
+hl.bind(mainMod .. " + M", hl.dsp.workspace.toggle_special("magic"))
+hl.bind(mainMod .. " + SHIFT + M", hl.dsp.window.move({ workspace = "special:magic" }))
 
 -- Move/resize floating windows with Super + LMB/RMB drag
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
-
--- Laptop media keys (wpctl + brightnessctl are both in the image)
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), { locked = true, repeating = true })
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
-hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"), { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"), { locked = true, repeating = true })
-hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true })
-hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
 
 -- ── upstream's two near-universal window rules ────────────────────────────
 -- Ignore maximize requests from apps (floating envs want this).
