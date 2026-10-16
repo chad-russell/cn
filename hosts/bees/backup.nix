@@ -54,6 +54,13 @@
       # committed transactions (that exact mistake wiped reviews 2026-09-08).
       "/home/crussell/.local/share/wankbank"
 
+      # nsfw-suite (nsfw.internal.crussell.io): sqlite catalog + images
+      # under ~/nsfw-suite-data (app source in ~/nsfw-suite is small and
+      # lives outside the repo; the data is what matters). Directory
+      # include covers db + -wal/-shm siblings together, per the
+      # wankbank lesson above.
+      "/home/crussell/nsfw-suite-data"
+
       # Forgejo (git.crussell.io) on gateway: nightly `forgejo dump` zips
       # pulled from the VPS by forgejo-dump-pull.timer — the gateway itself
       # has no restic/S3 credentials (secret-free by design).

@@ -35,12 +35,26 @@ hl.env("XCURSOR_SIZE", "24")
 -- ── input ─────────────────────────────────────────────────────────────────
 hl.config({
     input = {
+        kb_options = "caps:swapescape", -- same as niri + GNOME (dconf layer)
         follow_mouse = 1,
         touchpad = {
             natural_scroll = true, -- trackpad direction like GNOME/niri
         },
     },
 })
+
+-- Hyprspace overview styling/behavior. NOTE: plugin config keys only exist
+-- once the plugin is loaded — UNCOMMENT this block after running
+-- `hyprpm enable Hyprspace`, else Hyprland errors on the unknown key
+-- (verified live). All options in the Hyprspace README: dragAlpha,
+-- showNewWorkspace, onBottom, reservedArea, exitKey, ...
+-- hl.config({
+--     plugin = {
+--         overview = {
+--             centerAligned = true, -- KDE/macOS-style centered strip
+--         },
+--     },
+-- })
 
 -- ── the trial's model: floating by default ────────────────────────────────
 hl.config({
@@ -88,20 +102,29 @@ hl.config({ scrolling = { fullscreen_on_one_column = true } })
 -- ── shell + overview ──────────────────────────────────────────────────────
 hl.on("hyprland.start", function()
     -- Import the Wayland env into the systemd user manager: the bubblebox
-    -- wrappers spawn GUI apps via `systemd-run --user`, and without uwsm
-    -- nothing else does this import for a plain GDM-launched session.
-    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-    -- vicinae (launcher): start directly. graphical-session.target REFUSES
-    -- manual start (RefuseManualStart — only uwsm/desktop sessions may pull
-    -- it), and nothing of ours hangs off it user-level anyway (verified
-    -- live: only uresourced/spice-vdagent do).
+    -- wrappers spawn GUI apps via `systemd-run --user`, and vicinae/portal
+    -- children need WAYLAND_DISPLAY *and* DISPLAY (X11-defaulting Electron
+    -- apps like Slack crash without DISPLAY even though XWayland is up —
+    -- diagnosed live 2026-11). Without uwsm nothing else does this import.
+    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE DISPLAY")
+    -- Start the session target FIRST: plain GDM-launched Hyprland never
+    -- starts graphical-session.target (RefuseManualStart — only uwsm/desktop
+    -- sessions may pull it), and xdg-desktop-portal.service has
+    -- Requisite= on it — without this, NO portals run (diagnosed live
+    -- 2026-11: every portal failure traced here). hyprland-session.target
+    -- (this repo, deployed to ~/.config/systemd/user/) pulls it in.
+    hl.exec_cmd("systemctl --user start hyprland-session.target")
+    -- vicinae (launcher): bound to graphical-session.target upstream, but
+    -- started directly too for determinism.
     hl.exec_cmd("systemctl --user start vicinae.service")
-    -- Workspace overview daemon (Super+Tab toggles it)
-    hl.exec_cmd("qs -c overview")
-    -- Pick ONE quickshell env per tasting session (see ./README.md). Kill the
-    -- old one first: pkill -f "qs -c" (shells are just dirs under
-    -- ~/.config/quickshell/<name>, run with `qs -c <name>`).
-    hl.exec_cmd("qs -c REPLACE_ME") -- e.g. caelestia / illogical-impulse
+    -- Desktop shell: Ambxst (Axenide; Go binary supervising a quickshell
+    -- shell + axctl + wl-paste). Deployed user-space: binary + axctl in
+    -- ~/.local/bin (checksum-verified), sources at ~/.local/src/ambxst,
+    -- pointer in ~/.local/share/ambxst/shell_repo, phosphor fonts installed.
+    -- PATH export: the compositor session PATH lacks ~/.local/bin and the
+    -- binary shells out to axctl. Swap shells by changing this one line.
+    -- Logs: journalctl --user -u ambxst-trial (first run was transient).
+    hl.exec_cmd("export PATH=$HOME/.local/bin:$PATH; exec $HOME/.local/bin/ambxst")
     -- Overview, compositor-level (needs `hyprpm add KZDKM/Hyprspace` first):
     -- hl.exec_cmd("hyprctl dispatch overviewtoggle")
 end)
@@ -114,18 +137,32 @@ local mainMod = "SUPER"
 
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
--- App switching: Alt+Tab muscle memory (cyclenext via hyprctl; no verified
--- hl.dsp form for it).
-hl.bind("ALT + TAB", hl.dsp.exec_cmd("hyprctl dispatch cyclenext"))
-hl.bind("ALT + SHIFT + TAB", hl.dsp.exec_cmd("hyprctl dispatch cyclenext prev"))
--- Overview: quickshell-overview module (git-cloned to
--- ~/.config/quickshell/overview; same key as mango's built-in overview so
--- the A/B comparison shares muscle memory). Hyprspace was the alternative
--- but hyprpm demands an interactive sudo — revisit if wanted.
-hl.bind(mainMod .. " + TAB", hl.dsp.exec_cmd("qs ipc -c overview call overview toggle"))
+-- App switching: Alt+Tab muscle memory. 0.56-native typed dispatchers
+-- (string dispatch like cyclenext is gone; cycle_next({next=false}) = prev).
+hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
+hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
+-- Overview: Hyprspace plugin (KZDKM) — compositor-level expo: live window
+-- previews, drag windows between workspaces, touchpad swipe. Enabled with:
+--   hyprpm add https://github.com/KZDKM/Hyprspace && hyprpm enable Hyprspace
+-- (interactive sudo, run once in a terminal). The closure only touches the
+-- plugin namespace on keypress, so this bind is safe even before enabling.
+-- Same key as mango's built-in overview for A/B muscle-memory parity.
+hl.bind(mainMod .. " + TAB", function()
+    hl.plugin.overview.toggle()
+end)
+hl.bind(mainMod .. " + SHIFT + TAB", function()
+    hl.plugin.overview.toggle("all")
+end)
 -- Launcher — same Mod+Space muscle memory as niri (vicinae daemon client).
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("$HOME/.local/bin/vicinae toggle"))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
+-- niri parity: Mod+Q is the real close key (C kept as upstream's alias)
+hl.bind(mainMod .. " + Q", hl.dsp.window.close())
+-- Screenshot, niri's Mod+P slot: slurp an area, copy PNG to clipboard.
+-- (grim/slurp/wl-clipboard are baked in the image; Shift variant saves to
+-- ~/Pictures/Screenshots like niri's default path.)
+hl.bind(mainMod .. " + P", hl.dsp.exec_cmd('grim -g "$(slurp)" - | wl-copy'))
+hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd('grim -g "$(slurp)" "$HOME/Pictures/Screenshots/$(date +%F-%H%M%S).png"'))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprctl dispatch exit"))
 
