@@ -152,52 +152,20 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # uwsm). Drop the plain entry so GDM offers exactly one.
 RUN rm -f /usr/share/wayland-sessions/hyprland.desktop
 
-# ---- 2.5. Build + install our niri-caelestia-shell fork ------------------
-# The shell is a Quickshell config (pure QML) + a small C++ Quickshell plugin
-# (libcaelestia: qalculate wrapper, image analysis, niri IPC, cava/audio
-# providers) + `caelestia` version helper. We build it from OUR fork
-# (chad-russell/niri-caelestia-shell — maintenance fork of AyushKr2003's
-# archived niri port of Caelestia) at a pinned commit, same model as a
-# distro package: system-wide install (plugin → /usr/lib/qt6/qml/Caelestia,
-# helper → /usr/lib/caelestia, shell QML → /etc/xdg/quickshell/
-# niri-caelestia-shell), no user-clone needed to run it. Iterating on the
-# shell happens in a user clone at ~/.config/quickshell/niri-caelestia-shell
-# (same config name shadows the system copy — that's the Quickshell lookup
-# order); the image copy is the stable baseline.
-#
-# Pin is deliberate: bump on purpose, not by drift. Rebuilds are cached
-# by the dnf layer below this one; this layer recompiles only when the pin
-# moves (~2-3 min). The toolchain + *-devel packages stay in the image on
-# purpose: this is the machine we iterate on the shell from, so building
-# the C++ plugin on-host is a feature, not bloat.
-#
-# NOTE on prefixes: upstream's CMake install dirs are RELATIVE ("usr/lib/...,
-# etc/xdg/..."), so the prefix MUST be "/" (their README's invocation) —
-# CMAKE_INSTALL_PREFIX=/usr yields /usr/usr/... and /usr/etc/..., the latter
-# failing `bootc container lint` (etc-usretc). Two more overrides, both
-# required on Fedora (upstream defaults are Arch-flavored):
-#   - INSTALL_QMLDIR must be /usr/lib64/qt6/qml (Fedora's Qt6 QML2_IMPORT_DIR;
-#     the default usr/lib/qt6/qml is Arch's layout — landed there on first
-#     build attempt and `import Caelestia` would fail at runtime).
-#   - INSTALL_QSCONFDIR is the fork's canonical config name so `qs -c
-#     niri-caelestia-shell` (spawn line in niri config.kdl + ipc binds)
-#     resolves against this install.
-ADD https://github.com/chad-russell/niri-caelestia-shell/archive/566f92997d27dbce4e5315b1a35d9d143ce0db5b.tar.gz /tmp/ncs.tar.gz
-RUN tar -xzf /tmp/ncs.tar.gz -C /tmp \
-    && dnf5 -y install cmake ninja-build gcc-c++ \
-                       qt6-qtbase-devel qt6-qtdeclarative-devel \
-                       qt6-qt5compat-devel qt6-qtmultimedia-devel \
-                       fftw-devel libqalculate-devel pipewire-devel \
-                       aubio-devel \
-    && cmake -S /tmp/niri-caelestia-shell-566f92997d27dbce4e5315b1a35d9d143ce0db5b \
-           -B /tmp/ncs-build \
-           -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ \
-           -DINSTALL_QMLDIR=usr/lib64/qt6/qml \
-           -DINSTALL_QSCONFDIR=etc/xdg/quickshell/niri-caelestia-shell \
-           -DDISTRIBUTOR="cn image build" \
-    && cmake --build /tmp/ncs-build \
-    && cmake --install /tmp/ncs-build \
-    && rm -rf /tmp/ncs.tar.gz /tmp/niri-caelestia-shell-566f92997d27dbce4e5315b1a35d9d143ce0db5b /tmp/ncs-build
+# ---- 2.5. Ambxst shell binaries (all compositors) -------------------------
+# Ambxst replaces the retired niri-caelestia-shell fork (2026-11): one Go
+# binary supervising a quickshell shell + axctl, running under BOTH niri and
+# Hyprland. Pinned release, SHA256-verified. The shell QML sources clone
+# per-user to ~/.local/src/ambxst (ambxst finds them via the pointer file
+# ~/.local/share/ambxst/shell_repo; axctl.toml there maps compositor
+# targets). Phosphor icon fonts install user-side with the sources.
+RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/ambxst-linux-amd64 -o /tmp/ambxst \
+    && curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/SHA256SUMS -o /tmp/ambxst.SHA256SUMS \
+    && (cd /tmp && sha256sum --check --ignore-missing ambxst.SHA256SUMS) \
+    && install -m 755 /tmp/ambxst /usr/bin/ambxst \
+    && curl -fsSL https://github.com/Axenide/axctl/releases/download/v0.0.29/axctl_linux_amd64 -o /tmp/axctl \
+    && install -m 755 /tmp/axctl /usr/bin/axctl \
+    && rm -f /tmp/ambxst /tmp/ambxst.SHA256SUMS /tmp/axctl
 
 # ---- 2.7. Hyprland plugin build deps (hyprpm) ----------------------------
 # hyprpm compiles the Hyprland SOURCE itself for headers when building
@@ -209,7 +177,7 @@ RUN tar -xzf /tmp/ncs.tar.gz -C /tmp \
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y --setopt=install_weak_deps=False install \
-        meson glslang-devel glaze \
+        cmake ninja-build gcc-c++ meson glslang-devel glaze \
         gtk4-devel gtk4-layer-shell-devel libadwaita-devel \
         aquamarine-devel cairo-devel libglvnd-devel mesa-libgbm-devel \
         glib2-devel hwdata-devel hyprcursor-devel hyprgraphics-devel \

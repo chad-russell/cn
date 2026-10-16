@@ -19,9 +19,7 @@ packages = [
   "nvim", "oh-my-posh", "pnpm", "psql", "rg", "rust-dev", "sops", "slack", "terraform",
   "tokei", "uv", "vicinae", "witr", "ghostty", "wezterm", "yazi", "zoxide",
 ]
-# noctalia removed 2026-09-02 — replaced by the niri-caelestia-shell fork
-# (built into the host image, Containerfile step 2.5; notifications, panels,
-# lock, brightness/volume all come from the fork now).
+# (shell history: noctalia → niri-caelestia-shell fork → Ambxst, 2026-11)
 
 # ── Flatpak apps ([flatpak], bubblebox ≥ 0.4.0) ──────────────────────────────
 # Declarative flatpaks in the PER-USER installation (no root/polkit; app data
@@ -115,11 +113,6 @@ dst = ".config/oh-my-posh.json"
 [[files]]
 dst = ".config/environment.d/10-bubblebox.conf"
 
-# niri-caelestia-shell color-script venv pointer (see the file header for
-# how the venv is built/maintained)
-[[files]]
-dst = ".config/environment.d/caelestia.conf"
-
 # Declared dconf defaults: a keyfile compiled into a file-db layered UNDER the
 # user-db via DCONF_PROFILE (Settings changes still win; `dconf reset` falls
 # back to the declared value). See .config/dconf/bubblebox.d/00-thinkpad.
@@ -162,11 +155,6 @@ dst = ".config/gtk-3.0/settings.ini"
 [[files]]
 dst = ".config/gtk-4.0/settings.ini"
 
-# caelestia shell preferences (bar/border/launcher). monitors/ under caelestia
-# is per-output runtime state — deliberately NOT managed.
-[[files]]
-dst = ".config/caelestia/shell.json"
-
 # Login autostart. Real files, not symlinks: the old zen symlink pointed at
 # the SYSTEM flatpak export, gone since the per-user flatpak migration.
 [[files]]
@@ -180,9 +168,9 @@ dst = ".config/autostart/ghostty.desktop"
 dst = ".local/share/flatpak/overrides/global"
 
 
-# Hyprland trial (2026-09-01 → 2026-09-02) retired: hyprland.lua and the
-# session-bridge target removed with it. The niri session is now paired with
-# our niri-caelestia-shell fork (built into the image, Containerfile 2.5).
+# Desktop shell is Ambxst (2026-11): one shell for niri AND Hyprland, binary
+# baked into the image (Containerfile 2.5), sources cloned per-user to
+# ~/.local/src/ambxst. Replaced the niri-caelestia-shell fork.
 
 [[files]]
 dst = ".config/ghostty/config"
@@ -255,12 +243,11 @@ name = "buzz-desktop-update.service"
 name = "buzz-desktop-update.timer"
 enable = true
 
-# The niri-caelestia-shell fork, as a systemd user unit (replaces the old
-# `spawn-at-startup "qs" ...` line in niri config.kdl): enabled via
-# niri.service.wants so it only runs under niri, and Restart=on-failure
-# turns a startup-race crash into a 1s blip. See the unit header.
+# Ambxst desktop shell under niri (same pattern the caelestia unit used:
+# niri.service.wants, Restart=on-failure). Under Hyprland the shell starts
+# from hyprland.lua instead — never both.
 [[units]]
-name = "caelestia-shell"
+name = "ambxst"
 enable = true
 
 # think host-image pipeline consumer (see .local/bin/thinkpad-image-update):

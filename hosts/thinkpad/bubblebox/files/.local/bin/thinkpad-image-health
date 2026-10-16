@@ -22,7 +22,7 @@ set -euo pipefail
 NTFY="https://ntfy.internal.crussell.io/homelab-alerts"
 
 # Let the session and shell settle before judging them (the unit fires at
-# user-manager start; niri + caelestia-shell come up seconds later).
+# user-manager start; niri + ambxst come up seconds later).
 sleep 90
 
 failed=()
@@ -32,14 +32,14 @@ check() {  # check <description> <path>
 
 check "image version stamp" /usr/lib/host-image-thinkpad-version
 check "niri session" /usr/share/wayland-sessions/niri.desktop
-check "shell QML" /etc/xdg/quickshell/niri-caelestia-shell/shell.qml
-check "shell plugin" /usr/lib64/qt6/qml/Caelestia/qmldir
+check "shell binary ambxst" /usr/bin/ambxst
+check "shell helper axctl" /usr/bin/axctl
 check "zot registry drop-in" /etc/containers/registries.conf.d/10-homelab-registry.conf
 
 # The shell unit only runs under the niri session; "failed" (not merely
 # inactive) after the settle delay means it crashed through its restarts.
-if systemctl --user is-failed caelestia-shell.service >/dev/null 2>&1; then
-  failed+=("caelestia-shell.service failed (journalctl --user -u caelestia-shell)")
+if systemctl --user is-failed ambxst.service >/dev/null 2>&1; then
+  failed+=("ambxst.service failed (journalctl --user -u ambxst)")
 fi
 
 if [ "${#failed[@]}" -eq 0 ]; then
