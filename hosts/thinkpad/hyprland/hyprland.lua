@@ -47,16 +47,14 @@ hl.config({
     },
 })
 
--- Hyprspace overview styling/behavior (keys exist now that the plugin is
--- enabled; all options in its README: dragAlpha, showNewWorkspace, onBottom,
--- reservedArea, exitKey, overrideAnimSpeed, ...)
-hl.config({
-    plugin = {
-        overview = {
-            centerAligned = true, -- KDE/macOS-style centered strip
-        },
-    },
-})
+-- Overview plugin: hymission (mission-control style; Hyprspace was retired
+-- after the A/B). Binds are GUARDED below — in Lua config mode the plugin
+-- loads asynchronously, so hl.plugin.hymission is nil on the first config
+-- pass; the plugin triggers a config reload after loading and the second
+-- pass registers the binds (pattern from hymission's README). Do NOT
+-- declare plugin.hymission config here unless the plugin is enabled —
+-- unknown plugin keys are hard config errors (same trap as Hyprspace's
+-- plugin.overview block).
 
 -- ── the trial's model: floating by default ────────────────────────────────
 -- APPEARANCE PAIRING: Ambxst/axctl applies look changes as LIVE keywords
@@ -159,18 +157,24 @@ hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
 -- (string dispatch like cyclenext is gone; cycle_next({next=false}) = prev).
 hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
 hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
--- Overview: Hyprspace plugin (KZDKM) — compositor-level expo: live window
--- previews, drag windows between workspaces, touchpad swipe. Enabled with:
---   hyprpm add https://github.com/KZDKM/Hyprspace && hyprpm enable Hyprspace
--- (interactive sudo, run once in a terminal). The closure only touches the
--- plugin namespace on keypress, so this bind is safe even before enabling.
--- Same key as mango's built-in overview for A/B muscle-memory parity.
-hl.bind(mainMod .. " + TAB", function()
-    hl.plugin.overview.toggle()
-end)
-hl.bind(mainMod .. " + SHIFT + TAB", function()
-    hl.plugin.overview.toggle("all")
-end)
+-- Overview: hymission (mission-control). Binds guarded — see the note at
+-- the top of the file; they register on the plugin's post-load config
+-- reload. Enabled via hyprpm (remove + add + enable after the image has
+-- the gtk4 deps).
+if hl.plugin and hl.plugin.hymission then
+    hl.bind(mainMod .. " + TAB", hl.plugin.hymission.toggle)
+    hl.bind(mainMod .. " + SHIFT + TAB", function()
+        hl.plugin.hymission.toggle("reverse")
+    end)
+    hl.bind(mainMod .. " + CTRL + TAB", hl.plugin.hymission.close)
+    -- Scoped overviews:
+    hl.bind(mainMod .. " + A", function()
+        hl.plugin.hymission.toggle("forceall")
+    end)
+    hl.bind(mainMod .. " + S", function()
+        hl.plugin.hymission.open("onlycurrentworkspace")
+    end)
+end
 -- Launcher — same Mod+Space muscle memory as niri (vicinae daemon client).
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("$HOME/.local/bin/vicinae toggle"))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
