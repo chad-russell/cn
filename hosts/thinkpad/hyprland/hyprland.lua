@@ -99,10 +99,12 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user start vicinae.service")
     -- Workspace overview daemon (Super+Tab toggles it)
     hl.exec_cmd("qs -c overview")
-    -- Pick ONE quickshell env per tasting session (see ./README.md). Kill the
-    -- old one first: pkill -f "qs -c" (shells are just dirs under
-    -- ~/.config/quickshell/<name>, run with `qs -c <name>`).
-    hl.exec_cmd("qs -c REPLACE_ME") -- e.g. caelestia / illogical-impulse
+    -- Desktop shell: serpantinum (quickshell-based; supports hyprland, niri,
+    -- sway AND mango). Deployed user-space at ~/.local/share/serpantinum via
+    -- the atomic-safe manual install (see hyprland/README.md); swap shells by
+    -- changing this one line. Trial-run logs: journalctl --user -u
+    -- serpantinum-trial (transient unit from the first SSH-launched run).
+    hl.exec_cmd("$HOME/.local/bin/serpantinumd start")
     -- Overview, compositor-level (needs `hyprpm add KZDKM/Hyprspace` first):
     -- hl.exec_cmd("hyprctl dispatch overviewtoggle")
 end)
