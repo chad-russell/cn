@@ -36,7 +36,11 @@ hl.env("XCURSOR_SIZE", "24")
 hl.config({
     input = {
         kb_options = "caps:swapescape", -- same as niri + GNOME (dconf layer)
-        follow_mouse = 1,
+        follow_mouse = 0,
+        -- Keyboard focus (Alt+Tab) must be allowed to leave the hovered
+        -- window. With this on, Hyprland's raise path snaps focus back to
+        -- whatever is under the cursor.
+        mouse_refocus = false,
         touchpad = {
             natural_scroll = true, -- trackpad direction like GNOME/niri
         },
@@ -57,14 +61,30 @@ hl.config({
 -- })
 
 -- ── the trial's model: floating by default ────────────────────────────────
+-- APPEARANCE PAIRING: Ambxst/axctl applies look changes as LIVE keywords
+-- from ~/.local/share/ambxst/axctl.toml and never persists them here —
+-- every reload of this file re-asserts whatever is declared below. So the
+-- geometry values here intentionally MIRROR axctl.toml (gaps 2/4, border 2,
+-- rounding 16, blur on). Change appearance in the Ambxst UI for a live
+-- preview, then mirror the winner into this block (both sides must agree,
+-- else you get the flash-then-revert effect). Border COLORS stay out of
+-- here on purpose: axctl sets them from the live matugen palette.
 hl.config({
     general = {
-        gaps_in = 6,
-        gaps_out = 10,
+        gaps_in = 2,
+        gaps_out = 4,
         border_size = 2,
         -- Fallback layout for the rare window you DO tile into a layout
         -- workspace (everything else floats via the rule below).
         layout = "dwindle",
+    },
+    decoration = {
+        rounding = 16,
+        blur = {
+            enabled = true,
+            size = 4,
+            passes = 2,
+        },
     },
     animations = { enabled = true },
 })
@@ -167,10 +187,27 @@ hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprctl dispatch exit"))
 
 -- Focus / workspaces
-hl.bind(mainMod .. " + left", hl.dsp.focus({ direction = "left" }))
-hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
-hl.bind(mainMod .. " + up", hl.dsp.focus({ direction = "up" }))
-hl.bind(mainMod .. " + down", hl.dsp.focus({ direction = "down" }))
+hl.bind(mainMod .. " + h", hl.dsp.focus({ direction = "left" }))
+hl.bind(mainMod .. " + l", hl.dsp.focus({ direction = "right" }))
+hl.bind(mainMod .. " + k", hl.dsp.focus({ direction = "up" }))
+hl.bind(mainMod .. " + j", hl.dsp.focus({ direction = "down" }))
+
+-- Any focus change raises that floating window, so Alt+Tab is visible.
+local raising_focused = false
+hl.on("window.active", function(w)
+    if raising_focused or w == nil or not w.floating then
+        return
+    end
+    raising_focused = true
+    hl.dispatch(hl.dsp.window.alter_zorder({ mode = "top", window = w }))
+    raising_focused = false
+end)
+-- Adjacent workspace on this monitor, including an empty one (r±1).
+hl.bind(mainMod .. " + CTRL + h", hl.dsp.focus({ workspace = "r-1" }))
+hl.bind(mainMod .. " + CTRL + l", hl.dsp.focus({ workspace = "r+1" }))
+-- Move the focused window with you.
+hl.bind(mainMod .. " + SHIFT + h", hl.dsp.window.move({ workspace = "r-1" }))
+hl.bind(mainMod .. " + SHIFT + l", hl.dsp.window.move({ workspace = "r+1" }))
 
 for i = 1, 10 do
     local key = i % 10 -- workspace 10 maps to key 0
