@@ -146,6 +146,12 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     # updater, cjust recipes) and system units have no ~/.local/bin on PATH.
     # && dnf5 -y install cosmic-desktop
 
+# ---- 2.4. single Hyprland login entry ------------------------------------
+# The hyprland package ships a plain hyprland.desktop; the uwsm-managed
+# session (hyprland-uwsm.desktop) is the one we run (the config assumes
+# uwsm). Drop the plain entry so GDM offers exactly one.
+RUN rm -f /usr/share/wayland-sessions/hyprland.desktop
+
 # ---- 2.5. Build + install our niri-caelestia-shell fork ------------------
 # The shell is a Quickshell config (pure QML) + a small C++ Quickshell plugin
 # (libcaelestia: qalculate wrapper, image analysis, niri IPC, cava/audio
@@ -215,6 +221,21 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         wayland-protocols-devel libxcb-devel xcb-util-errors-devel \
         xcb-util-wm-devel xcb-util-renderutil-devel xcb-util-devel \
         libXcursor-devel libxkbcommon-devel xorg-x11-server-Xwayland-devel
+
+
+# ---- 2.8. MangoWM (repo-scoped Terra install) ----------------------------
+# mangowm returns for the comparison evening. The first attempt (bake era)
+# installed it with ALL repos enabled and Terra's package set collided with
+# the mineiro COPR stack inside one rpm transaction (repo drift, 2026-11;
+# installs clean in isolation). Fix: this transaction runs with every COPR
+# disabled — mangowm + deps resolve from Terra + Fedora only and never meet
+# the COPR-installed set.
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    dnf5 -y install \
+        'https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-6.noarch.rpm' \
+        'https://repos.fyralabs.com/terra44/terra-release-0:44-10.noarch.rpm' \
+    && dnf5 -y --disablerepo="copr*" --setopt=install_weak_deps=False install mangowm
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/

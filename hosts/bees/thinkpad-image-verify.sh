@@ -10,8 +10,8 @@
 # What it asserts on a mounted image (fail = non-zero before publish/merge):
 #   1. baked /etc/hosts — COPY is the one Containerfile step whose failure
 #      is silent (RUN would be runtime-masked), so grep the layer itself.
-#   2. wayland sessions — niri + hyprland present (mango dropped from the
-#      trial image 2026-11 after Terra repo drift broke the build), cosmic absent.
+#   2. wayland sessions — niri + hyprland-uwsm + mango present, PLAIN hyprland
+#      entry rejected (one Hyprland in GDM), cosmic absent.
 #   3. niri-caelestia-shell artifacts — a silent CMake/install failure
 #      must not ship an image whose shell is missing at next login.
 #
@@ -40,22 +40,32 @@ echo "    /etc/hosts entries verified in image layer"
 
 # ---- gate 2: wayland sessions -------------------------------------------
 echo "==> verifying wayland sessions in ${IMAGE}"
-# niri (primary) + the two 2026-11 compositor-trial sessions. Trial runbook:
-# hosts/thinkpad/hyprland/README.md. When the trial concludes, keep only the
-# winner's line here and drop the loser's install block in the Containerfile.
-for session in niri hyprland; do
+# niri (primary) + the uwsm-managed Hyprland session + mango (repo-scoped
+# Terra install). The PLAIN hyprland.desktop is deliberately removed
+# (Containerfile step 2.4) so GDM offers exactly one Hyprland entry.
+for session in niri hyprland-uwsm; do
   if [ ! -f "${VERIFY_MNT}/usr/share/wayland-sessions/${session}.desktop" ]; then
     echo "ERROR: ${session}.desktop missing from ${IMAGE}" >&2
-    echo "  expected sessions: niri + hyprland (GNOME ships in the base image)" >&2
+    echo "  expected sessions: niri + hyprland-uwsm + mango (GNOME in base)" >&2
     exit 1
   fi
 done
+if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/hyprland.desktop" ]; then
+  echo "ERROR: plain hyprland.desktop present — only the uwsm session is offered" >&2
+  echo "  Containerfile step 2.4 should have removed it" >&2
+  exit 1
+fi
+if ! ls "${VERIFY_MNT}/usr/share/wayland-sessions/" 2>/dev/null | grep -qi mango; then
+  echo "ERROR: no mango session file in ${IMAGE}" >&2
+  echo "  Containerfile step 2.8 (Terra/mangowm) did not land" >&2
+  exit 1
+fi
 if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/cosmic.desktop" ]; then
   echo "ERROR: cosmic.desktop present but COSMIC is soft-removed" >&2
   echo "  un-comment the cosmic lines in the Containerfile or drop this check" >&2
   exit 1
 fi
-echo "    wayland sessions verified: niri + hyprland (+ GNOME from base)"
+echo "    wayland sessions verified: niri + hyprland-uwsm + mango (+ GNOME from base)"
 
 # ---- gate 3: niri-caelestia-shell fork artifacts -------------------------
 echo "==> verifying niri-caelestia-shell artifacts in ${IMAGE}"
