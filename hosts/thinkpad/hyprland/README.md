@@ -134,13 +134,20 @@ One image rebuild, one bubblebox change, both familiar:
    `dnf5 -y copr enable mineiro/hyprland` +
    `dnf5 -y install hyprland hyprlock hypridle hyprpaper hyprpolkitagent`
    (+ the chosen shell's extra deps), then drop the rpm-ostree layer.
-2. `bubblebox/profile.toml` `[[files]]`: declare `.config/hypr` (a dir entry,
+2. **The build gate will reject the image until it is updated**: the shared
+   verify script (`hosts/bees/thinkpad-image-verify.sh`, used by BOTH the
+   nightly build and the CI `thinkpad-image` PR job) deliberately fails if
+   `hyprland.desktop` is present — it was erected after round 1 to enforce
+   the niri-only image. Baking Hyprland means flipping that check to assert
+   the Hyprland session instead of rejecting it, in the same PR.
+3. `bubblebox/profile.toml` `[[files]]`: declare `.config/hypr` (a dir entry,
    like `.config/nvim`) and any shell config that should be repo-tracked.
-3. Move `hyprland-shell@.service` into `bubblebox/units/` (modeled on
+4. Move `hyprland-shell@.service` into `bubblebox/units/` (modeled on
    `caelestia-shell.service`, but `WantedBy=hyprland.service`) if running
    the uwsm session.
-4. `thinkpad-image-health` asserts the niri session/shell artifacts — if
-   Hyprland becomes the primary, extend its checks then.
+5. `thinkpad-image-health` asserts the niri session/shell artifacts — it
+   stays green while niri remains in the image; extend its checks only if
+   Hyprland becomes the primary.
 
 Until then nothing here touches the image: this directory is staging only.
 
