@@ -11,6 +11,7 @@ host.
 ├── nebula/         # Nebula VPN container/service
 ├── backup/         # restic S3 backup (units in host-image/; image build + seeding here)
 ├── wycliffe-vpn/   # on-demand GlobalProtect wrapper
+├── hyprland/       # round-2 Hyprland exploration kit (layered, not baked)
 └── bubblebox/      # declarative host profile (packages + dotfiles + units)
     ├── profile.toml   # desired package set + [[files]] + [[units]] declarations
     ├── files/         # host-native dotfiles, mirroring $HOME (managed by `bubblebox apply`)
@@ -147,6 +148,15 @@ ship, so the eventual ostree merge stays clean.
 ### `wycliffe-vpn/`
 On-demand Wycliffe GlobalProtect container workflow. See
 `wycliffe-vpn/README.md`.
+
+### `hyprland/`
+Round-2 Hyprland exploration kit (2026-11): runbook + skeleton
+`hyprland.lua` (float-by-default, per-workspace scrolling/monocle layouts) +
+a quickshell template unit. Exploration deliberately stays OUT of the host
+image — Hyprland is layered once via `rpm-ostree` from the `mineiro/hyprland`
+COPR (F44 ships no hyprland package) and everything else iterates in
+`~/.config`. Only a keeper gets baked into `host-image/`. See
+`hyprland/README.md`.
 
 ### `bubblebox/`
 The host's **bubblebox profile** (`profile.toml`) — the desired set of bubblebox
