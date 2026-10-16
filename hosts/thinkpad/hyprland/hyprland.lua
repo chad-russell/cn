@@ -43,6 +43,19 @@ hl.config({
     },
 })
 
+-- Hyprspace overview styling/behavior. NOTE: plugin config keys only exist
+-- once the plugin is loaded — UNCOMMENT this block after running
+-- `hyprpm enable Hyprspace`, else Hyprland errors on the unknown key
+-- (verified live). All options in the Hyprspace README: dragAlpha,
+-- showNewWorkspace, onBottom, reservedArea, exitKey, ...
+-- hl.config({
+--     plugin = {
+--         overview = {
+--             centerAligned = true, -- KDE/macOS-style centered strip
+--         },
+--     },
+-- })
+
 -- ── the trial's model: floating by default ────────────────────────────────
 hl.config({
     general = {
@@ -97,8 +110,6 @@ hl.on("hyprland.start", function()
     -- it), and nothing of ours hangs off it user-level anyway (verified
     -- live: only uresourced/spice-vdagent do).
     hl.exec_cmd("systemctl --user start vicinae.service")
-    -- Workspace overview daemon (Super+Tab toggles it)
-    hl.exec_cmd("qs -c overview")
     -- Desktop shell: serpantinum (quickshell-based; supports hyprland, niri,
     -- sway AND mango). Deployed user-space at ~/.local/share/serpantinum via
     -- the atomic-safe manual install (see hyprland/README.md); swap shells by
@@ -121,11 +132,18 @@ hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
 -- (string dispatch like cyclenext is gone; cycle_next({next=false}) = prev).
 hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
 hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
--- Overview: quickshell-overview module (git-cloned to
--- ~/.config/quickshell/overview; same key as mango's built-in overview so
--- the A/B comparison shares muscle memory). Hyprspace was the alternative
--- but hyprpm demands an interactive sudo — revisit if wanted.
-hl.bind(mainMod .. " + TAB", hl.dsp.exec_cmd("qs ipc -c overview call overview toggle"))
+-- Overview: Hyprspace plugin (KZDKM) — compositor-level expo: live window
+-- previews, drag windows between workspaces, touchpad swipe. Enabled with:
+--   hyprpm add https://github.com/KZDKM/Hyprspace && hyprpm enable Hyprspace
+-- (interactive sudo, run once in a terminal). The closure only touches the
+-- plugin namespace on keypress, so this bind is safe even before enabling.
+-- Same key as mango's built-in overview for A/B muscle-memory parity.
+hl.bind(mainMod .. " + TAB", function()
+    hl.plugin.overview.toggle()
+end)
+hl.bind(mainMod .. " + SHIFT + TAB", function()
+    hl.plugin.overview.toggle("all")
+end)
 -- Launcher — same Mod+Space muscle memory as niri (vicinae daemon client).
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("$HOME/.local/bin/vicinae toggle"))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
