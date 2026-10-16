@@ -175,8 +175,12 @@ pairs="$(
       done
 )"
 missing="$(printf '%s\n' "$pairs" | while IFS=$'\t' read -r unit tgt; do
-  [ -n "$unit" ] && [ ! -e "$HOME/.config/systemd/user/$tgt.wants/$unit" ] \
-    && printf '%s (missing from %s.wants)\n' "$unit" "$tgt"
+  # NB: plain if — under set -e an && chain whose LAST executed test fails
+  # (the common case on a HEALTHY machine: [ ! -e ] is false) would kill the
+  # whole script with exit 1 on the healthy path.
+  if [ -n "$unit" ] && [ ! -e "$HOME/.config/systemd/user/$tgt.wants/$unit" ]; then
+    printf '%s (missing from %s.wants)\n' "$unit" "$tgt"
+  fi
 done)"
 if [ -n "$missing" ]; then
   echo "==> unit enablement:"
