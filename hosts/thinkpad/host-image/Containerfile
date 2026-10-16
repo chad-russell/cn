@@ -193,14 +193,19 @@ RUN tar -xzf /tmp/ncs.tar.gz -C /tmp \
 
 # ---- 2.7. MangoWM (B half of the 2026-11 compositor trial) ---------------
 # BAKE PR (dormant): mangowm comes from the Terra third-party repo (not a
-# COPR); terra-release is just the repo-file rpm. URL pinned deliberately —
-# the filename carries epoch:release (bump on purpose when Terra bumps).
-# mangowm pulls scenefx. Verified live from think 2026-11: mangowm
-# 0.18.1-1.fc44 + scenefx 0.5-1.fc44 in terra44. If HYPRLAND wins the
-# trial instead, delete this step (and the mango half of the verify gate).
+# COPR). Terra is a chicken-and-egg pair — terra-release (the repo file)
+# Requires terra-gpg-keys, which only exists inside the repo terra-release
+# enables — so BOTH rpms are installed together from pinned URLs (epoch is
+# in the filenames; bump on purpose when Terra bumps). There is no published
+# terra.repo to fetch instead (404, verified 2026-11). mangowm pulls scenefx.
+# Verified live from think 2026-11: mangowm 0.18.1-1.fc44 + scenefx 0.5-1.fc44
+# in terra44. If HYPRLAND wins the trial instead, delete this step (and the
+# mango half of the verify gate).
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
-    dnf5 -y install 'https://repos.fyralabs.com/terra44/terra-release-0:44-10.noarch.rpm' \
+    dnf5 -y install \
+        'https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-6.noarch.rpm' \
+        'https://repos.fyralabs.com/terra44/terra-release-0:44-10.noarch.rpm' \
     && dnf5 -y --setopt=install_weak_deps=False install mangowm
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
