@@ -35,6 +35,7 @@ hl.env("XCURSOR_SIZE", "24")
 -- ── input ─────────────────────────────────────────────────────────────────
 hl.config({
     input = {
+        kb_options = "caps:swapescape", -- same as niri + GNOME (dconf layer)
         follow_mouse = 1,
         touchpad = {
             natural_scroll = true, -- trackpad direction like GNOME/niri
