@@ -135,6 +135,12 @@ kind = "dir"
 
 [[files]]
 dst = ".config/niri/config.kdl"
+
+# Hyprland config (uwsm session; Ambxst shell, hymission overview). Same
+# symlink-into-repo model as niri: LLM/local edits in ~/.config land in the
+# repo checkout directly — commit from think is the only remaining step.
+[[files]]
+dst = ".config/hypr/hyprland.lua"
 # ── more host-resident config (2026-10-15: previously hand-edited) ────────
 [[files]]
 dst = ".gitconfig"

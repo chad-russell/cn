@@ -51,16 +51,17 @@ notes live in `host-image/Containerfile` step 2 and
 
 ## Stage the configs
 
+The Hyprland config is a bubblebox `[[files]]` entry — it lives at
+`bubblebox/files/.config/hypr/hyprland.lua` in this repo and deploys as a
+symlink (same model as niri's config.kdl):
+
 ```bash
-mkdir -p ~/.config/hypr && cp ~/Code/cn/hosts/thinkpad/hyprland/hyprland.lua ~/.config/hypr/
-mkdir -p ~/.config/mango
-cp /etc/mango/config.conf ~/.config/mango/config.conf
-cat ~/Code/cn/hosts/thinkpad/hyprland/mango-snippet.conf >> ~/.config/mango/config.conf
-mango -c ~/.config/mango/config.conf -p
+cjust bubblebox-apply
 ```
 
-(The last line validates the config without starting the session. The
-hyprland copy may already be in place from the layered attempt.)
+After that, editing `~/.config/hypr/hyprland.lua` edits the repo checkout
+directly; commit from think is the only remaining step. (The mango snippet
+below is dormant since mango left the image.)
 
 ## The iterate loop (zero rebuilds)
 
