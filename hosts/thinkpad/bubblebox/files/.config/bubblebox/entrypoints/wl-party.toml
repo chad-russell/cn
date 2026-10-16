@@ -1,0 +1,10 @@
+# User entrypoint override for wl-party (per bubblebox-pkgs wl-party/entrypoint
+# comments): the packaged sandbox is Wayland-only with no home access, but
+# custom Rhai effects live at ~/.config/wl-party/effects/ — grant home read
+# access for those. Effects are declared in this repo (see the [[files]]
+# entry for .config/wl-party/effects).
+package = "wl-party"
+
+[sandbox]
+writable_run = true
+writable_home = true
