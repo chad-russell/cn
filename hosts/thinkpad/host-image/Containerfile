@@ -159,13 +159,13 @@ RUN rm -f /usr/share/wayland-sessions/hyprland.desktop
 # per-user to ~/.local/src/ambxst (ambxst finds them via the pointer file
 # ~/.local/share/ambxst/shell_repo; axctl.toml there maps compositor
 # targets). Phosphor icon fonts install user-side with the sources.
-RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/ambxst-linux-amd64 -o /tmp/ambxst \
+RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/ambxst-linux-amd64 -o /tmp/ambxst-linux-amd64 \
     && curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/SHA256SUMS -o /tmp/ambxst.SHA256SUMS \
     && (cd /tmp && sha256sum --check --ignore-missing ambxst.SHA256SUMS) \
-    && install -m 755 /tmp/ambxst /usr/bin/ambxst \
+    && install -m 755 /tmp/ambxst-linux-amd64 /usr/bin/ambxst \
     && curl -fsSL https://github.com/Axenide/axctl/releases/download/v0.0.29/axctl_linux_amd64 -o /tmp/axctl \
     && install -m 755 /tmp/axctl /usr/bin/axctl \
-    && rm -f /tmp/ambxst /tmp/ambxst.SHA256SUMS /tmp/axctl
+    && rm -f /tmp/ambxst-linux-amd64 /tmp/ambxst.SHA256SUMS /tmp/axctl
 
 # ---- 2.7. Hyprland plugin build deps (hyprpm) ----------------------------
 # hyprpm compiles the Hyprland SOURCE itself for headers when building

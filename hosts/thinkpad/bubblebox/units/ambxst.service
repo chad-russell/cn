@@ -18,6 +18,11 @@ StartLimitBurst=5
 Type=simple
 # ambxst supervises the quickshell shell + axctl + wl-paste; all three are
 # on /usr/bin. Shell QML sources resolve via ~/.local/share/ambxst/shell_repo.
+# PATH prepends ~/.local/bin: the user-side matugen 4.2 lives there (the
+# image ships 3.1 from Fedora; Ambxst's Material You pipeline needs
+# --source-color-index, added in 4.x) — without this the niri-side unit
+# spawns the old matugen and theming silently fails.
+Environment="PATH=%h/.local/bin:/usr/bin:/bin"
 ExecStart=/usr/bin/ambxst
 Restart=on-failure
 RestartSec=1
