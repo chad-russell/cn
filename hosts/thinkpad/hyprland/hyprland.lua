@@ -110,12 +110,14 @@ hl.on("hyprland.start", function()
     -- it), and nothing of ours hangs off it user-level anyway (verified
     -- live: only uresourced/spice-vdagent do).
     hl.exec_cmd("systemctl --user start vicinae.service")
-    -- Desktop shell: serpantinum (quickshell-based; supports hyprland, niri,
-    -- sway AND mango). Deployed user-space at ~/.local/share/serpantinum via
-    -- the atomic-safe manual install (see hyprland/README.md); swap shells by
-    -- changing this one line. Trial-run logs: journalctl --user -u
-    -- serpantinum-trial (transient unit from the first SSH-launched run).
-    hl.exec_cmd("$HOME/.local/bin/serpantinumd start")
+    -- Desktop shell: Ambxst (Axenide; Go binary supervising a quickshell
+    -- shell + axctl + wl-paste). Deployed user-space: binary + axctl in
+    -- ~/.local/bin (checksum-verified), sources at ~/.local/src/ambxst,
+    -- pointer in ~/.local/share/ambxst/shell_repo, phosphor fonts installed.
+    -- PATH export: the compositor session PATH lacks ~/.local/bin and the
+    -- binary shells out to axctl. Swap shells by changing this one line.
+    -- Logs: journalctl --user -u ambxst-trial (first run was transient).
+    hl.exec_cmd("export PATH=$HOME/.local/bin:$PATH; exec $HOME/.local/bin/ambxst")
     -- Overview, compositor-level (needs `hyprpm add KZDKM/Hyprspace` first):
     -- hl.exec_cmd("hyprctl dispatch overviewtoggle")
 end)
