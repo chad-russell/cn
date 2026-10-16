@@ -127,6 +127,13 @@ hl.bind(mainMod .. " + TAB", hl.dsp.exec_cmd("qs ipc -c overview call overview t
 -- Launcher — same Mod+Space muscle memory as niri (vicinae daemon client).
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("$HOME/.local/bin/vicinae toggle"))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
+-- niri parity: Mod+Q is the real close key (C kept as upstream's alias)
+hl.bind(mainMod .. " + Q", hl.dsp.window.close())
+-- Screenshot, niri's Mod+P slot: slurp an area, copy PNG to clipboard.
+-- (grim/slurp/wl-clipboard are baked in the image; Shift variant saves to
+-- ~/Pictures/Screenshots like niri's default path.)
+hl.bind(mainMod .. " + P", hl.dsp.exec_cmd('grim -g "$(slurp)" - | wl-copy'))
+hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd('grim -g "$(slurp)" "$HOME/Pictures/Screenshots/$(date +%F-%H%M%S).png"'))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprctl dispatch exit"))
 
