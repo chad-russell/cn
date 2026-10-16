@@ -69,13 +69,21 @@ echo "    wayland sessions verified: niri + hyprland-uwsm + mango (+ GNOME from 
 
 # ---- gate 3: desktop shell binaries (Ambxst) ------------------------------
 echo "==> verifying desktop shell binaries in ${IMAGE}"
-for artifact in "${VERIFY_MNT}/usr/bin/ambxst" "${VERIFY_MNT}/usr/bin/axctl" "${VERIFY_MNT}/usr/bin/qs"; do
+for artifact in "${VERIFY_MNT}/usr/bin/ambxst" "${VERIFY_MNT}/usr/bin/axctl" "${VERIFY_MNT}/usr/bin/quickshell"; do
   if [ ! -f "${artifact}" ]; then
     echo "ERROR: ${artifact} missing from ${IMAGE}" >&2
     echo "  Containerfile step 2.5 (Ambxst binaries) did not land" >&2
     exit 1
   fi
 done
+# NB: qs is an ABSOLUTE symlink (/usr/bin/qs -> /usr/bin/quickshell); testing
+# it through the host-mounted image tree would resolve against the HOST and
+# always fail on machines without quickshell installed. Test the real file
+# above; here only assert the link itself exists.
+if [ ! -L "${VERIFY_MNT}/usr/bin/qs" ]; then
+  echo "ERROR: /usr/bin/qs symlink missing from ${IMAGE}" >&2
+  exit 1
+fi
 # the retired niri-caelestia-shell fork must NOT come back by accident
 if [ -f "${VERIFY_MNT}/usr/lib64/qt6/qml/Caelestia/qmldir" ]; then
   echo "ERROR: Caelestia plugin present in ${IMAGE} — fork was retired 2026-11" >&2
