@@ -5,7 +5,7 @@ Description=Daily think host-image stage + lag check
 # Daily cadence plus a boot-time retry: a laptop misses calendar windows
 # while asleep/off, and a fresh boot is exactly when an up-to-date staged
 # deployment is most useful (next reboot applies it). Both elapses are
-# randomized a bit so this never collides with buzz-desktop-update.
+# randomized a bit to avoid colliding with other morning timers.
 OnCalendar=daily
 OnBootSec=25min
 # Fire even if the laptop was asleep/offline at the scheduled time

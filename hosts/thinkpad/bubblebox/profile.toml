@@ -188,12 +188,6 @@ kind = "dir"
 [[files]]
 dst = ".local/bin/zen-browser"
 
-# Buzz Desktop (block/buzz) updater engine — the AppImage itself lives in
-# ~/.local/share/buzz-desktop/, managed by this script, NOT here (binaries
-# are not dotfiles). See the script header for the update story.
-[[files]]
-dst = ".local/bin/buzz-desktop"
-
 # think host-image consumer: daily `bootc upgrade` stage + ntfy lag alert
 # (the sudoers grant it relies on is baked into the image — Containerfile
 # step 3.8). Full story in the script header.
@@ -214,9 +208,7 @@ dst = ".local/bin/thinkpad-bubblebox-check"
 [[files]]
 dst = ".local/bin/dconf-bubblebox"
 
-[[files]]
-dst = ".local/share/applications/buzz.desktop"
-
+# Application menu entries
 [[files]]
 dst = ".local/share/applications/wezterm.desktop"
 
@@ -232,15 +224,6 @@ dst = ".local/share/applications/ghostty.desktop"
 # hosts/bee. Don't run CI on the laptop.)
 [[units]]
 name = "vicinae"
-enable = true
-
-# Buzz Desktop AppImage updater — daily digest-verified update check
-# (the app's own Tauri updater ships endpoint-less; see buzz-desktop).
-[[units]]
-name = "buzz-desktop-update.service"
-
-[[units]]
-name = "buzz-desktop-update.timer"
 enable = true
 
 # Ambxst desktop shell under niri (same pattern the caelestia unit used:

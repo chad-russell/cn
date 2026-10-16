@@ -411,10 +411,6 @@ dst = ".local/bin/zen-browser"
 blob = "e154842cd6b489d757daeeea9df58ea0ccc041c57d7eb411b8556e608382bece"
 
 [[file]]
-dst = ".local/bin/buzz-desktop"
-blob = "b9edb59fb7ee2bc9fc8cd8e05720d4771849a124a5bfaebe7126224518e15aaa"
-
-[[file]]
 dst = ".local/bin/thinkpad-image-update"
 blob = "185969847a108f50467d6aa4b877279279668c4d504feb4a5e36f17f7971a752"
 
@@ -431,10 +427,6 @@ dst = ".local/bin/dconf-bubblebox"
 blob = "bf301232e9964791fa50b5cc23d444433942ad276c39e30a16e760a138cce6c4"
 
 [[file]]
-dst = ".local/share/applications/buzz.desktop"
-blob = "ad1d0b76278444ff144fa39d3dd4ab98078712d7a5672ea1f6fa4a7084ec5f92"
-
-[[file]]
 dst = ".local/share/applications/wezterm.desktop"
 blob = "3e05eb7fae2aafa8633757fbb4a89acad85c8d7a266e66d7cd24795a83db9cc6"
 
@@ -446,16 +438,6 @@ blob = "1512d2a7df17ca87693d33175e35648dae817ffaf30b00831447fa376b34eca7"
 name = "vicinae"
 enabled = true
 blob = "8857fc11670ea0765d9e67c0a851771d97d4150625760172a2781e3416bfa8ab"
-
-[[unit]]
-name = "buzz-desktop-update.service"
-enabled = false
-blob = "ede4f01fae4521aa4b3beed5aee6b8a66c1820088b322027f1bc41087b484f16"
-
-[[unit]]
-name = "buzz-desktop-update.timer"
-enabled = true
-blob = "b5d02beb164b169177adeca2bf6e578c0e2a50f42ca9e5c510635872c39f455d"
 
 [[unit]]
 name = "ambxst"
