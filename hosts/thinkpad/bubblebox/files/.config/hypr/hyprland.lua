@@ -120,20 +120,13 @@ hl.config({ scrolling = { fullscreen_on_one_column = true } })
 -- See https://github.com/hyprwm/Hyprland/tree/main/example/layouts
 
 -- ── shell + overview ──────────────────────────────────────────────────────
+-- NOTE: this config assumes the uwsm-managed session (GDM entry "Hyprland
+-- (uwsm)" → wayland-wm@hyprland.desktop.service). uwsm handles everything
+-- the plain session needed hand-rolled workarounds for: the dbus/systemd
+-- env imports (incl. DISPLAY after XWayland starts) and
+-- graphical-session.target startup (portals, vicinae binding). Those
+-- workarounds were removed 2026-11 after verifying the uwsm session live.
 hl.on("hyprland.start", function()
-    -- Import the Wayland env into the systemd user manager: the bubblebox
-    -- wrappers spawn GUI apps via `systemd-run --user`, and vicinae/portal
-    -- children need WAYLAND_DISPLAY *and* DISPLAY (X11-defaulting Electron
-    -- apps like Slack crash without DISPLAY even though XWayland is up —
-    -- diagnosed live 2026-11). Without uwsm nothing else does this import.
-    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE DISPLAY")
-    -- Start the session target FIRST: plain GDM-launched Hyprland never
-    -- starts graphical-session.target (RefuseManualStart — only uwsm/desktop
-    -- sessions may pull it), and xdg-desktop-portal.service has
-    -- Requisite= on it — without this, NO portals run (diagnosed live
-    -- 2026-11: every portal failure traced here). hyprland-session.target
-    -- (this repo, deployed to ~/.config/systemd/user/) pulls it in.
-    hl.exec_cmd("systemctl --user start hyprland-session.target")
     -- vicinae (launcher): bound to graphical-session.target upstream, but
     -- started directly too for determinism.
     hl.exec_cmd("systemctl --user start vicinae.service")
