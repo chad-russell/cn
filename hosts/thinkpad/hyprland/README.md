@@ -48,26 +48,23 @@ are user-programmable in Lua (`hl.layout.register`, see upstream's
 
 ```bash
 sudo dnf5 copr enable mineiro/hyprland
+[ -f /tmp/terra-gpg-keys.rpm ] || curl -fLo /tmp/terra-gpg-keys.rpm 'https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-6.noarch.rpm'
 [ -f /tmp/terra-release.rpm ] || curl -fLo /tmp/terra-release.rpm 'https://repos.fyralabs.com/terra44/terra-release-0:44-10.noarch.rpm'
-sudo rpm-ostree install /tmp/terra-release.rpm
+sudo rpm-ostree install /tmp/terra-gpg-keys.rpm /tmp/terra-release.rpm
 sudo rpm-ostree install hyprland hyprlock hypridle hyprpaper hyprpolkitagent waybar mangowm
 systemctl reboot
 ```
 
-Paste blocks in this file are deliberately **comment-free**: zsh only honors
-`#` comments in scripts — interactively (without `setopt
-interactivecomments`) a trailing comment's words get passed to the command,
-which once made rpm-ostree try to resolve packages named `#`, `1:`, `Terra`,
-`layer` (2026-11, live). Keep commentary in prose, not on command lines.
-
-Layer 1 (`terra-release`) just drops the Terra repo file; layer 2 then
-resolves `mangowm` from it — two rpm-ostree transactions, ONE reboot. Terra
-URL verified live from think, 2026-11; mangowm 0.18.1 + scenefx 0.5 in
-`terra44`. rpm-ostree 2026.3 — what F44 ships — has **no**
-`--from-latest-copr`; the enable-then-layer path is the working one.
-`dnf5-plugins` is already installed on think. If `dnf5 copr enable` ever
-refuses on an atomic host, fall back to dropping the repo file from
-https://copr.fedorainfracloud.org/coprs/mineiro/hyprland/ into
+Terra has a chicken-and-egg pair: `terra-release` (the repo file)
+**Requires `terra-gpg-keys`**, which only exists inside the repo terra-release
+enables — so the two rpms must be layered together in ONE `@commandline`
+transaction (both URLs verified live from think, 2026-11; there is no
+published `terra.repo` to curl instead). After that layer, `mangowm`
+(0.18.1 + scenefx 0.5) resolves normally. rpm-ostree 2026.3 — what F44
+ships — has **no** `--from-latest-copr`; enable-then-layer is the working
+pattern. `dnf5-plugins` is already installed on think. If `dnf5 copr
+enable` ever refuses on an atomic host, fall back to dropping the repo file
+from https://copr.fedorainfracloud.org/coprs/mineiro/hyprland/ into
 `/etc/yum.repos.d/` by hand.
 
 Pick "Hyprland" at the GDM session gear. Layered packages ride on top of the
