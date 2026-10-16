@@ -114,10 +114,10 @@ local mainMod = "SUPER"
 
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
--- App switching: Alt+Tab muscle memory (cyclenext via hyprctl; no verified
--- hl.dsp form for it).
-hl.bind("ALT + TAB", hl.dsp.exec_cmd("hyprctl dispatch cyclenext"))
-hl.bind("ALT + SHIFT + TAB", hl.dsp.exec_cmd("hyprctl dispatch cyclenext prev"))
+-- App switching: Alt+Tab muscle memory. 0.56-native typed dispatchers
+-- (string dispatch like cyclenext is gone; cycle_next({next=false}) = prev).
+hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
+hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
 -- Overview: quickshell-overview module (git-cloned to
 -- ~/.config/quickshell/overview; same key as mango's built-in overview so
 -- the A/B comparison shares muscle memory). Hyprspace was the alternative
