@@ -98,7 +98,8 @@ in `~/.var/app` is shared and untouched).
 A minimal bootc-managed host image. It is intentionally small: host-level
 choices that truly belong in the base OS (convenience packages, disabling
 SELinux, adding `distrobox` — the base image's `toolbox` stays — the niri
-compositor stack, and `nodejs`/`npm` for the hermes desktop build). See
+compositor stack; `nodejs` stays for the buzz-desktop updater's manifest
+parse and the npm-managed dev CLIs — railway, agent-browser). See
 `host-image/README.md`.
 
 The image is built **on bees** (daily `thinkpad-image-build.timer` + on-demand
@@ -211,10 +212,8 @@ Current tools (defined in `~/Code/bubblebox-pkgs/`):
   `host-image/README.md`).
 - `yazi`, `zoxide` — file manager and `cd` replacement.
 
-(AI coding agents are not bubblebox tools — opencode was retired 2026-09-02.
-The hermes agent lives on bee and only the desktop GUI runs here; dsh is a
-web UI at `https://dsh.internal.crussell.io`. See the `hermes/` section
-below.)
+(AI coding agents are not bubblebox tools — see the note where the hermes
+section used to be.)
 
 Typical workflow:
 
@@ -231,57 +230,10 @@ cache), then add the name to `bubblebox/profile.toml`'s `packages` list and run
 `cjust bubblebox-upgrade`. To try a Containerfile before the PR, `cjust
 bubblebox-build <name>` builds it locally.
 
-### `hermes/` (desktop-only; agent lives on bee)
-
-[Hermes Agent](https://hermes-agent.nousresearch.com/) (Nous Research) — the AI
-agent with a CLI, TUI (`hermes --tui`), and Electron desktop app. The AGENT is
-not installed on this host — it runs on bee as a NixOS service (deployed from
-this flake), and this laptop is a thin client: the desktop app connects to bee
-over SSH and spawns `hermes serve` there. All state (config, sessions, skills,
-memory) lives on bee.
-
-```bash
-cjust hermes-desktop-build     # build the Electron app off-host, extract to host
-cjust hermes-desktop-build main  # …or build a specific rev (default: latest release tag)
-~/.local/bin/hermes-desktop    # launch via the host wrapper
-```
-
-No local `hermes` install is needed. `~/.hermes/` on this host is still used
-by the desktop app itself (logs, plugins, desktop-plugins) — don't delete it,
-but it holds no agent state that matters.
-
-**How updates work.** The build maintains its own source checkout at
-`~/.local/share/hermes-desktop-src` (a git clone of upstream). Each run
-fetches and checks out the latest release tag by default. Upstream ships no
-prebuilt desktop binaries — build-from-source is the only channel. Keep the
-desktop roughly in step with bee's hermes version (the desktop warns when the
-remote backend is older/newer than itself).
-
-**Why the desktop is built off-host.** `hermes desktop` builds the Electron
-app from source via npm, which needs `gcc-c++ make` + ~200 MB of `node_modules`
-+ the Electron runtime download. None of that should land on the read-only
-`/usr` host image (it would force a rebuild + reboot, and the host would carry
-build cruft forever). Instead, `cjust hermes-desktop-build` follows the
-`cjust icons` (Papirus) pattern: build inside a throwaway Fedora+Node podman
-container, then copy only the unpacked app dir to
-`~/.local/share/hermes-desktop/`. No host-image change, no reboot.
-
-**Why not bubblebox for the GUI.** The *rendering* of an Electron window fits
-bubblebox fine (same surface as wezterm/ghostty: `writable_run` + `/dev`
-dev-bind + mesa). What doesn't fit is a local *agent backend*: it spawns
-synchronous subprocesses in arbitrary host working directories dozens of times
-per task, capturing stdout/stderr/exit. Since the agent lives on bee, that
-concern is moot here — but the build also runs on the host (git + podman
-only), and the app dir is per-user state, so bubblebox has nothing to manage.
-
-**Secrets.** None needed locally — the desktop talks to bee over SSH and the
-provider keys live on bee. Legacy: `secrets/hermes-thinkpad-env.age` (removed
-2026-09-08, HML-9) fed a former local agent install via
-`bubblebox/files/.zshenv`; the desktop wrapper
-(`bubblebox/files/.local/bin/hermes-desktop`) still sources that cache before
-exec'ing the Electron app, so a local agent could be re-added without a
-wrapper change (re-create the .age + re-list it in secrets.nix).
-
+(AI coding agents are not bubblebox tools — opencode was retired
+2026-09-02, and the hermes desktop + dsh CLI were removed from this host
+2026-10-16 (unused here). Agent work happens on bee via the dsh web UI at
+`https://dsh.internal.crussell.io`.)
 ### Host-resident dotfiles (`bubblebox/files/` + `[[files]]`)
 
 Host-native user dotfiles — the small exception to "everything lives in a
@@ -385,11 +337,9 @@ Examples:
 
 - `host-image/` ships the desktop stack: niri (compositor) + our
   niri-caelestia-shell fork (desktop shell, built at a pinned commit), plus
-  the small set of host-resident tools (just, fzf, nodejs/npm for the hermes
-  desktop build).
+  the small set of host-resident tools (just, fzf, nodejs/npm for the
+  buzz-desktop updater and the npm-managed dev CLIs).
 - Dev tools live in bubblebox sandboxes, not on the host image.
-- AI coding agents don't run on this host: the hermes agent lives on bee
-  (this host runs only the desktop GUI, built off-host by
-  `cjust hermes-desktop-build` from our own source checkout (~/.local/share/
-  hermes-desktop-src), per-user on its own update channel), and dsh is a
-  server-side web UI. (opencode was retired 2026-09-02.)
+- AI coding agents don't run on this host. (opencode was retired 2026-09-02;
+  the hermes desktop and dsh CLI were removed 2026-10-16 — agent work happens
+  on bee via the dsh web UI.)

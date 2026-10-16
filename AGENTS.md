@@ -481,10 +481,9 @@ bee is podman-only (no Docker daemon). Deploy with `nix run .#deploy -- bee`
 from the deploy origin (`bees`).
 
 > Dev stacks for gpl, polymer, and buildspace run on bee via podman quadlets
-> (`hosts/bee/dev-quadlets/`). They're reached from the thinkpad via SSH
-> tunnels (`cjust dev-tunnel <project>`). The thinkpad also has local copies
-> of the gpl/polymer quadlets under `hosts/thinkpad/gloo/` for when the laptop
-> is offline.
+> (`hosts/bee/dev-quadlets/`) — driven with `qd` on bee. The thinkpad-side
+> `cjust dev-tunnel`/`dev-up` recipes and the local quadlet copies under
+> `hosts/thinkpad/{gloo,buildspace}/` were removed 2026-10-16 (unused there).
 
 ### gateway — Hetzner Cloud VPS (public ingress)
 
