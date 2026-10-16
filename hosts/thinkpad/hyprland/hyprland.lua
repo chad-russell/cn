@@ -13,17 +13,34 @@
 --   * workspace 3 = scrolling tape (niri/PaperWM feel), workspace 4 = monocle
 --   * animated overview via the Hyprspace plugin or quickshell-overview
 
-local terminal = "ghostty" -- bubblebox tool; wrapper resolves on PATH
+-- ghostty is a bubblebox tool: the wrapper lives at ~/.local/bin/ghostty.
+-- Use the explicit $HOME path — GDM launches Hyprland with a thin session
+-- env whose PATH may not include ~/.local/bin ($HOME expands because
+-- exec_cmd runs through a shell; see upstream's example binds).
+local terminal = "$HOME/.local/bin/ghostty"
 
 -- ── monitors ──────────────────────────────────────────────────────────────
-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
--- External Dell P3225QE over USB-C: check `hyprctl monitors` for the output
--- name, then add e.g.:
--- hl.monitor({ output = "DP-1", mode = "preferred", position = "auto" })
+-- eDP-1 explicit: scale "auto" computed 1.5 on this 1920x1200 14" panel and
+-- everything rendered huge; niri runs it at 1.0 (bubblebox niri config.kdl)
+-- — match that.
+hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = "1.0" })
+-- Docked — mirror niri's config.kdl entries when needed (names via
+-- `hyprctl monitors`; the Dell shows up as DP-*):
+-- hl.monitor({ output = "DP-1", mode = "2560x1440@59.951", position = "auto", scale = "1.0" })
 
 hl.env("XCURSOR_SIZE", "24")
 -- hl.env("XCURSOR_THEME", "Bibata-...") -- bibata-cursor-themes is in the
 -- image; match the theme string niri uses before uncommenting.
+
+-- ── input ─────────────────────────────────────────────────────────────────
+hl.config({
+    input = {
+        follow_mouse = 1,
+        touchpad = {
+            natural_scroll = true, -- trackpad direction like GNOME/niri
+        },
+    },
+})
 
 -- ── the trial's model: floating by default ────────────────────────────────
 hl.config({
@@ -70,6 +87,17 @@ hl.config({ scrolling = { fullscreen_on_one_column = true } })
 
 -- ── shell + overview ──────────────────────────────────────────────────────
 hl.on("hyprland.start", function()
+    -- Import the Wayland env into the systemd user manager: the bubblebox
+    -- wrappers spawn GUI apps via `systemd-run --user`, and without uwsm
+    -- nothing else does this import for a plain GDM-launched session.
+    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
+    -- vicinae (launcher): start directly. graphical-session.target REFUSES
+    -- manual start (RefuseManualStart — only uwsm/desktop sessions may pull
+    -- it), and nothing of ours hangs off it user-level anyway (verified
+    -- live: only uresourced/spice-vdagent do).
+    hl.exec_cmd("systemctl --user start vicinae.service")
+    -- Workspace overview daemon (Super+Tab toggles it)
+    hl.exec_cmd("qs -c overview")
     -- Pick ONE quickshell env per tasting session (see ./README.md). Kill the
     -- old one first: pkill -f "qs -c" (shells are just dirs under
     -- ~/.config/quickshell/<name>, run with `qs -c <name>`).
@@ -85,6 +113,18 @@ end)
 local mainMod = "SUPER"
 
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
+-- App switching: Alt+Tab muscle memory (cyclenext via hyprctl; no verified
+-- hl.dsp form for it).
+hl.bind("ALT + TAB", hl.dsp.exec_cmd("hyprctl dispatch cyclenext"))
+hl.bind("ALT + SHIFT + TAB", hl.dsp.exec_cmd("hyprctl dispatch cyclenext prev"))
+-- Overview: quickshell-overview module (git-cloned to
+-- ~/.config/quickshell/overview; same key as mango's built-in overview so
+-- the A/B comparison shares muscle memory). Hyprspace was the alternative
+-- but hyprpm demands an interactive sudo — revisit if wanted.
+hl.bind(mainMod .. " + TAB", hl.dsp.exec_cmd("qs ipc -c overview call overview toggle"))
+-- Launcher — same Mod+Space muscle memory as niri (vicinae daemon client).
+hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("$HOME/.local/bin/vicinae toggle"))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprctl dispatch exit"))
