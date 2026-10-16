@@ -92,7 +92,6 @@ Last validated via SSH: **2026-09-09**.
 │   ├── vector-log-shipper.nix # journald→OpenObserve Vector agent (default-on)
 │   ├── restic-backup.nix      # Shared restic backup job builder
 │   ├── btrfs-snapshots.nix    # Btrfs snapshot management
-│   ├── buzz-harness.nix       # Buzz agent harness (disabled on bee, replaced by Hermes)
 │   ├── freshness-checks.nix   # Periodic health checks with ntfy alerting
 │   └── fzf-history-widget.zsh # Shared fzf Ctrl+R widget for zsh
 ├── nebula/

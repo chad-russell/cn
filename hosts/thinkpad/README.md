@@ -99,8 +99,8 @@ in `~/.var/app` is shared and untouched).
 A minimal bootc-managed host image. It is intentionally small: host-level
 choices that truly belong in the base OS (convenience packages, disabling
 SELinux, adding `distrobox` — the base image's `toolbox` stays — the niri
-compositor stack; `nodejs` stays for the buzz-desktop updater's manifest
-parse and the npm-managed dev CLIs — railway, agent-browser). See
+compositor stack; `nodejs` stays for the npm-managed dev CLIs —
+railway, agent-browser). See
 `host-image/README.md`.
 
 The image is built **on bees** (daily `thinkpad-image-build.timer` + on-demand
@@ -348,7 +348,7 @@ Examples:
 - `host-image/` ships the desktop stack: niri (compositor) + our
   niri-caelestia-shell fork (desktop shell, built at a pinned commit), plus
   the small set of host-resident tools (just, fzf, nodejs/npm for the
-  buzz-desktop updater and the npm-managed dev CLIs).
+  npm-managed dev CLIs).
 - Dev tools live in bubblebox sandboxes, not on the host image.
 - AI coding agents don't run on this host. (opencode was retired 2026-09-02;
   the hermes desktop and dsh CLI were removed 2026-10-16 — agent work happens

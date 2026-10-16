@@ -140,4 +140,59 @@ ${ov}
 Keep them: copy into the keyfile + commit. Drop them: dconf-bubblebox accept <key>"
   fi
 fi
+# ---- 4. unit enablement: wants symlinks bubblebox can't see ---------------
+# (First hit 2026-11: vicinae's graphical-session.target.wants symlink went
+# missing after some Oct-15 mutation — the daemon silently didn't start at
+# next login, Mod+Space died. bubblebox plan CANNOT catch this class: for
+# store-symlinked unit files `systemctl --user is-enabled` returns "alias"
+# regardless of the wants symlink, so plan reports enablement as fine. So
+# verify directly: every profile [[units]] entry with enable=true must have
+# its wants symlink at ~/.config/systemd/user/<WantedBy>.wants/<unit>. Bare
+# names carry the implicit .service suffix (same rule bubblebox applies).)
+# The script is deployed as a store symlink, so relative-to-$0 paths are
+# useless. The repo checkout is the source of truth (cjust recipes run from it;
+# bubblebox apply is invoked from there too).
+profile="${BUBBLEBOX_PROFILE:-${HOME%/}/Code/cn/hosts/thinkpad/bubblebox/profile.toml}"
+# A missing profile/unreadable profile must FAIL LOUD, not read as "healthy"
+# (empty unit list) — that would silently disable this whole check.
+if [ ! -r "$profile" ]; then
+  echo "unit-enablement check: cannot read profile at $profile" >&2
+  exit 1
+fi
+pairs="$(
+  # enabled unit names from profile.toml (unit blocks: name= then enable=)
+  sed -n '/^\[\[units\]\]/,/^$/p' "$profile" \
+    | awk '/^name[[:space:]]*=/{gsub(/[" \t]/,"",$3); n=$3}
+           /^enable[[:space:]]*=[[:space:]]*true/ && n!="" {print n; n=""}' \
+    | while IFS= read -r unit; do
+        case "$unit" in *.service|*.timer|*.path|*.socket) ;; *) unit="$unit.service" ;; esac
+        f="$(dirname "$profile")/units/$unit"
+        # every WantedBy target from the unit file
+        sed -n 's/^[[:space:]]*WantedBy[[:space:]]*=//p' "$f" 2>/dev/null | tr ' ' '\n' \
+          | while IFS= read -r tgt; do
+              [ -n "$tgt" ] && printf '%s\t%s\n' "$unit" "$tgt"
+            done
+      done
+)"
+missing="$(printf '%s\n' "$pairs" | while IFS=$'\t' read -r unit tgt; do
+  # NB: plain if — under set -e an && chain whose LAST executed test fails
+  # (the common case on a HEALTHY machine: [ ! -e ] is false) would kill the
+  # whole script with exit 1 on the healthy path.
+  if [ -n "$unit" ] && [ ! -e "$HOME/.config/systemd/user/$tgt.wants/$unit" ]; then
+    printf '%s (missing from %s.wants)\n' "$unit" "$tgt"
+  fi
+done)"
+if [ -n "$missing" ]; then
+  echo "==> unit enablement:"
+  printf '%s\n' "$missing" | sed 's/^/    /'
+  notify units-enabled "$(printf '%s' "$missing" | sha256sum | cut -c1-16)" \
+    "think: enabled unit(s) lost their wants symlink" "warning" \
+    "Units declared enable=true in profile.toml but not enabled on disk:
+$missing
+These will NOT auto-start at next login. Fix: systemctl --user enable --now <unit>"
+else
+  echo "==> unit enablement: all wants symlinks present"
+  clear_state units-enabled
+fi
+
 echo "==> healthy"

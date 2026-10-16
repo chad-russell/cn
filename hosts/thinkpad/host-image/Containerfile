@@ -142,8 +142,8 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     # (the ~/.local/bin wrapper shadows /usr/bin/rg anyway). fish removed:
     # unused (login shell is zsh; no terminal profile or spawn references).
     # jq/curl/wget/rsync STAY: host-image infra runs them OUTSIDE any bubblebox
-    # sandbox (thinkpad-image-update, the restic ntfy template, buzz-desktop
-    # updater, cjust recipes) and system units have no ~/.local/bin on PATH.
+    # sandbox (thinkpad-image-update, the restic ntfy template, the cjust
+    # recipes) and system units have no ~/.local/bin on PATH.
     # && dnf5 -y install cosmic-desktop
 
 # ---- 2.4. single Hyprland login entry ------------------------------------
