@@ -42,8 +42,12 @@ notes live in `host-image/Containerfile` step 2 and
 
    ```bash
    sudo dnf5 copr disable mineiro/hyprland
-   sudo rpm-ostree cleanup --pkg-cache
+   sudo rpm-ostree cleanup -b -m
    ```
+
+   (Flags verified against `rpm-ostree cleanup --help` on think 2026-11:
+   `-b` clears temporary/pkg files, `-m` the cached rpm-md metadata. There
+   is no `--pkg-cache` option in rpm-ostree 2026.3. Purely cosmetic — ~72 MB.)
 
 ## Stage the configs
 
