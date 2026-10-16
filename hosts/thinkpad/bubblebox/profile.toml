@@ -185,6 +185,17 @@ dst = ".config/wezterm/wezterm.lua"
 dst = ".config/nvim"
 kind = "dir"
 
+# wl-party custom Rhai effects (snow/stars/matrix/dragon/...), checked
+# headlessly with `wl-party check <name>` before landing. Same dir pattern
+# as nvim above. The sandbox override that lets the wrapper read these
+# (writable_home) is .config/bubblebox/entrypoints/wl-party.toml below.
+[[files]]
+dst = ".config/wl-party/effects"
+kind = "dir"
+
+[[files]]
+dst = ".config/bubblebox/entrypoints/wl-party.toml"
+
 [[files]]
 dst = ".local/bin/zen-browser"
 
