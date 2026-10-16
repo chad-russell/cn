@@ -13,7 +13,11 @@
 --   * workspace 3 = scrolling tape (niri/PaperWM feel), workspace 4 = monocle
 --   * animated overview via the Hyprspace plugin or quickshell-overview
 
-local terminal = "ghostty" -- bubblebox tool; wrapper resolves on PATH
+-- ghostty is a bubblebox tool: the wrapper lives at ~/.local/bin/ghostty.
+-- Use the explicit $HOME path — GDM launches Hyprland with a thin session
+-- env whose PATH may not include ~/.local/bin ($HOME expands because
+-- exec_cmd runs through a shell; see upstream's example binds).
+local terminal = "$HOME/.local/bin/ghostty"
 
 -- ── monitors ──────────────────────────────────────────────────────────────
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
@@ -70,6 +74,10 @@ hl.config({ scrolling = { fullscreen_on_one_column = true } })
 
 -- ── shell + overview ──────────────────────────────────────────────────────
 hl.on("hyprland.start", function()
+    -- Import the Wayland env into the systemd user manager: the bubblebox
+    -- wrappers spawn GUI apps via `systemd-run --user`, and without uwsm
+    -- nothing else does this import for a plain GDM-launched session.
+    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
     -- Pick ONE quickshell env per tasting session (see ./README.md). Kill the
     -- old one first: pkill -f "qs -c" (shells are just dirs under
     -- ~/.config/quickshell/<name>, run with `qs -c <name>`).
@@ -85,6 +93,7 @@ end)
 local mainMod = "SUPER"
 
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprctl dispatch exit"))
