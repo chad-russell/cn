@@ -47,21 +47,28 @@ are user-programmable in Lua (`hl.layout.register`, see upstream's
 ## Phase 1 — layer once, reboot once
 
 ```bash
-sudo dnf5 copr enable mineiro/hyprland    # repo file for the hyprland suite (+ waybar)
-curl -fLo /tmp/terra-release.rpm 'https://repos.fyralabs.com/terra44/terra-release-0:44-10.noarch.rpm'
-sudo rpm-ostree install /tmp/terra-release.rpm   # layer 1: enables the Terra repo file
+sudo dnf5 copr enable mineiro/hyprland
+[ -f /tmp/terra-release.rpm ] || curl -fLo /tmp/terra-release.rpm 'https://repos.fyralabs.com/terra44/terra-release-0:44-10.noarch.rpm'
+sudo rpm-ostree install /tmp/terra-release.rpm
 sudo rpm-ostree install hyprland hyprlock hypridle hyprpaper hyprpolkitagent waybar mangowm
 systemctl reboot
 ```
 
-(Two rpm-ostree transactions, ONE reboot: mangowm only resolves after
-terra-release's repo file is layered. Terra URL verified live from think,
-2026-11; mangowm 0.18.1 + scenefx 0.5 in `terra44`. rpm-ostree 2026.3 — what
-F44 ships — has **no** `--from-latest-copr`; the enable-then-layer path is
-the working one. `dnf5-plugins` is already installed on think. If `dnf5 copr
-enable` ever refuses on an atomic host, fall back to dropping the repo file
-from https://copr.fedorainfracloud.org/coprs/mineiro/hyprland/ into
-`/etc/yum.repos.d/` by hand.)
+Paste blocks in this file are deliberately **comment-free**: zsh only honors
+`#` comments in scripts — interactively (without `setopt
+interactivecomments`) a trailing comment's words get passed to the command,
+which once made rpm-ostree try to resolve packages named `#`, `1:`, `Terra`,
+`layer` (2026-11, live). Keep commentary in prose, not on command lines.
+
+Layer 1 (`terra-release`) just drops the Terra repo file; layer 2 then
+resolves `mangowm` from it — two rpm-ostree transactions, ONE reboot. Terra
+URL verified live from think, 2026-11; mangowm 0.18.1 + scenefx 0.5 in
+`terra44`. rpm-ostree 2026.3 — what F44 ships — has **no**
+`--from-latest-copr`; the enable-then-layer path is the working one.
+`dnf5-plugins` is already installed on think. If `dnf5 copr enable` ever
+refuses on an atomic host, fall back to dropping the repo file from
+https://copr.fedorainfracloud.org/coprs/mineiro/hyprland/ into
+`/etc/yum.repos.d/` by hand.
 
 Pick "Hyprland" at the GDM session gear. Layered packages ride on top of the
 image deployment and survive `bootc upgrade` (the daily staging timer keeps
@@ -127,9 +134,12 @@ why it needs uwsm.
 
 ```bash
 rpm-ostree uninstall hyprland hyprlock hypridle hyprpaper hyprpolkitagent waybar mangowm terra-release
-systemctl reboot          # or just boot the pre-layer deployment from GRUB
-rm -rf ~/.config/hypr ~/.config/mango   # and any tasting shells under ~/.config/quickshell/
+systemctl reboot
+rm -rf ~/.config/hypr ~/.config/mango
 ```
+
+(Or skip the uninstall: boot the pre-layer deployment from GRUB. The rm also
+clears any tasting shells under `~/.config/quickshell/`.)
 
 ## Endgame — if Hyprland survives the trial
 
@@ -173,8 +183,10 @@ overview on Super+Tab, waybar + ghostty):
 mkdir -p ~/.config/mango
 cp /etc/mango/config.conf ~/.config/mango/config.conf
 cat ~/Code/cn/hosts/thinkpad/hyprland/mango-snippet.conf >> ~/.config/mango/config.conf
-mango -c ~/.config/mango/config.conf -p    # validate without starting
+mango -c ~/.config/mango/config.conf -p
 ```
+
+(The last line validates the config without starting the session.)
 
 What to actually try (the things Hyprland can't give you natively):
 
