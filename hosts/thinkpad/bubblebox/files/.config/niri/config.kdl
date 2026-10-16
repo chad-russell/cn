@@ -181,8 +181,8 @@ binds {
     // is Super-key / Mod+Space too once running)
     Mod+Space { spawn "vicinae" "toggle"; }
 
-    // (Ambxst registers its own binds/gestures via axctl; screenshot keys
-    // live in Ambxst's settings. Mod+Space vicinae above stays as fallback.)
+    // (Ambxst binds live in the include at the BOTTOM of this file — axctl
+    // regenerates them there; override below the include. Mod+Space stays.)
 
     // Monitor navigation
     Mod+Shift+Left  { focus-monitor-left; }
