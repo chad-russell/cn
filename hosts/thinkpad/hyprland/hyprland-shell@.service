@@ -1,0 +1,30 @@
+[Unit]
+Description=quickshell env %i under Hyprland
+# The Hyprland analog of bubblebox/units/caelestia-shell.service (niri): one
+# template unit, %i = the quickshell config name under ~/.config/quickshell/.
+#
+# IMPORTANT: `hyprland.service` only exists when Hyprland is launched via the
+# uwsm-managed session (uwsm is in the mineiro/hyprland COPR; the session
+# picker shows it as a separate entry). With a plain GDM-launched Hyprland
+# there is NO hyprland.service — start the shell from hyprland.lua instead:
+#   hl.on("hyprland.start", function() hl.exec_cmd("qs -c <name>") end)
+# PartOf both the compositor and the graphical session so the shell stops
+# (and restarts) with the session.
+PartOf=hyprland.service
+PartOf=graphical-session.target
+After=hyprland.service
+After=graphical-session.target
+# Rate-limit (same rationale as caelestia-shell.service: a quickshell startup
+# race should cost a 1s blip, not a restart loop). StartLimit* MUST live in
+# [Unit] — systemd ignores them elsewhere.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/qs -c %i
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=hyprland.service
