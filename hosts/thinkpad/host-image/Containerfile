@@ -130,9 +130,11 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        ddcutil playerctl upower nm-connection-editor \
                        breeze-icon-theme \
                        hyprland hyprlock hypridle hyprpaper hyprpolkitagent \
-                       waybar
+                       xdg-desktop-portal-hyprland \
+                       hyprland-guiutils waybar
     # hyprland suite + waybar: BAKE PR (dormant until the 2026-11 compositor
-    # trial concludes) — re-added from the same mineiro COPR round 1 used.
+    # trial concludes; merged 2026-11). re-added from the same mineiro COPR round 1
+    # used; hyprland-guiutils added after the live session warned it is missing.
     # If MANGO wins the trial instead, delete these lines + step 2.7 below
     # (and the hyprland half of the verify gate). Trial runbook:
     # hosts/thinkpad/hyprland/README.md.
@@ -207,6 +209,28 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         'https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-6.noarch.rpm' \
         'https://repos.fyralabs.com/terra44/terra-release-0:44-10.noarch.rpm' \
     && dnf5 -y --setopt=install_weak_deps=False install mangowm
+
+# ---- 2.8. Hyprland plugin build deps (hyprpm) ----------------------------
+# hyprpm compiles the Hyprland SOURCE itself for headers when building
+# plugins (Hyprspace etc.) — the shell-plugin toolchain from step 2.5 is
+# not enough (first live miss: glslang, 2026-11). This is the full
+# BuildRequires set from the mineiro COPR's hyprland.spec with every
+# pkgconfig() resolved to its exact Fedora package name against the live
+# repos. Same rationale as 2.5: this is the machine we iterate on.
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    dnf5 -y --setopt=install_weak_deps=False install \
+        meson glslang-devel glaze-devel \
+        aquamarine-devel cairo-devel libglvnd-devel mesa-libgbm-devel \
+        glib2-devel hwdata-devel hyprcursor-devel hyprgraphics-devel \
+        hyprlang-devel hyprutils-devel hyprwire-devel hyprwayland-scanner-devel \
+        lcms2-devel libdisplay-info-devel libdrm-devel libeis-devel \
+        libinput-devel libliftoff-devel libseat-devel systemd-devel \
+        lua-devel muParser-devel pango-devel pixman-devel readline-devel \
+        re2-devel tomlplusplus-devel libuuid-devel wayland-devel \
+        wayland-protocols-devel libxcb-devel xcb-util-errors-devel \
+        xcb-util-wm-devel xcb-util-renderutil-devel xcb-util-devel \
+        libXcursor-devel libxkbcommon-devel xorg-x11-server-Xwayland-devel
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/
