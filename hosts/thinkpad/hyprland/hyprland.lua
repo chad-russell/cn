@@ -105,10 +105,15 @@ hl.on("hyprland.start", function()
     -- wrappers spawn GUI apps via `systemd-run --user`, and without uwsm
     -- nothing else does this import for a plain GDM-launched session.
     hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-    -- vicinae (launcher): start directly. graphical-session.target REFUSES
-    -- manual start (RefuseManualStart — only uwsm/desktop sessions may pull
-    -- it), and nothing of ours hangs off it user-level anyway (verified
-    -- live: only uresourced/spice-vdagent do).
+    -- Start the session target FIRST: plain GDM-launched Hyprland never
+    -- starts graphical-session.target (RefuseManualStart — only uwsm/desktop
+    -- sessions may pull it), and xdg-desktop-portal.service has
+    -- Requisite= on it — without this, NO portals run (diagnosed live
+    -- 2026-11: every portal failure traced here). hyprland-session.target
+    -- (this repo, deployed to ~/.config/systemd/user/) pulls it in.
+    hl.exec_cmd("systemctl --user start hyprland-session.target")
+    -- vicinae (launcher): bound to graphical-session.target upstream, but
+    -- started directly too for determinism.
     hl.exec_cmd("systemctl --user start vicinae.service")
     -- Desktop shell: Ambxst (Axenide; Go binary supervising a quickshell
     -- shell + axctl + wl-paste). Deployed user-space: binary + axctl in
