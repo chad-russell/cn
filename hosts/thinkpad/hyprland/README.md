@@ -45,10 +45,17 @@ are user-programmable in Lua (`hl.layout.register`, see upstream's
 ## Phase 1 — layer once, reboot once
 
 ```bash
-rpm-ostree install --from-latest-copr='copr=mineiro/hyprland' \
-  hyprland hyprlock hypridle hyprpaper hyprpolkitagent
+sudo dnf5 copr enable mineiro/hyprland   # writes the COPR repo file under /etc/yum.repos.d
+sudo rpm-ostree install hyprland hyprlock hypridle hyprpaper hyprpolkitagent
 systemctl reboot
 ```
+
+(rpm-ostree 2026.3 — what F44 ships — has **no** `--from-latest-copr`; the
+enable-then-layer path above is the working one, verified on-host 2026-11.
+`dnf5-plugins` is already installed on think. If `dnf5 copr enable` ever
+refuses on an atomic host, fall back to dropping the repo file from
+https://copr.fedorainfracloud.org/coprs/mineiro/hyprland/ into
+`/etc/yum.repos.d/` by hand.)
 
 Pick "Hyprland" at the GDM session gear. Layered packages ride on top of the
 image deployment and survive `bootc upgrade` (the daily staging timer keeps
@@ -136,3 +143,20 @@ One image rebuild, one bubblebox change, both familiar:
    Hyprland becomes the primary, extend its checks then.
 
 Until then nothing here touches the image: this directory is staging only.
+
+## Aside — MangoWM in the same loop
+
+[MangoWM][mango] (dwl-based, 2026) implements this trial's whole wish list
+natively — **per-tag layouts** (scroller, monocle, grid, deck, master-stack,
+dwindle), a **built-in Hycov-style overview**, animations + scenefx effects,
+hot-reload TOML config with `[[rules]]`/`exec-once`, IPC. It's young (one
+main dev, small community) and the polished quickshell envs do NOT target
+it — bars are bring-your-own (waybar / generic quickshell). On Fedora it
+lives in the [Terra][terra] repo (not a COPR): same pattern — get Terra's
+repo file into `/etc/yum.repos.d/`, then `rpm-ostree install mangowm`. It
+makes a cheap second GDM session in this same exploration loop
+(`~/.config/mango/` doesn't collide with `~/.config/hypr/`): A/B the *WM
+model* on mango while the Hyprland trial A/B-s the *shell ecosystem*.
+
+[mango]: https://github.com/mangowm/mango
+[terra]: https://terrapkg.com/
