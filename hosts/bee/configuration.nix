@@ -308,6 +308,10 @@ in {
       pkgs.composefs
       pkgs.podman
       pkgs.git
+      # git pulls origin over ssh (ssh://git@git.crussell.io:2222); without ssh
+      # on PATH the nightly's `git pull --ff-only` fails silently (stderr is
+      # discarded) and the run verifies a stale checkout.
+      pkgs.openssh
       pkgs.python3
       pkgs.bubblewrap
       pkgs.fuse3
