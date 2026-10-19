@@ -15,7 +15,12 @@
 # outage was caused by bees's Caddy being down after a power-outage reboot).
 # Now each backend is reached independently over Nebula from the gateway.
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   services.caddy = {
@@ -83,6 +88,13 @@
       handle {
         reverse_proxy 10.10.0.6:3097
       }
+    '';
+
+    # purlinens-preview.crussell.io — Pürlin customer-site rebuild preview
+    # (Next.js + Payload app on bee, crussell user unit purlinens.service,
+    # port 3002; see ~/purlinens on bee). Preview only — not customer-facing.
+    virtualHosts."purlinens-preview.crussell.io".extraConfig = ''
+      reverse_proxy 10.10.0.12:3002
     '';
 
     # git.crussell.io — Forgejo on the gateway itself (loopback HTTP;
