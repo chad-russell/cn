@@ -15,12 +15,7 @@
 # outage was caused by bees's Caddy being down after a power-outage reboot).
 # Now each backend is reached independently over Nebula from the gateway.
 
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+{ config, lib, pkgs, ... }:
 
 {
   services.caddy = {
