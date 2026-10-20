@@ -141,6 +141,13 @@ dst = ".gitconfig"
 [[files]]
 dst = ".config/mimeapps.list"
 
+# Portal backend selection (portals.conf(5)): pin ONLY the FileChooser
+# interface to the gnome backend for its Adwaita GTK4 dialog (the modern
+# picker); gtk stays the generic fallback for everything else. Header
+# comment in the file itself explains the full why.
+[[files]]
+dst = ".config/xdg-desktop-portal/portals.conf"
+
 # GNOME monitor layout (was hand-maintained; a Containerfile comment claimed
 # it lived here long ago — now it actually does).
 [[files]]
