@@ -1,5 +1,5 @@
-id = "a0326f59ce4cdd986fc33247f8ba5b721c5608c52a3df1b40ef65d9c63d4cd0a"
-created_at = 1792184582
+id = "bca94113422029ae3e3e8cbe271996c8c9cdb4d2906a6b2f1eee8d06734b3cf9"
+created_at = 1792599913
 roots = [
     "age",
     "age-keygen",
@@ -26,6 +26,7 @@ roots = [
     "witr",
     "ghostty",
     "wezterm",
+    "wl-party",
     "yazi",
     "zoxide",
 ]
@@ -223,6 +224,14 @@ kind = "cache"
 url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
+name = "wl-party"
+digest = "402762c7a7e2ddab453dd858533720825eaa7f1c37d04a7dfdfbb870459ce9d3"
+
+[package.origin]
+kind = "cache"
+url = "https://bubblebox.internal.crussell.io"
+
+[[package]]
 name = "yazi"
 digest = "0cac221d19a249a43a47f1773ade947cc5220a015b7edbcbe448bef7de98abbe"
 
@@ -272,11 +281,11 @@ blob = "c888022072f298cb81a6f9335dbe6f70d8899d52b2a43e5fbdce81fafacac1f1"
 
 [[file]]
 dst = ".config/niri/config.kdl"
-blob = "137f16b3031f75658923ba94b237fdff3d7068098150b7857816d543878b873f"
+blob = "e57761db070e5aa7e5fdca2ba6da1cecfbdab17461013eb9a88f95ed42db53de"
 
 [[file]]
 dst = ".config/hypr/hyprland.lua"
-blob = "140d418cdb2393e138c0b4de30a9a065522e9e6046cc5bad23bda4b024bfae67"
+blob = "98444edf60a861a7917bc8bc989a00d0c943ee12de030f7792da7cd1e3c22685"
 
 [[file]]
 dst = ".gitconfig"
@@ -285,6 +294,10 @@ blob = "dcf39f73880559f8c0dc3efa3e5f5458c6ffac27a448f3c778ae5577de266951"
 [[file]]
 dst = ".config/mimeapps.list"
 blob = "1dd2ebc64e0f984e63609c9284a8cb526fffbf3e060d02a7c41197bfb6fdde83"
+
+[[file]]
+dst = ".config/xdg-desktop-portal/portals.conf"
+blob = "1cd028f7d89cde12e52692141538fb79cef22e33263b57b860ec79f2836b2a57"
 
 [[file]]
 dst = ".config/monitors.xml"
@@ -317,6 +330,14 @@ blob = "a347ec306961a12244f31f87d448e1ea5ffcb021ef5d442b454de193daf2c69e"
 [[file]]
 dst = ".config/vicinae/settings.json"
 blob = "17ad3d1609fc9625d5d0b6642ac08736d3b15c901660456159241ff1ab4d7d0c"
+
+[[file]]
+dst = ".config/mango/config.conf"
+blob = "392d6076dd94b5be265a5dc64688e06a2cead324da12c9e95a8d122b01b935de"
+
+[[file]]
+dst = ".local/share/wayland-sessions/hyprland.desktop"
+blob = "85f585abe35babdeadd4f3c8819911fdcca1a59f5072befae69fad5f8c191552"
 
 [[file]]
 dst = ".config/wezterm/wezterm.lua"
@@ -407,6 +428,42 @@ dst = ".config/nvim/queries/markdown/highlights.scm"
 blob = "7d662ce4f3e05739344f796b23c3433fe185e08672e31f3dc57982c3a9cc1ffe"
 
 [[file]]
+dst = ".config/wl-party/effects/dragon.rhai"
+blob = "64e188ff4aa637c89876cd98e1eb4f1c8aeec04cbe2415f1b06770d3fa2595ba"
+
+[[file]]
+dst = ".config/wl-party/effects/fountain.rhai"
+blob = "390a6a327672df6b114353b5d30dacdd643fe698647f46e60f504956b1f62ad4"
+
+[[file]]
+dst = ".config/wl-party/effects/hearts.rhai"
+blob = "15a5d9a4f781d155f932d0858154ac323aadcdf01a77c30e98668f82f2d04cf0"
+
+[[file]]
+dst = ".config/wl-party/effects/matrix.rhai"
+blob = "935bcc74bde0521c8c312f25694b702ab2df38523baf08f8a7c51503bd42218e"
+
+[[file]]
+dst = ".config/wl-party/effects/money.rhai"
+blob = "2a26aedbc02807ce37eb071bc725a500398ccd1ffc8f1b4967f905b8adb32186"
+
+[[file]]
+dst = ".config/wl-party/effects/snow.rhai"
+blob = "3259e93c2e29da1df125082c4405a78d60d458e5583649ae4c18db27daad5364"
+
+[[file]]
+dst = ".config/wl-party/effects/stars.rhai"
+blob = "e4d48ce83392d5872053f4772187030bffb9ed53d0213f2a0b865a2d57f5df53"
+
+[[file]]
+dst = ".config/wl-party/effects/vday.rhai"
+blob = "58f27f1e4f5bde1cd128abfb6b0929f5f74241e418a22cf9f53dfe69097f549b"
+
+[[file]]
+dst = ".config/bubblebox/entrypoints/wl-party.toml"
+blob = "6197ab7af6ea564995537d7a6a60f30a30c14625eba46ef715f47098fa1b2c7b"
+
+[[file]]
 dst = ".local/bin/zen-browser"
 blob = "e154842cd6b489d757daeeea9df58ea0ccc041c57d7eb411b8556e608382bece"
 
@@ -420,7 +477,7 @@ blob = "aa3debcb2abc73e0447b51cabbdd63242cf78ebd69b97037045e54810ad419e0"
 
 [[file]]
 dst = ".local/bin/thinkpad-bubblebox-check"
-blob = "d298d6c0b7c0c1205dc2907234e1f9070efa972c3411cb994bb53418e04de026"
+blob = "eb00621da5e22579dbb25b0988ec38fb06d8ba74d8ad396f0d431b60f1b7bd3d"
 
 [[file]]
 dst = ".local/bin/dconf-bubblebox"
@@ -452,7 +509,7 @@ blob = "6ec66ef153e3e87aae897f237388e4a1333fd049863cffe26ae99210e4395b25"
 [[unit]]
 name = "thinkpad-image-update.timer"
 enabled = true
-blob = "390e25d1c67ad53f0ffe2528883608f3d251cf02acb9c9b263cd2d792ee057b8"
+blob = "c377710e1ea4346cc72346e5f038b29216f9dc864d7f1489c5f2a92685078db8"
 
 [[unit]]
 name = "thinkpad-image-health.service"
