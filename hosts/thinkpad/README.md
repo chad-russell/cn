@@ -150,13 +150,18 @@ On-demand Wycliffe GlobalProtect container workflow. See
 `wycliffe-vpn/README.md`.
 
 ### `hyprland/`
-Round-2 Hyprland exploration kit (2026-11): runbook + skeleton
-`hyprland.lua` (float-by-default, per-workspace scrolling/monocle layouts) +
-a quickshell template unit. Exploration deliberately stays OUT of the host
-image — Hyprland is layered once via `rpm-ostree` from the `mineiro/hyprland`
-COPR (F44 ships no hyprland package) and everything else iterates in
-`~/.config`. Only a keeper gets baked into `host-image/`. See
-`hyprland/README.md`.
+Compositor trial kit (2026-11): runbook + configs for both trial
+compositors. Hyprland (from the `mineiro/hyprland` COPR) and MangoWM (Terra)
+are baked into the host image (Containerfile steps 2 / 2.8); behavior lives
+in `~/.config` as bubblebox `[[files]]` entries:
+`files/.config/hypr/hyprland.lua` (float-by-default, per-workspace
+scrolling/monocle layouts, ambxst shell) and `files/.config/mango/config.conf`
+(ambxst shell sourced from the axctl-generated
+`~/.local/share/ambxst/mango.conf`, same trial layout model, Mod+Space →
+vicinae). `files/.local/share/wayland-sessions/hyprland.desktop` is uwsm's
+user-scope launch target — required for the uwsm Hyprland session to start
+at all (uwsm resolves it via the XDG data hierarchy; GDM never lists it).
+See `hyprland/README.md`.
 
 ### `bubblebox/`
 The host's **bubblebox profile** (`profile.toml`) — the desired set of bubblebox

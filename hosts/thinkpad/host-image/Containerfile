@@ -149,8 +149,19 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # ---- 2.4. single Hyprland login entry ------------------------------------
 # The hyprland package ships a plain hyprland.desktop; the uwsm-managed
 # session (hyprland-uwsm.desktop) is the one we run (the config assumes
-# uwsm). Drop the plain entry so GDM offers exactly one.
-RUN rm -f /usr/share/wayland-sessions/hyprland.desktop
+# uwsm). Drop the plain entry so GDM offers exactly one. The image ALSO
+# renames the uwsm entry to plain "Hyprland" ("Hyprland (uwsm-managed)" was
+# the stock Name). uwsm's launch TARGET hyprland.desktop — the entry
+# `uwsm start -D Hyprland hyprland.desktop` resolves through the XDG data
+# hierarchy — is NOT shipped here: it lives user-scope as a bubblebox file
+# (~/.local/share/wayland-sessions/, see bubblebox/profile.toml). System
+# /usr/share/wayland-sessions would make GDM list it too; user-scope keeps
+# it uwsm-only (GDM scans system dirs only). Deleting the system copy
+# without providing the user-scope one breaks every Hyprland login
+# ("uwsm: Could not find entry", live 2026-10 — GDM bounces back).
+RUN rm -f /usr/share/wayland-sessions/hyprland.desktop \
+    && sed -i 's/^Name=Hyprland (uwsm-managed)$/Name=Hyprland/' \
+        /usr/share/wayland-sessions/hyprland-uwsm.desktop
 
 # ---- 2.5. Ambxst shell binaries (all compositors) -------------------------
 # Ambxst replaces the retired niri-caelestia-shell fork (2026-11): one Go

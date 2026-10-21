@@ -113,11 +113,32 @@ everything else is config.
 [caelestia]: https://github.com/caelestia-dots/shell
 [axshell]: https://github.com/Axenide/Ax-Shell
 
-Shell lifecycle: during the trial, start the shell from `hyprland.lua`
-(`hl.on("hyprland.start", ...)`). `hyprland-shell@.service` in this dir is
-the systemd version for the uwsm-managed session (template unit,
-`systemctl --user enable --now hyprland-shell@<name>`); see its header for
-why it needs uwsm.
+Shell lifecycle: the desktop shell under Hyprland and mango is **Ambxst**
+(same binary + sources as niri). Under Hyprland it starts from
+`hyprland.lua` (`hl.on("hyprland.start", ...)`); under mango, ambxst's own
+axctl startup integration starts it (`exec-once = ambxst`, generated into
+`~/.local/share/ambxst/mango.conf` and `source`d by our mango config). The
+launcher is vicinae: `vicinae.service` (graphical-session.target) runs under
+every compositor; Mod+Space toggles it in niri, Hyprland and mango.
+`hyprland-shell@.service` in this dir is the generic template for running
+any quickshell config under the uwsm session; see its header for why it
+needs uwsm.
+
+Session-entry map (GDM → what actually runs):
+
+- `niri.desktop` → niri (image).
+- `hyprland-uwsm.desktop` → `uwsm start -e -D Hyprland hyprland.desktop`
+  (image; Name= "Hyprland" since the 2026-10 rename — the stock
+  "(uwsm-managed)" suffix is cosmetic noise). The `hyprland.desktop` in
+  that Exec line resolves **user-scope** via the XDG data hierarchy:
+  `~/.local/share/wayland-sessions/hyprland.desktop`, a bubblebox
+  `[[files]]` entry. The image deliberately ships no system copy (GDM
+  would list it as a second entry) — but a missing user-scope copy breaks
+  every Hyprland login ("uwsm: Could not find entry" → GDM bounce), which
+  is exactly the 2026-10 crash; the bubblebox file is the fix.
+- `mango.desktop` → mango directly (image, Terra). No uwsm under mango —
+  the mango config imports the Wayland env into the user manager itself
+  (`dbus-update-activation-environment`).
 
 ## MangoWM session (the B half of the A/B)
 

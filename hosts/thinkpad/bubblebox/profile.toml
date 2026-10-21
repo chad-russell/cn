@@ -185,6 +185,22 @@ dst = ".config/ghostty/config"
 [[files]]
 dst = ".config/vicinae/settings.json"
 
+# Mango compositor config: ambxst shell (sourced from the axctl-generated
+# ~/.local/share/ambxst/mango.conf) + the trial layout model + Mod+Space →
+# vicinae. See the file header for the full story.
+
+[[files]]
+dst = ".config/mango/config.conf"
+
+# uwsm's Hyprland launch target, user-scope: uwsm resolves
+# "hyprland.desktop" through the XDG data hierarchy (fixes the session
+# crash from the image deleting the system copy — step 2.4), while GDM
+# (system session dirs only) still offers exactly one entry. NoDisplay,
+# so it can never leak into a session list.
+
+[[files]]
+dst = ".local/share/wayland-sessions/hyprland.desktop"
+
 [[files]]
 dst = ".config/wezterm/wezterm.lua"
 

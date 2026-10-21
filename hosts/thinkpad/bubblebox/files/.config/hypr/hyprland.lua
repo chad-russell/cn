@@ -98,8 +98,12 @@ hl.config({ scrolling = { fullscreen_on_one_column = true } })
 -- See https://github.com/hyprwm/Hyprland/tree/main/example/layouts
 
 -- ── shell + overview ──────────────────────────────────────────────────────
--- NOTE: this config assumes the uwsm-managed session (GDM entry "Hyprland
--- (uwsm)" → wayland-wm@hyprland.desktop.service). uwsm handles everything
+-- NOTE: this config assumes the uwsm-managed session (GDM entry "Hyprland")
+-- → hyprland-uwsm.desktop). uwsm's launch target hyprland.desktop is a
+-- USER-scope bubblebox file (~/.local/share/wayland-sessions/) — inside the
+-- XDG data hierarchy so uwsm finds it, outside the system session dirs so
+-- GDM never lists it (the image deletes the system copy, step 2.4). uwsm
+-- handles everything
 -- the plain session needed hand-rolled workarounds for: the dbus/systemd
 -- env imports (incl. DISPLAY after XWayland starts) and
 -- graphical-session.target startup (portals, vicinae binding). Those
@@ -142,15 +146,19 @@ hl.bind(mainMod .. " + SHIFT + O", function()
     hl.plugin.hymission.toggle("forceall")
 end)
 
-hl.config({
-    plugin = {
-        hymission = {
-            selected_expand_scale = 1.0,
-            hover_expand_scale = 1.25,
-            overview_focus_follows_mouse = 0,
-        }
-    }
-})
+-- Plugin styling keys only exist once the plugin is loaded (see the
+-- Hyprspace note above — same failure mode, verified live 2026-11: this
+-- block uncommented with no plugin installed broke every session start).
+-- Re-enable together with the hymission binds above:
+-- hl.config({
+--     plugin = {
+--         hymission = {
+--             selected_expand_scale = 1.0,
+--             hover_expand_scale = 1.25,
+--             overview_focus_follows_mouse = 0,
+--         }
+--     }
+-- })
 
 -- Launcher — same Mod+Space muscle memory as niri (vicinae daemon client).
 hl.unbind(mainMod .. " + SPACE")
