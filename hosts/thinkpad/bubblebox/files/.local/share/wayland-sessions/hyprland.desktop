@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+# uwsm's compositor target, NOT a GDM session: ~/.local/share/wayland-sessions
+# is in the XDG data hierarchy (uwsm finds its entry there) but outside the
+# system session dirs GDM scans, so the login screen still offers exactly one
+# Hyprland entry: "Hyprland" (hyprland-uwsm.desktop in the image). See
+# hosts/thinkpad/host-image/Containerfile step 2.4 for the history.
+Name=Hyprland (uwsm target, do not show)
+NoDisplay=true
+Comment=uwsm launch target for the Hyprland session
+Exec=Hyprland
+TryExec=hyprland
+DesktopNames=Hyprland
