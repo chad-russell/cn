@@ -112,7 +112,12 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     && dnf5 -y copr enable celestelove/app2unit \
     && dnf5 -y copr enable peterwu/rendezvous \
     && dnf5 -y copr enable mineiro/hyprland \
-    && dnf5 -y --setopt=install_weak_deps=False install \
+    # --refresh: the cache mount (type=cache,dst=/var/cache/libdnf5) persists
+    # rpm-md across builds with a 48h default TTL; when Fedora supersedes a
+    # build (assimp 6.0.5-5 -> -6, 2026-10-21) cached metadata kept resolving
+    # the dead rpm and every mirror 404ed. --refresh forces fresh metadata
+    # whenever this layer re-executes.
+    && dnf5 -y --refresh --setopt=install_weak_deps=False install \
                        niri xwayland-satellite bibata-cursor-themes \
                        quickshell app2unit libcava libcava-devel \
                        material-symbols-fonts cascadia-code-nerd-fonts \
