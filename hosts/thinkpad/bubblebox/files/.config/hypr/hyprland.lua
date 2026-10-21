@@ -2,13 +2,13 @@
 --
 -- Install:  mkdir -p ~/.config/hypr && cp hyprland.lua ~/.config/hypr/
 -- Hyprland reads ~/.config/hypr/hyprland.lua (Lua config, the `hl.*` API)
--- and hot-reloads on save. Classic hyprland.conf still works too — the
+-- and hot-reloads on save. Classic hyprland.conf still works too -- the
 -- current upstream example config is this Lua form, and the wiki documents
 -- the new features (scrolling/monocle layouts, per-workspace layouts) in it.
 --
 -- Syntax verified against hyprwm/Hyprland example/hyprland.lua @ main and
 -- the wiki code-snippets page (2026-11). The layout model this skeleton
--- implements is the point of the trial — see ./README.md:
+-- implements is the point of the trial -- see ./README.md:
 --   * floating by default (one window rule)
 --   * workspace 3 = scrolling tape (niri/PaperWM feel), workspace 4 = monocle
 --   * animated overview via the Hyprspace plugin or quickshell-overview
@@ -21,17 +21,17 @@ hl.unbind("SUPER + Super_L")
 hl.unbind("SUPER + L")
 
 -- ghostty is a bubblebox tool: the wrapper lives at ~/.local/bin/ghostty.
--- Use the explicit $HOME path — GDM launches Hyprland with a thin session
+-- Use the explicit $HOME path -- GDM launches Hyprland with a thin session
 -- env whose PATH may not include ~/.local/bin ($HOME expands because
 -- exec_cmd runs through a shell; see upstream's example binds).
 local terminal = "$HOME/.local/bin/ghostty"
 
--- ── monitors ──────────────────────────────────────────────────────────────
+-- -- monitors --------------------------------------------------------------
 -- eDP-1 explicit: scale "auto" computed 1.5 on this 1920x1200 14" panel and
 -- everything rendered huge; niri runs it at 1.0 (bubblebox niri config.kdl)
--- — match that.
+-- -- match that.
 hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = "1.0" })
--- Docked — mirror niri's config.kdl entries when needed (names via
+-- Docked -- mirror niri's config.kdl entries when needed (names via
 -- `hyprctl monitors`; the Dell shows up as DP-*):
 -- hl.monitor({ output = "DP-1", mode = "2560x1440@59.951", position = "auto", scale = "1.0" })
 
@@ -39,7 +39,7 @@ hl.env("XCURSOR_SIZE", "24")
 -- hl.env("XCURSOR_THEME", "Bibata-...") -- bibata-cursor-themes is in the
 -- image; match the theme string niri uses before uncommenting.
 
--- ── input ─────────────────────────────────────────────────────────────────
+-- -- input -----------------------------------------------------------------
 hl.config({
     input = {
         kb_options = "caps:swapescape", -- same as niri + GNOME (dconf layer)
@@ -55,7 +55,7 @@ hl.config({
 })
 
 -- Hyprspace overview styling/behavior. NOTE: plugin config keys only exist
--- once the plugin is loaded — UNCOMMENT this block after running
+-- once the plugin is loaded -- UNCOMMENT this block after running
 -- `hyprpm enable Hyprspace`, else Hyprland errors on the unknown key
 -- (verified live). All options in the Hyprspace README: dragAlpha,
 -- showNewWorkspace, onBottom, reservedArea, exitKey, ...
@@ -81,7 +81,7 @@ hl.window_rule({
 --     workspace = "3",
 -- })
 
--- ── per-workspace layouts (core Hyprland now — no plugins) ────────────────
+-- -- per-workspace layouts (core Hyprland now -- no plugins) ----------------
 -- Scrolling = infinitely growing tape. Monocle = one window full-bleed.
 -- (Both are core; workspace rules assign them per workspace.)
 hl.workspace_rule({ workspace = "3", layout = "scrolling" })
@@ -92,15 +92,15 @@ hl.config({ scrolling = { fullscreen_on_one_column = true } })
 -- Monocle cycling dispatcher: see the wiki Monocle Layout page for the
 -- exact hl.dsp.layout(...) form and bind it if you adopt workspace 4.
 
--- Custom layouts are user-programmable in plain Lua — no C plugins. Upstream
+-- Custom layouts are user-programmable in plain Lua -- no C plugins. Upstream
 -- ships examples (columns/grid/manual/spiral) using:
 --   hl.layout.register("mylayout", { recalculate = function(ctx) ... end })
 -- See https://github.com/hyprwm/Hyprland/tree/main/example/layouts
 
--- ── shell + overview ──────────────────────────────────────────────────────
+-- -- shell + overview ------------------------------------------------------
 -- NOTE: this config assumes the uwsm-managed session (GDM entry "Hyprland")
--- → hyprland-uwsm.desktop). uwsm's launch target hyprland.desktop is a
--- USER-scope bubblebox file (~/.local/share/wayland-sessions/) — inside the
+-- -> hyprland-uwsm.desktop). uwsm's launch target hyprland.desktop is a
+-- USER-scope bubblebox file (~/.local/share/wayland-sessions/) -- inside the
 -- XDG data hierarchy so uwsm finds it, outside the system session dirs so
 -- GDM never lists it (the image deletes the system copy, step 2.4). uwsm
 -- handles everything
@@ -125,9 +125,9 @@ hl.on("hyprland.start", function()
 end)
 -- Alternative overview without a plugin: the standalone quickshell module
 -- https://github.com/Shanu-Kumawat/quickshell-overview (live previews of all
--- workspaces, Super+Tab toggle) — run it as its own qs config alongside a bar.
+-- workspaces, Super+Tab toggle) -- run it as its own qs config alongside a bar.
 
--- ── binds ─────────────────────────────────────────────────────────────────
+-- -- binds -----------------------------------------------------------------
 local mainMod = "SUPER"
 
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))
@@ -147,7 +147,7 @@ hl.bind(mainMod .. " + SHIFT + O", function()
 end)
 
 -- Plugin styling keys only exist once the plugin is loaded (see the
--- Hyprspace note above — same failure mode, verified live 2026-11: this
+-- Hyprspace note above -- same failure mode, verified live 2026-11: this
 -- block uncommented with no plugin installed broke every session start).
 -- Re-enable together with the hymission binds above:
 -- hl.config({
@@ -160,7 +160,7 @@ end)
 --     }
 -- })
 
--- Launcher — same Mod+Space muscle memory as niri (vicinae daemon client).
+-- Launcher -- same Mod+Space muscle memory as niri (vicinae daemon client).
 hl.unbind(mainMod .. " + SPACE")
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("$HOME/.local/bin/vicinae toggle"))
 
@@ -185,7 +185,7 @@ hl.on("window.active", function(w)
     raising_focused = false
 end)
 
--- Adjacent workspace on this monitor, including an empty one (r±1).
+-- Adjacent workspace on this monitor, including an empty one (r+/-1).
 hl.unbind(mainMod .. "+ CTRL + k")
 hl.bind(mainMod .. " + CTRL + k", hl.dsp.focus({ workspace = "r-1" }))
 
@@ -213,7 +213,7 @@ hl.bind(mainMod .. " + SHIFT + M", hl.dsp.window.move({ workspace = "special:mag
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- ── upstream's two near-universal window rules ────────────────────────────
+-- -- upstream's two near-universal window rules ----------------------------
 -- Ignore maximize requests from apps (floating envs want this).
 hl.window_rule({
     name = "suppress-maximize-events",

@@ -1,24 +1,24 @@
-# Custom Fedora Silverblue image for the ThinkPad — "bluefin-style".
+# Custom Fedora Silverblue image for the ThinkPad -- "bluefin-style".
 #
 # A thin layer over stock Silverblue. The active host-level changes:
-#   - add `distrobox` (the base image's `toolbox` stays — deliberate,
+#   - add `distrobox` (the base image's `toolbox` stays -- deliberate,
 #     2026-09-24: it can't hurt next to distrobox/podman).
 #   - install the compositor stack (niri + our shell fork) from COPRs.
 #     (desktoppak, the old per-user bwrap payload layer, was retired
-#     2026-09-01 — the normal bootc/image path won; see host-image/README.md.)
+#     2026-09-01 -- the normal bootc/image path won; see host-image/README.md.)
 #
 # This image uses the modern bootc-native build model, matching current
 # Bluefin/finpilot (projectbluefin/finpilot):
 #   - `dnf5` for all package changes at build time (NOT `rpm-ostree`).
 #     finpilot's AGENTS.md is explicit: "Use dnf5 exclusively (never dnf, yum,
 #     rpm-ostree)". In a bootc container build dnf5 writes straight into the
-#     image's /usr, so a plain `dnf5 remove` drops a base package — no
+#     image's /usr, so a plain `dnf5 remove` drops a base package -- no
 #     `rpm-ostree override remove` needed (that was an rpm-ostree *client*
 #     concept; at build time the tree is just a writable filesystem).
 #   - `bootc container lint` to finalize/validate (replaces the old
 #     `ostree container commit`).
 #   - Switched/deployed with `bootc`, not `rpm-ostree` (see switch.sh).
-#   bootc still uses ostree/libostree under the hood — it's the stable,
+#   bootc still uses ostree/libostree under the hood -- it's the stable,
 #   future-facing front-end (per bootc-status(8): "bootc and rpm-ostree share
 #   the same code").
 #
@@ -43,7 +43,7 @@ FROM quay.io/fedora-ostree-desktops/silverblue:${FEDORA_MAJOR_VERSION}
 #
 # `just` and `fzf` are host-native on purpose: they back the `cjust` task menu
 # (hosts/thinkpad/Justfile + the cjust function in bubblebox/files/.zshrc). Like
-# oh-my-posh they can't live in a bubblebox — `cjust` must run before any box
+# oh-my-posh they can't live in a bubblebox -- `cjust` must run before any box
 # is set up. (`just` was previously borrowed from the `default` box, which
 # made the menu depend on the thing it bootstraps; `fzf` backs `just --choose`.)
 # `nodejs` + `npm` are host-native for the hermes desktop app build
@@ -69,19 +69,19 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 #
 # The shell stack for niri (fork: github.com/chad-russell/niri-caelestia-shell,
 # our maintenance fork of AyushKr2003's archived port of Caelestia to niri):
-#   - `quickshell` from errornointernet/quickshell (F44 release build 0.3.x —
+#   - `quickshell` from errornointernet/quickshell (F44 release build 0.3.x --
 #     the QML runtime the fork's shell runs on).
-#   - fonts + materialyoucolor from gmanka/caelestia — the ONE thing we keep
+#   - fonts + materialyoucolor from gmanka/caelestia -- the ONE thing we keep
 #     that COPR for (material-symbols-fonts, cascadia-code-nerd-fonts,
 #     python3-materialyoucolor); caelestia-shell itself is NOT installed.
 #   - `app2unit` from celestelove/app2unit (the fork's app-launcher helper:
 #     launches apps as transient user units, scoped to the graphical session).
-#   - `libcava` (+ devel, tiny) from celestelove/libcava — the audio-
+#   - `libcava` (+ devel, tiny) from celestelove/libcava -- the audio-
 #     visualizer lib the shell's C++ plugin links for the audio visualizer
 #     widget (plugin built in step 2.5 below).
 #
 # Runtime deps for the fork (each verified available on F44):
-#   matugen (Fedora proper — the Material-You color pipeline), nmcli via
+#   matugen (Fedora proper -- the Material-You color pipeline), nmcli via
 #   NetworkManager (base image), kdialog + kf6-kirigami + kf6-syntax-
 #   highlighting + plasma-integration (Qt dialogs/theme), swappy +
 #   tesseract-langpack-eng + wf-recorder (screenshot annotate/OCR/record),
@@ -94,13 +94,13 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # NO dolphin/system-settings: their weak-dep chain pulls in the entire Plasma
 # workspace (plasma.desktop session included). nautilus (GNOME base) is the
 # file manager; the fork's file-manager config default just points at a
-# binary — nautilus covers it. install_weak_deps=False keeps other recommends
+# binary -- nautilus covers it. install_weak_deps=False keeps other recommends
 # (fonts, extra modules) from ballooning the image the same way.
 #
 # COSMIC soft-removed 2026-09-01: not in active use; revisit in a few months
 # to check epoch progress. To restore, un-comment the cosmic lines below and
 # rebuild (`cjust image-rebuild`). Settings are already backed up in-repo
-# (cjust cosmic-backup → bubblebox/files/.config/cosmic/).
+# (cjust cosmic-backup -> bubblebox/files/.config/cosmic/).
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install dnf5-plugins \
@@ -136,7 +136,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     # trial concludes; merged 2026-11). re-added from the same mineiro COPR round 1
     # used; hyprland-guiutils added after the live session warned it is missing.
     # (mango/step-2.7 dropped 2026-11: Terra repo drift broke the build; the
-    # trial went all-Hyprland — reinstatable as its own PR if wanted.)
+    # trial went all-Hyprland -- reinstatable as its own PR if wanted.)
     # hosts/thinkpad/hyprland/README.md.
     # ripgrep removed 2026-10-15: duplicate of the bubblebox `rg` package
     # (the ~/.local/bin wrapper shadows /usr/bin/rg anyway). fish removed:
@@ -151,14 +151,14 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # session (hyprland-uwsm.desktop) is the one we run (the config assumes
 # uwsm). Drop the plain entry so GDM offers exactly one. The image ALSO
 # renames the uwsm entry to plain "Hyprland" ("Hyprland (uwsm-managed)" was
-# the stock Name). uwsm's launch TARGET hyprland.desktop — the entry
+# the stock Name). uwsm's launch TARGET hyprland.desktop -- the entry
 # `uwsm start -D Hyprland hyprland.desktop` resolves through the XDG data
-# hierarchy — is NOT shipped here: it lives user-scope as a bubblebox file
+# hierarchy -- is NOT shipped here: it lives user-scope as a bubblebox file
 # (~/.local/share/wayland-sessions/, see bubblebox/profile.toml). System
 # /usr/share/wayland-sessions would make GDM list it too; user-scope keeps
 # it uwsm-only (GDM scans system dirs only). Deleting the system copy
 # without providing the user-scope one breaks every Hyprland login
-# ("uwsm: Could not find entry", live 2026-10 — GDM bounces back).
+# ("uwsm: Could not find entry", live 2026-10 -- GDM bounces back).
 RUN rm -f /usr/share/wayland-sessions/hyprland.desktop \
     && sed -i 's/^Name=Hyprland (uwsm-managed)$/Name=Hyprland/' \
         /usr/share/wayland-sessions/hyprland-uwsm.desktop
@@ -180,7 +180,7 @@ RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/ambxst
 
 # ---- 2.7. Hyprland plugin build deps (hyprpm) ----------------------------
 # hyprpm compiles the Hyprland SOURCE itself for headers when building
-# plugins (Hyprspace etc.) — the shell-plugin toolchain from step 2.5 is
+# plugins (Hyprspace etc.) -- the shell-plugin toolchain from step 2.5 is
 # not enough (first live miss: glslang, 2026-11). This is the full
 # BuildRequires set from the mineiro COPR's hyprland.spec with every
 # pkgconfig() resolved to its exact Fedora package name against the live
@@ -207,7 +207,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # installed it with ALL repos enabled and Terra's package set collided with
 # the mineiro COPR stack inside one rpm transaction (repo drift, 2026-11;
 # installs clean in isolation). Fix: this transaction runs with every COPR
-# disabled — mangowm + deps resolve from Terra + Fedora only and never meet
+# disabled -- mangowm + deps resolve from Terra + Fedora only and never meet
 # the COPR-installed set.
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
@@ -221,11 +221,11 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # Arch where SELinux isn't part of the workflow. Fedora ships the `targeted`
 # policy enabled by default; its friction (label mismatches on relocated paths,
 # audit noise, per-inode relabeling cost) isn't worth the hardening for this
-# threat model — the desktop apps worth sandboxing run in bubblebox containers
+# threat model -- the desktop apps worth sandboxing run in bubblebox containers
 # or come from this image itself, and the daemons `targeted` most protects
 # (httpd, named, ...) don't run on a desktop. So: disable it in the image.
 #
-# Mechanism: `SELINUX=disabled` in /etc/selinux/config — the canonical, image-
+# Mechanism: `SELINUX=disabled` in /etc/selinux/config -- the canonical, image-
 # bakeable way. The selinux-policy packages stay installed (removing them
 # breaks a web of dependencies), but no policy is loaded and no enforcement
 # happens. For absolute-zero kernel overhead you could additionally
@@ -257,8 +257,8 @@ RUN set -e; \
 
 # ---- 3.5. kernel args (bootc static kargs) -----------------------------
 # bootc applies *.toml files under /usr/lib/bootc/kargs.d/ to every deployment
-# staged from this image — on BOTH `bootc install` and routine `bootc upgrade`
-# — by diffing the booted image's kargs.d against the new image's and patching
+# staged from this image -- on BOTH `bootc install` and routine `bootc upgrade`
+# -- by diffing the booted image's kargs.d against the new image's and patching
 # the new deployment's cmdline accordingly. Removing a file from a future
 # image retracts its karg on the next upgrade. This is the image-bakeable,
 # declarative equivalent of `rpm-ostree kargs --append-if-missing`, and it
@@ -268,7 +268,7 @@ RUN set -e; \
 #
 # usbcore.autosuspend=-1: disables USB runtime autosuspend globally. The Dell
 # P3225QE over USB-C/DisplayPort on this Lunar Lake (xe) ThinkPad was flapping
-# the DP-1 connector at a steady ~3s cadence — the classic signature of the
+# the DP-1 connector at a steady ~3s cadence -- the classic signature of the
 # USB-C DP tunnel cycling in/out of runtime suspend, which drops HPD and forces
 # a link retrain each wake. Keeping the tunnel awake fixes the external-monitor
 # black-screen cycling at full 4K@60, so the 1440p workaround in
@@ -278,14 +278,14 @@ RUN mkdir -p /usr/lib/bootc/kargs.d && \
     > /usr/lib/bootc/kargs.d/10-usb-autosuspend.toml
 
 # ---- 3.6. insecure-registry drop-in for the homelab zot registry --------
-# The host's boot image pulls from bees's zot registry at 10.10.0.6:5000 —
+# The host's boot image pulls from bees's zot registry at 10.10.0.6:5000 --
 # plain HTTP inside the Nebula WireGuard tunnel (Nebula IS the transport
 # security; the registry is bound to the overlay address only). This drop-in
 # teaches container tools in the image (skopeo/bootc container previews,
 # `podman pull 10.10.0.6:5000/...` if you ever want to inspect the image
 # without switching) that the registry is intentionally insecure-HTTP.
 # NOTE: bootc itself reads these drop-ins too (same containers-image stack)
-# — trust for 10.10.0.6:5000 must exist on the HOST at switch/upgrade time;
+# -- trust for 10.10.0.6:5000 must exist on the HOST at switch/upgrade time;
 # switch.sh bootstraps it for the running host.
 RUN mkdir -p /etc/containers/registries.conf.d && \
     printf '[[registry]]\nlocation = "10.10.0.6:5000"\ninsecure = true\n' \
@@ -297,16 +297,16 @@ RUN mkdir -p /etc/containers/registries.conf.d && \
 # source of truth). The thinkpad bakes the SAME rendered entries into the
 # image's /etc/hosts. At deploy time bootc migrates the image's /etc into
 # the deployment's /usr/etc defaults, and ostree 3-way merges those into
-# the live /etc/hosts on every upgrade — so overlay names (bee, bees, nas,
+# the live /etc/hosts on every upgrade -- so overlay names (bee, bees, nas,
 # nebula-hetzner, ...) resolve everywhere, and future host-meta changes
 # flow to this host with each image upgrade, as long as the live /etc/hosts
 # stays unmodified (it ships unmodified today).
 #
-# MECHANISM — COPY, not RUN: buildah RUN-time-masks /etc/hosts (like
+# MECHANISM -- COPY, not RUN: buildah RUN-time-masks /etc/hosts (like
 # resolv.conf / hostname): every RUN container gets a freshly generated
 # /etc/hosts, so `RUN cat >> /etc/hosts` writes the throwaway runtime copy
 # and NEVER commits to the layer (verified live: a separate-RUN grep
-# assertion failed, 2026-08-27). COPY writes the layer tarball directly —
+# assertion failed, 2026-08-27). COPY writes the layer tarball directly --
 # no masking. etc-hosts is the COMPLETE file (stock Fedora loopback block +
 # the generated fragment), rendered by `nix run .#render-thinkpad-hosts`;
 # the identical fragment (hosts-sync on the laptop) is also committed as
@@ -316,13 +316,13 @@ COPY etc-hosts /etc/hosts
 # ---- 3.8. sudoers: passwordless `bootc upgrade` for the daily timer -------
 # bubblebox ships a user timer (hosts/thinkpad/bubblebox/units/thinkpad-
 # image-update.{service,timer}) that runs the consumer side of this pipeline
-# daily: stage the latest build (`bootc upgrade`, stage-only — reboots stay
+# daily: stage the latest build (`bootc upgrade`, stage-only -- reboots stay
 # manual) + an ntfy lag alert. A user unit has no TTY for an askpass, so the
 # staging command gets an explicit NOPASSWD grant. Args are listed EXPLICITLY:
 # a Cmnd with arguments matches ONLY that exact argv, so `upgrade` alone is
 # granted and `upgrade --apply` (which reboots) still requires a password.
-# (The original grant pinned the args as `upgrade ""` — an empty-string
-# argument in the spec — which sudo listed as a valid match but never
+# (The original grant pinned the args as `upgrade ""` -- an empty-string
+# argument in the spec -- which sudo listed as a valid match but never
 # honoured at exec time; the daily timer failed "a password is required"
 # from day one. Plain `upgrade` is the exact-argv form.)
 # Everything that changes the image REFERENCE (`bootc switch`, `bootc edit`)
@@ -337,12 +337,12 @@ RUN printf 'crussell ALL=(root) NOPASSWD: /usr/bin/bootc upgrade\n' \
 # The nebula/tailscale/restic units are part of the SYSTEM layer now: quadlet
 # sources + timers + the ntfy template ship in the image (their dirs under
 # hosts/thinkpad/ keep only the container-image builds and the one-time
-# secret seeding — volumes and /etc/restic-backup are host state, not image
+# secret seeding -- volumes and /etc/restic-backup are host state, not image
 # state). This replaces the sudo install.sh copies into /etc, which could
 # drift from the repo and vanish on a reinstall.
 COPY quadlets/ /usr/share/containers/systemd/
 COPY systemd/ /usr/lib/systemd/system/
-# sshd: key-only drop-in. Ships in /etc — bootc snapshots build-time /etc as
+# sshd: key-only drop-in. Ships in /etc -- bootc snapshots build-time /etc as
 # the default configuration (same as the etc-hosts COPY below; /usr/etc is a
 # bootc implementation detail and `bootc container lint` rejects it).
 # Replaces `cjust ssh`'s imperative write; authorized_keys stays a recipe
@@ -351,14 +351,14 @@ COPY etc/ /etc/
 # User linger: bubblebox user units run before any login (tmpfiles.d).
 COPY tmpfiles.d/ /usr/lib/tmpfiles.d/
 # nebula autostart: quadlet units are GENERATED at boot (no unit file exists
-# at build time, so `systemctl enable` can't work) — bake the wants symlink
+# at build time, so `systemctl enable` can't work) -- bake the wants symlink
 # to the generator output. Same mechanism install.sh used (proven on this
 # host); the generator runs before multi-user.target evaluates its wants.
-# tailscale stays on-demand (no symlink) by design — see its quadlet header.
+# tailscale stays on-demand (no symlink) by design -- see its quadlet header.
 RUN mkdir -p /etc/systemd/system/multi-user.target.wants \
     && ln -s /run/systemd/generator/nebula.service \
         /etc/systemd/system/multi-user.target.wants/nebula.service
-# Real units enable normally (offline in the build root — bootc-blessed).
+# Real units enable normally (offline in the build root -- bootc-blessed).
 RUN systemctl enable restic-backup.timer restic-check.timer sshd.service
 
 # ---- 4. build identity (lets `bootc upgrade` detect a rebuild) ----------
@@ -370,7 +370,7 @@ RUN systemctl enable restic-backup.timer restic-check.timer sshd.service
 #     `:stable` is always detected as new and gets deployed (see README, "switch
 #     once, upgrade thereafter"). Without the label, a rebuild that reuses
 #     podman's layer cache has an identical manifest digest and `bootc upgrade`
-#     correctly — but uselessly — reports "No update available".
+#     correctly -- but uselessly -- reports "No update available".
 #   - written to /usr as well, so on the booted system you can `cat
 #     /usr/lib/host-image-thinkpad-version` to see exactly which build you're
 #     on without querying bootc/podman.
@@ -384,6 +384,6 @@ LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
 # ---- 5. finalize: bootc-native validation -----------------------------
 # systemd as pid 1 is required for a bootc image. `bootc container lint` then
 # validates the image (catches /run leftovers, /opt issues, etc.) before you
-# ever switch to it — it replaces the old `ostree container commit`.
+# ever switch to it -- it replaces the old `ostree container commit`.
 CMD ["/sbin/init"]
 RUN bootc container lint

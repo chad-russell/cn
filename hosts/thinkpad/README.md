@@ -1,4 +1,4 @@
-# ThinkPad — atomic workstation repo
+# ThinkPad -- atomic workstation repo
 
 This repo holds machine-specific infrastructure for a Fedora-based atomic (bootc)
 host.
@@ -7,15 +7,15 @@ host.
 
 ```text
 .
-├── host-image/     # minimal bootc host image
-├── nebula/         # Nebula VPN container/service
-├── backup/         # restic S3 backup (units in host-image/; image build + seeding here)
-├── wycliffe-vpn/   # on-demand GlobalProtect wrapper
-├── hyprland/       # round-2 Hyprland exploration kit (layered, not baked)
-└── bubblebox/      # declarative host profile (packages + dotfiles + units)
-    ├── profile.toml   # desired package set + [[files]] + [[units]] declarations
-    ├── files/         # host-native dotfiles, mirroring $HOME (managed by `bubblebox apply`)
-    └── units/         # systemd user units (managed by `bubblebox apply`)
+|-- host-image/     # minimal bootc host image
+|-- nebula/         # Nebula VPN container/service
+|-- backup/         # restic S3 backup (units in host-image/; image build + seeding here)
+|-- wycliffe-vpn/   # on-demand GlobalProtect wrapper
+|-- hyprland/       # round-2 Hyprland exploration kit (layered, not baked)
+--- bubblebox/      # declarative host profile (packages + dotfiles + units)
+    |-- profile.toml   # desired package set + [[files]] + [[units]] declarations
+    |-- files/         # host-native dotfiles, mirroring $HOME (managed by `bubblebox apply`)
+    --- units/         # systemd user units (managed by `bubblebox apply`)
 ```
 
 ## Guiding principle
@@ -52,11 +52,11 @@ Dotfiles and systemd user units are declared in `bubblebox/profile.toml` (the
 `[[files]]` and `[[units]]` sections) and realized by `cjust bubblebox-apply`.
 The profile is applied **in place**: `~/.config/bubblebox/profile.toml` is a
 symlink to `bubblebox/profile.toml` here, and the engine mirrors the realized
-lock to `bubblebox/profile.lock` — commit it alongside profile edits (the
+lock to `bubblebox/profile.lock` -- commit it alongside profile edits (the
 `flake.lock` analog).
 
 `thinkpad-bubblebox-check.timer` runs daily: a read-only `bubblebox plan`
-for **drift** (live state ≠ committed profile/lock) and `plan --refresh` for
+for **drift** (live state != committed profile/lock) and `plan --refresh` for
 **updates** (CI published newer builds). One ntfy ping (homelab-alerts) per
 distinct state, silent when healthy or away from home; it never applies.
 
@@ -77,9 +77,9 @@ keyfile, `cjust bubblebox-apply`.
 **The rest of the user layer is declared too**: `.gitconfig`,
 `mimeapps.list`, `monitors.xml`, GTK `settings.ini` (non-GNOME sessions),
 the caelestia `shell.json`, login autostart (real `.desktop` files), and the
-user flatpak overrides — all `[[files]]`, all content-identical to what the
+user flatpak overrides -- all `[[files]]`, all content-identical to what the
 machine had. `~/.config/containers/containers.conf` is NOT declared: its
-`compose_providers` path (`~/.local/bin/podman-compose`) doesn't exist — dead
+`compose_providers` path (`~/.local/bin/podman-compose`) doesn't exist -- dead
 config, safe to delete. The dev-project quadlets under
 `~/.config/containers/systemd/` stay symlinked by their per-project
 `install.sh` recipes (repo-tracked sources).
@@ -98,8 +98,8 @@ in `~/.var/app` is shared and untouched).
 ### `host-image/`
 A minimal bootc-managed host image. It is intentionally small: host-level
 choices that truly belong in the base OS (convenience packages, disabling
-SELinux, adding `distrobox` — the base image's `toolbox` stays — the niri
-compositor stack; `nodejs` stays for the npm-managed dev CLIs —
+SELinux, adding `distrobox` -- the base image's `toolbox` stays -- the niri
+compositor stack; `nodejs` stays for the npm-managed dev CLIs --
 railway, agent-browser). See
 `host-image/README.md`.
 
@@ -110,7 +110,7 @@ pulls only the changed layers and stages the new deployment; it goes live on
 the next reboot. The bubblebox timer `thinkpad-image-update.timer` automates
 the routine path (daily stage + ntfy lag alert; see
 `bubblebox/files/.local/bin/thinkpad-image-update`), and
-`thinkpad-image-health.service` gates every boot — it asserts the booted
+`thinkpad-image-health.service` gates every boot -- it asserts the booted
 image's load-bearing artifacts (session, shell, version stamp) and pings
 ntfy if one is missing. Recovery stays manual by design:
 `bootc rollback` + reboot. Local `./build.sh`
@@ -124,12 +124,12 @@ one-time secret seeding (`setup.sh`).
 
 ### Nebula overlay hostnames
 
-Every NixOS host resolves overlay names (`bees`, `bee`, `nas`, …) through
-`modules/nebula-hosts.nix` ← `lib/host-meta.nix`. The thinkpad gets the same
+Every NixOS host resolves overlay names (`bees`, `bee`, `nas`, ...) through
+`modules/nebula-hosts.nix` <- `lib/host-meta.nix`. The thinkpad gets the same
 entries by baking the rendered fragment into the **host image**
-(`host-image/Containerfile` step 3.7 → `/usr/etc/hosts`): ostree 3-way merges
+(`host-image/Containerfile` step 3.7 -> `/usr/etc/hosts`): ostree 3-way merges
 image defaults into the live `/etc/hosts` on every upgrade, so `ping bees`
-works and future `host-meta.nix` edits flow in automatically — as long as the
+works and future `host-meta.nix` edits flow in automatically -- as long as the
 live `/etc/hosts` is never hand-edited (a modified copy stops tracking the
 image).
 
@@ -157,14 +157,14 @@ in `~/.config` as bubblebox `[[files]]` entries:
 `files/.config/hypr/hyprland.lua` (float-by-default, per-workspace
 scrolling/monocle layouts, ambxst shell) and `files/.config/mango/config.conf`
 (ambxst shell sourced from the axctl-generated
-`~/.local/share/ambxst/mango.conf`, same trial layout model, Mod+Space →
+`~/.local/share/ambxst/mango.conf`, same trial layout model, Mod+Space ->
 vicinae). `files/.local/share/wayland-sessions/hyprland.desktop` is uwsm's
-user-scope launch target — required for the uwsm Hyprland session to start
+user-scope launch target -- required for the uwsm Hyprland session to start
 at all (uwsm resolves it via the XDG data hierarchy; GDM never lists it).
 See `hyprland/README.md`.
 
 ### `bubblebox/`
-The host's **bubblebox profile** (`profile.toml`) — the desired set of bubblebox
+The host's **bubblebox profile** (`profile.toml`) -- the desired set of bubblebox
 tools to install, the source registry it resolves them from, **plus** the
 host-resident dotfiles (`[[files]]`) and systemd user units (`[[units]]`). This
 is the `flake.nix` analog: a declarative input list that `bubblebox apply`
@@ -182,7 +182,7 @@ bubblebox itself spans three repos / concerns:
 | **profile** | this dir (`bubblebox/profile.toml`) | the host's desired package set + source registration + `[[files]]` / `[[units]]` |
 
 A **package** is an OCI image (a `Containerfile`); an **entrypoint** is how
-bubblebox runs it (which binary to exec, what to compose in, binds/env) —
+bubblebox runs it (which binary to exec, what to compose in, binds/env) --
 authored alongside the Containerfile because the package author knows what the
 tool needs. **Config / dotfiles** are a separate concern: every tool reads its
 personal config from the host `$HOME` via `writable_home` (e.g. aws reads
@@ -195,39 +195,39 @@ zoxide's db) is isolated to bubblebox-owned dirs via `/persist` binds.
 The laptop is a pure bubblebox **consumer**: the engine is a pinned Forgejo
 release (`bubblebox_version` in the Justfile, installed by `cjust
 bubblebox-install`), and packages are built, signed, and published to the bees
-cache by bubblebox-pkgs CI — nothing builds locally by default.
+cache by bubblebox-pkgs CI -- nothing builds locally by default.
 `cjust bubblebox-apply` pulls the locked packages and generates wrappers at
 `~/.local/bin/<tool>`; each tool auto-mounts on first invocation (rootless
 FUSE), then `nvim` / `aws` / `wezterm` / etc. work transparently.
 
 Current tools (defined in `~/Code/bubblebox-pkgs/`):
 
-- `age` — `age` from Fedora; standalone ad-hoc encryption (notably `age -d
+- `age` -- `age` from Fedora; standalone ad-hoc encryption (notably `age -d
   -i ~/.ssh/id_ed25519 nebula/pki/*.key.age` per repo convention). Not
-  composed into `sops` — sops uses age as a Go library.
-- `age-keygen` — a "virtual entrypoint" over the `age` package: its
+  composed into `sops` -- sops uses age as a Go library.
+- `age-keygen` -- a "virtual entrypoint" over the `age` package: its
   `entrypoint.toml` sets `package = "age"` + `binary = "age-keygen"`, so
   bubblebox execs `/usr/bin/age-keygen` from the age image rather than
   duplicating the build (no Containerfile of its own).
-- `aws` — AWS CLI v2; config + credentials both live at the default `~/.aws/`
+- `aws` -- AWS CLI v2; config + credentials both live at the default `~/.aws/`
   (personal dotfiles + machine-local runtime state, reached via writable_home).
-- `bat`, `dust`, `eza`, `rg`, `fd`, `tokei`, `htop` — CLI tools, Rust ones
+- `bat`, `dust`, `eza`, `rg`, `fd`, `tokei`, `htop` -- CLI tools, Rust ones
   built via `cargo install` against a distroless runtime.
-- `sops` — Mozilla SOPS, built from Go source (not packaged in Fedora) via
+- `sops` -- Mozilla SOPS, built from Go source (not packaged in Fedora) via
   `go install` against a distroless/static runtime. Edit mode (`sops
   file.yaml`) needs an editor override; see `sops/entrypoint.toml`.
-- `nvim` — neovim; config lives in dotfiles (`~/.config/nvim`), plugin trees +
+- `nvim` -- neovim; config lives in dotfiles (`~/.config/nvim`), plugin trees +
   undo history isolated to `/persist` (bound from `$BUBBLEBOX_DATA_DIR/nvim`).
-- `wezterm`, `ghostty` — GUI terminals; spawn the host shell via
+- `wezterm`, `ghostty` -- GUI terminals; spawn the host shell via
   `systemd-run --user` so the shell inside the terminal has full host access
   (PATH, `/dev/fuse`, host tools, etc.).
-- `vicinae` — launcher daemon; bubblebox wrapper with GPU + D-Bus access via
-  its entrypoint. Fallback launcher — the primary desktop shell is our
+- `vicinae` -- launcher daemon; bubblebox wrapper with GPU + D-Bus access via
+  its entrypoint. Fallback launcher -- the primary desktop shell is our
   niri-caelestia-shell fork, which ships in the host image (see
   `host-image/README.md`).
-- `yazi`, `zoxide` — file manager and `cd` replacement.
+- `yazi`, `zoxide` -- file manager and `cd` replacement.
 
-(AI coding agents are not bubblebox tools — see the note where the hermes
+(AI coding agents are not bubblebox tools -- see the note where the hermes
 section used to be.)
 
 Typical workflow:
@@ -245,22 +245,22 @@ cache), then add the name to `bubblebox/profile.toml`'s `packages` list and run
 `cjust bubblebox-upgrade`. To try a Containerfile before the PR, `cjust
 bubblebox-build <name>` builds it locally.
 
-(AI coding agents are not bubblebox tools — opencode was retired
+(AI coding agents are not bubblebox tools -- opencode was retired
 2026-09-02, and the hermes desktop + dsh CLI were removed from this host
 2026-10-16 (unused here). Agent work happens on bee via the dsh web UI at
 `https://dsh.internal.crussell.io`.)
 ### Host-resident dotfiles (`bubblebox/files/` + `[[files]]`)
 
-Host-native user dotfiles — the small exception to "everything lives in a
+Host-native user dotfiles -- the small exception to "everything lives in a
 sandbox." A tool's personal config (e.g. `~/.aws/config`,
 `~/.config/vicinae/`, `~/.config/nvim`) lives under `bubblebox/files/`
 (mirroring `$HOME`-relative layout) and is declared in the `[[files]]` section
 of `bubblebox/profile.toml`. `bubblebox apply` hashes each file's content into
-the content-addressed store and symlinks `$HOME/<dst>` → the store blob, so the
+the content-addressed store and symlinks `$HOME/<dst>` -> the store blob, so the
 checkout is the single source of truth. A few things are inherently
 host-resident regardless:
 
-- **oh-my-posh** — renders the prompt on every command, can't pay a
+- **oh-my-posh** -- renders the prompt on every command, can't pay a
   per-invocation sandbox spawn
 
 This is declarative, not live-edit: change the source file under
@@ -277,14 +277,14 @@ cjust bubblebox-apply
 To add another host-native dotfile: drop it under `bubblebox/files/` at its
 `$HOME`-relative path, add a `[[files]]` entry (with `dst = "<path>"`) to
 `bubblebox/profile.toml`, and re-run `cjust bubblebox-apply`. Secrets stay on
-the existing rails (agenix/age, see the repo-wide `AGENTS.md`) — don't add them
+the existing rails (agenix/age, see the repo-wide `AGENTS.md`) -- don't add them
 here.
 
-#### COSMIC desktop settings — `bubblebox/files/.config/cosmic/`
+#### COSMIC desktop settings -- `bubblebox/files/.config/cosmic/`
 
 The entire COSMIC settings tree is vendored under
 `bubblebox/files/.config/cosmic/` and managed via **copy**, not bubblebox
-symlinks — COSMIC dislikes symlinks for its config tree, so this is a permanent
+symlinks -- COSMIC dislikes symlinks for its config tree, so this is a permanent
 exception. `cjust cosmic-backup` copies the live `~/.config/cosmic` into the
 repo tree for git tracking, and `cjust cosmic-restore` copies it back. It
 covers the compositor (`com.system76.CosmicComp`), panels + dock, themes
@@ -294,10 +294,10 @@ library/list, and shortcuts.
 `cosmic-config` persists each key as a **plain-text, RON-like file** under
 `<app>/v1/<key>`, which makes the tree:
 
-- **git-friendly** — every change is a readable diff.
-- **LLM-editable** — an agent can read a key, edit it, and the live setting
+- **git-friendly** -- every change is a readable diff.
+- **LLM-editable** -- an agent can read a key, edit it, and the live setting
   updates on cosmic's next config reload (or session restart).
-- **portable** — no `/home/` paths, UUIDs, or machine IDs; the wallpaper
+- **portable** -- no `/home/` paths, UUIDs, or machine IDs; the wallpaper
   points at a path shipped with COSMIC itself.
 
 Notes:
@@ -320,9 +320,9 @@ apply` symlinks each unit into `~/.config/systemd/user/`, daemon-reloads, and
 enables lingering; units with `enable = true` in the profile are also started.
 Current units:
 
-- `vicinae.service` — starts the bubblebox-wrapped vicinae launcher daemon
+- `vicinae.service` -- starts the bubblebox-wrapped vicinae launcher daemon
   (`vicinae server --replace`), bound to `graphical-session.target` so it
-  auto-starts under any compositor (niri, COSMIC, ...) — replacing niri's
+  auto-starts under any compositor (niri, COSMIC, ...) -- replacing niri's
   `spawn-at-startup`. The `Mod+Space { spawn "vicinae" "toggle"; }` client
   keybind in niri is unaffected (it's an IPC client, not the daemon).
 
@@ -356,5 +356,5 @@ Examples:
   npm-managed dev CLIs).
 - Dev tools live in bubblebox sandboxes, not on the host image.
 - AI coding agents don't run on this host. (opencode was retired 2026-09-02;
-  the hermes desktop and dsh CLI were removed 2026-10-16 — agent work happens
+  the hermes desktop and dsh CLI were removed 2026-10-16 -- agent work happens
   on bee via the dsh web UI.)
