@@ -1,7 +1,7 @@
 # ── bee: sweatshop (rootless quadlet, crussell) ───────────────────────
 #
 # Chad's personal software factory (repo: git.crussell.io/chad/sweatshop,
-# checkout ~/ss/sweatshop). ONE instance, no dev server (sweatshop 0020):
+# checkout ~/sweatshop). ONE instance, no dev server (sweatshop 0020):
 # this unit serves `next start` of a production build in the checkout,
 # and the checkout moves only through its own scripts/deploy.sh (stop →
 # npm ci + next build + db:migrate → start). Sweatshop changes itself by
@@ -11,7 +11,7 @@
 # read-only under /etc, symlink into crussell's user quadlet search path,
 # reload the user manager, enable.
 #
-# State lives in ~/ss/sweatshop/data (sqlite + WAL, the Workflow SDK local
+# State lives in ~/sweatshop/data (sqlite + WAL, the Workflow SDK local
 # world, backups/) — in bee's restic paths (backup.nix). The nightly timer
 # below writes a guaranteed-consistent copy, data/backups/nightly.db, an
 # hour before the 00:00 (+≤1 h jitter) restic window.
@@ -23,7 +23,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  checkout = "/home/crussell/ss/sweatshop";
+  checkout = "/home/crussell/sweatshop";
   units = [ "sweatshop.container" "sweatshop-harness.network" ];
 in {
   # 0043 host channel: the exec tool's SSH key, mounted read-only into

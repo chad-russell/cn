@@ -15,24 +15,14 @@ in {
   # (hosts/bee/hindsight.nix).
   "hindsight-env.age".publicKeys = [ crussell ];
 
-  # ── 9router AI provider gateway on bee ────────────────────────
-  # JWT_SECRET (dashboard cookie signing), INITIAL_PASSWORD (first
-  # dashboard login only — upstream default is 123456),
-  # API_KEY_SECRET + MACHINE_ID_SALT (upstream defaults are public
-  # strings). All randomly generated at creation. owner=crussell so the
-  # rootless user quadlet can read it (hosts/bee/ninerouter.nix).
-  "ninerouter-env.age".publicKeys = [ crussell ];
-
-  # ── 9router API key for dsh (bee) ─────────────────────────────
-  # NINEROUTER_API_KEY — Bearer key minted in the 9router dashboard
-  # (name "dsh"), consumed by dsh-web via EnvironmentFile in
-  # modules/dsh.nix (provider "ninerouter" → 10.10.0.12:20128).
-  # Separate file from ninerouter-env.age (the container's own secret)
-  # per consumer — openrouter-api-key/hindsight-env precedent.
-  "ninerouter-dsh-key.age".publicKeys = [ crussell ];
-
   # ── Z.AI API key (opencode) ───────────────────
   "zai-api-key.age".publicKeys = [ crussell ];
+
+  # ── tastyquant (bee) — trades.internal.crussell.io ─────────────
+  # TT_SECRET, TT_REFRESH, TASTYTRADE_PRODUCTION, MARKETDATA_APP_KEY.
+  # Materialized as ~/tastyquant/.env + .env.production by
+  # hosts/bee/tastyquant.nix (owner=crussell for the user units).
+  "tastyquant-env.age".publicKeys = [ crussell ];
 
   # ── Restic backup secrets ──────────────────────────────────────
   # S3 credentials (shared by all machines)
@@ -60,10 +50,6 @@ in {
   # Env file (KEY=<hub public key>, TOKEN=<universal token>) shared by
   # every beszel-agent. Created after first booting the hub.
   "beszel-agent-env.age".publicKeys = [ crussell ];
-
-  # ── Kan (kan.bn) on bees — trello.crussell.io ────────────────────
-  # POSTGRES_PASSWORD, POSTGRES_URL, BETTER_AUTH_SECRET, KAN_ADMIN_API_KEY.
-  "kan-env.age".publicKeys = [ crussell ];
 
   # ── Proton Pass agent token for bee ("Glen" vault) ───────────────
   # PROTON_PASS_PERSONAL_ACCESS_TOKEN (hermes-bee agent, 6m expiry — renew via

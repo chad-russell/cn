@@ -5,11 +5,11 @@
 # `podman auto-update` run compares the remote digest of each labeled
 # tag against local storage; on drift it pulls and systemd restarts the
 # unit onto the new image. Containers WITHOUT the label are never
-# touched — pinned images (dev-quadlets) stay where they are.
+# touched — pinned images stay where they are.
 #
 # User-level (crussell's manager) because every long-running quadlet on
 # bee is rootless; the system-level NixOS podman auto-update can't see
-# rootless storage. Labeled today: ninerouter, hindsight, filebrowser.
+# rootless storage. Labeled today: hindsight, filebrowser.
 #
 # Schedule: 04:30 + jitter, so image pulls and service restarts (brief
 # API blips) land in the quiet hours. Persistent=true catches missed
