@@ -16,7 +16,7 @@
 # must precede the [[source]]/[[cache]] table headers -- standard TOML.)
 packages = [
   "age", "age-keygen", "aws", "bat", "dust", "eza", "fastfetch", "fd", "gh", "htop",
-  "nvim", "oh-my-posh", "pnpm", "psql", "rg", "rust-dev", "sops", "slack", "terraform",
+  "nvim", "oh-my-posh", "pnpm", "psql", "railway", "rg", "rust-dev", "sops", "slack", "terraform",
   "tokei", "uv", "vicinae", "witr", "ghostty", "wezterm", "wl-party", "yazi", "zoxide",
 ]
 # (shell history: noctalia -> niri-caelestia-shell fork -> Ambxst, 2026-11)
