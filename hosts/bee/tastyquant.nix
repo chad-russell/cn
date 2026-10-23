@@ -116,6 +116,14 @@ in {
       serve "gateway" "tastyquant order gateway (tools/tq gateway)" { };
     tastyquant-market =
       serve "market" "tastyquant market service (tools/tq market)" { };
+    # apps/site :8808 — the desk's analytics backend (bands/book/analyze/
+    # screen/sql over the v2 db). Discovered 2026-10-23 the hard way: the
+    # tasty-route cleanup removed it as "v1" and every desk board view
+    # 500/502'd. INTERNAL ONLY — no caddy route, bound to Nebula IP.
+    tastyquant-site = serve "site"
+      "tastyquant analytics site (apps/site :8808 — desk backend, internal)" {
+        TQ_SITE_BIND = "10.10.0.12";
+      };
     # Direct-to-Z.AI LLM (9router decommissioned 2026-10-23; overrides the
     # code default that still points at the dead 20128 gateway).
     tastyquant-desk = serve "desk"
