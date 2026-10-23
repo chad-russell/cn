@@ -30,7 +30,7 @@ let
   repo = "/home/crussell/tastyquant";
   tq = "${repo}/tools/tq";
   execEnv = {
-    PATH = "/run/current-system/sw/bin:/usr/bin:/bin";
+    PATH = lib.mkForce "/run/current-system/sw/bin:/usr/bin:/bin";
     HOME = "/home/crussell";
   };
   # Serve-unit template: oneshot launcher with matching --stop. Gates on
