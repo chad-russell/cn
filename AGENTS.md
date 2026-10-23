@@ -580,6 +580,38 @@ Decrypt Nebula key material with the SSH ed25519 key when needed:
 age -d -i ~/.ssh/id_ed25519 nebula/pki/bees.key.age > /tmp/bees.key
 ```
 
+## Home Directory Layout Contract (2026-10-23)
+
+Server home dirs are infrastructure runtime state, not personal
+workspaces. Every path under `~crussell` on bee/bees (and eventually
+every host) must be exactly ONE of:
+
+1. **Deployment checkout** — a git repo whose origin is Forgejo
+   (`git.crussell.io/chad/*`) or GitHub (private), with its serving
+   units declared in cn (`hosts/bee/tastyquant.nix` is the reference
+   pattern). Checkout + cn unit + agenix env = the whole deployment.
+2. **Declared data/volume state** — service-owned data (e.g.
+   `~/filebrowser/data`, `~/nsfw-suite-data`, `~/artifacts`), owned by
+   the consuming service/user and covered by backup or explicitly
+   documented as ephemeral.
+3. **Rebuildable cache** — anything under `~/.cache`, `~/.npm`, etc.
+   Safe to delete at any time; nobody may depend on its contents.
+4. **Trash** — `~/.local/share/trash`. Treat as deleted.
+
+Anything that fits none of these gets archived to trash or deleted.
+Dotfiles come from `modules/server-home.nix` / bubblebox only; a
+dotfile dir belonging to a retired tool is trash, not memorabilia.
+Development happens in sweatshop sandboxes, not in bare home-dir
+checkouts (the `~/Gloo` → sweatshop migration is the known exception
+still in progress).
+
+Current bee home (post 2026-10-23 cleanup): `Code` (cn + repos),
+`artifacts`, `filebrowser`, `personal`, `purlinens` (→ GitHub +
+Railway gitops, in progress), `sweatshop`, `tastyquant`, `Gloo`
+(exception, migrating). Current bees home: `Code`, `comfy-tools`,
+`noms`, `nsfw-suite`, `nsfw-suite-data`, `deploy-inbox.sh` (review
+pending).
+
 ## Secrets
 
 Agenix and age are both used:
