@@ -6,10 +6,12 @@
 #      (flake.nix checks.<host> = config.system.build.toplevel), so this
 #      is a real build gate, not just eval. bees's persistent /nix/store
 #      makes it incremental.
-#   3. thinkpad-image (parallel job) — build the bootc Containerfile and
-#      run the shared thinkpad-image-verify.sh gates against it, so a
-#      Containerfile-breaking PR is caught at review time instead of by
-#      the 05:10 nightly's ntfy failure ping. Uses the same dedicated
+#   3. thinkpad-image (path-gated, parallel) — build the bootc
+#      Containerfile and run the shared thinkpad-image-verify.sh gates
+#      against it, so a Containerfile-breaking PR is caught at review
+#      time instead of by the 05:10 nightly's ntfy failure ping. Only
+#      runs when hosts/thinkpad/** or its build/verify plumbing changed
+#      (see the changes job). Uses the same dedicated
 #      btrfs build store as the nightly (warm layer cache; the job runs
 #      as crussell, so podman goes through sudo with the wrapper path).
 #
@@ -27,7 +29,44 @@ on:
   push:
     branches: [main]
 
+# Forgejo's act runner does not honor `on.paths:` filters, so path
+# gating is done the portable way: a `changes` job diffs the event's
+# commits against main and exports booleans; downstream jobs gate on
+# them via needs + if.
 jobs:
+  changes:
+    runs-on: nix-host
+    timeout-minutes: 5
+    outputs:
+      thinkpad: ${{ steps.filter.outputs.thinkpad }}
+    steps:
+      - name: Checkout
+        run: |
+          set -eu
+          git init -q .
+          git remote add origin "https://${GITHUB_ACTOR:-x-access-token}:${{ secrets.GITHUB_TOKEN }}@git.crussell.io/chad/cn.git"
+          git fetch --depth=1 origin main
+          git fetch --depth=1 origin "+${GITHUB_REF}:"
+          git checkout --detach FETCH_HEAD
+      - name: Detect changed paths
+        id: filter
+        run: |
+          set -eu
+          BASE=origin/main
+          # push-to-main events: compare against the previous commit.
+          if [ "${GITHUB_EVENT_NAME}" = push ]; then
+            BASE="${GITHUB_SHA}^"
+            git fetch --depth=2 origin "+${GITHUB_REF}:"
+          fi
+          CHANGED=$(git diff --name-only "$BASE"...HEAD 2>/dev/null || git diff --name-only "$BASE" )
+          echo "changed files:"
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -qE "^hosts/thinkpad/|^hosts/bees/thinkpad-image-verify\.sh|^hosts/bees/thinkpad-registry\.nix|^hosts/bees/zot"; then
+            echo "thinkpad=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "thinkpad=false" >> "$GITHUB_OUTPUT"
+          fi
+
   check:
     runs-on: nix-host
     timeout-minutes: 60
@@ -47,6 +86,8 @@ jobs:
         run: nix flake check
 
   thinkpad-image:
+    needs: [changes]
+    if: needs.changes.outputs.thinkpad == 'true'
     runs-on: nix-host
     timeout-minutes: 40
     steps:
