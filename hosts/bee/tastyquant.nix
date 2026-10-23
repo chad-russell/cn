@@ -80,11 +80,16 @@ in {
     after = [ "age-secret-tastyquant-env.service" ];
     wants = [ "age-secret-tastyquant-env.service" ];
     wantedBy = [ "multi-user.target" ];
+    # The script shells out to awk — unit-script PATH is minimal, gawk
+    # must be declared (its absence is why both earlier env writes
+    # silently produced empty files / failed the switch).
+    path = [ pkgs.gawk ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
     };
     script = ''
+      set -eu
       awk_extract() { # $1=marker $2=dest — write via temp file (a bare
         # /dev/stdin pipe into install proved fragile on first deploy)
         awk -v m="$1" '
