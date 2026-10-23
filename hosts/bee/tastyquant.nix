@@ -36,13 +36,13 @@ let
   # Serve-unit template: oneshot launcher with matching --stop. Gates on
   # the env file (the env-deploy system unit can't order against user
   # units — the condition makes the dependency fail-safe instead).
-  serve = name: desc: {
+  serve = name: desc: extraEnv: {
     description = desc;
     after = [ "podman.socket" "network-online.target" ];
     wants = [ "network-online.target" ];
     wantedBy = [ "default.target" ];
     unitConfig.ConditionPathExists = "${repo}/.env";
-    environment = execEnv;
+    environment = execEnv // extraEnv;
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
@@ -101,21 +101,20 @@ in {
 
   systemd.user.services = {
     tastyquant-gateway =
-      serve "gateway" "tastyquant order gateway (tools/tq gateway)";
+      serve "gateway" "tastyquant order gateway (tools/tq gateway)" { };
     tastyquant-market =
-      serve "market" "tastyquant market service (tools/tq market)";
+      serve "market" "tastyquant market service (tools/tq market)" { };
+    # Direct-to-Z.AI LLM (9router decommissioned 2026-10-23; overrides the
+    # code default that still points at the dead 20128 gateway).
     tastyquant-desk = serve "desk"
-      "tastyquant chat desk (apps/desk Next.js on 10.10.0.12:3320 → trades.internal)";
+      "tastyquant chat desk (apps/desk Next.js on 10.10.0.12:3320 → trades.internal)" {
+        TQ_LLM_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
+      };
     tastyquant-scan = oneshot "scan"
       "tastyquant morning scan + repair pass (deterministic tickets)";
     tastyquant-capture = oneshot "capture" "tastyquant daily read-only capture";
     tastyquant-sweep = oneshot "sweep"
       "tastyquant OCC-universe market-metrics sweep (read-only)";
-  };
-
-  # Direct-to-Z.AI (9router decommissioned 2026-10-23).
-  systemd.user.services.tastyquant-desk.environment = execEnv // {
-    TQ_LLM_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
   };
 
   systemd.user.timers = {
