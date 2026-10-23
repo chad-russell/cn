@@ -34,8 +34,6 @@ Last validated via SSH: **2026-09-09**.
 │   │   │   └── filebrowser/   # the .container quadlet input
 │   │   ├── hindsight.nix      # hindsight agent-memory quadlet (10.10.0.12:8888 API+MCP / :9999 UI)
 │   │   │   └── hindsight/     # the .container quadlet input
-│   │   └── dev-quadlets.nix   # Dev environment stacks + README
-│   │       └── dev-quadlets/  # gpl, polymer, buildspace (container + volume + network per project)
 │   ├── bees/                  # Production server: all shared + media + ingress services
 │   │   ├── configuration.nix
 │   │   ├── disk-config.nix
@@ -458,7 +456,6 @@ Source files:
 - `hosts/bee/backup.nix` — Restic backup to S3
 - `hosts/bee/tailscale.nix` — on-demand Tailscale (not enabled at boot)
 - `hosts/bee/filebrowser.nix` + `filebrowser/` — filebrowser rootless quadlet (10.10.0.12:8093; buzz stack files removed 2026-09-19, D-014)
-- `hosts/bee/dev-quadlets.nix` + `dev-quadlets/` — dev environment stacks
 
 Running services:
 
@@ -468,7 +465,6 @@ Running services:
 - `hermes-serve.service` — Hermes JSON-RPC/WebSocket API on Nebula `10.10.0.12:9119` (desktop/mobile remote clients; basic-auth plugin). The WebUI (`hermes-webui.service`, port 8787, `https://hermes.internal.crussell.io`) was retired 2026-09-01 — desktop + Discord are the only chat surfaces.
 - filebrowser (rootless quadlet, crussell user units) — web file manager on `10.10.0.12:8093` (`hosts/bee/filebrowser.nix`, 2026-09-19; replaced a manually-run container). NOTE: `hermes-agent.service` above still references the buzz CLI/NIP-42 — that path died with the buzz decommission; hermes decommission is pending (crons still scheduled there).
 - `hindsight.service` (rootless quadlet, crussell user units) — agent-memory server `ghcr.io/vectorize-io/hindsight:latest` (`hosts/bee/hindsight.nix`, live 2026-09-21): retain/recall/reflect API + per-bank MCP on Nebula `10.10.0.12:8888`, control-plane UI `:9999` (gated by `HINDSIGHT_CP_ACCESS_KEY`); full image runs BGE embeddings + MiniLM reranker locally, extraction LLM is `deepseek/deepseek-v4-flash` via OpenRouter per-token ($0.055/$0.111 per M, 1M ctx — picked by a 2026-09-22 head-to-head extraction test vs glm-5.3-flash and qwen3.7-flash; glm-5.3-flash day one billed $7.05, the coding-plan endpoint was tried and reverted 2026-09-22 — its request-rate limit starved interactive dsh sessions; refresh/reflect throttles live in the quadlet; key = openrouter-api-key value in agenix `hindsight-env.age`, crussell-readable for the user quadlet). Data: embedded pg0 Postgres in named volume `hindsight-data` (restic-covered via `~/.local/share/containers`; image layers excluded in `backup.nix`). Ingress: bees Caddy `hindsight.internal.crussell.io` (+ `-ui`) — runbook is the `hindsight` skill (chad/skills). Coding agents: `npx @vectorize-io/hindsight-coding-agents install <harness> --server self-hosted --api-url http://10.10.0.12:8888` (dsh wired 2026-09-21).
-- Dev stacks (`dev-quadlets/`) — gpl, polymer, buildspace (podman quadlets, reached via SSH tunnels; see `hosts/bee/dev-quadlets/README.md` and `cjust dev-tunnel`)
 - Restic backup (daily S3 backup via `hosts/bee/backup.nix`)
 - `dsh-web.service` — DeepSeek Harness web UI (`modules/dsh.nix`): loopback `:3080` → `dsh-web-proxy` socket on Nebula `10.10.0.12:3080` → bees Caddy `https://dsh.internal.crussell.io`. Default model `zai-coding/glm-5.3` (personal coding plan; replaces opencode, retired 2026-09-02). `codex` CLI also installed for work-lane delegation. `DSH_HOME` (`/var/lib/dsh`) is a **local git repo** (no remote): agents commit config changes in place after each edit — hand-maintained files only (`sessions/`, `storages/`, `relay/`, `.credentials.yaml` are gitignored, restic covers them; see `modules/dsh.nix` header).
 - Beszel agent (default-on via `modules/beszel-agent.nix`)
@@ -479,10 +475,9 @@ Running services:
 bee is podman-only (no Docker daemon). Deploy with `nix run .#deploy -- bee`
 from the deploy origin (`bees`).
 
-> Dev stacks for gpl, polymer, and buildspace run on bee via podman quadlets
-> (`hosts/bee/dev-quadlets/`) — driven with `qd` on bee. The thinkpad-side
-> `cjust dev-tunnel`/`dev-up` recipes and the local quadlet copies under
-> `hosts/thinkpad/{gloo,buildspace}/` were removed 2026-10-16 (unused there).
+> Dev stacks for gpl, polymer, and buildspace were removed 2026-10-23 —
+> superseded by sweatshop sandboxes. The thinkpad-side `cjust
+> dev-tunnel`/`dev-up` recipes had already gone 2026-10-16.
 
 ### gateway — Hetzner Cloud VPS (public ingress)
 
@@ -514,7 +509,6 @@ Public routes (gateway Caddy → backend over Nebula):
 | `jellyfin.crussell.io`      | `10.10.0.6:8096`                                                                         |
 | `photos.crussell.io`        | `10.10.0.6:2283`                                                                         |
 | `datenight.crussell.io`     | `10.10.0.6:7890`                                                                         |
-| `trello.crussell.io`        | `10.10.0.6:3300` (Kan/kan.bn quadlets — see `hosts/bees/kan.nix`; Caddy `basic_auth` outer layer) |
 
 > To add/change a public route, edit `hosts/gateway/caddy.nix` and `nix run .#deploy -- gateway`. Adding a new hostname requires it to resolve to the gateway (covered by the `*.crussell.io` wildcard) and Caddy auto-issues its cert on first request via HTTP-01.
 

@@ -4,7 +4,7 @@
 # sprawl audit D-017): same image, port (Nebula 10.10.0.12:8093 → 8080),
 # and mounts, but nix-managed and supervised (Restart=always).
 #
-# Mechanics copied from dev-quadlets.nix: materialize the quadlet
+# Mechanics: materialize the quadlet
 # read-only under /etc, symlink into crussell's user quadlet search path,
 # reload the user manager so podman-system-generator picks it up — plus
 # enable (it is wanted at boot, not on-demand). Data stays at

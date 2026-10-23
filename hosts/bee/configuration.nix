@@ -58,14 +58,10 @@ in {
     # API+MCP :8888, UI :9999, rootless quadlet; coding agents connect here.
     ./hindsight.nix
     # sweatshop software factory (http://bee:3300) — rootless quadlet serving
-    # a production build of ~/ss/sweatshop; deploys via its scripts/deploy.sh.
+    # a production build of ~/sweatshop; deploys via its scripts/deploy.sh.
     ./sweatshop.nix
-    # 9router AI provider gateway (9router.internal.crussell.io) —
-    # OpenAI-compatible :20128, rootless quadlet; dsh + future projects
-    # point at it instead of configuring providers per-tool.
-    ./ninerouter.nix
     # Nightly podman auto-update for rootless quadlets that set
-    # AutoUpdate=registry (ninerouter, hindsight, filebrowser)
+    # AutoUpdate=registry (hindsight, filebrowser)
     ./podman-auto-update.nix
     {
       # DeepSeek Harness web UI — loopback on bee, exposed at
@@ -76,7 +72,6 @@ in {
     ../../modules/beszel-agent.nix
     # Journald → OpenObserve shipper (central logs on bees)
     ../../modules/vector-log-shipper.nix
-    ./dev-quadlets.nix
     # ./searxng.nix      # retired 2026-09-03 — every upstream engine except
     #                      # bing had flagged this IP (google 403, ddg/startpage
     #                      # CAPTCHA, brave rate-limit, yahoo flaky-then-dead,
@@ -88,7 +83,10 @@ in {
     #                      # only chat surfaces now; webui state dir was 210 MB
     # ./hermes-gloo.nix  # removed 2026-09-06 (single-brain collapse — work
     #                      # lane folded into the default glen gateway)
-    ./trades-site.nix
+    # ./trades-site.nix  # removed 2026-10-23 — v1 ~/tasty_options stack
+    #                      # superseded by tastyquant (./tastyquant.nix,
+    #                      # trades.internal.crussell.io)
+    ./tastyquant.nix
     ./forgejo-runner.nix # Actions runner for git.crussell.io (Forgejo on gateway)
     ./backup.nix
     ./tailscale.nix

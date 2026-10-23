@@ -14,12 +14,11 @@ AutoUpdate=registry
 User=0:0
 PublishPort=10.10.0.12:8093:8080
 # Faithful port of the manual container's mounts (podman inspect 2026-09-19).
+# rmt + business mounts removed 2026-10-23 — Chad trashed those home dirs.
 # NOTE (security): browses the whole home incl. employer trees + hermes
 # state — deliberate convenience, Nebula-only listener, revisit if it
 # ever gains a public route.
 Volume=/home/crussell/personal:/srv/personal
-Volume=/home/crussell/rmt:/srv/rmt
-Volume=/home/crussell/business:/srv/business
 Volume=/home/crussell/Gloo:/srv/Gloo
 Volume=/home/crussell/filebrowser/data:/home/filebrowser/data
 Volume=/var/lib/hermes/.hermes:/srv/hermes

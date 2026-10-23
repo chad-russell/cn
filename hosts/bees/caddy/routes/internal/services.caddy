@@ -21,18 +21,14 @@ handle @dsh {
 }
 
 # trades.internal -> tastyquant chat desk (apps/desk, Next.js on bee :3320,
-# 2026-10-16 D-021). Chat streams over SSE — flush immediately. v1 site
-# still runs on bee :8901 (unrouted). Nebula/LAN only, never public.
+# 2026-10-16 D-021; declarative since 2026-10-23 via hosts/bee/tastyquant.nix).
+# Chat streams over SSE — flush immediately. Nebula/LAN only, never public.
+# tasty.internal (v1 site on :8808) removed 2026-10-23.
 @trades host trades.internal.crussell.io
 handle @trades {
     reverse_proxy 10.10.0.12:3320 {
         flush_interval -1
     }
-}
-
-@tasty host tasty.internal.crussell.io
-handle @tasty {
-    reverse_proxy 10.10.0.12:8808
 }
 
 @nsfw host nsfw.internal.crussell.io
