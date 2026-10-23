@@ -19,16 +19,14 @@
     ./ntfy.nix
     ./datenight.nix
     ./nsfw-suite.nix
-    ./qrcode-qa.nix
     ./caddy.nix
     ./services.nix
     # Central log search (openobserve quadlet, 10.10.0.6:5080, fed by the
     # fleet-wide Vector shipper; parquet in RustFS on nas)
     ./openobserve.nix
     ../../modules/vector-log-shipper.nix
-    ./kan.nix
     # Nightly podman auto-update for system quadlets that set
-    # AutoUpdate=registry (linkding, papra, kan, sonarr, radarr,
+    # AutoUpdate=registry (linkding, papra, sonarr, radarr,
     # prowlarr, qbittorrent); unlabeled quadlets are never touched
     ./podman-auto-update.nix
     # Lane (Plane CE) retired 2026-09-08 — Hermes kanban is the source of

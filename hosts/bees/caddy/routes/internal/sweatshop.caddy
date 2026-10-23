@@ -1,4 +1,4 @@
-# sweatshop (bee — ~/ss/sweatshop, the personal software factory).
+# sweatshop (bee — ~/sweatshop, the personal software factory).
 # sweatshop.service (user quadlet ~/.config/containers/systemd/
 # sweatshop.container) serves the production build on bee 0.0.0.0:3300
 # (host 3000 is taken); bees Caddy terminates TLS (wildcard

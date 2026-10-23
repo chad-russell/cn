@@ -1,4 +1,4 @@
-# sweatshop previews (docs/0016 in ~/ss/sweatshop) — dev servers running
+# sweatshop previews (docs/0016 in ~/sweatshop) — dev servers running
 # in sweatshop sandboxes, one flat label each under the existing wildcard
 # cert: https://pv-<slug>.internal.crussell.io. sweatshop's preview proxy
 # (published by its ./dev on bee's Nebula IP, 10.10.0.12:3301) routes by

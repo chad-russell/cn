@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Container]
 # The image is built locally from the sweatshop repo's Containerfile.dev
-# (node 24 + docker-cli + git); `./dev build` in ~/ss/sweatshop rebuilds it.
+# (node 24 + docker-cli + git); `./dev build` in ~/sweatshop rebuilds it.
 # No AutoUpdate: it is not in a registry.
 Image=localhost/sweatshop-dev
 # Name kept from the ./dev era: sweatshop's sandbox-gc client and the
@@ -13,12 +13,12 @@ Image=localhost/sweatshop-dev
 ContainerName=sweatshop-dev
 # Rootless podman maps container root to crussell, so writes into the
 # bind-mounted checkout (data/, .next/) land crussell-owned (the same model
-# as ./dev and the dev-quadlets).
+# as ./dev).
 User=0
 WorkingDir=/workspace
 # The deploy checkout. It moves only through its own scripts/deploy.sh
 # (stop, build, migrate, start); this unit just serves the build in it.
-Volume=/home/crussell/ss/sweatshop:/workspace
+Volume=/home/crussell/sweatshop:/workspace
 # node_modules lives in a named volume so the host tree stays clean;
 # shared with the repo's ./dev exec, which runs the build and gate.
 Volume=sweatshop-node-modules:/workspace/node_modules
@@ -34,7 +34,7 @@ PublishPort=3300:3000
 PublishPort=10.10.0.12:3301:3001
 # Model and git credentials (gitignored, 0600, in the checkout). The
 # sweatshop Secrets entity is the long-term home for these.
-EnvironmentFile=/home/crussell/ss/sweatshop/.env.local
+EnvironmentFile=/home/crussell/sweatshop/.env.local
 # 0043 host channel: the exec tool's SSH key (agenix, crussell-owned on
 # the host). One key authorized on every NixOS host; each HOST_<NAME>_…
 # var names it for that host's registry entry (vars without a matching

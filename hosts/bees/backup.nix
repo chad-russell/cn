@@ -23,8 +23,6 @@
       "/var/lib/qBittorrent"
       "/var/lib/ntfy-sh"
       "/var/lib/datenight"
-      # QRCode.Bible crowd QA votes (SQLite database + WAL).
-      "/var/lib/qrcode-qa"
       "/var/lib/redis-immich"
       # Beszel hub (SQLite: users, tokens, alert config, history) —
       # without this a bees rebuild loses the whole monitoring setup.

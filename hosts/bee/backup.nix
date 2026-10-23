@@ -45,7 +45,7 @@
       # data/backups/ (pre-deploy snapshots + the 23:00 nightly.db, a
       # guaranteed-consistent copy). db + -wal travel together — SQLite
       # recovers the pair; a bare .db loses committed transactions.
-      "/home/crussell/ss/sweatshop/data"
+      "/home/crussell/sweatshop/data"
     ];
 
     exclude = [
