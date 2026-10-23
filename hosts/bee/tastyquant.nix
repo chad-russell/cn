@@ -103,8 +103,11 @@ in {
       }
       awk_extract .env ${repo}/.env
       awk_extract .env.production ${repo}/.env.production
+      # zai-api-key.age is an ENV FILE (ZHIPU_API_KEY=<key>), not a bare
+      # key — strip the name or the desk sends "ZHIPU_API_KEY=<key>" as
+      # the bearer token (401 Authentication Failed, 2026-10-23).
       printf 'NINEROUTER_API_KEY=%s\n' \
-        "$(cat ${config.age.secrets.zai-api-key.path})" \
+        "$(sed -n 's/^ZHIPU_API_KEY=//p' ${config.age.secrets.zai-api-key.path})" \
         > ${repo}/.env.desk
       chown crussell:users ${repo}/.env.desk
       chmod 0600 ${repo}/.env.desk
