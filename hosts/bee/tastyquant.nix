@@ -100,20 +100,23 @@ in {
   };
 
   systemd.user.services = {
-    tastyquant-gateway = serve "gateway"
-      "tastyquant order gateway (tools/tq gateway)";
-    tastyquant-market = serve "market"
-      "tastyquant market service (tools/tq market)";
+    tastyquant-gateway =
+      serve "gateway" "tastyquant order gateway (tools/tq gateway)";
+    tastyquant-market =
+      serve "market" "tastyquant market service (tools/tq market)";
     tastyquant-desk = serve "desk"
       "tastyquant chat desk (apps/desk Next.js on 10.10.0.12:3320 → trades.internal)";
-    tastyquant-scan = oneshot "scan" "tastyquant morning scan + repair pass (deterministic tickets)";
+    tastyquant-scan = oneshot "scan"
+      "tastyquant morning scan + repair pass (deterministic tickets)";
     tastyquant-capture = oneshot "capture" "tastyquant daily read-only capture";
-    tastyquant-sweep = oneshot "sweep" "tastyquant OCC-universe market-metrics sweep (read-only)";
+    tastyquant-sweep = oneshot "sweep"
+      "tastyquant OCC-universe market-metrics sweep (read-only)";
   };
 
   # Direct-to-Z.AI (9router decommissioned 2026-10-23).
-  systemd.user.services.tastyquant-desk.environment =
-    execEnv // { TQ_LLM_BASE_URL = "https://api.z.ai/api/coding/paas/v4"; };
+  systemd.user.services.tastyquant-desk.environment = execEnv // {
+    TQ_LLM_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
+  };
 
   systemd.user.timers = {
     tastyquant-scan = {

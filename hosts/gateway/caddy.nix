@@ -49,7 +49,6 @@
       reverse_proxy 10.10.0.6:7890
     '';
 
-
     # glen.crussell.io — Google OAuth consent branding for the "Glen" app
     # (personal-use, unverified). Google (Aug 2026) requires a homepage +
     # privacy policy URL on an authorized domain to publish an OAuth app.
