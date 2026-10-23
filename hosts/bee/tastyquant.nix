@@ -41,6 +41,10 @@ let
     after = [ "podman.socket" "network-online.target" ];
     wants = [ "network-online.target" ];
     wantedBy = [ "default.target" ];
+    # Only crussell's user manager may run these — without this, EVERY
+    # root SSH login spawns user@0.service, whose default.target starts
+    # (and on logout, ExecStop-kills) the whole tq container stack.
+    unitConfig.ConditionUser = "crussell";
     unitConfig.ConditionPathExists = "${repo}/.env";
     environment = execEnv // extraEnv;
     serviceConfig = {
@@ -81,16 +85,19 @@ in {
       RemainAfterExit = true;
     };
     script = ''
-      split() { # $1=marker $2=dest
+      awk_extract() { # $1=marker $2=dest — write via temp file (a bare
+        # /dev/stdin pipe into install proved fragile on first deploy)
         awk -v m="$1" '
           $0 == "#--- " m " ---" { insec = 1; next }
           /^#--- / { insec = 0; next }
           insec && /^[A-Z]/ { print }
-        ' ${config.age.secrets.tastyquant-env.path} \
-          | install -o crussell -g users -m 0600 /dev/stdin "$2"
+        ' ${config.age.secrets.tastyquant-env.path} > "$2.tmp"
+        chown crussell:users "$2.tmp"
+        chmod 0600 "$2.tmp"
+        mv -f "$2.tmp" "$2"
       }
-      split .env ${repo}/.env
-      split .env.production ${repo}/.env.production
+      awk_extract .env ${repo}/.env
+      awk_extract .env.production ${repo}/.env.production
       printf 'NINEROUTER_API_KEY=%s\n' \
         "$(cat ${config.age.secrets.zai-api-key.path})" \
         > ${repo}/.env.desk
@@ -120,6 +127,7 @@ in {
   systemd.user.timers = {
     tastyquant-scan = {
       description = "tastyquant morning scan (weekdays 10:15 ET)";
+      unitConfig.ConditionUser = "crussell";
       timerConfig = {
         OnCalendar = "Mon..Fri 10:15 America/New_York";
         Persistent = true;
@@ -128,6 +136,7 @@ in {
     };
     tastyquant-capture = {
       description = "tastyquant daily capture (weekdays 17:10 ET)";
+      unitConfig.ConditionUser = "crussell";
       timerConfig = {
         OnCalendar = "Mon..Fri 17:10 America/New_York";
         Persistent = true;
@@ -136,6 +145,7 @@ in {
     };
     tastyquant-sweep = {
       description = "tastyquant nightly metrics sweep (weekdays 17:35 ET)";
+      unitConfig.ConditionUser = "crussell";
       timerConfig = {
         OnCalendar = "Mon..Fri 17:35 America/New_York";
         Persistent = true;
