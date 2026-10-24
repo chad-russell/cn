@@ -46,6 +46,12 @@
       # guaranteed-consistent copy). db + -wal travel together — SQLite
       # recovers the pair; a bare .db loses committed transactions.
       "/home/crussell/sweatshop/data"
+
+      # tastyquant (hosts/bee/tastyquant.nix): v2 portfolio db + WAL, the
+      # executor audit chain (order safety record — irreplaceable), kill
+      # switch, scan/capture logs, backtests. Moved out of the checkout
+      # 2026-10-24 (image-deploy pilot).
+      "/home/crussell/tastyquant-data"
     ];
 
     exclude = [

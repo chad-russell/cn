@@ -10,6 +10,10 @@
 # (desk | gateway | market), which builds + (re)starts the rootless
 # tq-* podman containers; `tools/tq <cmd> --stop` is the ExecStop.
 #
+# State lives in ~/tastyquant-data (moved out of the checkout 2026-10-24):
+# v2 portfolio.db + executor audit db + logs/corpora; pre-move snapshot in
+# tastyquant-data/pre-move-snapshot-2026-10-24/.
+#
 # Credentials (agenix, never in the tastyquant repo):
 #   secrets/tastyquant-env.age → TT_SECRET, TT_REFRESH,
 #     TASTYTRADE_PRODUCTION, MARKETDATA_APP_KEY — materialized as
@@ -32,6 +36,12 @@ let
   execEnv = {
     PATH = lib.mkForce "/run/current-system/sw/bin:/usr/bin:/bin";
     HOME = "/home/crussell";
+    # Declared data dir (moved out of the checkout 2026-10-24 — the pilot's
+    # checkout-removal step). tools/tq binds it at /work/data (TQ_DATA_DIR);
+    # the site's spawned placement/reprice containers bind it too
+    # (TQ_REPRICE_DATA_HOST, tastyquant #12). Backed up via backup.nix.
+    TQ_DATA_DIR = "/home/crussell/tastyquant-data";
+    TQ_REPRICE_DATA_HOST = "/home/crussell/tastyquant-data";
   };
   # Serve-unit template: oneshot launcher with matching --stop. Gates on
   # the env file (the env-deploy system unit can't order against user
