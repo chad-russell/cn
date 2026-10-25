@@ -124,31 +124,54 @@ in {
     '';
   };
 
+  # The four SERVING units are QUADLETS now (tastyquant-quadlets/*.container,
+  # running the CI-built zot image :main) â deployed below. The
+  # scan/capture/sweep oneshots still run tools/tq against the checkout
+  # until the final checkout-removal step converts them too.
   systemd.user.services = {
-    tastyquant-gateway =
-      serve "gateway" "tastyquant order gateway (tools/tq gateway)" { };
-    tastyquant-market =
-      serve "market" "tastyquant market service (tools/tq market)" { };
-    # apps/site :8808 — the desk's analytics backend (bands/book/analyze/
-    # screen/sql over the v2 db). Discovered 2026-10-23 the hard way: the
-    # tasty-route cleanup removed it as "v1" and every desk board view
-    # 500/502'd. INTERNAL ONLY — no caddy route, bound to Nebula IP.
-    tastyquant-site = serve "site"
-      "tastyquant analytics site (apps/site :8808 — desk backend, internal)" {
-        TQ_SITE_BIND = "10.10.0.12";
-      };
-    # Direct-to-Z.AI LLM (9router decommissioned 2026-10-23; overrides the
-    # code default that still points at the dead 20128 gateway).
-    tastyquant-desk = serve "desk"
-      "tastyquant chat desk (apps/desk Next.js on 10.10.0.12:3320 → trades.internal)" {
-        TQ_LLM_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
-      };
     tastyquant-scan = oneshot "scan"
       "tastyquant morning scan + repair pass (deterministic tickets)";
     tastyquant-capture = oneshot "capture" "tastyquant daily read-only capture";
     tastyquant-sweep = oneshot "sweep"
       "tastyquant OCC-universe market-metrics sweep (read-only)";
   };
+
+  # Serving quadlets (zot image): materialize read-only under /etc,
+  # symlink into crussell's user quadlet search path, reload the user
+  # manager (mechanics as sweatshop.nix D-017).
+  environment.etc."tastyquant-quadlets/tastyquant-desk.container" = {
+    source = ./tastyquant-quadlets/tastyquant-desk.container;
+    mode = "0644";
+  };
+  environment.etc."tastyquant-quadlets/tastyquant-market.container" = {
+    source = ./tastyquant-quadlets/tastyquant-market.container;
+    mode = "0644";
+  };
+  environment.etc."tastyquant-quadlets/tastyquant-gateway.container" = {
+    source = ./tastyquant-quadlets/tastyquant-gateway.container;
+    mode = "0644";
+  };
+  environment.etc."tastyquant-quadlets/tastyquant-site.container" = {
+    source = ./tastyquant-quadlets/tastyquant-site.container;
+    mode = "0644";
+  };
+  system.activationScripts.tastyquant-quadlets = lib.stringAfter [ "users" ] ''
+    dest=/home/crussell/.config/containers/systemd
+    mkdir -p "$dest"
+    for u in tastyquant-desk tastyquant-market tastyquant-gateway tastyquant-site; do
+      ln -sfn "/etc/tastyquant-quadlets/$u.container" "$dest/$u.container"
+      chown -h crussell:users "$dest/$u.container"
+    done
+    # clear containers left by the retired tools/tq units (same names)
+    runuser -l crussell -- env XDG_RUNTIME_DIR=/run/user/1000 podman rm -f \
+      tq-desk tq-market tq-gateway tq-site >/dev/null 2>&1 || true
+    /run/wrappers/bin/sudo systemctl --machine=crussell@.host --user daemon-reload || true
+  '';
+
+  # zot (bees, Nebula-only) serves plain HTTP â mark it insecure so
+  # the rootless quadlet pulls and podman auto-update work without
+  # per-command tls flags.
+  virtualisation.containers.registries.insecure = [ "10.10.0.6:5000" ];
 
   systemd.user.timers = {
     tastyquant-scan = {
