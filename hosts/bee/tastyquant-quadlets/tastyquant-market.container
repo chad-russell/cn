@@ -1,0 +1,22 @@
+# tastyquant market service — read-only broker data (:8811, loopback).
+[Unit]
+Description=tastyquant market service (apps/fetcher, 127.0.0.1:8811)
+
+[Container]
+Image=10.10.0.6:5000/tastyquant/app:main
+ContainerName=tq-market
+AutoUpdate=registry
+WorkingDir=/work
+Environment=TZ=UTC
+PublishPort=127.0.0.1:8811:8811
+Volume=%h/tastyquant-data:/work/data
+Volume=%h/tastyquant/.env:/work/.env:ro
+Exec=node apps/fetcher/dist/market-server.js --env-file /work/.env --db data/v2/portfolio.db --host 0.0.0.0 --port 8811
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

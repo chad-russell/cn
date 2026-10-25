@@ -1,0 +1,35 @@
+# tastyquant chat desk — serves https://trades.internal.crussell.io.
+# Image-era unit (2026-10-24): runs the CI-built zot image (:main, pushed
+# on every merge; per-deploy pull happens in the repo's deploy job, the
+# nightly podman auto-update is the catch-up). No checkout build: deploy
+# downtime is pull+restart, not a Next rebuild.
+[Unit]
+Description=tastyquant chat desk (apps/desk, 10.10.0.12:3320 → trades.internal)
+
+[Container]
+Image=10.10.0.6:5000/tastyquant/app:main
+ContainerName=tq-desk
+AutoUpdate=registry
+Network=host
+WorkingDir=/work/apps/desk
+Environment=NODE_ENV=production
+Environment=HOSTNAME=10.10.0.12
+Environment=PORT=3320
+Environment=TQ_GATEWAY_URL=http://127.0.0.1:8810
+Environment=TQ_MARKET_URL=http://127.0.0.1:8811
+Environment=TQ_SITE_URL=http://10.10.0.12:8808
+# Direct-to-Z.AI (9router decommissioned 2026-10-23; the NINEROUTER_API_KEY
+# name in .env.desk is legacy — value is the Z.AI coding-plan key via agenix).
+Environment=TQ_LLM_BASE_URL=https://api.z.ai/api/coding/paas/v4
+Environment=TQ_LLM_MODELS=glm-5.3
+EnvironmentFile=%h/tastyquant/.env.desk
+Volume=%h/tastyquant-data:/work/data
+Exec=node node_modules/next/dist/bin/next start -H 10.10.0.12 -p 3320
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

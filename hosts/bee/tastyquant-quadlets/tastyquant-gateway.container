@@ -1,0 +1,24 @@
+# tastyquant order gateway (apps/executor, 127.0.0.1:8810). Holds the audit
+# chain + kill switch under the declared data dir. Trade-scoped env
+# (.env.production, agenix materialized) binds read-only.
+[Unit]
+Description=tastyquant order gateway (apps/executor, 127.0.0.1:8810)
+
+[Container]
+Image=10.10.0.6:5000/tastyquant/app:main
+ContainerName=tq-gateway
+AutoUpdate=registry
+Network=host
+WorkingDir=/work
+Environment=TZ=UTC
+Volume=%h/tastyquant-data:/work/data
+Volume=%h/tastyquant/.env.production:/work/.env.production:ro
+Exec=node apps/executor/dist/gateway-server.js --env-file /work/.env.production --tickets-db data/v2/portfolio.db --audit-db data/executor/executor.db --host 127.0.0.1 --port 8810
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
