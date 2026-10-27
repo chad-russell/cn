@@ -124,8 +124,16 @@
               home-manager.users.${username} = import ./modules/server-home.nix;
             }
             {
-              # Make this flake self-referential for deployments
-              nix.registry.cn.flake = self;
+              # experimental-features only. The former `nix.registry.cn.flake
+              # = self` (added 2026-05-02 as "self-referential for
+              # deployments") embedded the flake source's store path — keyed
+              # to the exact commit — into /etc/nix/registry.json on EVERY
+              # host, so every merge to main (even docs/ci-only) drifted all
+              # four toplevels and auto-deployed the whole fleet. Nothing in
+              # the repo or docs uses `cn#` on a host (the documented
+              # fallback is github:chad-russell/cn#<host>), so the entry was
+              # vestigial; removed 2026-10-27. Deploy drift now reflects real
+              # config changes per host, as deploy.yml's design describes.
               nix.settings.experimental-features = [ "nix-command" "flakes" ];
             }
           ] ++ extraModules;
