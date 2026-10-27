@@ -219,6 +219,13 @@ kind = "dir"
 [[files]]
 dst = ".config/bubblebox/entrypoints/wl-party.toml"
 
+# sops EDIT-MODE override: composes nvim into the sops sandbox and sets EDITOR
+# so `sops edit` / polymer's `node scripts/secrets/edit.mjs` can open the
+# decrypted file (sops execs $EDITOR inside its own sandbox; the host nvim
+# wrapper is not runnable there). See the override file for the full story.
+[[files]]
+dst = ".config/bubblebox/entrypoints/sops.toml"
+
 [[files]]
 dst = ".local/bin/zen-browser"
 

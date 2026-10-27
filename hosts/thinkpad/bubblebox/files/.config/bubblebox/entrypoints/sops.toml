@@ -1,0 +1,16 @@
+# User entrypoint override for sops: enable EDIT MODE (`sops edit file`, which
+# polymer's `node scripts/secrets/edit.mjs` drives). The packaged sandbox has
+# no editor — sops execs $EDITOR inside its own sandbox, so pointing EDITOR at
+# the host ~/.local/bin/nvim wrapper fails ("fork/exec ... no such file or
+# directory": the wrapper exists via writable_home but its `bubblebox` +
+# `/usr/bin/bwrap` dependencies are not on the sandbox's deterministic PATH).
+# Shape 1 from the package's header comment: compose nvim into the sops
+# sandbox and name it EDITOR. Caveat per that comment: the composed nvim runs
+# under sops's sandbox spec, so nvim's own /persist isolation does not apply —
+# plugin state lands in host ~/.local/share/nvim via writable_home. Fine for
+# quick secret edits; long editing sessions belong in a real nvim.
+package = "sops"
+compose = ["sops", "nvim"]
+
+[sandbox.env]
+EDITOR = "nvim"
