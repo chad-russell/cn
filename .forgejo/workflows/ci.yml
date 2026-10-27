@@ -61,7 +61,7 @@ jobs:
           CHANGED=$(git diff --name-only "$BASE"...HEAD 2>/dev/null || git diff --name-only "$BASE" )
           echo "changed files:"
           echo "$CHANGED"
-          if echo "$CHANGED" | grep -qE "^hosts/thinkpad/|^hosts/bees/thinkpad-image-verify\.sh|^hosts/bees/thinkpad-registry\.nix|^hosts/bees/zot"; then
+          if echo "$CHANGED" | grep -qE "^hosts/thinkpad/host-image/|^hosts/bees/thinkpad-image-verify\.sh|^hosts/bees/thinkpad-registry\.nix|^hosts/bees/zot"; then
             echo "thinkpad=true" >> "$GITHUB_OUTPUT"
           else
             echo "thinkpad=false" >> "$GITHUB_OUTPUT"
