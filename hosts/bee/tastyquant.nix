@@ -43,29 +43,6 @@ let
     TQ_DATA_DIR = "/home/crussell/tastyquant-data";
     TQ_REPRICE_DATA_HOST = "/home/crussell/tastyquant-data";
   };
-  # Serve-unit template: oneshot launcher with matching --stop. Gates on
-  # the env file (the env-deploy system unit can't order against user
-  # units — the condition makes the dependency fail-safe instead).
-  serve = name: desc: extraEnv: {
-    description = desc;
-    after = [ "podman.socket" "network-online.target" ];
-    wants = [ "network-online.target" ];
-    wantedBy = [ "default.target" ];
-    # Only crussell's user manager may run these — without this, EVERY
-    # root SSH login spawns user@0.service, whose default.target starts
-    # (and on logout, ExecStop-kills) the whole tq container stack.
-    unitConfig.ConditionUser = "crussell";
-    unitConfig.ConditionPathExists = "${repo}/.env";
-    environment = execEnv // extraEnv;
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      WorkingDirectory = repo;
-      TimeoutStartSec = 1200;
-      ExecStart = "${tq} ${name}";
-      ExecStop = "${tq} ${name} --stop";
-    };
-  };
   oneshot = name: desc: {
     description = desc;
     environment = execEnv;
@@ -165,7 +142,18 @@ in {
     # clear containers left by the retired tools/tq units (same names)
     runuser -l crussell -- env XDG_RUNTIME_DIR=/run/user/1000 podman rm -f \
       tq-desk tq-market tq-gateway tq-site >/dev/null 2>&1 || true
+    # stale enablement symlinks from the pre-quadlet nix units shadow the
+    # generator (highest-precedence path, pointing into dead store paths) —
+    # remove and restart, or a switched-out unit definition never applies
+    # (2026-10-29 lesson: desk/market/gateway restarted as old node:22
+    # builds until these were cleared)
+    u=/home/crussell/.config/systemd/user
+    rm -f "$u"/tastyquant-{desk,market,gateway,site}.service \
+          "$u"/default.target.wants/tastyquant-{desk,market,gateway,site}.service
     /run/wrappers/bin/sudo systemctl --machine=crussell@.host --user daemon-reload || true
+    /run/wrappers/bin/sudo systemctl --machine=crussell@.host --user restart \
+      tastyquant-desk.service tastyquant-market.service \
+      tastyquant-gateway.service tastyquant-site.service >/dev/null 2>&1 || true
   '';
 
   # zot (bees, Nebula-only) serves plain HTTP â mark it insecure so
