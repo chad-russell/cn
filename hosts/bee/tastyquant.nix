@@ -32,25 +32,21 @@
 
 let
   repo = "/home/crussell/tastyquant";
-  tq = "${repo}/tools/tq";
-  execEnv = {
-    PATH = lib.mkForce "/run/current-system/sw/bin:/usr/bin:/bin";
-    HOME = "/home/crussell";
-    # Declared data dir (moved out of the checkout 2026-10-24 — the pilot's
-    # checkout-removal step). tools/tq binds it at /work/data (TQ_DATA_DIR);
-    # the site's spawned placement/reprice containers bind it too
-    # (TQ_REPRICE_DATA_HOST, tastyquant #12). Backed up via backup.nix.
-    TQ_DATA_DIR = "/home/crussell/tastyquant-data";
-    TQ_REPRICE_DATA_HOST = "/home/crussell/tastyquant-data";
-  };
-  oneshot = name: desc: {
+  # Image-run oneshot: dist is baked into the zot image — no checkout,
+  # no pnpm build. Data + read-only .env bind exactly as tools/tq did.
+  imageRun = cli: ''
+    ${pkgs.podman}/bin/podman run --rm --user 0:0 \
+      -v /home/crussell/tastyquant-data:/work/data \
+      -v /home/crussell/tastyquant-data/env/.env:/work/.env:ro \
+      -e TQ_ENV_FILE=/work/.env -e TZ=UTC -w /work \
+      10.10.0.6:5000/tastyquant/app:main \
+      node apps/fetcher/dist/${cli}'';
+  oneshot = cli: desc: {
     description = desc;
-    environment = execEnv;
     serviceConfig = {
       Type = "oneshot";
-      WorkingDirectory = repo;
-      TimeoutStartSec = 600;
-      ExecStart = "${tq} ${name}";
+      TimeoutStartSec = 900;
+      ExecStart = imageRun cli;
     };
   };
 in {
@@ -88,16 +84,17 @@ in {
         chmod 0600 "$2.tmp"
         mv -f "$2.tmp" "$2"
       }
-      awk_extract .env ${repo}/.env
-      awk_extract .env.production ${repo}/.env.production
+      mkdir -p /home/crussell/tastyquant-data/env
+      awk_extract .env /home/crussell/tastyquant-data/env/.env
+      awk_extract .env.production /home/crussell/tastyquant-data/env/.env.production
       # zai-api-key.age is an ENV FILE (ZHIPU_API_KEY=<key>), not a bare
       # key — strip the name or the desk sends "ZHIPU_API_KEY=<key>" as
       # the bearer token (401 Authentication Failed, 2026-10-23).
       printf 'NINEROUTER_API_KEY=%s\n' \
         "$(sed -n 's/^ZHIPU_API_KEY=//p' ${config.age.secrets.zai-api-key.path})" \
-        > ${repo}/.env.desk
-      chown crussell:users ${repo}/.env.desk
-      chmod 0600 ${repo}/.env.desk
+        > /home/crussell/tastyquant-data/env/.env.desk
+      chown crussell:users /home/crussell/tastyquant-data/env/.env.desk
+      chmod 0600 /home/crussell/tastyquant-data/env/.env.desk
     '';
   };
 
@@ -106,11 +103,12 @@ in {
   # scan/capture/sweep oneshots still run tools/tq against the checkout
   # until the final checkout-removal step converts them too.
   systemd.user.services = {
-    tastyquant-scan = oneshot "scan"
-      "tastyquant morning scan + repair pass (deterministic tickets)";
-    tastyquant-capture = oneshot "capture" "tastyquant daily read-only capture";
-    tastyquant-sweep = oneshot "sweep"
-      "tastyquant OCC-universe market-metrics sweep (read-only)";
+    tastyquant-scan = oneshot "scan-cli.js"
+      "tastyquant morning scan + repair pass (deterministic tickets; image-run)";
+    tastyquant-capture =
+      oneshot "capture-cli.js" "tastyquant daily read-only capture (image-run)";
+    tastyquant-sweep = oneshot "sweep-cli.js"
+      "tastyquant OCC-universe market-metrics sweep (read-only; image-run)";
   };
 
   # Serving quadlets (zot image): materialize read-only under /etc,

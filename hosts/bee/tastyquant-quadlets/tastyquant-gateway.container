@@ -12,7 +12,7 @@ Network=host
 WorkingDir=/work
 Environment=TZ=UTC
 Volume=%h/tastyquant-data:/work/data
-Volume=%h/tastyquant/.env.production:/work/.env.production:ro
+Volume=%h/tastyquant-data/env/.env.production:/work/.env.production:ro
 Exec=node apps/executor/dist/gateway-server.js --env-file /work/.env.production --tickets-db data/v2/portfolio.db --audit-db data/executor/executor.db --host 127.0.0.1 --port 8810
 
 [Service]

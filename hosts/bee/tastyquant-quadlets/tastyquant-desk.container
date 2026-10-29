@@ -22,7 +22,7 @@ Environment=TQ_SITE_URL=http://10.10.0.12:8808
 # name in .env.desk is legacy — value is the Z.AI coding-plan key via agenix).
 Environment=TQ_LLM_BASE_URL=https://api.z.ai/api/coding/paas/v4
 Environment=TQ_LLM_MODELS=glm-5.3
-EnvironmentFile=%h/tastyquant/.env.desk
+EnvironmentFile=%h/tastyquant-data/env/.env.desk
 Volume=%h/tastyquant-data:/work/data
 Exec=node node_modules/next/dist/bin/next start -H 10.10.0.12 -p 3320
 
