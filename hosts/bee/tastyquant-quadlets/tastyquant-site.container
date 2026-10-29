@@ -17,12 +17,17 @@ Environment=TQ_REPRICE_PODMAN_SOCK=/run/user/1000/podman/podman.sock
 Environment=TQ_REPRICE_REPO_HOST=%h/tastyquant
 Environment=TQ_REPRICE_REPO_CONTAINER=/work
 Environment=TQ_REPRICE_CACHE_VOLUME=tq-build-cache
-Environment=TQ_REPRICE_IMAGE=docker.io/library/node:22
+# Spawn image mode (2026-10-29): placement/reprice containers run the
+# SAME baked code as this stack — no repo bind, data + trade env bind
+# from their declared dirs (tastyquant #12's MOUNT_REPO=0 path).
+Environment=TQ_REPRICE_IMAGE=10.10.0.6:5000/tastyquant/app:main
+Environment=TQ_REPRICE_MOUNT_REPO=0
+Environment=TQ_REPRICE_ENV_HOST=%h/tastyquant-data/env
 Environment=TQ_REPRICE_DATA_HOST=%h/tastyquant-data
 Environment=TQ_EXECUTOR_KILL_SWITCH=/work/data/executor/kill-switch
 Environment=TQ_EXECUTOR_AUDIT_DB=/work/data/executor/executor.db
 Volume=%h/tastyquant-data:/work/data
-Volume=%h/tastyquant/.env:/work/.env:ro
+Volume=%h/tastyquant-data/env/.env:/work/.env:ro
 Volume=/run/user/1000/podman/podman.sock:/run/user/1000/podman/podman.sock
 Exec=node apps/site/dist/server.js --db data/v2/portfolio.db --port 8808 --host 10.10.0.12
 

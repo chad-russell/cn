@@ -10,7 +10,7 @@ WorkingDir=/work
 Environment=TZ=UTC
 PublishPort=127.0.0.1:8811:8811
 Volume=%h/tastyquant-data:/work/data
-Volume=%h/tastyquant/.env:/work/.env:ro
+Volume=%h/tastyquant-data/env/.env:/work/.env:ro
 Exec=node apps/fetcher/dist/market-server.js --env-file /work/.env --db data/v2/portfolio.db --host 0.0.0.0 --port 8811
 
 [Service]
