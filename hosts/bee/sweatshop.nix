@@ -37,11 +37,7 @@ let
   # bucket-init service below runs it in a one-off container on the
   # harness network (only members can reach the sidecar).
   units =
-    [
-      "sweatshop.container"
-      "sweatshop-harness.network"
-      "rustfs.container"
-    ];
+    [ "sweatshop.container" "sweatshop-harness.network" "rustfs.container" ];
 in {
   # 0043 host channel: the exec tool's SSH key, mounted read-only into
   # the container (see sweatshop.container). owner=crussell per the
