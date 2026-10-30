@@ -93,6 +93,17 @@ in {
   # (work provider). Historical name kept to avoid re-encrypting.
   "hermes-bee-env-glen.age".publicKeys = [ crussell ];
 
+  # ── Sweatshop skills sidecar (bee) ─────────────────────────────
+  # RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY for the sweatshop-rustfs
+  # rootless quadlet (hosts/bee/sweatshop/rustfs.container) and the
+  # bucket-init unit — a DEDICATED pair, not the nas root keys above
+  # (per-service keys were deferred on nas until a second consumer;
+  # sweatshop sidesteps the shared instance entirely — see
+  # docs/rustfs-migration/PLAN.md topology note). Values also ride the
+  # checkout's gitignored .env.local as SKILLS_S3_ACCESS_KEY_ID /
+  # SKILLS_S3_SECRET_ACCESS_KEY (app-side names).
+  "sweatshop-rustfs-env.age".publicKeys = [ crussell ];
+
   # ── Central logging: OpenObserve (bees) + RustFS (nas) ──────────
   # openobserve-env: ZO_ROOT_USER_EMAIL / ZO_ROOT_USER_PASSWORD (UI
   # login AND OTLP basic auth for every Vector shipper — consumed on
