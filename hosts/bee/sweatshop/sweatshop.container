@@ -1,7 +1,7 @@
 [Unit]
 Description=sweatshop - personal software factory (Next.js production build), http://bee:3300 + preview proxy 10.10.0.12:3301
-After=network-online.target
-Wants=network-online.target
+After=network-online.target sweatshop-rustfs.service
+Wants=network-online.target sweatshop-rustfs.service
 
 [Container]
 # The image is built locally from the sweatshop repo's Containerfile.dev
@@ -34,6 +34,10 @@ PublishPort=3300:3000
 PublishPort=10.10.0.12:3301:3001
 # Model and git credentials (gitignored, 0600, in the checkout). The
 # sweatshop Secrets entity is the long-term home for these.
+# Skills store (0088): SKILLS_S3_* lines are appended here on the host
+# post-deploy (endpoint http://sweatshop-rustfs:9000, bucket skills,
+# dedicated rustfs keypair) — env is read at process start, so the app
+# unit restarts after the .env.local edit land them.
 EnvironmentFile=/home/crussell/sweatshop/.env.local
 # 0043 host channel: the exec tool's SSH key (agenix, crussell-owned on
 # the host). One key authorized on every NixOS host; each HOST_<NAME>_…

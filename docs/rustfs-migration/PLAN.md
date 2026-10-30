@@ -85,6 +85,31 @@ Original candidate triggers (second restic target, artifact store, hindsight
 attachments, immich cold tier) remain open for future consumers — point them
 at `10.10.0.3:9000`, don't spawn new sidecars.
 
+## Decision record: sweatshop skills store — sidecar, NOT the nas instance (2026-10-30)
+
+sweatshop's skills feature (0088, S3 bucket of SKILL.md families) looked
+like a nas consumer and was decided the other way. The rule was applied
+to the data, not the app: skills are stack-private, KB-scale, recreated
+from git history + chat transcripts — fails survival, multiplicity and
+operational weight all three → per-project sidecar, the same topology
+as the minio swaps. Two extra weights on the sidecar side:
+
+- **Backup asymmetry.** A rootless named volume on bee lands under
+  `~/.local/share/containers/volumes` — inside bee's existing restic
+  backup (backup.nix excludes image layers only). The nas instance has
+  NO restic coverage (deferred above; nas is the backup target host).
+  For irreplaceable-ish data the sidecar is the safer place today.
+- **Hermeticity.** sweatshop is laptop-portable by design; the sidecar
+  rides the same `sweatshop-harness` network and dies with the stack.
+
+Built as `hosts/bee/sweatshop/rustfs.container` (rootless quadlet,
+crussell user units, same digest as nas, no published port, dedicated
+keypair in `sweatshop-rustfs-env.age`, bucket `skills` bootstrapped by
+the bucket-init unit in sweatshop.nix). The app reads it through
+`SKILLS_S3_*` env (see the module header). If skills ever outgrow the
+stack (shared across hosts, artifact-grade retention), THAT is the
+trigger to move them to the nas instance — lift and shift the bucket.
+
 ## The swap recipe (identical for every sidecar)
 
 All four in-scope `.container` files have the same shape. Per stack:

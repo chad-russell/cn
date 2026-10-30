@@ -1,0 +1,55 @@
+# RustFS — sweatshop skills sidecar (rootless quadlet, crussell).
+#
+# sweatshop 0088: the skills catalog is an S3-compatible bucket
+# (SKILLS_S3_* env → lib/skills/store.ts). Topology per
+# docs/rustfs-migration/PLAN.md: skills are stack-private, KB-scale
+# data — fails all three shared-instance tests (survival,
+# multiplicity, operational weight), so it's a per-project sidecar,
+# NOT the nas shared instance. Bonus the nas store can't offer: the
+# named volume lands under ~/.local/share/containers/volumes —
+# already inside bee's restic backup path (backup.nix; image layers
+# excluded, volumes kept); nas rustfs has no restic coverage at all.
+#
+# Image: pinned to the SAME digest as the nas instance (RustFS 1.0.0,
+# amd64 — verified 2026-09-25; the only rustfs image in the lab).
+# Single data path, console off, no published port: reachable only on
+# sweatshop-harness by container name (membership is the boundary).
+# The image runs as 10001:10001; rootless quadlet's container-uid-0 =
+# crussell mapping makes the named volume writable (qrcode sidecar
+# precedent).
+[Unit]
+Description=sweatshop-rustfs - skills S3 sidecar (bucket skills), sweatshop-harness only
+# Ordering with the app unit, not hard dependency: the app treats an
+# unreachable store as an empty catalog (0088), so rustfs being down
+# degrades, never blocks, sweatshop.
+Before=sweatshop.service
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/rustfs/rustfs@sha256:ba0a1b53e36f321c0d46f3867104abef169f7bc59c467c664ddac87e7ddc9a8b
+ContainerName=sweatshop-rustfs
+Environment=RUSTFS_ADDRESS=:9000
+Environment=RUSTFS_REGION=us-east-1
+Environment=RUSTFS_CONSOLE_ENABLE=false
+Environment=RUSTFS_HEALTH_ENDPOINT_ENABLE=true
+# RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY (dedicated pair — NOT the nas
+# root keys; fresh values, agenix-encrypted to the crussell age key).
+EnvironmentFile=/run/agenix/sweatshop-rustfs-env
+# Restic-covered via ~/.local/share/containers (backup.nix).
+Volume=sweatshop-rustfs-data:/data
+Network=sweatshop-harness.network
+Exec=/data
+HealthCmd=curl --fail --silent http://127.0.0.1:9000/health/ready
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=30
+HealthStartPeriod=20s
+
+[Service]
+TimeoutStartSec=180
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
