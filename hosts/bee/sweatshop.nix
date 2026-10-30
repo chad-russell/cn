@@ -60,19 +60,20 @@ in {
     mode = "0400";
   };
 
-  environment.etc = lib.listToAttrs (map (u: {
+  # The quadlet inputs + the bucket-bootstrap script (run by
+  # sweatshop-rustfs-bucket-init below in a one-off container), both
+  # materialized read-only under /etc/sweatshop.
+  environment.etc = (lib.listToAttrs (map (u: {
     name = "sweatshop/${u}";
     value = {
       source = ./sweatshop + "/${u}";
       mode = "0444";
     };
-  }) units);
-
-  # Bucket-bootstrap script, materialized for the one-off container
-  # (see sweatshop-rustfs-bucket-init below).
-  environment.etc."sweatshop/rustfs-bucket-init.mjs" = {
-    source = ./sweatshop/rustfs-bucket-init.mjs;
-    mode = "0444";
+  }) units)) // {
+    "sweatshop/rustfs-bucket-init.mjs" = {
+      source = ./sweatshop/rustfs-bucket-init.mjs;
+      mode = "0444";
+    };
   };
 
   system.activationScripts.sweatshop-quadlet =
