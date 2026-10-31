@@ -42,10 +42,13 @@
 
       # sweatshop (http://bee:3300, sweatshop.nix): sqlite db + WAL, the
       # Workflow SDK local world (in-flight runs, gates, hooks), and
-      # data/backups/ (pre-deploy snapshots + the 23:00 nightly.db, a
+      # backups/ (pre-deploy snapshots + the 23:00 nightly.db, a
       # guaranteed-consistent copy). db + -wal travel together — SQLite
       # recovers the pair; a bare .db loses committed transactions.
-      "/home/crussell/sweatshop/data"
+      # Image era (sweatshop 0091, 2026-10-31): state moved out of the
+      # checkout to ~/.sweatshop-data; the checkout itself is no longer
+      # serving infrastructure (no build, no node_modules bind).
+      "/home/crussell/.sweatshop-data"
 
       # tastyquant (hosts/bee/tastyquant.nix): v2 portfolio db + WAL, the
       # executor audit chain (order safety record — irreplaceable), kill

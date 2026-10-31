@@ -1,20 +1,24 @@
 # ── bee: sweatshop (rootless quadlet, crussell) ───────────────────────
 #
 # Chad's personal software factory (repo: git.crussell.io/chad/sweatshop,
-# checkout ~/sweatshop). ONE instance, no dev server (sweatshop 0020):
-# this unit serves `next start` of a production build in the checkout,
-# and the checkout moves only through its own scripts/deploy.sh (stop →
-# npm ci + next build + db:migrate → start). Sweatshop changes itself by
-# PRs from its sandboxes; dsh is the emergency path if a deploy breaks it.
+# GitHub chad-russell/sweatshop, checkout ~/sweatshop). ONE instance,
+# image-era serving (sweatshop 0091, cutover 2026-10-31): this unit runs
+# the CI-built zot image (10.10.0.6:5000/sweatshop/app:main) — the image
+# entrypoint runs migrations then `next start`. Deploys are pull +
+# restart by the repo's Forgejo deploy workflow; the checkout stays for
+# ./dev one-offs but is no longer serving infrastructure. dsh is the
+# emergency path if a deploy breaks it.
 #
 # Mechanics as hindsight.nix (D-017): materialize the quadlet files
 # read-only under /etc, symlink into crussell's user quadlet search path,
 # reload the user manager, enable.
 #
-# State lives in ~/sweatshop/data (sqlite + WAL, the Workflow SDK local
-# world, backups/) — in bee's restic paths (backup.nix). The nightly timer
-# below writes a guaranteed-consistent copy, data/backups/nightly.db, an
-# hour before the 00:00 (+≤1 h jitter) restic window.
+# State lives in ~/.sweatshop-data (sqlite + WAL, the Workflow SDK local
+# world, backups/, env/.env.local) — in bee's restic paths (backup.nix).
+# Moved out of the checkout at the 0091 cutover; a cutover activation
+# below performs the one-time move (idempotent). The nightly timer below
+# writes a guaranteed-consistent copy, backups/nightly.db, an hour
+# before the 00:00 (+≤1 h jitter) restic window.
 #
 # Skills store (sweatshop 0088): rootless rustfs sidecar in the same
 # quadlet family — sweatshop-rustfs.container, bucket `skills`, nothing
@@ -32,6 +36,8 @@
 
 let
   checkout = "/home/crussell/sweatshop";
+  # 0091: state dir, moved out of the checkout at the image-era cutover.
+  dataDir = "/home/crussell/.sweatshop-data";
   # rustfs.container deploys alongside (quadlet, symlinked by the
   # activation below). rustfs-bucket-init.mjs is NOT a unit — the
   # bucket-init service below runs it in a one-off container on the
@@ -74,7 +80,7 @@ in {
   };
 
   system.activationScripts.sweatshop-quadlet =
-    lib.stringAfter [ "users" "etc" ] ''
+    lib.stringAfter [ "users" "etc" "sweatshop-data-move" ] ''
       dest="/home/crussell/.config/containers/systemd"
       mkdir -p "$dest"
       chown crussell:users "$dest"
@@ -90,25 +96,52 @@ in {
         # Generated units cannot be `enable`d; [Install] WantedBy in the
         # .container wires boot start through the generator. Activation never
         # starts or restarts the app — the first start is the cut-over, and
-        # every later restart belongs to scripts/deploy.sh.
+        # every later restart belongs to the repo's deploy workflow.
       fi
     '';
 
+  # ── 0091 cutover: one-time state move out of the checkout ────────
+  # Idempotent; run BEFORE the quadlet activation above would start the
+  # image unit against an empty data dir. Order: stringAfter ["users"]
+  # is enough — it must merely precede any start of the new unit, and
+  # activation never starts units.
+  system.activationScripts.sweatshop-data-move = lib.stringAfter [ "users" ] ''
+    if [ -d "${checkout}/data" ] && [ ! -e "${dataDir}" ]; then
+      mv "${checkout}/data" "${dataDir}"
+    fi
+    mkdir -p "${dataDir}/env"
+    # .env.local moves into the data dir (quadlet reads
+    # ${dataDir}/env/.env.local); a symlink keeps the checkout's ./dev
+    # path (and anything else referencing it) working.
+    if [ -f "${checkout}/.env.local" ] && [ ! -e "${dataDir}/env/.env.local" ]; then
+      mv "${checkout}/.env.local" "${dataDir}/env/.env.local"
+      ln -sfn "${dataDir}/env/.env.local" "${checkout}/.env.local"
+    fi
+    chown -R crussell:users "${dataDir}"
+    chmod 700 "${dataDir}" "${dataDir}/env"
+    chmod 600 "${dataDir}/env/.env.local" 2>/dev/null || true
+  '';
+
   # Consistent online copy of the app db (better-sqlite3 backup API, via the
   # repo's own script in a one-off container with the app's mounts).
+  # Image-era (0091): the snapshot runs inside the SERVING image (it
+  # carries scripts/ + @aws-sdk deps), against the bound data dir — no
+  # checkout, no dev container. sqlite must quiesce first: stop the app
+  # unit, snapshot, start again (the 23:00 blip is the trade for a
+  # guaranteed-consistent nightly.db; same pattern as the pre-cutover
+  # service's better-sqlite3 backup API, which required no stop).
   systemd.user.services.sweatshop-db-snapshot = {
-    description = "sweatshop nightly db snapshot (data/backups/nightly.db)";
+    description = "sweatshop nightly db snapshot (backups/nightly.db)";
     onFailure = [ "ntfy-failure@sweatshop-db-snapshot.service" ];
     unitConfig = {
       ConditionUser = "crussell";
-      ConditionPathExists = "${checkout}/data/sweatshop.db";
+      ConditionPathExists = "${dataDir}/sweatshop.db";
     };
     path = [ pkgs.podman pkgs.bash pkgs.coreutils ];
     serviceConfig = {
       Type = "oneshot";
-      WorkingDirectory = checkout;
       ExecStart =
-        "${pkgs.bash}/bin/bash ${checkout}/dev exec -- node scripts/db-snapshot.mjs nightly";
+        "${pkgs.bash}/bin/bash -c '${config.systemd.package}/bin/systemctl --user stop sweatshop.service && ${pkgs.podman}/bin/podman run --rm -v ${dataDir}:/app/data 10.10.0.6:5000/sweatshop/app:main node scripts/db-snapshot.mjs nightly; rc=$?; ${config.systemd.package}/bin/systemctl --user start sweatshop.service; exit $rc'";
     };
   };
 
@@ -142,13 +175,13 @@ in {
       RemainAfterExit = true;
     };
     script = ''
+      # Image era (0091): the serving image carries node + scripts/, so
+      # the bootstrap runs there — no dev image, no node_modules volume.
       ${pkgs.podman}/bin/podman run --rm \
         --network sweatshop-harness \
         --env RUSTFS_ACCESS_KEY --env RUSTFS_SECRET_KEY \
-        --workdir /workspace \
-        --volume sweatshop-node-modules:/workspace/node_modules \
-        --volume /etc/sweatshop/rustfs-bucket-init.mjs:/workspace/rustfs-bucket-init.mjs:ro \
-        localhost/sweatshop-dev \
+        --volume /etc/sweatshop/rustfs-bucket-init.mjs:/app/rustfs-bucket-init.mjs:ro \
+        10.10.0.6:5000/sweatshop/app:main \
         node rustfs-bucket-init.mjs
     '';
   };

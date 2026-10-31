@@ -22,6 +22,19 @@
               "mostRecentlyPushedCount": 3
             }
           ]
+        },
+        {
+          "repositories": ["sweatshop/*"],
+          "deleteUntagged": true,
+          "keepTags": [
+            {
+              "patterns": ["^main$"]
+            },
+            {
+              "patterns": ["^[0-9a-f]{7,40}$"],
+              "mostRecentlyPushedCount": 3
+            }
+          ]
         }
       ]
     }

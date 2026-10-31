@@ -1,29 +1,33 @@
 [Unit]
-Description=sweatshop - personal software factory (Next.js production build), http://bee:3300 + preview proxy 10.10.0.12:3301
+Description=sweatshop - personal software factory (CI-built zot image), http://bee:3300 + preview proxy 10.10.0.12:3301
 # rustfs.service is the skills sidecar's generated unit name (quadlet
 # units take the file name rustfs.container -> rustfs.service).
 After=network-online.target rustfs.service
 Wants=network-online.target rustfs.service
 
 [Container]
-# The image is built locally from the sweatshop repo's Containerfile.dev
-# (node 24 + docker-cli + git); `./dev build` in ~/sweatshop rebuilds it.
-# No AutoUpdate: it is not in a registry.
-Image=localhost/sweatshop-dev
+# Image-era serving (sweatshop 0091, cn quadlet cutover): the image is
+# CI-built on merge to main by the sweatshop repo's Forgejo workflow and
+# pushed to the bees zot registry. The repo's deploy workflow pulls
+# :main and restarts this unit; AutoUpdate=registry is the catch-up
+# (nightly podman auto-update pulls if a deploy pull failed — tastyquant
+# model). zot is plain HTTP on the Nebula LAN: registries.insecure on
+# bee (tastyquant.nix).
+Image=10.10.0.6:5000/sweatshop/app:main
+AutoUpdate=registry
 # Name kept from the ./dev era: sweatshop's sandbox-gc client and the
 # claude bridge reach the app by this name on sweatshop-harness.
 ContainerName=sweatshop-dev
 # Rootless podman maps container root to crussell, so writes into the
-# bind-mounted checkout (data/, .next/) land crussell-owned (the same model
-# as ./dev).
+# bind-mounted data dir land crussell-owned (the same model as ./dev).
 User=0
-WorkingDir=/workspace
-# The deploy checkout. It moves only through its own scripts/deploy.sh
-# (stop, build, migrate, start); this unit just serves the build in it.
-Volume=/home/crussell/sweatshop:/workspace
-# node_modules lives in a named volume so the host tree stays clean;
-# shared with the repo's ./dev exec, which runs the build and gate.
-Volume=sweatshop-node-modules:/workspace/node_modules
+# NO checkout bind, NO node_modules volume (0091): the image carries the
+# built tree + deps. State (sqlite + WAL, workflow-data, backups/,
+# env/.env.local) lives in ~/.sweatshop-data, moved out of the checkout
+# by the cutover activation in sweatshop.nix — restic covers it
+# (backup.nix). The checkout stays for ./dev but is no longer serving
+# infrastructure.
+Volume=%h/.sweatshop-data:/app/data
 # Host rootless podman socket: sandboxes, service containers and previews
 # are sibling containers on host podman (no nesting).
 Volume=%t/podman/podman.sock:/var/run/docker.sock
@@ -34,13 +38,13 @@ Network=sweatshop-harness.network
 # only, where bees' Caddy forwards pv-*.internal.crussell.io.
 PublishPort=3300:3000
 PublishPort=10.10.0.12:3301:3001
-# Model and git credentials (gitignored, 0600, in the checkout). The
-# sweatshop Secrets entity is the long-term home for these.
-# Skills store (0088): SKILLS_S3_* lines are appended here on the host
-# post-deploy (endpoint http://sweatshop-rustfs:9000, bucket skills,
-# dedicated rustfs keypair) — env is read at process start, so the app
-# unit restarts after the .env.local edit land them.
-EnvironmentFile=/home/crussell/sweatshop/.env.local
+# Model and git credentials (0600), relocated to the data dir by the
+# cutover activation (a symlink keeps the checkout's ./dev path working).
+# The sweatshop Secrets entity is the long-term home for these.
+# Skills store (0088): SKILLS_S3_* lines (endpoint http://sweatshop-rustfs:9000,
+# bucket skills, dedicated rustfs keypair) — env is read at process
+# start, so a unit restart is needed after edits land.
+EnvironmentFile=%h/.sweatshop-data/env/.env.local
 # 0043 host channel: the exec tool's SSH key (agenix, crussell-owned on
 # the host). One key authorized on every NixOS host; each HOST_<NAME>_…
 # var names it for that host's registry entry (vars without a matching
@@ -55,15 +59,16 @@ Environment=NODE_ENV=production
 # are required: withWorkflow() overwrites WORKFLOW_LOCAL_DATA_DIR to
 # .next/workflow-data whenever WORKFLOW_TARGET_WORLD is unset.
 Environment=WORKFLOW_TARGET_WORLD=local
-Environment=WORKFLOW_LOCAL_DATA_DIR=/workspace/data/workflow-data
-Entrypoint=npx
-Exec=next start -p 3000
+Environment=WORKFLOW_LOCAL_DATA_DIR=/app/data/workflow-data
+# No Entrypoint=/Exec= override: the image CMD runs migrations then
+# `next start -p 3000` (self-contained schema step, sweatshop 0091).
 
 [Service]
 Restart=always
 RestartSec=5
-# A cold start only loads the existing build; deploys build before start.
-TimeoutStartSec=120
+# Cold start pulls the image (if absent) and runs migrations before
+# serving; the pull is the slow part on first boot.
+TimeoutStartSec=300
 
 [Install]
 WantedBy=default.target
