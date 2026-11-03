@@ -1,0 +1,56 @@
+# tansweat — Chad's next-gen sweatshop replacement (repo
+# git.crussell.io/chad/tansweat). One app, apps/web (TanStack Start +
+# nitro), serving https://tansweat.internal.crussell.io via bees Caddy
+# (hosts/bees/caddy/routes/internal/tansweat.caddy) → 10.10.0.12:3330.
+#
+# Runs the CI-built zot image (:main). Deploy flow (no cn change needed):
+#   merge to chad/tansweat main → bees Forgejo runner builds the image →
+#   pushes 10.10.0.6:5000/tansweat/app:main → CI ssh's to bee, pulls and
+#   `systemctl --user restart tansweat.service`. The nightly
+#   podman-auto-update (AutoUpdate=registry) catches any missed restart.
+# NixOS activation (hosts/bee/tansweat.nix) only installs/reloads this
+# file; it never starts or restarts the app.
+#
+# First boot, before the first image push: the pull fails and the unit
+# retries (Restart=always). Expected and harmless.
+#
+# State: /home/crussell/tansweat-data (sqlite+WAL db, generated
+# secret-key/media-secret, claude-home/, codex-home/) — in bee's restic
+# paths; nightly consistent copy at backups/nightly.db (tansweat.nix).
+#
+# Sandboxes: tansweat drives the host rootless podman engine via dockerode
+# through the mounted socket, so sandboxes run as sibling containers
+# (same model as sweatshop). Published sandbox preview ports are
+# reachable on the engine host at 10.10.0.12:<port>.
+[Unit]
+Description=tansweat (apps/web, 10.10.0.12:3330 → tansweat.internal)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=10.10.0.6:5000/tansweat/app:main
+ContainerName=tansweat
+AutoUpdate=registry
+# Host network: binds the Nebula IP directly and lets the app reach
+# sandbox preview ports published on the host (tastyquant precedent).
+Network=host
+# Runtime layout is baked into the image (git + docker-cli included).
+WorkingDir=/app/apps/web
+Environment=NODE_ENV=production
+Environment=TANSWEAT_DB=/data/tansweat.db
+Environment=TANSWEAT_CLAUDE_HOME=/data/claude-home
+Environment=TANSWEAT_CODEX_HOME=/data/codex-home
+Environment=PORT=3330
+Environment=HOST=10.10.0.12
+Volume=/home/crussell/tansweat-data:/data
+# Host rootless podman socket (the built-in "Podman" profile uses it).
+Volume=%t/podman/podman.sock:/var/run/docker.sock
+Exec=node .output/server/index.mjs
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
