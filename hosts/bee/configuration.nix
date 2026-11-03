@@ -87,6 +87,9 @@ in {
     #                      # superseded by tastyquant (./tastyquant.nix,
     #                      # trades.internal.crussell.io)
     ./tastyquant.nix
+    # tansweat (https://tansweat.internal.crussell.io) — rootless quadlet
+    # running the CI-built zot image; sweatshop's successor.
+    ./tansweat.nix
     ./forgejo-runner.nix # Actions runner for git.crussell.io (Forgejo on gateway)
     ./backup.nix
     ./tailscale.nix
