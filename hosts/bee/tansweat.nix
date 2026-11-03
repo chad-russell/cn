@@ -16,25 +16,26 @@
 # State: ~/tansweat-data (db + WAL, keys, claude-home, codex-home) — in
 # restic paths (backup.nix). The timer below writes a consistent copy,
 # backups/nightly.db, before the nightly restic window.
+#
+# The snapshot script lives as a FILE, /etc/tansweat/db-snapshot.mjs
+# (bind-mounted read-only into a one-off container of the app image), not
+# as an inline `node -e '<JS>'` in ExecStart: systemd rejected the
+# multi-line single-quoted script ("Unbalanced quoting", unit wouldn't
+# load). It uses VACUUM INTO because node:24's DatabaseSync has no
+# .backup(). Both were live lessons, 2026-11-03.
 { config, lib, pkgs, ... }:
 
 let
   image = "10.10.0.6:5000/tansweat/app:main";
   dataDir = "/home/crussell/tansweat-data";
-  # node:sqlite online backup of the live db (WAL-safe), run in a one-off
-  # container of the app's own image (node is baked in).
-  backupScript = ''
-    const { DatabaseSync } = require("node:sqlite");
-    const fs = require("node:fs");
-    fs.mkdirSync("/data/backups", { recursive: true });
-    const db = new DatabaseSync("/data/tansweat.db");
-    db.backup("/data/backups/nightly.db")
-      .then(() => { db.close(); })
-      .catch((e) => { console.error(e); process.exit(1); });
-  '';
 in {
   environment.etc."tansweat/tansweat.container" = {
     source = ./tansweat/tansweat.container;
+    mode = "0444";
+  };
+
+  environment.etc."tansweat/db-snapshot.mjs" = {
+    source = ./tansweat/db-snapshot.mjs;
     mode = "0444";
   };
 
@@ -67,11 +68,8 @@ in {
     };
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = ''
-        ${pkgs.podman}/bin/podman run --rm --network host \
-          -v ${dataDir}:/data ${image} \
-          node -e '${backupScript}'
-      '';
+      ExecStart =
+        "${pkgs.podman}/bin/podman run --rm --network host -v ${dataDir}:/data -v /etc/tansweat/db-snapshot.mjs:/db-snapshot.mjs:ro ${image} node /db-snapshot.mjs";
     };
   };
 
