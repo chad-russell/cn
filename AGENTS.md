@@ -32,6 +32,8 @@ Last validated via SSH: **2026-09-09**.
 │   │   ├── tailscale.nix      # On-demand Tailscale (not default-on)
 │   │   ├── sweatshop.nix      # sweatshop rootless quadlet (bee:3300) + rustfs skills sidecar
 │   │   │   └── sweatshop/     # .container quadlet inputs (app, harness net, rustfs sidecar)
+│   │   ├── tansweat.nix       # tansweat quadlet (bee 10.10.0.12:3330, zot image + CI gitops)
+│   │   │   └── tansweat/      # .container quadlet + db-snapshot.mjs
 │   │   ├── filebrowser.nix    # filebrowser rootless quadlet (10.10.0.12:8093)
 │   │   │   └── filebrowser/   # the .container quadlet input
 │   │   ├── hindsight.nix      # hindsight agent-memory quadlet (10.10.0.12:8888 API+MCP / :9999 UI)
@@ -459,6 +461,7 @@ Source files:
 - `hosts/bee/tailscale.nix` — on-demand Tailscale (not enabled at boot)
 - `hosts/bee/sweatshop.nix` + `sweatshop/` — sweatshop rootless quadlet (http://bee:3300, checkout `~/sweatshop`, deploys via its own scripts/deploy.sh) + the rustfs skills sidecar
 - `hosts/bee/filebrowser.nix` + `filebrowser/` — filebrowser rootless quadlet (10.10.0.12:8093; buzz stack files removed 2026-09-19, D-014)
+- `hosts/bee/tansweat.nix` + `tansweat/` — tansweat rootless quadlet (10.10.0.12:3330 → tansweat.internal.crussell.io), running the CI-built zot image `tansweat/app:main` (image gitops: merge to chad/tansweat main → bees runner builds → zot → ssh bee pull + `systemctl --user restart tansweat.service`; state `~/tansweat-data`, restic-backed, nightly VACUUM INTO snapshot 23:05)
 
 Running services:
 
