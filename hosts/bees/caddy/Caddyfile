@@ -25,6 +25,27 @@
     import /etc/caddy/imports/routes/internal/*.caddy
 }
 
+# tansweat app previews — one subdomain per sandbox preview:
+# https://<slug>.preview.internal.crussell.io. Same upstream as
+# tansweat.internal.crussell.io (bee 10.10.0.12:3330); tansweat reads
+# the slug from the Host header (passed through untouched) and routes
+# to the right sandbox. The slug labels sit one level deeper than
+# *.internal.crussell.io, so this site needs its own wildcard cert —
+# same Route53 DNS challenge; DNS itself is already covered by the
+# zone's *.preview.internal wildcard (everything resolves to bees).
+*.preview.internal.crussell.io {
+    tls {
+        dns route53 {
+            hosted_zone_id Z0225258330LLQ5BK81Z0
+        }
+        propagation_timeout 5m
+    }
+
+    # Route files for preview subdomains. Every <slug>.preview host hits
+    # these; see routes/preview/ in the repo.
+    import /etc/caddy/imports/routes/preview/*.caddy
+}
+
 # dsh-relay management pages on the standard relay port — the dsh web UI's
 # "Relay" corner link points at host:3443, so it must answer on the DNS name.
 # Caddy terminates TLS with the same wildcard cert; the relay behind does its

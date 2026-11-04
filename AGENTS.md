@@ -42,7 +42,8 @@ Last validated via SSH: **2026-09-09**.
 │   │   ├── configuration.nix
 │   │   ├── disk-config.nix
 │   │   ├── caddy.nix + caddy/ (Caddyfile, routes, caddy.container)
-│   │   │   └── routes/internal/ (services.caddy, media.caddy, beszel.caddy)
+│   │   │   ├── routes/internal/ (services.caddy, media.caddy, beszel.caddy)
+│   │   │   └── routes/preview/ (tansweat-previews.caddy — *.preview.internal)
 │   │   ├── media-services.nix
 │   │   ├── immich-quadlet.nix   # Immich quadlets (server + ML containers)
 │   │   ├── immich-native.nix    # native PG + redis-immich + db dump + freshness
@@ -404,6 +405,11 @@ Bees's Caddy (`hosts/bees/caddy/Caddyfile`) handles **only**
 resolves `*.internal.crussell.io` → `10.10.0.6` (bees Nebula), so internal
 clients reach bees directly over the overlay, bypassing the gateway.
 
+A second wildcard site, `*.preview.internal.crussell.io`, terminates its own
+cert (same Route53 DNS challenge — one wildcard can't span both label depths)
+and proxies every `<slug>` host to tansweat for per-sandbox app previews; its
+routes live under `hosts/bees/caddy/routes/preview/`.
+
 Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
 - `services.caddy` — linkding, papra, ntfy, dsh, trades, nsfw, files, lane, lane-hooks, wankbank
@@ -461,7 +467,7 @@ Source files:
 - `hosts/bee/tailscale.nix` — on-demand Tailscale (not enabled at boot)
 - `hosts/bee/sweatshop.nix` + `sweatshop/` — sweatshop rootless quadlet (http://bee:3300, checkout `~/sweatshop`, deploys via its own scripts/deploy.sh) + the rustfs skills sidecar
 - `hosts/bee/filebrowser.nix` + `filebrowser/` — filebrowser rootless quadlet (10.10.0.12:8093; buzz stack files removed 2026-09-19, D-014)
-- `hosts/bee/tansweat.nix` + `tansweat/` — tansweat rootless quadlet (10.10.0.12:3330 → tansweat.internal.crussell.io), running the CI-built zot image `tansweat/app:main` (image gitops: merge to chad/tansweat main → bees runner builds → zot → ssh bee pull + `systemctl --user restart tansweat.service`; state `~/tansweat-data`, restic-backed, nightly VACUUM INTO snapshot 23:05)
+- `hosts/bee/tansweat.nix` + `tansweat/` — tansweat rootless quadlet (10.10.0.12:3330 → tansweat.internal.crussell.io), running the CI-built zot image `tansweat/app:main` (image gitops: merge to chad/tansweat main → bees runner builds → zot → ssh bee pull + `systemctl --user restart tansweat.service`; sandbox app previews at `https://<slug>.preview.internal.crussell.io` (bees Caddy second wildcard site, Host-based routing in tansweat); state `~/tansweat-data`, restic-backed, nightly VACUUM INTO snapshot 23:05)
 
 Running services:
 
