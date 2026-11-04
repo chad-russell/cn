@@ -40,6 +40,11 @@ Environment=NODE_ENV=production
 Environment=TANSWEAT_DB=/data/tansweat.db
 Environment=TANSWEAT_CLAUDE_HOME=/data/claude-home
 Environment=TANSWEAT_CODEX_HOME=/data/codex-home
+# Preview subdomain suffix: sandboxes answer at
+# https://<slug>.preview.internal.crussell.io (bees Caddy wildcard site,
+# routes/preview/tansweat-previews.caddy) which proxies here with the
+# original Host intact — the app strips the slug off the front of it.
+Environment=TANSWEAT_PREVIEW_DOMAIN=preview.internal.crussell.io
 Environment=PORT=3330
 Environment=HOST=10.10.0.12
 Volume=/home/crussell/tansweat-data:/data
