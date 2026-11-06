@@ -416,10 +416,16 @@ in {
       # 26.05 boot ordering: nebula's tun often appears after sockets.target,
       # so binding the Nebula IP failed with I/O error and left the socket
       # dead until manual restart (seen on 2026-09-06 boots). FreeBind lets
-      # the socket bind before the address exists; wants/after order boot;
-      # PartOf re-creates it whenever nebula itself restarts.
-      wants = [ "nebula@homelab.service" ];
-      after = [ "nebula@homelab.service" ];
+      # the socket bind before the address exists; PartOf re-creates it
+      # whenever nebula itself restarts.
+      #
+      # No wants/after on nebula: nebula@homelab is a normal service
+      # (After=basic.target) and basic.target is After=sockets.target, so
+      # ordering a sockets.target socket after nebula is a cycle. It stayed
+      # latent until a switch restarted nebula (2026-11-05, PR #132 changed
+      # the nebula firewall) — "Failed to start basic.target: Transaction
+      # order is cyclic" aborted the bee deploy. FreeBind already covers
+      # the late-address race, which is all the ordering was for.
       partOf = [ "nebula@homelab.service" ];
       socketConfig = {
         # All interfaces: dsh-mobile's network scan walks the phone's primary
