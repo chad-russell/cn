@@ -152,6 +152,20 @@
     "Z /etc/nebula-lh/ca.crt  0440 root nebula-lighthouse -"
     "Z /etc/nebula-lh/host.crt 0440 root nebula-lighthouse -"
     "Z /etc/nebula-lh/host.key 0440 root nebula-lighthouse -"
+    # HERMES_HOME state-dir parent. The hermes-agent module's activation
+    # creates /var/lib/hermes at switch time, but if the state is ever wiped
+    # between switches the gateway crash-loops ("Permission denied /
+    # Required directory does not exist") until the next activation —
+    # observed live at the 2026-11-06 fresh-start wipe. Declare it here so
+    # tmpfiles guarantees it at boot/apply, same convention as the module:
+    # 2770 + setgid, crussell:hermes (the three units share via the group).
+    # NOTE: `hermes chat` from an interactive shell still fails with
+    # unsafe_control_permissions — upstream's gateway discovery rejects the
+    # group bits on HERMES_HOME itself (gateway_runtime_discovery.home_mode_
+    # unsafe). Pre-existing upstream behavior, unrelated to this rule; the
+    # delivery surfaces (Discord gateway, hermes-serve API) don't use that
+    # path.
+    "d /var/lib/hermes 2770 crussell hermes -"
     # /bin/true compat symlink: hermes ≥0.21's restart-safe-scope probe runs
     # `systemd-run --user --scope -- /bin/true` (tools/process_registry.py);
     # NixOS ships no /bin/true, so without this the probe always fails and
