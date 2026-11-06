@@ -705,68 +705,22 @@
       # raised to 900s 2026-08-19 after 300s defaults kept expiring).
       approvals.mode = "off";
       approvals.timeout = 900;
-      # Discord bot — see gateway.platforms.discord below for the full
-      # lane-model rationale. Sole messaging platform since 2026-08-31
-      # (Telegram decommissioned).
-      # Discord bot (2026-08-31): the "lane model" — one private server,
-      # one channel per project lane (#infra, #rmt,
-      # #fantasy-football, #trading, #bible-reading, + Personal category).
-      # 2026-09-06 single-brain collapse: ONE bot (hermes-glen) serves all
-      # lanes including the Gloo work category (#gloo-general — channel
-      # prompt above). Categories are UI organization only; the old
-      # two-profile split (and its blindness overwrites) is retired.
-      # require_mention=false: single-user server, so every channel is
-      # free-response — type and it answers, no @mention ceremony.
-      # Telegram was decommissioned 2026-08-31 (prune script retired
-      # 2026-11-06 with the fresh-start wipe); Discord is the sole messaging
-      # platform. Token: DISCORD_BOT_TOKEN (hermes-private bot) in hermes-bee-env-glen.age; allowlist:
-      # DISCORD_ALLOWED_USERS below.
+      # Discord — minimal surface (2026-11-06 fresh-start trim): the bot
+      # responds ONLY in #general (the allowlist gate — extra.allowed_channels
+      # seeds DISCORD_ALLOWED_CHANNELS; DMs still work via the user allowlist)
+      # plus DMs. The lane-per-channel model (#gloo-general, #infra, #rmt,
+      # #fantasy-football, #trading, #inbox prompts/overrides/bindings) was
+      # retired the same day — wrong abstraction to pre-wire; channels gain
+      # doctrine when a real workflow emerges (IDs recoverable from git
+      # history, this commit's parent). require_mention=false stays: in the
+      # one allowed channel the bot free-responds, no @mention ceremony.
       gateway.platforms.discord = {
         enabled = true;
         extra.require_mention = false;
-        # ── Lane config (server "Glen", guild 1544084775499735070) ──
-        # Per-channel ephemeral prompts: the lane's project context.
-        # Gateway sessions always run at terminal.cwd (/home/crussell),
-        # so lane context files can't auto-load — these prompts carry it.
-        # no_thread_channels: adapter responds directly in-channel instead of
-        # isolating each message into a thread (see discord adapter
-        # _get_no_thread_channels / DISCORD_NO_THREAD_CHANNELS). CSV of IDs.
-        # #general stays AUTO-THREADED (Chad's preference 2026-09-06, tried
-        # inline and went back): each top-level message gets its own thread.
-        # #inbox: capture lane — each drop gets a one-line confirm in-channel,
-        # threads would fragment it. (#laura lane retired 2026-09-06.)
-        extra.no_thread_channels = "1545653384197967912";
-        extra.channel_prompts = {
-          "1544085937577918535" =
-            "Work lane (Gloo category #gloo-general): Chad's employer work — Wycliffe/360: GPL, Polymer, Hummingbird, open-bible, Bible QR codes, acceleration RFCs. Work repos live under ~/Gloo; RFCs in ~/Gloo/TangoGroup/360-acceleration-rfcs. Linear is the ticket source of truth. Route work coding to the gloo provider (employer-paid, model IDs gloo-*) or the codex CLI; never bill personal providers for work traffic. GitHub PR reviews in isolated worktrees (/tmp/pr-N-review).";
-          "1544085981236432906" =
-            "Homelab/infra lane. Nix repo ~/Code/cn; AGENTS.md is authoritative; deploys run from bees over Nebula (nix run .#deploy -- <host>). Verify live state over SSH before concluding anything.";
-          "1544086006771220562" =
-            "Math research lane: random matrix theory / CUE critical-point bimodality. Workspace ~/rmt (plan.md curriculum, corpus.md notes). Tutor posture: derive why, never decree. Numerics: use Arb-precision approaches for high-degree work.";
-          "1544086070436565123" =
-            "Fantasy football lane. Yahoo league 66096, team 10. Roster fetch needs prior-season ycookie parse from /f1/66096/10 raw. Wire-only league: no trades, no FAAB.";
-          "1544086089005006888" =
-            "Options trading lane. tastytrade 3-account advisor workflow; scanner at ~/tasty_options; recommendations at https://trades.internal.crussell.io.";
-          "1545653384197967912" =
-            "#inbox capture lane (no auto-threads): every message is a drop to classify and route, not converse. Life fact → append ~/brain/events; link/screenshot → ~/brain/inbox verbatim; action → ~/brain/todo.md; durable fact/preference → built-in memory; question → answer from the event log per recall order; work content → handle with work doctrine (gloo provider, ~/Gloo repos — same brain since 2026-09-06). One-line confirms only. Timestamped events NEVER go into memory; when/how-many questions are answered only from ~/brain/events.";
-        };
-        # Per-channel default model (Hermes ≥0.21 `channel_overrides`, sibling
-        # of `extra` under the platform — bridged by gateway/config_loader.py;
-        # threads inherit the parent channel's override, session /model wins
-        # over it). #gloo-general uses Gloo AI provider with gloo-z-ai-glm-5.3
-        # (employer-paid; confirmed live on platform 2026-09-09). Vision falls
-        # to the global aux vision (zai-coding/glm-5.3-flash). Use /model to
-        # override in-session (e.g. gloo-anthropic-claude-sonnet-4.6).
-        channel_overrides."1544085937577918535" = {
-          provider = "gloo";
-          model = "gloo-z-ai-glm-5.3";
-        };
-        # Home channel — fallback delivery target for bare-platform cron
-        # deliveries (e.g. daily-hermes-state-backup's deliver: discord) and
-        # cross-platform messages. Equivalent of /sethome in Personal #general;
-        # declared 2026-09-05 to stop the "No home channel" first-message nag.
-        # NOTE: the glen unit is generation-stable — bounce hermes-agent
-        # explicitly after changes here so the running gateway reloads config.
+        # #general (guild "Glen") — the only responding channel.
+        extra.allowed_channels = "1544084776363888723";
+        # Home channel — fallback delivery target for cron deliveries
+        # (daily-hermes-state-backup) and cross-platform messages.
         home_channel = {
           platform = "discord";
           chat_id = "1544084776363888723";
