@@ -48,9 +48,9 @@ handle @files {
 # routes removed — DNS wildcard just stops answering for those names.
 # Lane archive note below is historical.
 
-# Lane (self-hosted Plane CE) RETIRED 2026-09-08 — Hermes kanban is the
-# source of truth (kanban.internal.crussell.io). Routes removed; archive
-# at NAS /mnt/backups/lane-archive-2026-09-08 (pg dump + uploads).
+# Lane (self-hosted Plane CE) RETIRED 2026-09-08 — routes removed; archive
+# at NAS /mnt/backups/lane-archive-2026-09-08 (pg dump + uploads). Its
+# successor (Hermes kanban, kanban.internal) was retired 2026-11-06 too.
 # (HML-7's lane-hooks webhook bridge dropped in this merge too — its
 # Plane upstream is the thing that retired.)
 
