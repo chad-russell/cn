@@ -404,6 +404,13 @@ in {
       # Scoped to this unit rather than systemPackages.
       environment.PATH =
         lib.mkForce "${pkgs.pnpm}/bin:/run/current-system/sw/bin";
+      # Pin pnpm's store to the one profiles/glen/node_modules is already
+      # linked from (.modules.yaml storeDir). Without it pnpm 11 picks
+      # /var/lib/dsh/.pnpm-store (the profile lives on a different mount
+      # than $HOME) and refuses every remove/install with
+      # ERR_PNPM_UNEXPECTED_STORE.
+      environment.pnpm_config_store_dir =
+        "/var/lib/dsh/.local/share/pnpm/store";
       # Credential for the keyless bees llama.cpp route (see apiKeyEnv in
       # the seed): non-empty placeholder so pi-ai's credential resolution
       # succeeds; llama-server never checks it.
