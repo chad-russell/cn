@@ -398,7 +398,12 @@ in {
       # the bwrap sandbox probe fails ENOENT and landlock-run's exec of the
       # command fails ENOENT → "no sandbox backend is usable". Point PATH at
       # the system profile (bash, bwrap, git, and everything else on bee).
-      environment.PATH = lib.mkForce "/run/current-system/sw/bin";
+      # pnpm: dsh's plugin manager shells out to bare `pnpm` (install,
+      # remove, repair of profiles/glen) — bee has no system pnpm, so
+      # uninstalling from the Plugins UI failed "spawn pnpm ENOENT".
+      # Scoped to this unit rather than systemPackages.
+      environment.PATH =
+        lib.mkForce "${pkgs.pnpm}/bin:/run/current-system/sw/bin";
       # Credential for the keyless bees llama.cpp route (see apiKeyEnv in
       # the seed): non-empty placeholder so pi-ai's credential resolution
       # succeeds; llama-server never checks it.
