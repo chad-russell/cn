@@ -25,6 +25,11 @@
     # fleet-wide Vector shipper; parquet in RustFS on nas)
     ./openobserve.nix
     ../../modules/vector-log-shipper.nix
+    # Rootless podman API on Nebula :8750 for tansweat sandboxes
+    ../../modules/tansweat-sandbox-host.nix
+    {
+      homelab.tansweatSandboxHost.enable = true;
+    }
     # Nightly podman auto-update for system quadlets that set
     # AutoUpdate=registry (linkding, papra, sonarr, radarr,
     # prowlarr, qbittorrent); unlabeled quadlets are never touched

@@ -90,6 +90,9 @@ in {
     # tansweat (https://tansweat.internal.crussell.io) — rootless quadlet
     # running the CI-built zot image; sweatshop's successor.
     ./tansweat.nix
+    # Rootless podman API on Nebula :8750 for tansweat sandboxes
+    ../../modules/tansweat-sandbox-host.nix
+    { homelab.tansweatSandboxHost.enable = true; }
     ./forgejo-runner.nix # Actions runner for git.crussell.io (Forgejo on gateway)
     ./backup.nix
     ./tailscale.nix
