@@ -32,7 +32,7 @@ buildNpmPackage rec {
   # prebuilt dist needs only the production tree, so strip devDeps at
   # build time and ship a prod-only lockfile (0.2.0-rc.2's tarball ships
   # no devDependencies at all, so the strip is now a harmless no-op;
-  # lockfile regenerated 2026-10-01 the same way).
+  # lockfile regenerated 2026-10-01 and 2026-11-05 (0.2.2-rc.1) the same way).
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
     # 0.1.5 declares devDependencies on unpublished experimental packages
@@ -49,7 +49,7 @@ buildNpmPackage rec {
     mv package.json.stripped package.json
   '';
 
-  npmDepsHash = lib.fakeHash;
+  npmDepsHash = "sha256-6k/AFdBGDInFNX30yaBgZ9Pe8ezA/tsnFb1SnCfS3sw=";
 
   # Prebuilt distribution — no compile step, no scripts to run.
   npmInstallFlags = [ "--ignore-scripts" ];
