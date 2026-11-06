@@ -1,5 +1,5 @@
-id = "bca94113422029ae3e3e8cbe271996c8c9cdb4d2906a6b2f1eee8d06734b3cf9"
-created_at = 1792599913
+id = "e25db48e04a8ee8d090990c919bda9c1bc421ac1b1b4ffb851540f220c93eefb"
+created_at = 1794004049
 roots = [
     "age",
     "age-keygen",
@@ -284,8 +284,8 @@ dst = ".config/niri/config.kdl"
 blob = "e57761db070e5aa7e5fdca2ba6da1cecfbdab17461013eb9a88f95ed42db53de"
 
 [[file]]
-dst = ".config/hypr/hyprland.lua"
-blob = "98444edf60a861a7917bc8bc989a00d0c943ee12de030f7792da7cd1e3c22685"
+dst = ".config/umbriel/config.toml"
+blob = "f66dc199c2245cac20dced11775b8ceb0dc64bc6e9c53a93ca6118ec5b48eb9a"
 
 [[file]]
 dst = ".gitconfig"
@@ -297,7 +297,7 @@ blob = "1dd2ebc64e0f984e63609c9284a8cb526fffbf3e060d02a7c41197bfb6fdde83"
 
 [[file]]
 dst = ".config/xdg-desktop-portal/portals.conf"
-blob = "1cd028f7d89cde12e52692141538fb79cef22e33263b57b860ec79f2836b2a57"
+blob = "8ae6fa5f02827c15f4b80c41dd31142874539973f78dad9c37e9a00ced099954"
 
 [[file]]
 dst = ".config/monitors.xml"
@@ -330,14 +330,6 @@ blob = "a347ec306961a12244f31f87d448e1ea5ffcb021ef5d442b454de193daf2c69e"
 [[file]]
 dst = ".config/vicinae/settings.json"
 blob = "17ad3d1609fc9625d5d0b6642ac08736d3b15c901660456159241ff1ab4d7d0c"
-
-[[file]]
-dst = ".config/mango/config.conf"
-blob = "392d6076dd94b5be265a5dc64688e06a2cead324da12c9e95a8d122b01b935de"
-
-[[file]]
-dst = ".local/share/wayland-sessions/hyprland.desktop"
-blob = "85f585abe35babdeadd4f3c8819911fdcca1a59f5072befae69fad5f8c191552"
 
 [[file]]
 dst = ".config/wezterm/wezterm.lua"
@@ -500,6 +492,11 @@ blob = "8857fc11670ea0765d9e67c0a851771d97d4150625760172a2781e3416bfa8ab"
 name = "ambxst"
 enabled = true
 blob = "7c2f807f9e40959d5d53bf7c1354c589597bf2ee6fe6ca4f7e9f15092f1776c4"
+
+[[unit]]
+name = "dms-umbriel.service"
+enabled = true
+blob = "e8a195da56a55892b335f86fcf128df84c0be9d77044d54ffcb294e753868b4c"
 
 [[unit]]
 name = "thinkpad-image-update.service"

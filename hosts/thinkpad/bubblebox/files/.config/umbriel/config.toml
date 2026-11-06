@@ -1,0 +1,256 @@
+# Umbriel compositor config — vendored host config (bubblebox [[files]],
+# symlinked into ~/.config/umbriel/ by `cjust bubblebox-apply`).
+#
+# Replaces the retired Hyprland (hyprland.lua) + MangoWM (mango/config.conf)
+# configs (dropped 2026-11): Umbriel is the second compositor alongside niri.
+# Shell stack here: DMS (Dux Modular Shell, ex-DankMaterialShell) started by
+# the dms.service user unit (bound to umbriel-session.target — see
+# bubblebox/units/dms.service); Ambxst stays niri-only (niri.service.wants).
+#
+# Porting model: niri keybinds from .config/niri/config.kdl, one section at a
+# time, mapped to the closest umbriel action (docs.noctalia.dev/umbriel).
+# Deltas worth knowing:
+#   * niri's "column" focus left/right == window-focus-left/right in a
+#     scrolling layout (umbriel adapts column actions per layout).
+#   * niri's Mod+Ctrl+J/K "move-column-to-workspace-down/up" (ADJACENT
+#     workspace) == window-move-to-workspace-next/previous here.
+#   * niri's focus-ring width 2 == appearance.border_width = 2.
+#   * Media keys stay on wpctl/brightnessctl (pipewire-native, shell-
+#     independent, work while DMS is down) — same as the niri session; they
+#     are allow_when_locked so they work on DMS's lock screen too.
+#   * Mod+Space launches vicinae (the bubblebox-wrapped daemon client at
+#     ~/.local/bin/vicinae) — the ONE bind that must never change. vicinae
+#     resolves because .config/environment.d/10-bubblebox.conf puts
+#     ~/.local/bin on the graphical-session PATH.
+#
+# Validate after edits: `umbriel config validate` (hot-reloads on save in a
+# running session; errors show on screen and keep the last good config).
+
+# ── session ─────────────────────────────────────────────────────────────────
+[general]
+# DMS starts via systemd (dms.service → umbriel-session.target.wants), NOT
+# autostart — keeps it restartable/observable and out of GNOME/niri sessions.
+show_cheatsheet = false
+
+# Laptop lid: drop the panel from the desktop while closed (docs pattern).
+[events]
+lid_close = "umbriel msg output-disable eDP-1"
+lid_open = "umbriel msg output-enable eDP-1"
+
+# ── outputs (ported from niri config.kdl 1:1) ───────────────────────────────
+# eDP-1 anchors at x=0 y=0; externals sit above (negative y), centered.
+[output.eDP-1]
+mode = "1920x1200@60"
+scale = 1.0
+position = [0, 0]
+focus_at_startup = true
+
+# Work monitor: Dell 32", forced to 1440p (DP-over-USB-C flapping at 4K —
+# see the usbcore.autosuspend karg in host-image/Containerfile step 3.5).
+[output."Dell Inc. DELL P3225QE 616K784"]
+mode = "2560x1440@59.951"
+scale = 1.0
+position = [320, -1440]
+
+# Second P3225QE (different serial): 4K @ 1.25 → logical 3072x1728, centered.
+[output."Dell Inc. DELL P3225QE 5KCK784"]
+mode = "3840x2160@59.997"
+scale = 1.25
+position = [-576, -1728]
+
+# Home monitors (dock connectors).
+[output.DP-3]
+mode = "3840x2160@60"
+scale = 1.25
+position = [-3648, -1728]
+
+[output.DP-5]
+mode = "3840x2160@60"
+scale = 1.25
+position = [-576, -1728]
+
+# ── input (ported from niri) ────────────────────────────────────────────────
+[input.keyboard]
+options = "caps:swapescape"
+
+[input.touchpad]
+tap = true
+natural_scroll = true
+scroll_factor = 0.22
+
+[input.cursor]
+theme = "Bibata-Modern-Classic"
+size = 18
+
+# ── layout / looks (niri: gaps 8, focus-ring 2, corner radius 12) ───────────
+[layout]
+gap = 8
+mode = "scrolling"
+
+[appearance]
+border_width = 2
+corner_radius = 12
+
+# ── window rules (ported from niri + DMS/umbriel shell surfaces) ────────────
+# niri's global geometry-corner-radius 12 + clip-to-geometry analog.
+[[window_rule]]
+corner_radius = 12
+
+# niri: firefox PiP floats.
+[[window_rule]]
+match.title = "^Picture-in-Picture$"
+default_floating = true
+
+# niri: Zoom Workplace menus float (+focus), Settings/Sharing/Chat float.
+[[window_rule]]
+match.app_id = "^Zoom Workplace$"
+match.title = "menu"
+default_floating = true
+default_focused = true
+
+[[window_rule]]
+match.app_id = "^Zoom Workplace$"
+match.title = ["Settings", "Sharing", "Chat"]
+default_floating = true
+
+# DMS floating windows (Settings, Notepad, …) — app id per dux docs.
+[[window_rule]]
+match.app_id = "^dev\\.duxlabs\\.shell$"
+default_floating = true
+
+# Umbriel's own screencast picker (packaged config pattern).
+[[window_rule]]
+match.app_id = "^dev.noctalia.UmbrielSharePicker$"
+default_floating = true
+default_floating_size_px = { width = 800, height = 600 }
+
+# ── layer rules (DMS surfaces; namespaces from the dms 2.1 QML) ─────────────
+# Everything DMS draws gets blur; surfaces that open OVER windows use the
+# unoptimized path so they blur live content (same split the packaged
+# noctalia config uses: bar/island over wallpaper, panels over windows).
+[[layer_rule]]
+match.namespace = "^dms:"
+blur = true
+blur_ignore_alpha = 0.5
+blur_popups = true
+
+[[layer_rule]]
+match.namespace = "^dms:(spotlight|notification-popup|tooltip|toast|workspace-overview|dankisland|dock|frame|monitor-identify)"
+blur_optimized = false
+
+# ── keybinds: the niri port ─────────────────────────────────────────────────
+[keybinds]
+# THE launcher bind (vicinae daemon client; bubblebox wrapper on session PATH).
+"Mod+Space" = { action = "spawn vicinae toggle", repeat = false }
+
+# Applications (niri: Mod+T wezterm, Mod+B zen, Mod+F nautilus; + Return).
+"Mod+Return" = { action = "spawn wezterm", repeat = false }
+"Mod+T" = { action = "spawn wezterm", repeat = false }
+"Mod+B" = { action = "spawn flatpak run app.zen_browser.zen", repeat = false }
+"Mod+F" = { action = "spawn nautilus --new-window", repeat = false }
+
+# Session (niri: Mod+Q close, Mod+Shift+P power off monitors; lock via DMS).
+"Mod+Q" = { action = "window-close", repeat = false }
+"Mod+Escape" = "session-quit"
+"Mod+Shift+P" = { action = "dpms-off", repeat = false }
+"Super+Alt+L" = { action = "spawn dms ipc call lock lock", repeat = false }
+
+# Focus (niri: H/J/K/L + arrows; Mod+O overview).
+"Mod+Left" = "window-focus-left"
+"Mod+Down" = "window-focus-down"
+"Mod+Up" = "window-focus-up"
+"Mod+Right" = "window-focus-right"
+"Mod+H" = "window-focus-left"
+"Mod+J" = "window-focus-down"
+"Mod+K" = "window-focus-up"
+"Mod+L" = "window-focus-right"
+"Mod+O" = { action = "overview-toggle", repeat = false }
+
+# Column/window movement (niri: Mod+Ctrl+arrows/H/L column, [] consume/expel,
+# Mod+Ctrl+J/K move to ADJACENT workspace).
+"Mod+Ctrl+Left" = "column-move-left"
+"Mod+Ctrl+Right" = "column-move-right"
+"Mod+Ctrl+H" = "column-move-left"
+"Mod+Ctrl+L" = "column-move-right"
+"Mod+BracketLeft" = { action = "window-consume-or-expel-left", repeat = false }
+"Mod+BracketRight" = { action = "window-consume-or-expel-right", repeat = false }
+"Mod+Ctrl+Down" = { action = "window-move-to-workspace-next", repeat = false }
+"Mod+Ctrl+Up" = { action = "window-move-to-workspace-previous", repeat = false }
+"Mod+Ctrl+J" = { action = "window-move-to-workspace-next", repeat = false }
+"Mod+Ctrl+K" = { action = "window-move-to-workspace-previous", repeat = false }
+
+# Sizing (niri: Minus/Equal ±10% width, Shift ±10% height).
+"Mod+Minus" = "window-modify-primary-extent -0.1"
+"Mod+Equal" = "window-modify-primary-extent +0.1"
+"Mod+Shift+Minus" = "window-modify-secondary-extent -0.1"
+"Mod+Shift+Equal" = "window-modify-secondary-extent +0.1"
+
+# Window state (niri: V float, Shift+V float↔tiling focus, W tabs, X maximize,
+# Shift+F fullscreen).
+"Mod+V" = { action = "window-toggle-floating", repeat = false }
+"Mod+Shift+V" = { action = "window-focus-switch-floating", repeat = false }
+"Mod+W" = { action = "column-toggle-tabbed", repeat = false }
+"Mod+X" = { action = "window-toggle-maximize", repeat = false }
+"Mod+Shift+F" = { action = "window-toggle-fullscreen", repeat = false }
+
+# Monitor navigation (niri: Mod+Shift+arrows/HJKL focus-monitor-*).
+"Mod+Shift+Left" = "output-focus-left"
+"Mod+Shift+Down" = "output-focus-down"
+"Mod+Shift+Up" = "output-focus-up"
+"Mod+Shift+Right" = "output-focus-right"
+"Mod+Shift+H" = "output-focus-left"
+"Mod+Shift+J" = "output-focus-down"
+"Mod+Shift+K" = "output-focus-up"
+"Mod+Shift+L" = "output-focus-right"
+
+# Move to monitor (niri: Mod+Shift+Ctrl+arrows/HJKL move-column-to-monitor-*).
+"Mod+Shift+Ctrl+Left" = "column-move-to-output-left"
+"Mod+Shift+Ctrl+Down" = "column-move-to-output-down"
+"Mod+Shift+Ctrl+Up" = "column-move-to-output-up"
+"Mod+Shift+Ctrl+Right" = "column-move-to-output-right"
+"Mod+Shift+Ctrl+H" = "column-move-to-output-left"
+"Mod+Shift+Ctrl+J" = "column-move-to-output-down"
+"Mod+Shift+Ctrl+K" = "column-move-to-output-up"
+"Mod+Shift+Ctrl+L" = "column-move-to-output-right"
+
+# Workspaces 1-9 (came from the Ambxst include under niri; explicit here).
+"Mod+1" = "workspace-switch 1"
+"Mod+2" = "workspace-switch 2"
+"Mod+3" = "workspace-switch 3"
+"Mod+4" = "workspace-switch 4"
+"Mod+5" = "workspace-switch 5"
+"Mod+6" = "workspace-switch 6"
+"Mod+7" = "workspace-switch 7"
+"Mod+8" = "workspace-switch 8"
+"Mod+9" = "workspace-switch 9"
+"Mod+Shift+1" = { action = "window-move-to-workspace 1", repeat = false }
+"Mod+Shift+2" = { action = "window-move-to-workspace 2", repeat = false }
+"Mod+Shift+3" = { action = "window-move-to-workspace 3", repeat = false }
+"Mod+Shift+4" = { action = "window-move-to-workspace 4", repeat = false }
+"Mod+Shift+5" = { action = "window-move-to-workspace 5", repeat = false }
+"Mod+Shift+6" = { action = "window-move-to-workspace 6", repeat = false }
+"Mod+Shift+7" = { action = "window-move-to-workspace 7", repeat = false }
+"Mod+Shift+8" = { action = "window-move-to-workspace 8", repeat = false }
+"Mod+Shift+9" = { action = "window-move-to-workspace 9", repeat = false }
+
+# DMS shell toggles (dux stock binds, minus the ones niri-port claims:
+#  spotlight=Mod+Space is vicinae's, clipboard=Mod+V is float's).
+"Mod+M" = { action = "spawn dms ipc call dash toggle media", repeat = false }
+"Mod+Comma" = { action = "spawn dms ipc call settings focusOrToggle", repeat = false }
+"Mod+Ctrl+N" = { action = "spawn dms ipc call notifications toggle", repeat = false }
+"Mod+Y" = { action = "spawn dms ipc call dash toggle wallpaper", repeat = false }
+"Ctrl+Alt+Delete" = { action = "spawn dms ipc call processlist focusOrToggle", repeat = false }
+
+# Media keys (niri-identical: pipewire-native, no shell dependency).
+"XF86AudioRaiseVolume" = { action = "spawn wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+", allow_when_locked = true }
+"XF86AudioLowerVolume" = { action = "spawn wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%-", allow_when_locked = true }
+"XF86AudioMute" = { action = "spawn wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle", allow_when_locked = true, repeat = false }
+"XF86AudioMicMute" = { action = "spawn wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle", allow_when_locked = true, repeat = false }
+"XF86MonBrightnessUp" = { action = "spawn brightnessctl set +5%", allow_when_locked = true }
+"XF86MonBrightnessDown" = { action = "spawn brightnessctl set 5%-", allow_when_locked = true }
+
+# Overview hot corner (packaged default — same as niri's Mod+O, mouse path).
+[hot_corners.top_left]
+enabled = true
+delay_ms = 500
+action = "overview-open"
