@@ -18,11 +18,11 @@ buildNpmPackage rec {
   pname = "dsh";
   # npm scope dir must match: @deepseek-ai/dsh
   packageName = "@deepseek-ai/dsh";
-  version = "0.2.0-rc.2";
+  version = "0.2.2-rc.1";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/${packageName}/-/dsh-${version}.tgz";
-    hash = "sha256-vSeEfERc1opWWsH5HAa7vMdjnvkwcfZ4u1nF66/ziFk=";
+    hash = "sha256-rSGWiu0DN6MmuFNQeiOzDqy77E1nqwfztv3mm3WxnNY=";
   };
 
   # Generated via npm install --package-lock-only (see header comment).
@@ -49,7 +49,7 @@ buildNpmPackage rec {
     mv package.json.stripped package.json
   '';
 
-  npmDepsHash = "sha256-80NndyRPP6EsLOgT+73No/ln3GrpcvbFW+/CRFpNTa8=";
+  npmDepsHash = lib.fakeHash;
 
   # Prebuilt distribution — no compile step, no scripts to run.
   npmInstallFlags = [ "--ignore-scripts" ];

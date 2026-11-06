@@ -64,7 +64,7 @@ let
   port = 3080;
 
   # bee's Nebula address (lib/host-meta.nix is the source of truth).
-  nebulaIp = "10.10.0.12";
+  nebulaIp = (import ../lib/host-meta.nix).bee.nebula;
 
   # Public hostname (bees Caddy route → this service).
   hostname = "dsh.internal.crussell.io";
@@ -366,7 +366,7 @@ in {
       description = "DeepSeek Harness web UI (dsh web)";
       # before the 16-container stack is fully serving — ordering alone is not
       # enough, the channel plugin retries with backoff until the API answers.
-      wants = [ "dsh-seed.service" ];
+      wants = [ "dsh-seed.service" "network-online.target" ];
       after = [ "network-online.target" "dsh-seed.service" ];
       wantedBy = [ "multi-user.target" ];
 
@@ -377,7 +377,7 @@ in {
         WorkingDirectory = "/home/crussell";
         ExecStart = "${cfg.package}/bin/dsh --profile glen -- --port ${
             toString port
-          } --no-open --trusted-host ${hostname} --trusted-host 10.10.0.12 --trusted-host 192.168.20.105";
+          } --no-open --trusted-host ${hostname} --trusted-host ${nebulaIp}";
         # ZHIPU_API_KEY (zai-coding route) + GLOO_API_KEY (gloo route) +
         # OPENROUTER_API_KEY (openrouter route) + FORGEJO_TOKEN (tea),
         # resolved per request via the settings.yaml apiKeyEnv references.
@@ -428,23 +428,18 @@ in {
       # the late-address race, which is all the ordering was for.
       partOf = [ "nebula@homelab.service" ];
       socketConfig = {
-        # All interfaces: dsh-mobile's network scan walks the phone's primary
-        # subnet — WiFi (192.168.20.x) or Nebula (10.10.0.x) depending on
-        # what Android reports. Bind 0.0.0.0 so the harness is reachable and
-        # discoverable from either. Trust is enforced by dsh's own fence
-        # (--trusted-host) + token; LAN/WiFi members are trusted by policy.
-        # Both non-loopback interfaces explicitly (0.0.0.0 would collide
-        # with dsh-web's own 127.0.0.1 bind on the same port).
-        ListenStream =
-          [ "${nebulaIp}:${toString port}" "192.168.20.105:${toString port}" ];
-        BindIPv6Only = "both";
+        # Nebula only: bees Caddy (dsh.internal.crussell.io) is the sole
+        # client. The LAN bind for dsh-mobile's subnet scan was dropped
+        # 2026-11-05 (mobile retired) — this is an agent-driven RCE
+        # surface, so it no longer listens on 192.168.20.105.
+        ListenStream = "${nebulaIp}:${toString port}";
         FreeBind = true;
       };
     };
 
     systemd.services."dsh-web-proxy" = {
       description =
-        "Socket proxy: all interfaces :${toString port} → dsh loopback";
+        "Socket proxy: Nebula :${toString port} → dsh loopback";
       requires = [ "dsh-web.service" ];
       after = [ "dsh-web.service" ];
       serviceConfig = {
