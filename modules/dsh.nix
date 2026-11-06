@@ -438,8 +438,7 @@ in {
     };
 
     systemd.services."dsh-web-proxy" = {
-      description =
-        "Socket proxy: Nebula :${toString port} → dsh loopback";
+      description = "Socket proxy: Nebula :${toString port} → dsh loopback";
       requires = [ "dsh-web.service" ];
       after = [ "dsh-web.service" ];
       serviceConfig = {
