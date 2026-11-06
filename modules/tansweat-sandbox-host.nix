@@ -74,11 +74,31 @@ in {
     # Nebula rules are allow-only, so narrowing one port means replacing
     # the module's any/any rule with ranges around it.
     services.nebula.networks.homelab.firewall.inbound = lib.mkForce [
-      { port = "1-${toString (port - 1)}"; proto = "any"; host = "any"; }
-      { port = "${toString (port + 1)}-65535"; proto = "any"; host = "any"; }
-      { port = "any"; proto = "icmp"; host = "any"; }
-      { port = "fragment"; proto = "any"; host = "any"; }
-      { port = portStr; proto = "tcp"; cidr = cfg.allowedFrom; }
+      {
+        port = "1-${toString (port - 1)}";
+        proto = "any";
+        host = "any";
+      }
+      {
+        port = "${toString (port + 1)}-65535";
+        proto = "any";
+        host = "any";
+      }
+      {
+        port = "any";
+        proto = "icmp";
+        host = "any";
+      }
+      {
+        port = "fragment";
+        proto = "any";
+        host = "any";
+      }
+      {
+        port = portStr;
+        proto = "tcp";
+        cidr = cfg.allowedFrom;
+      }
     ];
 
     networking.firewall.interfaces."nebula.homelab".allowedTCPPorts = [ port ];
