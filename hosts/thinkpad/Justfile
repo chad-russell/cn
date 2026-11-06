@@ -486,10 +486,13 @@ bubblebox-build *tools:
 # ═══════════════════════════════════════════════════════════════════════════
 #
 # The NORMAL flow is registry-driven, built on bees:
-#   bees builds + publishes 10.10.0.6:5000/cn/thinkpad-host:stable daily
-#   (thinkpad-image-build.timer, hosts/bees/thinkpad-registry.nix), keeping
-#   the last 3 immutable tags. `cjust image-rebuild` triggers a build NOW;
-#   `cjust image-upgrade` pulls the diff and stages it; reboot applies.
+#   a PR that touches the image builds + verifies it once; MERGING it
+#   promotes that exact image to 10.10.0.6:5000/cn/thinkpad-host:stable
+#   (ci.yml thinkpad-image job; hosts/bees/thinkpad-image-ci.sh). So after a
+#   merge, once that job is green: `cjust image-upgrade`, then reboot.
+#   The daily thinkpad-image-build.timer (05:10) still rebuilds for Fedora
+#   base/dnf updates. `cjust image-rebuild` = build NOW without a merge
+#   (e.g. pull today's Fedora updates); rarely needed.
 #
 # BREAK-GLASS (bees/Nebula down only): build locally from host-image/ —
 #   cd hosts/thinkpad/host-image && ./build.sh && ./switch.sh && reboot
@@ -500,14 +503,24 @@ bubblebox-build *tools:
 
 # Build on bees NOW (pulls origin/main there), wait, then pull + stage here.
 # Requires: SSH key to bees (same ed25519 as elsewhere) + Nebula up.
-# "I pushed to origin/main and want it on the laptop today" — builds + stages in one shot.
+# Not needed after a merge (CI already promoted the image; use image-upgrade);
+# this is for "rebuild against today's Fedora updates".
+#
+# Waits with `systemctl start --wait`, which returns when the oneshot finishes
+# (non-zero if the build failed). The old version followed the log with
+# `journalctl -f`, which never exits on its own, so the image-upgrade step
+# below never ran and the recipe had to be Ctrl-C'd (2026-11). The log is
+# streamed alongside and stopped once the build returns.
 [group('host image')]
 image-rebuild:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "==> triggering build on bees (this pulls origin/main there) ..."
-    ssh -o IdentitiesOnly=yes crussell@10.10.0.6 \
-      'sudo systemctl start --no-block thinkpad-image-build.service && sudo journalctl -u thinkpad-image-build.service -f -n 0 -o cat'
+    echo "==> building on bees (pulls origin/main there; ~6 min with a warm cache) ..."
+    ssh -o IdentitiesOnly=yes crussell@10.10.0.6 '
+      sudo journalctl -u thinkpad-image-build.service -f -n 0 -o cat & tail_pid=$!
+      rc=0; sudo systemctl start --wait thinkpad-image-build.service || rc=$?
+      sleep 1; sudo kill "$tail_pid" 2>/dev/null || true
+      exit "$rc"'
     echo
     echo "==> build published; pulling + staging on this host"
     {{ just_executable() }} --justfile "{{ justfile_directory() }}/Justfile" image-upgrade

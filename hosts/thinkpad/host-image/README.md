@@ -85,13 +85,27 @@ host-image/
 
 ## Lifecycle — NORMAL (registry-driven, built on bees)
 
-bees builds + publishes this image daily (`thinkpad-image-build.timer`, see
-`hosts/bees/thinkpad-registry.nix`) to its zot registry at
+The image is published to bees's zot registry at
 `10.10.0.6:5000/cn/thinkpad-host:stable` (Nebula-only, plain HTTP inside the
-tunnel). Zot retention keeps the rolling `:stable` plus the last 3 immutable
-`<fedora>-<sha>-<ts>` tags (version-free patterns — a Fedora bump never
-touches the boot reference or retention) and GCs the rest. The Fedora major
-version lives in exactly one place: `host-image/version`.
+tunnel) by two paths:
+
+- **Merge (build once, promote).** A PR that changes this directory runs the
+  `thinkpad-image` CI job: build, then the shared verify gates, then push the
+  verified image as `:ctx-<hash of this directory's git tree>`. Merging it
+  copies that exact image to `:stable` plus its version tag (a registry-side
+  retag that takes seconds, with no rebuild). The image you reviewed is the
+  image that ships. If there's no candidate (for example the PR was never
+  built) or a nightly has published something newer since, the merge job
+  falls back to a full build. Details: `hosts/bees/thinkpad-image-ci.sh`.
+- **Nightly** (`thinkpad-image-build.timer`, 05:10; see
+  `hosts/bees/thinkpad-registry.nix`): rebuilds `main` with `--pull=newer`
+  so Fedora base and dnf updates arrive without a repo change.
+
+Zot retention keeps the rolling `:stable`, the last 3 immutable
+`<fedora>-<id>-<ts>` tags (id = commit sha for nightly builds, `c<ctx>` for
+CI builds) and the last 5 `ctx-*` candidates (version-free patterns — a
+Fedora bump never touches the boot reference or retention) and GCs the rest.
+The Fedora major version lives in exactly one place: `host-image/version`.
 
 ```bash
 # one-time: adopt the registry image (from a stock or local-flow host, or
@@ -99,11 +113,13 @@ version lives in exactly one place: `host-image/version`.
 cjust image-switch
 systemctl reboot
 
-# routine — "get me the latest bees built" (diff-only pull, then reboot)
+# routine, and right after a merge once the CI job is green
+# (diff-only pull, then reboot)
 cjust image-upgrade
 systemctl reboot
 
-# "I pushed to origin/main and want it NOW" — remote build, wait, pull, stage
+# rebuild NOW without a merge (e.g. today's Fedora updates): remote build,
+# wait, pull, stage. Rarely needed.
 cjust image-rebuild
 systemctl reboot
 ```
