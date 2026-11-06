@@ -31,12 +31,11 @@ Currently:
     months). Restore = un-comment the cosmic lines in the Containerfile +
     `cjust image-rebuild` + `cjust cosmic-restore`. Settings stay backed up
     in-repo under `bubblebox/files/.config/cosmic/`.
-  - **compositor-trial stack** (2026-11, dormant bake): `hyprland` suite
-    (+ waybar) from the `mineiro/hyprland` COPR, and `mangowm` from the
-    Terra repo (step 2.7) — extra GDM sessions for the Hyprland-vs-MangoWM
-    trial. niri remains the primary session. When the trial concludes, keep
-    only the winner's install block + verify-gate line. Runbook:
-    `../hyprland/README.md`.
+  - **Umbriel + DMS stack** (2026-11, replacing the retired Hyprland/MangoWM
+    trial): `umbriel-nightly` + `xdg-desktop-portal-umbriel-nightly` from the
+    Terra repo, and `dms` / `dms-cli` / `dux-search` / `dgop` / `matugen`(4.2)
+    from the `duxlabs/dms` COPR (step 2.8) — the second GDM session next to
+    niri, shell = DMS, config at `../bubblebox/files/.config/umbriel/config.toml`.
 - installs small host convenience packages:
   - `just` + `fzf` — back the `cjust` task menu (see `hosts/thinkpad/Justfile`);
     host-native because `cjust` must work before any sandbox is set up

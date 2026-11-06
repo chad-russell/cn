@@ -10,10 +10,11 @@
 # What it asserts on a mounted image (fail = non-zero before publish/merge):
 #   1. baked /etc/hosts — COPY is the one Containerfile step whose failure
 #      is silent (RUN would be runtime-masked), so grep the layer itself.
-#   2. wayland sessions — niri + hyprland-uwsm + mango present, PLAIN hyprland
-#      entry rejected (one Hyprland in GDM), cosmic absent.
-#   3. desktop shell binaries — ambxst + axctl + qs present, the retired
-#      Caelestia fork must NOT reappear (retired 2026-11).
+#   2. wayland sessions — niri + umbriel present; the RETIRED hyprland /
+#      hyprland-uwsm / mango sessions must NOT reappear (dropped 2026-11),
+#      cosmic absent.
+#   3. desktop shell binaries — ambxst + axctl + qs (niri) and dms (umbriel)
+#      present, the retired Caelestia fork must NOT reappear (retired 2026-11).
 #
 # Usage: thinkpad-image-verify.sh <image-ref>
 # Runs wherever podman can see the image; for the dedicated btrfs build
@@ -40,39 +41,38 @@ echo "    /etc/hosts entries verified in image layer"
 
 # ---- gate 2: wayland sessions -------------------------------------------
 echo "==> verifying wayland sessions in ${IMAGE}"
-# niri (primary) + the uwsm-managed Hyprland session + mango (repo-scoped
-# Terra install). The PLAIN hyprland.desktop is deliberately removed
-# (Containerfile step 2.4) so GDM offers exactly one Hyprland entry.
-for session in niri hyprland-uwsm; do
+# niri (primary) + umbriel (Terra install, Containerfile step 2.8). The
+# hyprland / hyprland-uwsm / mango sessions were RETIRED 2026-11 — assert
+# they stay gone (a stale COPR layer would resurrect them silently).
+for session in niri umbriel; do
   if [ ! -f "${VERIFY_MNT}/usr/share/wayland-sessions/${session}.desktop" ]; then
     echo "ERROR: ${session}.desktop missing from ${IMAGE}" >&2
-    echo "  expected sessions: niri + hyprland-uwsm + mango (GNOME in base)" >&2
+    echo "  expected sessions: niri + umbriel (GNOME in base)" >&2
     exit 1
   fi
 done
-if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/hyprland.desktop" ]; then
-  echo "ERROR: plain hyprland.desktop present — only the uwsm session is offered" >&2
-  echo "  Containerfile step 2.4 should have removed it" >&2
-  exit 1
-fi
-if ! ls "${VERIFY_MNT}/usr/share/wayland-sessions/" 2>/dev/null | grep -qi mango; then
-  echo "ERROR: no mango session file in ${IMAGE}" >&2
-  echo "  Containerfile step 2.8 (Terra/mangowm) did not land" >&2
-  exit 1
-fi
+for retired in hyprland hyprland-uwsm mango; do
+  if ls "${VERIFY_MNT}/usr/share/wayland-sessions/" 2>/dev/null | grep -qi "^${retired}"; then
+    echo "ERROR: retired ${retired} session present in ${IMAGE}" >&2
+    echo "  Hyprland + MangoWM were dropped 2026-11 (umbriel is the second session)" >&2
+    exit 1
+  fi
+done
 if [ -f "${VERIFY_MNT}/usr/share/wayland-sessions/cosmic.desktop" ]; then
   echo "ERROR: cosmic.desktop present but COSMIC is soft-removed" >&2
   echo "  un-comment the cosmic lines in the Containerfile or drop this check" >&2
   exit 1
 fi
-echo "    wayland sessions verified: niri + hyprland-uwsm + mango (+ GNOME from base)"
+echo "    wayland sessions verified: niri + umbriel (+ GNOME from base)"
 
-# ---- gate 3: desktop shell binaries (Ambxst) ------------------------------
+# ---- gate 3: desktop shell binaries (Ambxst for niri, dms for umbriel) -----
 echo "==> verifying desktop shell binaries in ${IMAGE}"
-for artifact in "${VERIFY_MNT}/usr/bin/ambxst" "${VERIFY_MNT}/usr/bin/axctl" "${VERIFY_MNT}/usr/bin/quickshell"; do
+for artifact in "${VERIFY_MNT}/usr/bin/ambxst" "${VERIFY_MNT}/usr/bin/axctl" \
+               "${VERIFY_MNT}/usr/bin/quickshell" "${VERIFY_MNT}/usr/bin/dms" \
+               "${VERIFY_MNT}/usr/bin/umbriel"; do
   if [ ! -f "${artifact}" ]; then
     echo "ERROR: ${artifact} missing from ${IMAGE}" >&2
-    echo "  Containerfile step 2.5 (Ambxst binaries) did not land" >&2
+    echo "  Containerfile step 2.5 (Ambxst) or 2.8 (umbriel+dms) did not land" >&2
     exit 1
   fi
 done
@@ -89,7 +89,7 @@ if [ -f "${VERIFY_MNT}/usr/lib64/qt6/qml/Caelestia/qmldir" ]; then
   echo "ERROR: Caelestia plugin present in ${IMAGE} — fork was retired 2026-11" >&2
   exit 1
 fi
-echo "    desktop shell binaries verified: ambxst + axctl + qs (fork absent)"
+echo "    desktop shell binaries verified: ambxst + axctl + qs + dms + umbriel (fork absent)"
 
 # ---- gate 4: baked system services (Containerfile step 3.9) --------------
 # COPY is silent on failure (same rationale as gate 1): assert the system
