@@ -336,8 +336,9 @@
   };
 
   # ── Hermes Agent gateway ────────────────────────────────────────
-  # Telegram is the delivery platform (forum topics for per-subject
-  # separation). The legacy Buzz relay/harness was removed 2026-08-20.
+  # Discord is the delivery platform (lane model — see the platform
+  # block below). Legacy Buzz relay/harness removed 2026-08-20; Telegram
+  # decommissioned 2026-08-31.
   services.hermes-agent = {
     enable = true;
 
@@ -578,7 +579,8 @@
       checkpoints.enabled = true;
       # Retention (HML-4, 2026-09-07): pin upstream v0.21.0 defaults
       # declaratively. The gateway's startup sweep (idempotent via
-      # checkpoints/.last_prune, >=24h apart) drops projects untouched for 7d, GCs the shared git store, and
+      # checkpoints/.last_prune, >=24h apart) drops projects untouched
+      # for 7d, GCs the shared git store, and
       # round-robin drops oldest commits until the store fits the size cap.
       # NOTE: the cap cannot go below one commit per LIVE project — the agent
       # checkpoints ~60 workdirs (skill dirs, Code/*, /tmp scratch), so
