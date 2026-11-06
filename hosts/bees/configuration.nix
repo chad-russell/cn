@@ -34,8 +34,9 @@
     # AutoUpdate=registry (linkding, papra, sonarr, radarr,
     # prowlarr, qbittorrent); unlabeled quadlets are never touched
     ./podman-auto-update.nix
-    # Lane (Plane CE) retired 2026-09-08 — Hermes kanban is the source of
-    # truth; 13 lane-* containers decommissioned (archive on NAS).
+    # Lane (Plane CE) retired 2026-09-08 (13 lane-* containers
+    # decommissioned, archive on NAS); its kanban successor was retired
+    # in turn 2026-11-06 with the hermes fresh-start wipe.
     ./llama-server.nix
     ./comfyui.nix
     ./backup.nix

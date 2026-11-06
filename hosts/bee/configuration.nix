@@ -5,42 +5,7 @@
 
 { config, lib, pkgs, unstable, hermes-agent, ... }:
 
-let
-  # Nix-declared Hermes settings, serialized for the config-drift check
-  # (see homelab.freshnessChecks.hermes-config-drift further below).
-  hermesDeclaredSettings = pkgs.writeText "hermes-declared-settings.json"
-    (builtins.toJSON config.services.hermes-agent.settings);
-  # Subset-compare: every key path declared in Nix must match the live
-  # config.yaml. User-owned keys (terminal.cwd, onboarding.seen, ...) are
-  # invisible to the check unless declared, so imperative state survives.
-  hermesDriftCheckPy = pkgs.writeText "hermes-config-drift-check.py" ''
-    import json, sys, yaml
-
-    declared = json.load(open(sys.argv[1]))
-    live = yaml.safe_load(open(sys.argv[2])) or {}
-
-    def flatten(d, prefix=""):
-        out = {}
-        for k, v in d.items():
-            key = f"{prefix}.{k}" if prefix else str(k)
-            if isinstance(v, dict) and v:
-                out.update(flatten(v, key))
-            else:
-                out[key] = v
-        return out
-
-    dflat, lflat = flatten(declared), flatten(live)
-    drift = [
-        f"{k}: declared={dflat[k]!r} live={lflat.get(k, '<missing>')!r}"
-        for k in sorted(dflat)
-        if lflat.get(k, "<missing>") != dflat[k]
-    ]
-    if drift:
-        print("Hermes config drift: " + "; ".join(drift))
-        sys.exit(1)
-    print(f"OK: live config.yaml matches all {len(dflat)} declared settings")
-  '';
-in {
+{
   imports = [
     ../../modules/base-server.nix
     ../../modules/freshness-checks.nix
@@ -187,11 +152,6 @@ in {
     "Z /etc/nebula-lh/ca.crt  0440 root nebula-lighthouse -"
     "Z /etc/nebula-lh/host.crt 0440 root nebula-lighthouse -"
     "Z /etc/nebula-lh/host.key 0440 root nebula-lighthouse -"
-    # qdrant (DynamicUser) storage parent, setgid hermes so the mkdir'd tree
-    # inherits group ownership (restic's hermes backup covers it). Must exist
-    # BEFORE the service starts — ReadWritePaths bind-mounts this path and
-    # systemd fails the unit with 226/NAMESPACE if it's missing.
-    "d /var/lib/hermes/mem0_qdrant_server 2770 crussell hermes -"
     # /bin/true compat symlink: hermes ≥0.21's restart-safe-scope probe runs
     # `systemd-run --user --scope -- /bin/true` (tools/process_registry.py);
     # NixOS ships no /bin/true, so without this the probe always fails and
@@ -378,39 +338,10 @@ in {
     group = "hermes";
   };
 
-  # ── Qdrant: vector store for Hermes' mem0 memory backend ─────────
-  # mem0 OSS in qdrant local-file mode holds an exclusive lock — only ONE
-  # process can open the folder. bee runs three hermes processes against
-  # the shared HERMES_HOME (gateway + hermes-serve + webui), so local-file
-  # mode deadlocks them against each other (2026-08-26). A real qdrant
-  # server on loopback allows concurrent access. Loopback-only; storage
-  # under /var/lib/hermes so the existing restic backup covers it.
-  services.qdrant = {
-    enable = true;
-    settings = {
-      host = "127.0.0.1";
-      service.http_port = 6333;
-      storage.storage_path = "/var/lib/hermes/mem0_qdrant_server/storage";
-      storage.snapshot_mode = "filesystem";
-    };
-  };
-  # The nixpkgs qdrant module runs as a DynamicUser (no static uid/gid) with
-  # ProtectSystem hardening, but the storage_path above lives under
-  # /var/lib/hermes (2770 crussell:hermes, setgid) so restic's existing hermes
-  # backup covers it. Two things the dynamic user needs for that path (hit
-  # both 2026-08-27): the hermes supplemental group (EACCES on the setgid
-  # dir) and an explicit ReadWritePaths carve-out (EROFS from ProtectSystem —
-  # only the module's own StateDirectory is writable by default). qdrant
-  # mkdir's its storage_path on first start; the setgid bit makes the tree
-  # inherit hermes group ownership.
-  systemd.services.qdrant.serviceConfig = {
-    SupplementaryGroups = [ "hermes" ];
-    ReadWritePaths = [ "/var/lib/hermes/mem0_qdrant_server" ];
-  };
-
   # ── Hermes Agent gateway ────────────────────────────────────────
-  # Telegram is the delivery platform (forum topics for per-subject
-  # separation). The legacy Buzz relay/harness was removed 2026-08-20.
+  # Discord is the delivery platform (lane model — see the platform
+  # block below). Legacy Buzz relay/harness removed 2026-08-20; Telegram
+  # decommissioned 2026-08-31.
   services.hermes-agent = {
     enable = true;
 
@@ -434,13 +365,13 @@ in {
     # shares /var/lib/hermes/.hermes with the long-running gateway service.
     addToSystemPackages = true;
 
-    # mem0 memory backend: bake the provider SDK into the sealed venv via the
-    # upstream package's extraDependencyGroups surface. NOTE: .override
-    # REPLACES the group list — upstream's default package is `full`
-    # (nix/packages.nix: messaging, voice, edge-tts, matrix, ...), so
-    # overriding with only [ "mem0" ] silently dropped Telegram support
-    # (2026-08-26). Mirror upstream `full` here + mem0, and re-sync this list
-    # on hermes-agent bumps.
+    # Sealed-venv provider extras via the upstream package's
+    # extraDependencyGroups surface. NOTE: .override REPLACES the group list —
+    # upstream's default package is `full` (nix/packages.nix: messaging,
+    # voice, edge-tts, matrix, ...), so overriding with a short list silently
+    # dropped Telegram support (2026-08-26). Mirror upstream `full` here and
+    # re-sync this list on hermes-agent bumps. (mem0 was once appended for
+    # the memory backend — retired 2026-11-06 with the fresh-start wipe.)
     package =
       hermes-agent.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
         extraDependencyGroups = [
@@ -460,7 +391,7 @@ in {
           # core and became catalog plugins (hermes_cli/
           # memory_provider_migration.py _LEFT_CORE) — the agent auto-
           # installs mem0 into HERMES_HOME/plugins on startup / `hermes
-          # update`. memory.provider = "mem0" below stays valid.
+          # update`.
           "messaging"
           "modal"
           "parallel-web"
@@ -472,86 +403,6 @@ in {
       };
 
     settings = {
-      # mem0 memory backend (OSS mode: local qdrant + Z.AI extraction +
-      # OpenRouter embeddings; behavioral config in $HERMES_HOME/mem0.json).
-      # The built-in MEMORY.md/USER.md stays active alongside it.
-      memory.provider = "mem0";
-      # Raised from the 2200-char default — bee's memory block sat at 99% and
-      # every save needed a consolidate-to-fit dance. mem0 carries the
-      # unbounded semantic store; this is the always-injected scratchpad.
-      # Read once at process start — bounce all hermes units after changing.
-      memory.memory_char_limit = 6000;
-      memory.user_char_limit = 2000;
-      # Skill-library slimming (2026-09-16 hygiene audit, Chad-approved):
-      # 46 of 155 skills had ZERO uses and ZERO views since install. The
-      # `skills.disabled` list HIDES them from the system-prompt catalog
-      # (prompt_builder.hides() — first-class config, live-effective, cached
-      # per disabled-set) without deleting the bundled copies — the gateway
-      # re-seeds bundled skills at every startup (run.py _sync_skills →
-      # sync_skills), so deletion alone never sticks. Local zero-use skills
-      # are rm'd by the hermes-prune-unused-skills activation script below
-      # (no re-seed path for locals). `hermes-agent` cannot be disabled
-      # (ESSENTIAL_SKILLS). To restore a skill: remove it from this list
-      # (bundled) or `hermes curator`-reinstall (local).
-      skills.disabled = [
-        # ── Tier 1a: bundled skills for accounts/stacks not in use ──
-        "airtable" # no Airtable account (hub bloat)
-        "notion" # no Notion account
-        "box" # no Box account
-        "maps" # OSM tooling unused; web tools cover geo
-        "himalaya" # email via skills/protocols not used
-        "email-inbox-triage" # inbox triage not used (has own inbox lane)
-        "teams-meeting-pipeline" # MS Teams — not used
-        "claude-code" # retired 2026-09-02 (delegation policy)
-        "baoyu-infographic" # infographic toolchain unused
-        "ascii-art" # pyfiglet/cowsay unused
-        "excalidraw" # JSON diagrams unused (hub-installed copy)
-        # ── Tier 1b: bundled doc/office skills unused by Chad's workflow ──
-        "docx" # rare Word needs; remove if a real ask lands
-        "pdf" # pdf needs → existing pdf workflows (rare)
-        "powerpoint" # pptx creation not used
-        "document-to-action-items"
-        "meeting-action-items"
-        "weekly-review-planning"
-        # ── Tier 1c: bundled research/monitor/dev-tool skills unused ──
-        "arxiv"
-        "competitor-news-monitor"
-        "product-price-monitor"
-        "codebase-inspection" # pygount LOC counting unused
-        "python-debugpy"
-        "node-inspect-debugger"
-        "spike" # throwaway-validation workflow unused
-        "songsee" # audio spectrograms unused
-        "songwriting-and-ai-music"
-        "huggingface-hub" # hf CLI not used on bee
-        "rss-feeds" # blogwatcher covers feed monitoring
-        "serving-llms-vllm" # strix-halo skill covers local serving
-      ];
-      # Kanban worker concurrency guardrails (2026-09-08, Lane→kanban
-      # migration). The gateway-embedded dispatcher reads these from
-      # config.yaml on EVERY tick (kanban_db_dispatch.configured_max_in_progress
-      # → load_config_readonly), so a switch activates them without bouncing
-      # the gateway. Unset, bee's 27GB RAM derives a cap of 8 concurrent
-      # workers — the exact parallel-spawn shape that 429'd the shared Z.AI
-      # plan (2026-09-08 08:41: 8-9 concurrent gateway threads, code 1302) and
-      # starved the interactive gateway. Hard ceiling of 2 total running
-      # workers (across all boards, ready+review lanes), max 1 per profile —
-      # the interactive session always keeps headroom.
-      kanban.max_in_progress = 2;
-      kanban.max_in_progress_per_profile = 1;
-      # Manual orchestration first: Glen decomposes and creates cards from
-      # chat/CLI (auto_decompose=false). Flip the dashboard Auto pill (or this
-      # flag) once usage calibrates. NOTE: default_assignee stays UNSET —
-      # setting it would auto-spawn workers on the 2 unassigned ready cards
-      # sitting on the hermes-team board.
-      kanban.auto_decompose = false;
-      kanban.dispatch_in_gateway = true;
-      # Kanban dashboard public URL (kanban.internal.crussell.io, bees caddy →
-      # bee :9120). Feeds the dashboard's Host-header/WS-Origin allowlist
-      # (web_server._dashboard_public_hosts ← dashboard.public_url) — without
-      # it, proxied requests 400 "Invalid Host header". Restart the
-      # hermes-kanban-dashboard user unit after this changes (read at start).
-      dashboard.public_url = "https://kanban.internal.crussell.io";
       # Custom providers in the MODERN v12+ `providers:` DICT shape (keyed
       # by provider id), NOT the legacy `custom_providers:` list.
       #
@@ -730,9 +581,9 @@ in {
       # Enable session checkpoints (rollback snapshots for long sessions)
       checkpoints.enabled = true;
       # Retention (HML-4, 2026-09-07): pin upstream v0.21.0 defaults
-      # declaratively so the config-drift check enforces them. The gateway's
-      # startup sweep (idempotent via checkpoints/.last_prune, >=24h apart)
-      # drops projects untouched for 7d, GCs the shared git store, and
+      # declaratively. The gateway's startup sweep (idempotent via
+      # checkpoints/.last_prune, >=24h apart) drops projects untouched
+      # for 7d, GCs the shared git store, and
       # round-robin drops oldest commits until the store fits the size cap.
       # NOTE: the cap cannot go below one commit per LIVE project — the agent
       # checkpoints ~60 workdirs (skill dirs, Code/*, /tmp scratch), so
@@ -821,7 +672,7 @@ in {
       # private URLs by default (SSRF guard); this lifts it for localhost.
       # Protected agent-instruction files (AGENTS.md / CLAUDE.md / SOUL.md /
       # .cursorrules): upstream default is an always-ask approval gate that
-      # fails closed for headless kanban workers (their AGENTS.md edits block
+      # fails closed for headless workers (their AGENTS.md edits block
       # until an approval times out). Chad opted out 2026-09-06: these repos
       # are his own, watched via code review, and the workers' whole job is
       # editing them. Gate OFF — agents may write instruction files directly.
@@ -852,9 +703,9 @@ in {
       # two-profile split (and its blindness overwrites) is retired.
       # require_mention=false: single-user server, so every channel is
       # free-response — type and it answers, no @mention ceremony.
-      # Telegram was decommissioned 2026-08-31 (see prune script below);
-      # Discord is the sole messaging platform. Token: DISCORD_BOT_TOKEN
-      # (hermes-private bot) in hermes-bee-env-glen.age; allowlist:
+      # Telegram was decommissioned 2026-08-31 (prune script retired
+      # 2026-11-06 with the fresh-start wipe); Discord is the sole messaging
+      # platform. Token: DISCORD_BOT_TOKEN (hermes-private bot) in hermes-bee-env-glen.age; allowlist:
       # DISCORD_ALLOWED_USERS below.
       gateway.platforms.discord = {
         enabled = true;
@@ -883,31 +734,8 @@ in {
           "1544086089005006888" =
             "Options trading lane. tastytrade 3-account advisor workflow; scanner at ~/tasty_options; recommendations at https://trades.internal.crussell.io.";
           "1545653384197967912" =
-            "#inbox capture lane (no auto-threads): every message is a drop to classify and route, not converse. Life fact → append ~/brain/events; link/screenshot → ~/brain/inbox verbatim; action → ~/brain/todo.md; durable fact/preference → mem0; question → answer from the event log per recall order; work content → handle with work doctrine (gloo provider, ~/Gloo repos — same brain since 2026-09-06). One-line confirms only. The inbox-brain skill (auto-bound) is the authoritative doctrine — follow it. Timestamped events NEVER go into mem0; when/how-many questions are answered only from ~/brain/events.";
+            "#inbox capture lane (no auto-threads): every message is a drop to classify and route, not converse. Life fact → append ~/brain/events; link/screenshot → ~/brain/inbox verbatim; action → ~/brain/todo.md; durable fact/preference → built-in memory; question → answer from the event log per recall order; work content → handle with work doctrine (gloo provider, ~/Gloo repos — same brain since 2026-09-06). One-line confirms only. Timestamped events NEVER go into memory; when/how-many questions are answered only from ~/brain/events.";
         };
-        # Auto-loaded skills per channel (exact id match, threads inherit).
-        extra.channel_skill_bindings = [
-          {
-            id = "1544085981236432906";
-            skills = [ "cn-homelab-infra" ];
-          }
-          {
-            id = "1544086006771220562";
-            skills = [ "tutoring" ];
-          }
-          {
-            id = "1544086070436565123";
-            skills = [ "fantasy-football-league-management" ];
-          }
-          {
-            id = "1544086089005006888";
-            skills = [ "tastytrade-portfolio-advisor" ];
-          }
-          {
-            id = "1545653384197967912";
-            skills = [ "inbox-brain" ];
-          }
-        ];
         # Per-channel default model (Hermes ≥0.21 `channel_overrides`, sibling
         # of `extra` under the platform — bridged by gateway/config_loader.py;
         # threads inherit the parent channel's override, session /model wins
@@ -975,13 +803,6 @@ in {
     SupplementaryGroups = [ "hermes" ];
   };
 
-  # The Hermes NixOS module deep-merges declarative settings into the existing
-  # mutable config.yaml so user-owned keys survive. That means removing a nested
-  # key from Nix does not delete a previously merged key on disk — stale values
-  # persist until explicitly pruned (root cause of both the Aug 12 web_extract
-  # saga and the Aug 11–19 auxiliary.vision drift). Prune known-stale keys
-  # here on every switch; the freshness-hermes-config-drift timer below
-  # alerts on any divergence between live config.yaml and declared settings.
   # ── Log rotation for Hermes' file logs (added 2026-09-01) ──────────
   # The Python processes hold their fds open, so copytruncate (copy then
   # zero the live file) instead of move-and-recreate. mcp-stderr.log has
@@ -997,197 +818,6 @@ in {
     missingok = true;
     su = "crussell hermes";
   };
-  #
-  system.activationScripts."hermes-prune-stale-config" =
-    lib.stringAfter [ "hermes-agent-setup" ] ''
-      ${pkgs.python3.withPackages (ps: [ ps.pyyaml ])}/bin/python3 - <<'PY'
-      from pathlib import Path
-      import yaml
-
-      path = Path("/var/lib/hermes/.hermes/config.yaml")
-      config = yaml.safe_load(path.read_text()) or {}
-
-      prunes = []
-      # Retired 2026-09-08: `model.fallback` was never read by hermes (the
-      # runtime reads only top-level fallback_providers/fallback_model —
-      # get_fallback_chain), so bee silently ran with NO fallback. Nix now
-      # declares the real top-level key; drop the dead nested list.
-      model_section = config.get("model")
-      if isinstance(model_section, dict) and "fallback" in model_section:
-          del model_section["fallback"]
-          prunes.append("model.fallback (dead key — runtime reads only top-level fallback_providers)")
-      # Retired 2026-09-07: the legacy `custom_providers` LIST is replaced by
-      # the modern `providers` DICT (see the providers block above and the
-      # incident note there). Hermes' v11→v12 migration and the NixOS
-      # deep-merge fought over the two shapes, leaving an invalid list under
-      # `providers:` that broke provider auth. Nix now declares only the
-      # dict; drop any stale list left on disk from before the cutover so it
-      # can't be re-migrated into a colliding shape. get_compatible_custom_
-      # providers dedups by name+URL, so this is safe even if both coexist.
-      if "custom_providers" in config and isinstance(config.get("providers"), dict):
-          del config["custom_providers"]
-          prunes.append("custom_providers (legacy list; superseded by providers dict)")
-      mcp_servers = config.get("mcp_servers")
-      if isinstance(mcp_servers, dict):
-          if "sqlite" in mcp_servers:
-              del mcp_servers["sqlite"]
-              prunes.append("mcp_servers.sqlite")
-          # Retired 2026-09-16 (hygiene audit): linear + vercel MCP servers
-          # were declared 09-06 but NEVER used — zero mcp__linear/mcp__vercel
-          # tool calls in agent.log and no OAuth tokens in auth.json. Nix no
-          # longer declares them; deep-merge would keep them on disk forever.
-          for stale_mcp in ("linear", "vercel"):
-              if stale_mcp in mcp_servers:
-                  del mcp_servers[stale_mcp]
-                  prunes.append(f"mcp_servers.{stale_mcp} (never authenticated, zero calls)")
-      web = config.get("web") or {}
-      if isinstance(web, dict) and "extract_backend" in web:
-          # Retired 2026-08-12: SearXNG cannot extract, and a stale
-          # searxng value here broke @url extraction silently.
-          del web["extract_backend"]
-          prunes.append("web.extract_backend")
-      if isinstance(web, dict) and web.get("search_backend") == "searxng":
-          # Retired 2026-09-03: SearXNG service removed (Bing-only after
-          # upstream engine blocks). Deep-merge would keep the stale pin
-          # on disk forever; it must not re-shadow the keyless ring.
-          del web["search_backend"]
-          prunes.append("web.search_backend=searxng")
-
-      # Retired 2026-08-31: Telegram decommissioned (Discord lane model is
-      # the sole messaging platform). Nix no longer declares
-      # gateway.platforms.telegram, so the deep-merge would keep the stale
-      # key on disk forever.
-      for section in ("gateway", "display"):
-          platforms = (config.get(section) or {}).get("platforms")
-          if isinstance(platforms, dict):
-              for stale in ("buzz", "telegram"):
-                  if stale in platforms:
-                      del platforms[stale]
-                      prunes.append(f"{section}.platforms.{stale}")
-
-      # Repointed 2026-09-05 (topology review L6): the inbox lane binding
-      # was pinned to THREAD 1545654237004832788 ("First message in inbox")
-      # instead of the actual #inbox channel 1545653384197967912 — prune
-      # the thread-keyed entries so only the channel-keyed ones remain.
-      # (The old #gloo-work prompt prune was removed 2026-09-06 — that
-      # channel is now served by this same gateway, single-brain collapse.)
-      discord = ((config.get("gateway") or {}).get("platforms") or {}).get("discord")
-      if isinstance(discord, dict):
-          extra = discord.get("extra") or {}
-          prompts = extra.get("channel_prompts")
-          stale_thread = "1545654237004832788"
-          if isinstance(prompts, dict) and stale_thread in prompts:
-              del prompts[stale_thread]
-              prunes.append("gateway.platforms.discord.extra.channel_prompts[inbox-thread]")
-          bindings = extra.get("channel_skill_bindings")
-          if isinstance(bindings, list):
-              kept = [b for b in bindings if b.get("id") != stale_thread]
-              if len(kept) != len(bindings):
-                  extra["channel_skill_bindings"] = kept
-                  prunes.append("gateway.platforms.discord.extra.channel_skill_bindings[inbox-thread]")
-          ntc = extra.get("no_thread_channels")
-          if isinstance(ntc, str) and stale_thread in ntc:
-              extra["no_thread_channels"] = ",".join(
-                  c for c in ntc.split(",") if c != stale_thread
-              )
-              prunes.append("gateway.platforms.discord.extra.no_thread_channels[inbox-thread]")
-
-      if prunes:
-          path.write_text(yaml.dump(config, default_flow_style=False, sort_keys=False))
-          print(f"hermes-prune-stale-config: pruned {', '.join(prunes)}")
-      PY
-      chown crussell:hermes /var/lib/hermes/.hermes/config.yaml
-      chmod 0660 /var/lib/hermes/.hermes/config.yaml
-    '';
-
-  # ── Hermes unused-skill prune (2026-09-16 hygiene audit) ────────
-  # Chad-approved deletions that complement skills.disabled above:
-  #   - Tier 2: zero-use agent-created LOCAL skills (no re-seed path —
-  #     deleting locals is permanent until re-authored) — EXCEPT
-  #     work-repo-release-discipline (created same-day 2026-09-16, encodes
-  #     the client-repo PR doctrine; deleting it would lose the rule).
-  #   - Tier 3a: regenerable caches — skills/.hub/index-cache (40MB,
-  #     regenerates from taps on demand) and the stale usage-stats entries
-  #     for skills already gone from disk (keeps .usage.json honest).
-  # Idempotent: safe on every switch; reports what changed.
-  system.activationScripts."hermes-prune-unused-skills" =
-    lib.stringAfter [ "hermes-agent-setup" ] ''
-      ${pkgs.python3.withPackages (ps: [ ps.pyyaml ])}/bin/python3 - <<'PY'
-      import json, shutil
-      from pathlib import Path
-
-      home = Path("/var/lib/hermes/.hermes")
-      skills_dir = home / "skills"
-      actions = []
-
-      # ── Tier 2: delete zero-use local skills (dir + usage stats) ──
-      tier2 = [
-          "retirement-planning",        # superseded by retirement-readiness
-          "family-directory",           # family facts live in memory/FAMILY.md
-          "community-discovery",        # never used
-          "roku-tv-control",            # openhue + roku ECP cover TV control
-          "buildspace-impeccable-design",  # buildspace UI work dormant
-      ]
-      for name in tier2:
-          # locals can live in any category dir; find by name
-          matches = [d for d in skills_dir.glob(f"*/{name}") if d.is_dir()]
-          if matches:
-              for d in matches:
-                  shutil.rmtree(d)
-                  actions.append(f"deleted skill dir {d.relative_to(skills_dir)}")
-      # hermes-web-backends: zero-use, agent-created 2026-09-03; kept on disk
-      # so far only because no category scan caught it — same tier-2 class.
-      wb = skills_dir / "software-development/hermes-web-backends"
-      if wb.exists():
-          shutil.rmtree(wb)
-          actions.append("deleted skill dir software-development/hermes-web-backends")
-
-      # ── Tier 3a: purge stale usage stats (skill gone, stats remain) ──
-      usage_path = skills_dir / ".usage.json"
-      if usage_path.exists():
-          usage = json.loads(usage_path.read_text())
-          # names currently on disk (category/name)
-          on_disk = {d.name for cat in skills_dir.iterdir()
-                     if cat.is_dir() and not cat.name.startswith(".")
-                     for d in cat.iterdir() if d.is_dir()}
-          tier2_names = set(tier2) | {"hermes-web-backends"}
-          stale = [n for n, u in usage.items()
-                   if n not in on_disk and (
-                       n in tier2_names or          # just deleted
-                       u.get("use_count", 0) == 0 and u.get("view_count", 0) == 0
-                   )]
-          # also drop stats for never-used skills we just deleted
-          for n in stale:
-              del usage[n]
-              actions.append(f"dropped stale usage stats: {n}")
-          if stale:
-              usage_path.write_text(json.dumps(usage, indent=2))
-
-      # ── Tier 3a: hub index cache (regenerable, 40MB) ──
-      cache = skills_dir / ".hub" / "index-cache"
-      if cache.exists():
-          shutil.rmtree(cache)
-          actions.append("cleared skills/.hub/index-cache (regenerable)")
-
-      if actions:
-          print("hermes-prune-unused-skills: " + "; ".join(actions))
-      PY
-    '';
-
-  # ── Hermes config drift alarm ────────────────────────────────────
-  # The WebUI settings panels and imperative `hermes config set` can write
-  # values the declarative config never asked for — the auxiliary.vision
-  # corruption (Aug 11–19) ran undetected because nothing compared live
-  # state against Nix between deploys. Hourly subset-compare via the shared
-  # freshness-check module; divergence pages the homelab-alerts ntfy topic.
-  homelab.freshnessChecks.hermes-config-drift = {
-    description = "Hermes live config.yaml matches Nix-declared settings";
-    checkCommand = "${
-        pkgs.python3.withPackages (ps: [ ps.pyyaml ])
-      }/bin/python3 ${hermesDriftCheckPy} ${hermesDeclaredSettings} /var/lib/hermes/.hermes/config.yaml";
-    onCalendar = "hourly";
-  };
-
   # ── Hermes gateway: run as crussell with NO filesystem sandbox ──────
   # The upstream NixOS module hardcodes ProtectSystem=strict and
   # ReadWritePaths=[stateDir workingDirectory], and sets HOME=stateDir.
@@ -1335,61 +965,6 @@ in {
       SupplementaryGroups = [ "hermes" ];
       ExecStart =
         "/run/current-system/sw/bin/hermes serve --host 10.10.0.12 --port 9119";
-      EnvironmentFile = [ config.age.secrets.hermes-bee-env-glen.path ];
-      Restart = "on-failure";
-      RestartSec = 5;
-    };
-  };
-
-  # ── hermes-dashboard: web admin panel on Nebula 10.10.0.12:9120 ──────
-  # Promotes the long-running-but-transient `hermes dashboard` scope
-  # (HML-7, agent-spawned repeatedly since 09-06, dies on reboot with no
-  # restart policy) into a managed system unit, mirroring hermes-serve
-  # above. Same auth story: non-loopback bind ⇒ auth gate engaged with the
-  # bundled `basic` dashboard-auth plugin (verified live 09-07: unauth GET
-  # serves the sign-in page; HERMES_DASHBOARD_BASIC_AUTH_{USERNAME,PASSWORD,
-  # SECRET} already in hermes-bee-env-glen.age; real usage logged from the
-  # thinkpad 09-06). No --insecure (a no-op since the June 2026 hardening)
-  # and no --skip-build: the `hermes` wrapper exports HERMES_WEB_DIST at
-  # the nix store's prebuilt web_dist, so no npm ever runs and the UI
-  # follows each hermes-agent deploy.
-  systemd.services.hermes-dashboard = {
-    description = "Hermes Web Dashboard (Nebula 10.10.0.12:9121)";
-    wantedBy = [ "multi-user.target" ];
-    # The unit binds the Nebula IP directly; like every such socket it can
-    # lose the boot race on 26.05 (see modules/dsh.nix) — order after the
-    # nebula unit and drag it along on nebula restarts.
-    after = [
-      "network-online.target"
-      "hermes-agent.service"
-      "nebula@homelab.service"
-    ];
-    bindsTo = [ "nebula@homelab.service" ];
-    partOf = [ "nebula@homelab.service" ];
-    environment = {
-      HERMES_HOME = "/var/lib/hermes/.hermes";
-      HOME = "/home/crussell";
-      # user-session env for systemd-run --user --scope — identical to
-      # hermes-agent/hermes-serve (the dashboard's embedded chat can
-      # dispatch background work the same way).
-      XDG_RUNTIME_DIR = "/run/user/1000";
-      DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/user/1000/bus";
-      # bash + node in PATH: same rationale as hermes-serve (terminal-tool
-      # shell resolution; npm/node for optional MCP children like
-      # server-github, which the transient instance spawned via npx).
-      PATH = lib.mkForce
-        "/run/wrappers/bin:${pkgs.bashInteractive}/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
-      SHELL = "${pkgs.bashInteractive}/bin/bash";
-    };
-    serviceConfig = {
-      Type = "simple";
-      User = "crussell";
-      # primary group = passwd group, hermes supplementary — shadow 4.19
-      # newuidmap rule, same as hermes-agent/hermes-serve (2026-09-07).
-      Group = "users";
-      SupplementaryGroups = [ "hermes" ];
-      ExecStart =
-        "/run/current-system/sw/bin/hermes dashboard --host 10.10.0.12 --port 9121 --no-open";
       EnvironmentFile = [ config.age.secrets.hermes-bee-env-glen.path ];
       Restart = "on-failure";
       RestartSec = 5;

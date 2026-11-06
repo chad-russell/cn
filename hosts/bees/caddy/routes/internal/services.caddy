@@ -42,35 +42,15 @@ handle @files {
     reverse_proxy 10.10.0.12:8093
 }
 
-# Kanban dashboard (bee, user unit hermes-kanban-dashboard) — phone-first
-# board UI for Hermes kanban (Lane→kanban migration Phase 3, 2026-09-08).
-# Dashboard's own token/basic-auth gate in front.
-@kanban host kanban.internal.crussell.io
-handle @kanban {
-    reverse_proxy 10.10.0.12:9120
-}
+# Hermes kanban dashboard + hermes-dashboard.service RETIRED 2026-11-06
+# (hermes fresh-start wipe: kanban had 0 tasks; `hermes dashboard` can be
+# run transiently if ever needed). kanban.internal / dashboard.internal
+# routes removed — DNS wildcard just stops answering for those names.
+# Lane archive note below is historical.
 
-# Hermes web dashboard on bee (HML-7, stacked-merge resolution 2026-09-19):
-# managed hermes-dashboard.service on Nebula 10.10.0.12:9121 — NOT 9120,
-# which the kanban dashboard user unit owns (live-verified while stacking;
-# dashboard.public_url feeds a single-host allowlist, so one instance
-# cannot serve both hostnames without 400s). Auth gate is Hermes' own
-# basic-auth provider (HERMES_DASHBOARD_BASIC_AUTH_*) — caddy only
-# terminates TLS. read_timeout 360s per beszel.caddy precedent: the
-# dashboard's embedded chat rides a long-lived WebSocket and turns can
-# run for minutes.
-@dashboard host dashboard.internal.crussell.io
-handle @dashboard {
-    reverse_proxy 10.10.0.12:9121 {
-        transport http {
-            read_timeout 360s
-        }
-    }
-}
-
-# Lane (self-hosted Plane CE) RETIRED 2026-09-08 — Hermes kanban is the
-# source of truth (kanban.internal.crussell.io). Routes removed; archive
-# at NAS /mnt/backups/lane-archive-2026-09-08 (pg dump + uploads).
+# Lane (self-hosted Plane CE) RETIRED 2026-09-08 — routes removed; archive
+# at NAS /mnt/backups/lane-archive-2026-09-08 (pg dump + uploads). Its
+# successor (Hermes kanban, kanban.internal) was retired 2026-11-06 too.
 # (HML-7's lane-hooks webhook bridge dropped in this merge too — its
 # Plane upstream is the thing that retired.)
 

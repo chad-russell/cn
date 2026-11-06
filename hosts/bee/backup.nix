@@ -1,7 +1,7 @@
 # ── bee: Backup Configuration ──────────────────────────────────────
 #
 # Backs up the Gloo dev stack data and the Hermes Agent state
-# (sessions, mem0/qdrant vectors, MEMORY.md, skills, cron).
+# (sessions, MEMORY.md, skills, cron).
 
 { ... }:
 
@@ -16,7 +16,7 @@
     paths = [
       "/home/crussell/Gloo"
 
-      # Hermes Agent state: sessions, mem0/qdrant vectors, MEMORY.md,
+      # Hermes Agent state: sessions, MEMORY.md,
       # skills, plugins, cron jobs. This is the agent's entire memory
       # and config — irreplaceable if the host is lost.
       "/var/lib/hermes"
