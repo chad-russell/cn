@@ -52,6 +52,22 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install distrobox zsh just fzf nodejs npm
 
+# ---- 1.5. FUSE 2 (libfuse.so.2) for type-2 AppImages --------------------
+# This is an ostree/bootc image, so we can't layer via `rpm-ostree install`
+# on the running host -- packages must be baked in at build time. Fedora 44
+# DROPPED the FUSE 2 libraries from the Atomic Desktop base images (the F44
+# change proposal "Atomic Desktops: Drop FUSE 2 libraries"), so the base
+# Silverblue here ships only FUSE 3 (libfuse.so.3). Classic (type-2)
+# AppImages dlopen() libfuse.so.2 to mount themselves and abort with "error
+# loading libfuse.so.2" without it. `fuse-libs` is still shipped in the
+# Fedora 44 repos and re-installing it is the documented fix. (`fuse2`
+# works too, but fuse-libs is the minimal runtime shim; AppImage's
+# mount-and-run path doesn't need the fusermount helper.) Added for PhysCAD;
+# enables native `./AppImage` launch instead of --appimage-extract-and-run.
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    dnf5 -y install fuse-libs
+
 # ---- 2. Desktop stack: niri + our niri-caelestia-shell fork --------------
 # niri comes from the upstream maintainer's COPR (yalter/niri), which tracks
 # newer than Fedora's package. xwayland-satellite provides niri's X11 app
@@ -121,7 +137,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        niri xwayland-satellite bibata-cursor-themes \
                        quickshell app2unit libcava libcava-devel \
                        material-symbols-fonts cascadia-code-nerd-fonts \
-                       python3-materialyoucolor matugen \
+                       python3-materialyoucolor matugen adw-gtk3-theme \
                        kf6-kirigami kf6-syntax-highlighting kdialog plasma-integration \
                        qt6-qt5compat qt6-qtmultimedia qt6-qtquicktimeline \
                        wl-clipboard cliphist grim slurp swappy \
