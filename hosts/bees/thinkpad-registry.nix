@@ -20,6 +20,13 @@
 # "44-…" tag, first-match-wins bound them all to the rule-less policy
 # (observed 2026-09-17: 39 tags accumulating, 31G, every log line
 # "retained by patterns policy"). Always anchor: "^stable$" / "^[0-9]+-".
+#
+# BUILD ONCE, PROMOTE ON MERGE (2026-11): the ci.yml thinkpad-image job
+# pushes each PR's VERIFIED build as cn/thinkpad-host:ctx-<context hash>
+# and, on merge, retags that exact image to :stable + its version tag (no
+# rebuild): see thinkpad-image-ci.sh. Retention keeps the last 5 ctx-*
+# candidates. The nightly below stays as the base-image/dnf refresh and as
+# the fallback when there's no promotable candidate.
 
 { config, lib, pkgs, ... }:
 
@@ -33,6 +40,10 @@
     source = ./zot-config.json;
     mode = "0644";
   };
+  # Quadlet units don't restart when a bind-mounted config file changes;
+  # without this a retention-policy edit only applies on the next reboot.
+  systemd.services.zot.restartTriggers =
+    [ config.environment.etc."zot/config.json".source ];
   system.activationScripts.zot-dirs = lib.stringAfter [ "users" ] ''
     mkdir -p /var/lib/zot
   '';
