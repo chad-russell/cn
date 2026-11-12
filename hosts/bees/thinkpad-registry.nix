@@ -42,8 +42,16 @@
   };
   # Quadlet units don't restart when a bind-mounted config file changes;
   # without this a retention-policy edit only applies on the next reboot.
-  systemd.services.zot.restartTriggers =
-    [ config.environment.etc."zot/config.json".source ];
+  # overrideStrategy = "asDropin" is REQUIRED: a bare option here would make
+  # NixOS write a top-level zot.service that SHADOWS the podman quadlet
+  # generator's unit (/etc/systemd/system beats /run/systemd/generator) —
+  # an ExecStart-less stub systemd refuses to start. That is exactly what
+  # took zot down at the 2026-11-12 switch (first trigger-fired restart in a
+  # month). As a drop-in it merges into the generated unit instead.
+  systemd.services.zot = {
+    overrideStrategy = "asDropin";
+    restartTriggers = [ config.environment.etc."zot/config.json".source ];
+  };
   system.activationScripts.zot-dirs = lib.stringAfter [ "users" ] ''
     mkdir -p /var/lib/zot
   '';
