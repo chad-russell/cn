@@ -24,6 +24,8 @@ Description=sweatshop-rustfs - skills S3 sidecar (bucket skills), sweatshop-harn
 # degrades, never blocks, sweatshop.
 Before=sweatshop.service
 After=network-online.target
+# NOTE: the generated sidecar unit is named rustfs.service (quadlet
+# units take the FILE name) — that is what downstream units reference.
 Wants=network-online.target
 
 [Container]

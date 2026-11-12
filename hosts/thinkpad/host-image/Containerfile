@@ -127,7 +127,6 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     && dnf5 -y copr enable celestelove/libcava \
     && dnf5 -y copr enable celestelove/app2unit \
     && dnf5 -y copr enable peterwu/rendezvous \
-    && dnf5 -y copr enable mineiro/hyprland \
     # --refresh: the cache mount (type=cache,dst=/var/cache/libdnf5) persists
     # rpm-md across builds with a 48h default TTL; when Fedora supersedes a
     # build (assimp 6.0.5-5 -> -6, 2026-10-21) cached metadata kept resolving
@@ -149,16 +148,12 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        jq bc curl wget rsync \
                        xdg-user-dirs xdg-utils libnotify brightnessctl \
                        ddcutil playerctl upower nm-connection-editor \
-                       breeze-icon-theme \
-                       hyprland hyprlock hypridle hyprpaper hyprpolkitagent hyprland-uwsm \
-                       xdg-desktop-portal-hyprland \
-                       hyprland-guiutils waybar
-    # hyprland suite + waybar: BAKE PR (dormant until the 2026-11 compositor
-    # trial concludes; merged 2026-11). re-added from the same mineiro COPR round 1
-    # used; hyprland-guiutils added after the live session warned it is missing.
-    # (mango/step-2.7 dropped 2026-11: Terra repo drift broke the build; the
-    # trial went all-Hyprland -- reinstatable as its own PR if wanted.)
-    # hosts/thinkpad/hyprland/README.md.
+                       breeze-icon-theme
+    # Hyprland + MangoWM REMOVED 2026-11 (trial concluded; the keeper is
+    # Umbriel): the suite lines, the mineiro/hyprland COPR, step 2.4's uwsm
+    # session surgery, and step 2.7's hyprpm build deps all went together.
+    # waybar left with them -- DMS (step 2.8) provides the bar. The
+    # second-session role is now Umbriel + DMS, see step 2.8 below.
     # ripgrep removed 2026-10-15: duplicate of the bubblebox `rg` package
     # (the ~/.local/bin wrapper shadows /usr/bin/rg anyway). fish removed:
     # unused (login shell is zsh; no terminal profile or spawn references).
@@ -167,27 +162,10 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     # recipes) and system units have no ~/.local/bin on PATH.
     # && dnf5 -y install cosmic-desktop
 
-# ---- 2.4. single Hyprland login entry ------------------------------------
-# The hyprland package ships a plain hyprland.desktop; the uwsm-managed
-# session (hyprland-uwsm.desktop) is the one we run (the config assumes
-# uwsm). Drop the plain entry so GDM offers exactly one. The image ALSO
-# renames the uwsm entry to plain "Hyprland" ("Hyprland (uwsm-managed)" was
-# the stock Name). uwsm's launch TARGET hyprland.desktop -- the entry
-# `uwsm start -D Hyprland hyprland.desktop` resolves through the XDG data
-# hierarchy -- is NOT shipped here: it lives user-scope as a bubblebox file
-# (~/.local/share/wayland-sessions/, see bubblebox/profile.toml). System
-# /usr/share/wayland-sessions would make GDM list it too; user-scope keeps
-# it uwsm-only (GDM scans system dirs only). Deleting the system copy
-# without providing the user-scope one breaks every Hyprland login
-# ("uwsm: Could not find entry", live 2026-10 -- GDM bounces back).
-RUN rm -f /usr/share/wayland-sessions/hyprland.desktop \
-    && sed -i 's/^Name=Hyprland (uwsm-managed)$/Name=Hyprland/' \
-        /usr/share/wayland-sessions/hyprland-uwsm.desktop
-
 # ---- 2.5. Ambxst shell binaries (all compositors) -------------------------
 # Ambxst replaces the retired niri-caelestia-shell fork (2026-11): one Go
-# binary supervising a quickshell shell + axctl, running under BOTH niri and
-# Hyprland. Pinned release, SHA256-verified. The shell QML sources clone
+# binary supervising a quickshell shell + axctl, running under niri (the
+# Umbriel session runs DMS instead -- step 2.8). Pinned release, SHA256-verified. The shell QML sources clone
 # per-user to ~/.local/src/ambxst (ambxst finds them via the pointer file
 # ~/.local/share/ambxst/shell_repo; axctl.toml there maps compositor
 # targets). Phosphor icon fonts install user-side with the sources.
@@ -199,43 +177,40 @@ RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/ambxst
     && install -m 755 /tmp/axctl /usr/bin/axctl \
     && rm -f /tmp/ambxst-linux-amd64 /tmp/ambxst.SHA256SUMS /tmp/axctl
 
-# ---- 2.7. Hyprland plugin build deps (hyprpm) ----------------------------
-# hyprpm compiles the Hyprland SOURCE itself for headers when building
-# plugins (Hyprspace etc.) -- the shell-plugin toolchain from step 2.5 is
-# not enough (first live miss: glslang, 2026-11). This is the full
-# BuildRequires set from the mineiro COPR's hyprland.spec with every
-# pkgconfig() resolved to its exact Fedora package name against the live
-# repos. Same rationale as 2.5: this is the machine we iterate on.
-RUN --mount=type=cache,dst=/var/cache/libdnf5 \
-    --mount=type=cache,dst=/var/cache/rpm-ostree \
-    dnf5 -y --setopt=install_weak_deps=False install \
-        cmake ninja-build gcc-c++ meson glslang-devel glaze \
-        gtk4-devel gtk4-layer-shell-devel libadwaita-devel \
-        aquamarine-devel cairo-devel libglvnd-devel mesa-libgbm-devel \
-        glib2-devel hwdata-devel hyprcursor-devel hyprgraphics-devel \
-        hyprlang-devel hyprutils-devel hyprwire-devel hyprwayland-scanner-devel \
-        lcms2-devel libdisplay-info-devel libdrm-devel libeis-devel \
-        libinput-devel libliftoff-devel libseat-devel systemd-devel \
-        lua-devel muParser-devel pango-devel pixman-devel readline-devel \
-        re2-devel tomlplusplus-devel libuuid-devel wayland-devel \
-        wayland-protocols-devel libxcb-devel xcb-util-errors-devel \
-        xcb-util-wm-devel xcb-util-renderutil-devel xcb-util-devel \
-        libXcursor-devel libxkbcommon-devel xorg-x11-server-Xwayland-devel
-
-
-# ---- 2.8. MangoWM (repo-scoped Terra install) ----------------------------
-# mangowm returns for the comparison evening. The first attempt (bake era)
-# installed it with ALL repos enabled and Terra's package set collided with
-# the mineiro COPR stack inside one rpm transaction (repo drift, 2026-11;
-# installs clean in isolation). Fix: this transaction runs with every COPR
-# disabled -- mangowm + deps resolve from Terra + Fedora only and never meet
-# the COPR-installed set.
+# ---- 2.8. Umbriel + DMS (the second compositor; 2026-11) ------------------
+# Umbriel (noctalia-dev's wlroots 0.20 compositor) replaces the retired
+# Hyprland + MangoWM comparison stack in the same role: the second GDM
+# session next to niri, with a niri-style scrolling layout. Config is
+# user-scope (.config/umbriel/config.toml, a bubblebox [[files]] entry --
+# the niri port of keybinds lives there).
+#
+# Shell for the Umbriel session = DMS / Dux Modular Shell (DankMaterialShell
+# was renamed Dux Shell at 2.0, "DMS" again at 2.1): bar, notifications,
+# lock screen, settings. Started by the dms-umbriel.service user unit bound
+# to umbriel-session.target (NOT autostart; Ambxst stays niri-only).
+#
+# Sources, isolated per the repo-drift lesson from the first mango attempt:
+#   * umbriel-nightly + xdg-desktop-portal-umbriel-nightly: Terra (terra44)
+#     -- the only distro channel shipping umbriel today. Installed with
+#     every COPR DISABLED so Terra's package set never meets the COPR stack
+#     in one rpm transaction. Runtime deps (wlroots 0.20, libeis,
+#     tomlplusplus, sdbus-cpp for the portal) resolve from Fedora proper.
+#   * dms + dms-cli (2.1.x) + dux-search + dgop: the duxlabs/dms COPR (its
+#     .repo auto-enables the duxlabs/dux-repo companion repo). matugen comes
+#     from dux-repo at 4.2 -- DMS's dynamic theming needs 4.x; this retires
+#     the user-side ~/.local/bin matugen-4.2 the ambxst unit PATH-hacked
+#     around. Terra disabled here too; quickshell still comes from
+#     errornointernet (step 2), matching what the dms docs test against.
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install \
         'https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-6.noarch.rpm' \
         'https://repos.fyralabs.com/terra44/terra-release-0:44-11.noarch.rpm' \
-    && dnf5 -y --disablerepo="copr*" --setopt=install_weak_deps=False install mangowm
+    && dnf5 -y --disablerepo="copr*" --setopt=install_weak_deps=False install \
+        umbriel-nightly xdg-desktop-portal-umbriel-nightly \
+    && dnf5 -y copr enable duxlabs/dms \
+    && dnf5 -y --disablerepo="terra*" --setopt=install_weak_deps=False install \
+        dms dms-cli dux-search dgop matugen
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/

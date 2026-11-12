@@ -18,11 +18,11 @@ buildNpmPackage rec {
   pname = "dsh";
   # npm scope dir must match: @deepseek-ai/dsh
   packageName = "@deepseek-ai/dsh";
-  version = "0.2.0-rc.2";
+  version = "0.2.2-rc.1";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/${packageName}/-/dsh-${version}.tgz";
-    hash = "sha256-vSeEfERc1opWWsH5HAa7vMdjnvkwcfZ4u1nF66/ziFk=";
+    hash = "sha256-rSGWiu0DN6MmuFNQeiOzDqy77E1nqwfztv3mm3WxnNY=";
   };
 
   # Generated via npm install --package-lock-only (see header comment).
@@ -32,7 +32,7 @@ buildNpmPackage rec {
   # prebuilt dist needs only the production tree, so strip devDeps at
   # build time and ship a prod-only lockfile (0.2.0-rc.2's tarball ships
   # no devDependencies at all, so the strip is now a harmless no-op;
-  # lockfile regenerated 2026-10-01 the same way).
+  # lockfile regenerated 2026-10-01 and 2026-11-05 (0.2.2-rc.1) the same way).
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
     # 0.1.5 declares devDependencies on unpublished experimental packages
@@ -49,7 +49,7 @@ buildNpmPackage rec {
     mv package.json.stripped package.json
   '';
 
-  npmDepsHash = "sha256-80NndyRPP6EsLOgT+73No/ln3GrpcvbFW+/CRFpNTa8=";
+  npmDepsHash = "sha256-6k/AFdBGDInFNX30yaBgZ9Pe8ezA/tsnFb1SnCfS3sw=";
 
   # Prebuilt distribution — no compile step, no scripts to run.
   npmInstallFlags = [ "--ignore-scripts" ];

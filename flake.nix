@@ -142,8 +142,8 @@
       # ── NixOS Configurations ─────────────────────────────────────
       nixosConfigurations.bee = mkHost {
         hostname = "bee";
-        # bee overrides the hermes-agent package (sealed-venv provider extras
-        # for the mem0 memory backend), so it needs the flake input directly.
+        # bee overrides the hermes-agent package (extraDependencyGroups mirrors
+        # upstream `full`), so it needs the flake input directly.
         extraSpecialArgs = { inherit hermes-agent; };
         extraModules = [
           hermes-agent.nixosModules.default

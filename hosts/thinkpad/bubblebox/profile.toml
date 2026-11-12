@@ -19,7 +19,8 @@ packages = [
   "nvim", "oh-my-posh", "pnpm", "psql", "railway", "rg", "rust-dev", "sops", "slack", "terraform",
   "tokei", "uv", "vicinae", "witr", "ghostty", "wezterm", "wl-party", "yazi", "zoxide",
 ]
-# (shell history: noctalia -> niri-caelestia-shell fork -> Ambxst, 2026-11)
+# (shell history: noctalia -> niri-caelestia-shell fork -> Ambxst, 2026-11;
+#  second-session compositor history: hyprland+mango trial -> Umbriel + DMS, 2026-11)
 
 # -- Flatpak apps ([flatpak], bubblebox >= 0.4.0) ------------------------------
 # Declarative flatpaks in the PER-USER installation (no root/polkit; app data
@@ -129,11 +130,12 @@ kind = "dir"
 [[files]]
 dst = ".config/niri/config.kdl"
 
-# Hyprland config (uwsm session; Ambxst shell, hymission overview). Same
-# symlink-into-repo model as niri: LLM/local edits in ~/.config land in the
-# repo checkout directly -- commit from think is the only remaining step.
+# Umbriel compositor config (the second session, replacing the retired
+# Hyprland + MangoWM). Same symlink-into-repo model as niri: the niri
+# keybind port (Mod+Space -> vicinae included) lives in the file, validated
+# with `umbriel config validate`.
 [[files]]
-dst = ".config/hypr/hyprland.lua"
+dst = ".config/umbriel/config.toml"
 # -- more host-resident config (2026-10-15: previously hand-edited) --------
 [[files]]
 dst = ".gitconfig"
@@ -175,31 +177,15 @@ dst = ".config/autostart/ghostty.desktop"
 dst = ".local/share/flatpak/overrides/global"
 
 
-# Desktop shell is Ambxst (2026-11): one shell for niri AND Hyprland, binary
-# baked into the image (Containerfile 2.5), sources cloned per-user to
-# ~/.local/src/ambxst. Replaced the niri-caelestia-shell fork.
+# Desktop shell for NIRI is Ambxst (2026-11): binary baked into the image
+# (Containerfile 2.5), sources cloned per-user to ~/.local/src/ambxst. The
+# UMBRIEL session runs DMS instead (rpm-baked, Containerfile 2.8).
 
 [[files]]
 dst = ".config/ghostty/config"
 
 [[files]]
 dst = ".config/vicinae/settings.json"
-
-# Mango compositor config: ambxst shell (sourced from the axctl-generated
-# ~/.local/share/ambxst/mango.conf) + the trial layout model + Mod+Space ->
-# vicinae. See the file header for the full story.
-
-[[files]]
-dst = ".config/mango/config.conf"
-
-# uwsm's Hyprland launch target, user-scope: uwsm resolves
-# "hyprland.desktop" through the XDG data hierarchy (fixes the session
-# crash from the image deleting the system copy -- step 2.4), while GDM
-# (system session dirs only) still offers exactly one entry. NoDisplay,
-# so it can never leak into a session list.
-
-[[files]]
-dst = ".local/share/wayland-sessions/hyprland.desktop"
 
 [[files]]
 dst = ".config/wezterm/wezterm.lua"
@@ -268,10 +254,18 @@ name = "vicinae"
 enable = true
 
 # Ambxst desktop shell under niri (same pattern the caelestia unit used:
-# niri.service.wants, Restart=on-failure). Under Hyprland the shell starts
-# from hyprland.lua instead -- never both.
+# niri.service.wants, Restart=on-failure). Niri-ONLY now: the Umbriel
+# session runs DMS instead (dms-umbriel below) -- never both shells.
 [[units]]
 name = "ambxst"
+enable = true
+
+# DMS (Dux Modular Shell, ex-DankMaterialShell) under Umbriel only
+# (2026-11, the Hyprland/MangoWM retirement): bound to
+# umbriel-session.target, a deliberate copy of the rpm's dms.service so we
+# control the session binding without shadowing the rpm unit.
+[[units]]
+name = "dms-umbriel.service"
 enable = true
 
 # think host-image pipeline consumer (see .local/bin/thinkpad-image-update):

@@ -1,7 +1,9 @@
 [Unit]
 Description=sweatshop - personal software factory (Next.js production build), http://bee:3300 + preview proxy 10.10.0.12:3301
-After=network-online.target sweatshop-rustfs.service
-Wants=network-online.target sweatshop-rustfs.service
+# rustfs.service is the skills sidecar's generated unit name (quadlet
+# units take the file name rustfs.container -> rustfs.service).
+After=network-online.target rustfs.service
+Wants=network-online.target rustfs.service
 
 [Container]
 # The image is built locally from the sweatshop repo's Containerfile.dev

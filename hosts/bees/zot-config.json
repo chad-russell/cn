@@ -20,6 +20,23 @@
             {
               "patterns": ["^[0-9]+-"],
               "mostRecentlyPushedCount": 3
+            },
+            {
+              "patterns": ["^ctx-[0-9a-f]+$"],
+              "mostRecentlyPushedCount": 5
+            }
+          ]
+        },
+        {
+          "repositories": ["tansweat/*"],
+          "deleteUntagged": true,
+          "keepTags": [
+            {
+              "patterns": ["^main$"]
+            },
+            {
+              "patterns": ["^[0-9a-f]{7,40}$"],
+              "mostRecentlyPushedCount": 5
             }
           ]
         }

@@ -32,6 +32,8 @@ Last validated via SSH: **2026-09-09**.
 │   │   ├── tailscale.nix      # On-demand Tailscale (not default-on)
 │   │   ├── sweatshop.nix      # sweatshop rootless quadlet (bee:3300) + rustfs skills sidecar
 │   │   │   └── sweatshop/     # .container quadlet inputs (app, harness net, rustfs sidecar)
+│   │   ├── tansweat.nix       # tansweat quadlet (bee 10.10.0.12:3330, zot image + CI gitops)
+│   │   │   └── tansweat/      # .container quadlet + db-snapshot.mjs
 │   │   ├── filebrowser.nix    # filebrowser rootless quadlet (10.10.0.12:8093)
 │   │   │   └── filebrowser/   # the .container quadlet input
 │   │   ├── hindsight.nix      # hindsight agent-memory quadlet (10.10.0.12:8888 API+MCP / :9999 UI)
@@ -40,7 +42,8 @@ Last validated via SSH: **2026-09-09**.
 │   │   ├── configuration.nix
 │   │   ├── disk-config.nix
 │   │   ├── caddy.nix + caddy/ (Caddyfile, routes, caddy.container)
-│   │   │   └── routes/internal/ (services.caddy, media.caddy, beszel.caddy)
+│   │   │   ├── routes/internal/ (services.caddy, media.caddy, beszel.caddy)
+│   │   │   └── routes/preview/ (tansweat-previews.caddy — *.preview.internal)
 │   │   ├── media-services.nix
 │   │   ├── immich-quadlet.nix   # Immich quadlets (server + ML containers)
 │   │   ├── immich-native.nix    # native PG + redis-immich + db dump + freshness
@@ -402,6 +405,11 @@ Bees's Caddy (`hosts/bees/caddy/Caddyfile`) handles **only**
 resolves `*.internal.crussell.io` → `10.10.0.6` (bees Nebula), so internal
 clients reach bees directly over the overlay, bypassing the gateway.
 
+A second wildcard site, `*.preview.internal.crussell.io`, terminates its own
+cert (same Route53 DNS challenge — one wildcard can't span both label depths)
+and proxies every `<slug>` host to tansweat for per-sandbox app previews; its
+routes live under `hosts/bees/caddy/routes/preview/`.
+
 Internal route snippets live under `hosts/bees/caddy/routes/internal/`:
 
 - `services.caddy` — linkding, papra, ntfy, dsh, trades, nsfw, files, lane, lane-hooks, wankbank
@@ -459,14 +467,15 @@ Source files:
 - `hosts/bee/tailscale.nix` — on-demand Tailscale (not enabled at boot)
 - `hosts/bee/sweatshop.nix` + `sweatshop/` — sweatshop rootless quadlet (http://bee:3300, checkout `~/sweatshop`, deploys via its own scripts/deploy.sh) + the rustfs skills sidecar
 - `hosts/bee/filebrowser.nix` + `filebrowser/` — filebrowser rootless quadlet (10.10.0.12:8093; buzz stack files removed 2026-09-19, D-014)
+- `hosts/bee/tansweat.nix` + `tansweat/` — tansweat rootless quadlet (10.10.0.12:3330 → tansweat.internal.crussell.io), running the CI-built zot image `tansweat/app:main` (image gitops: merge to chad/tansweat main → bees runner builds → zot → ssh bee pull + `systemctl --user restart tansweat.service`; sandbox app previews at `https://<slug>.preview.internal.crussell.io` (bees Caddy second wildcard site, Host-based routing in tansweat); state `~/tansweat-data`, restic-backed, nightly VACUUM INTO snapshot 23:05)
 
 Running services:
 
 - `nebula@homelab.service` — `10.10.0.12`
 - `nebula@lighthouse.service` — local lighthouse `10.10.0.1`, UDP `4243`
-- `hermes-agent.service` — Hermes Agent gateway (replaces buzz-acp; see `hosts/bee/configuration.nix`). Runs as `crussell` with full host access. Connects to the Buzz relay via NIP-42 auth, uses the `buzz` CLI for outbound message delivery. Memory backend: **mem0 (OSS mode)** — mem0ai baked into the sealed venv via the package override in `hosts/bee/configuration.nix`; behavioral config (Z.AI extraction LLM + OpenRouter embeddings + local qdrant at `$HERMES_HOME/mem0_qdrant`) in `/var/lib/hermes/.hermes/mem0.json`.
+- `hermes-agent.service` — Hermes Agent gateway (replaces buzz-acp; see `hosts/bee/configuration.nix`). Runs as `crussell` with full host access (delivery is Discord — the lane model; the legacy Buzz relay path was decommissioned 2026-08-20). Memory: built-in MEMORY.md/USER.md scratchpad (mem0+qdrant retired 2026-11-06 at the fresh-start wipe; codex OAuth + provider keys carried over). The kanban board/dashboard and `hermes-dashboard.service` were retired in the same wipe (`hermes dashboard` can be run transiently if needed).
 - `hermes-serve.service` — Hermes JSON-RPC/WebSocket API on Nebula `10.10.0.12:9119` (desktop/mobile remote clients; basic-auth plugin). The WebUI (`hermes-webui.service`, port 8787, `https://hermes.internal.crussell.io`) was retired 2026-09-01 — desktop + Discord are the only chat surfaces.
-- filebrowser (rootless quadlet, crussell user units) — web file manager on `10.10.0.12:8093` (`hosts/bee/filebrowser.nix`, 2026-09-19; replaced a manually-run container). NOTE: `hermes-agent.service` above still references the buzz CLI/NIP-42 — that path died with the buzz decommission; hermes decommission is pending (crons still scheduled there).
+- filebrowser (rootless quadlet, crussell user units) — web file manager on `10.10.0.12:8093` (`hosts/bee/filebrowser.nix`, 2026-09-19; replaced a manually-run container).
 - `sweatshop.service` (rootless quadlet, crussell user units) — personal software factory, Next.js production build of `~/sweatshop` on `http://bee:3300` (+ preview proxy `10.10.0.12:3301` → bees Caddy `pv-*.internal.crussell.io`). Deploys ONLY through the repo's own `scripts/deploy.sh` (stop → build → migrate → start); the quadlet just serves the checkout. State: `~/sweatshop/data` (sqlite, Workflow SDK world, backups — restic-covered + 23:00 nightly.db snapshot unit). Skills store: `sweatshop-rustfs.service` sidecar (RustFS, digest-pinned, no published port, reachable on `sweatshop-harness` as `http://sweatshop-rustfs:9000`, bucket `skills`, dedicated keypair `sweatshop-rustfs-env.age`, volume `sweatshop-rustfs-data` restic-covered) + a bucket-init one-shot; the app reads it via `SKILLS_S3_*` in the checkout's gitignored `.env.local`. Sidecar-not-nas rationale: `docs/rustfs-migration/PLAN.md` decision record.
 - `hindsight.service` (rootless quadlet, crussell user units) — agent-memory server `ghcr.io/vectorize-io/hindsight:latest` (`hosts/bee/hindsight.nix`, live 2026-09-21): retain/recall/reflect API + per-bank MCP on Nebula `10.10.0.12:8888`, control-plane UI `:9999` (gated by `HINDSIGHT_CP_ACCESS_KEY`); full image runs BGE embeddings + MiniLM reranker locally, extraction LLM is `deepseek/deepseek-v4-flash` via OpenRouter per-token ($0.055/$0.111 per M, 1M ctx — picked by a 2026-09-22 head-to-head extraction test vs glm-5.3-flash and qwen3.7-flash; glm-5.3-flash day one billed $7.05, the coding-plan endpoint was tried and reverted 2026-09-22 — its request-rate limit starved interactive dsh sessions; refresh/reflect throttles live in the quadlet; key = openrouter-api-key value in agenix `hindsight-env.age`, crussell-readable for the user quadlet). Data: embedded pg0 Postgres in named volume `hindsight-data` (restic-covered via `~/.local/share/containers`; image layers excluded in `backup.nix`). Ingress: bees Caddy `hindsight.internal.crussell.io` (+ `-ui`) — runbook is the `hindsight` skill (chad/skills). Coding agents: `npx @vectorize-io/hindsight-coding-agents install <harness> --server self-hosted --api-url http://10.10.0.12:8888` (dsh wired 2026-09-21).
 - Restic backup (daily S3 backup via `hosts/bee/backup.nix`)

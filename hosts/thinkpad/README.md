@@ -11,7 +11,7 @@ host.
 |-- nebula/         # Nebula VPN container/service
 |-- backup/         # restic S3 backup (units in host-image/; image build + seeding here)
 |-- wycliffe-vpn/   # on-demand GlobalProtect wrapper
-|-- hyprland/       # round-2 Hyprland exploration kit (layered, not baked)
+
 --- bubblebox/      # declarative host profile (packages + dotfiles + units)
     |-- profile.toml   # desired package set + [[files]] + [[units]] declarations
     |-- files/         # host-native dotfiles, mirroring $HOME (managed by `bubblebox apply`)
@@ -103,9 +103,11 @@ compositor stack; `nodejs` stays for the npm-managed dev CLIs --
 railway, agent-browser). See
 `host-image/README.md`.
 
-The image is built **on bees** (daily `thinkpad-image-build.timer` + on-demand
-`cjust image-rebuild`) and published to bees's zot registry
-(`10.10.0.6:5000/cn/thinkpad-host:stable`, Nebula-only). `cjust image-upgrade`
+The image is built **on bees** and published to bees's zot registry
+(`10.10.0.6:5000/cn/thinkpad-host:stable`, Nebula-only): merging an image PR
+promotes the exact image CI built and verified for it (no rebuild), and the
+daily `thinkpad-image-build.timer` rebuilds for Fedora updates (on-demand:
+`cjust image-rebuild`). See `host-image/README.md`. `cjust image-upgrade`
 pulls only the changed layers and stages the new deployment; it goes live on
 the next reboot. The bubblebox timer `thinkpad-image-update.timer` automates
 the routine path (daily stage + ntfy lag alert; see
@@ -149,19 +151,17 @@ ship, so the eventual ostree merge stays clean.
 On-demand Wycliffe GlobalProtect container workflow. See
 `wycliffe-vpn/README.md`.
 
-### `hyprland/`
-Compositor trial kit (2026-11): runbook + configs for both trial
-compositors. Hyprland (from the `mineiro/hyprland` COPR) and MangoWM (Terra)
-are baked into the host image (Containerfile steps 2 / 2.8); behavior lives
-in `~/.config` as bubblebox `[[files]]` entries:
-`files/.config/hypr/hyprland.lua` (float-by-default, per-workspace
-scrolling/monocle layouts, ambxst shell) and `files/.config/mango/config.conf`
-(ambxst shell sourced from the axctl-generated
-`~/.local/share/ambxst/mango.conf`, same trial layout model, Mod+Space ->
-vicinae). `files/.local/share/wayland-sessions/hyprland.desktop` is uwsm's
-user-scope launch target -- required for the uwsm Hyprland session to start
-at all (uwsm resolves it via the XDG data hierarchy; GDM never lists it).
-See `hyprland/README.md`.
+### Umbriel (the second compositor; 2026-11)
+The Hyprland + MangoWM trial concluded; both were **removed** (image
+Containerfile + bubblebox `[[files]]` + the `hyprland/` kit — git history
+keeps the runbook). The second-session role is now **Umbriel**
+(noctalia-dev's wlroots compositor, Terra's `umbriel-nightly`) with **DMS**
+(Dux Modular Shell, ex-DankMaterialShell, `duxlabs/dms` COPR) as its shell —
+`dms-umbriel.service` binds to `umbriel-session.target` so it never runs in
+the niri session (Ambxst stays niri-only). Behavior lives in
+`bubblebox/files/.config/umbriel/config.toml`: a section-by-section port of
+the niri keybinds (Mod+Space → vicinae preserved verbatim, output layout,
+Bibata cursor, media keys on wpctl). `umbriel config validate` checks it.
 
 ### `bubblebox/`
 The host's **bubblebox profile** (`profile.toml`) -- the desired set of bubblebox

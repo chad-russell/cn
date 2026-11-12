@@ -64,7 +64,7 @@ let
   port = 3080;
 
   # bee's Nebula address (lib/host-meta.nix is the source of truth).
-  nebulaIp = "10.10.0.12";
+  nebulaIp = (import ../lib/host-meta.nix).bee.nebula;
 
   # Public hostname (bees Caddy route → this service).
   hostname = "dsh.internal.crussell.io";
@@ -366,7 +366,7 @@ in {
       description = "DeepSeek Harness web UI (dsh web)";
       # before the 16-container stack is fully serving — ordering alone is not
       # enough, the channel plugin retries with backoff until the API answers.
-      wants = [ "dsh-seed.service" ];
+      wants = [ "dsh-seed.service" "network-online.target" ];
       after = [ "network-online.target" "dsh-seed.service" ];
       wantedBy = [ "multi-user.target" ];
 
@@ -377,7 +377,7 @@ in {
         WorkingDirectory = "/home/crussell";
         ExecStart = "${cfg.package}/bin/dsh --profile glen -- --port ${
             toString port
-          } --no-open --trusted-host ${hostname} --trusted-host 10.10.0.12 --trusted-host 192.168.20.105";
+          } --no-open --trusted-host ${hostname} --trusted-host ${nebulaIp}";
         # ZHIPU_API_KEY (zai-coding route) + GLOO_API_KEY (gloo route) +
         # OPENROUTER_API_KEY (openrouter route) + FORGEJO_TOKEN (tea),
         # resolved per request via the settings.yaml apiKeyEnv references.
@@ -398,7 +398,19 @@ in {
       # the bwrap sandbox probe fails ENOENT and landlock-run's exec of the
       # command fails ENOENT → "no sandbox backend is usable". Point PATH at
       # the system profile (bash, bwrap, git, and everything else on bee).
-      environment.PATH = lib.mkForce "/run/current-system/sw/bin";
+      # pnpm: dsh's plugin manager shells out to bare `pnpm` (install,
+      # remove, repair of profiles/glen) — bee has no system pnpm, so
+      # uninstalling from the Plugins UI failed "spawn pnpm ENOENT".
+      # Scoped to this unit rather than systemPackages.
+      environment.PATH =
+        lib.mkForce "${pkgs.pnpm}/bin:/run/current-system/sw/bin";
+      # Pin pnpm's store to the one profiles/glen/node_modules is already
+      # linked from (.modules.yaml storeDir). Without it pnpm 11 picks
+      # /var/lib/dsh/.pnpm-store (the profile lives on a different mount
+      # than $HOME) and refuses every remove/install with
+      # ERR_PNPM_UNEXPECTED_STORE.
+      environment.pnpm_config_store_dir =
+        "/var/lib/dsh/.local/share/pnpm/store";
       # Credential for the keyless bees llama.cpp route (see apiKeyEnv in
       # the seed): non-empty placeholder so pi-ai's credential resolution
       # succeeds; llama-server never checks it.
@@ -416,29 +428,29 @@ in {
       # 26.05 boot ordering: nebula's tun often appears after sockets.target,
       # so binding the Nebula IP failed with I/O error and left the socket
       # dead until manual restart (seen on 2026-09-06 boots). FreeBind lets
-      # the socket bind before the address exists; wants/after order boot;
-      # PartOf re-creates it whenever nebula itself restarts.
-      wants = [ "nebula@homelab.service" ];
-      after = [ "nebula@homelab.service" ];
+      # the socket bind before the address exists; PartOf re-creates it
+      # whenever nebula itself restarts.
+      #
+      # No wants/after on nebula: nebula@homelab is a normal service
+      # (After=basic.target) and basic.target is After=sockets.target, so
+      # ordering a sockets.target socket after nebula is a cycle. It stayed
+      # latent until a switch restarted nebula (2026-11-05, PR #132 changed
+      # the nebula firewall) — "Failed to start basic.target: Transaction
+      # order is cyclic" aborted the bee deploy. FreeBind already covers
+      # the late-address race, which is all the ordering was for.
       partOf = [ "nebula@homelab.service" ];
       socketConfig = {
-        # All interfaces: dsh-mobile's network scan walks the phone's primary
-        # subnet — WiFi (192.168.20.x) or Nebula (10.10.0.x) depending on
-        # what Android reports. Bind 0.0.0.0 so the harness is reachable and
-        # discoverable from either. Trust is enforced by dsh's own fence
-        # (--trusted-host) + token; LAN/WiFi members are trusted by policy.
-        # Both non-loopback interfaces explicitly (0.0.0.0 would collide
-        # with dsh-web's own 127.0.0.1 bind on the same port).
-        ListenStream =
-          [ "${nebulaIp}:${toString port}" "192.168.20.105:${toString port}" ];
-        BindIPv6Only = "both";
+        # Nebula only: bees Caddy (dsh.internal.crussell.io) is the sole
+        # client. The LAN bind for dsh-mobile's subnet scan was dropped
+        # 2026-11-05 (mobile retired) — this is an agent-driven RCE
+        # surface, so it no longer listens on 192.168.20.105.
+        ListenStream = "${nebulaIp}:${toString port}";
         FreeBind = true;
       };
     };
 
     systemd.services."dsh-web-proxy" = {
-      description =
-        "Socket proxy: all interfaces :${toString port} → dsh loopback";
+      description = "Socket proxy: Nebula :${toString port} → dsh loopback";
       requires = [ "dsh-web.service" ];
       after = [ "dsh-web.service" ];
       serviceConfig = {

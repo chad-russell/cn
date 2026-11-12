@@ -1,7 +1,7 @@
 # ── bee: Backup Configuration ──────────────────────────────────────
 #
 # Backs up the Gloo dev stack data and the Hermes Agent state
-# (sessions, mem0/qdrant vectors, MEMORY.md, skills, cron).
+# (sessions, MEMORY.md, skills, cron).
 
 { ... }:
 
@@ -16,7 +16,7 @@
     paths = [
       "/home/crussell/Gloo"
 
-      # Hermes Agent state: sessions, mem0/qdrant vectors, MEMORY.md,
+      # Hermes Agent state: sessions, MEMORY.md,
       # skills, plugins, cron jobs. This is the agent's entire memory
       # and config — irreplaceable if the host is lost.
       "/var/lib/hermes"
@@ -52,6 +52,11 @@
       # switch, scan/capture logs, backtests. Moved out of the checkout
       # 2026-10-24 (image-deploy pilot).
       "/home/crussell/tastyquant-data"
+
+      # tansweat (hosts/bee/tansweat.nix): sqlite db + WAL, generated
+      # secret-key/media-secret, claude-home/codex-home, and backups/
+      # nightly.db (23:05 consistent copy). db + -wal travel together.
+      "/home/crussell/tansweat-data"
     ];
 
     exclude = [
