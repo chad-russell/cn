@@ -218,8 +218,10 @@ RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/ambxst
 # pipewire -- shoji_wm links them; Xwayland 24.1 is already in the base for
 # the built-in xwayland-satellite). The bindgen-based -sys crates (drm/gbm/
 # input/libseat/libspa/pipewire/lcms2/pixman/xcb-util-cursor) drive the devel
-# list, and libclang (clang-libs) is for bindgen itself: a live build without
-# it panics in bindgen/lib.rs "Unable to find libclang". `dnf5 history
+# list -- libspa's headers ship inside pipewire-devel (pkgconfig(libspa-0.2),
+# /usr/include/spa-0.2; F44 has no separate SPA devel package) -- and libclang
+# (clang-libs) is for bindgen itself: a live build without it panics in
+# bindgen/lib.rs "Unable to find libclang". `dnf5 history
 # inside a container build (no transaction history survives the layer), so
 # plain remove + clean all is the honest cleanup. git and Xwayland are NOT
 # in the remove list: both are base-image packages (the install line lists
@@ -233,7 +235,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         rust cargo gcc make \
         wayland-devel libxkbcommon-devel systemd-devel libinput-devel \
         mesa-libgbm-devel libseat-devel libxcb-devel xcb-util-cursor-devel \
-        xorg-x11-server-Xwayland pipewire-devel spa-devel git \
+        xorg-x11-server-Xwayland pipewire-devel git \
         clang-libs libdrm-devel lcms2-devel pixman-devel \
     && git clone --no-checkout https://github.com/bea4dev/ShojiWM.git /tmp/ShojiWM \
     && git -C /tmp/ShojiWM checkout 048f2fdf9f2ddd2dea5c96bbb9a37f381edb09b1 \
@@ -260,7 +262,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         rust cargo gcc make \
         wayland-devel libxkbcommon-devel systemd-devel libinput-devel \
         mesa-libgbm-devel libseat-devel libxcb-devel xcb-util-cursor-devel \
-        pipewire-devel spa-devel \
+        pipewire-devel \
         clang-libs libdrm-devel lcms2-devel pixman-devel \
     && dnf5 -y clean all \
     && rm -rf /tmp/ShojiWM ~/.cargo /root/.cargo \
