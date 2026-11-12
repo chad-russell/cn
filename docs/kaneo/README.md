@@ -59,20 +59,19 @@ AUTH_SECRET=<openssl rand -hex 32>
   `POSTGRES_HOST/DB/USER`, `TRUSTED_PROXIES`, `TZ`; `KANEO_API_URL` is
   deliberately unset — the bundled image derives it from the client URL).
 
-> ⚠️ The committed `kaneo-env.age` is a **single-line placeholder** so
-> the flake evaluates. **Before merging/deploying**, replace it with a
-> real encrypted file (agenix cannot decrypt the plaintext placeholder,
-> so remove it first — `-e` then creates it fresh):
->
-> ```bash
-> rm secrets/kaneo-env.age
-> agenix -e secrets/kaneo-env.age   # paste the two lines above, save
-> ```
+The committed `kaneo-env.age` was generated and age-encrypted at
+creation time (2026-11-12) with fresh random values — no placeholder
+step is needed. To rotate: generate new values (`openssl rand -hex 32`
+twice), `rm secrets/kaneo-env.age`, `age -r <recipient> -o
+secrets/kaneo-env.age` (recipient = the crussell age public key in
+`secrets/secrets.nix`), then redeploy; note `AUTH_SECRET` rotation
+signs everyone out and `POSTGRES_PASSWORD` only takes effect before
+the volume's first init.
 
 ## First boot checklist
 
-1. Replace the `secrets/kaneo-env.age` placeholder for real — `rm` it,
-   then `agenix -e secrets/kaneo-env.age` (see above).
+1. Secret `secrets/kaneo-env.age` is already real (age-encrypted at
+   creation) — nothing to do.
 2. Deploy both hosts: `~/Code/cn/scripts/deploy.sh gateway bees`
    (gateway gets the route, bees gets the quadlets).
 3. From bees, confirm the API is up:
@@ -145,8 +144,8 @@ Common cases:
   `10.10.0.6:5173` (Nebula down, or the all-interfaces `PublishPort=`
   was changed to a loopback bind).
 - **App crash-loops with an AUTH/DB error** → `/run/agenix/kaneo-env`
-  is still the placeholder, or `POSTGRES_PASSWORD` was rotated after
-  the volume's first init (only valid pre-first-init).
+  is missing or stale on the host, or `POSTGRES_PASSWORD` was rotated
+  after the volume's first init (only valid pre-first-init).
 - **Migrations failed on first boot** → `journalctl -u kaneo-postgres`;
   once the DB is healthy, `systemctl restart kaneo` retries them.
 - **Dump timer never fires** → `systemctl list-timers kaneo-db-dump`;

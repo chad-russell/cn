@@ -124,12 +124,14 @@ in {
   "rustfs-env.age".publicKeys = [ crussell ];
 
   # ── Kaneo (kaneo.app) on bees — kaneo.crussell.io ────────────────
-  # POSTGRES_PASSWORD + AUTH_SECRET (both openssl rand -hex 32; the
-  # same file feeds kaneo.container and kaneo-postgres.container).
-  # The committed kaneo-env.age is a PLACEHOLDER — the owner must `rm`
-  # it and run `agenix -e secrets/kaneo-env.age` with the real values
-  # BEFORE merge/deploy (fresh values are only valid before the postgres
-  # volume's first init; see docs/kaneo/README.md § Secrets).
+  # kaneo-env: POSTGRES_PASSWORD + AUTH_SECRET for the Kaneo stack
+  # (both openssl rand -hex 32; the same file feeds kaneo.container and
+  # kaneo-postgres.container). Encrypted at creation time (2026-11-12)
+  # by an agent session using `age -r <crussell key>` — no plaintext
+  # ever committed; values generated fresh for this install (valid:
+  # postgres volume not yet initialized). Rotating later requires
+  # regenerating both the file and the postgres volume; see
+  # docs/kaneo/README.md § Secrets.
   "kaneo-env.age".publicKeys = [ crussell ];
 
   # ── Hermes WebUI on bee ─────────────────────────────────────────
