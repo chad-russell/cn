@@ -88,7 +88,9 @@ const HYBRID_WINDOW_MANAGER = new HybridWindowManager(naturalRootRect);
 
 // Window switcher (Super+Tab): "flip-3d" stacks the windows in 3D
 // (./flip-3d.tsx), "grid" lays them out side by side (./window-grid.tsx).
-const WINDOW_SWITCHER_STYLE = "flip-3d" as "flip-3d" | "grid";
+// The choice is the user's preference (2026-11): "grid" is the default,
+// flip-3d stays available by flipping the constant below.
+const WINDOW_SWITCHER_STYLE = "grid" as "flip-3d" | "grid";
 const WINDOW_SWITCHER = (
   WINDOW_SWITCHER_STYLE === "grid" ? createWindowGrid : createFlip3D
 )({
@@ -446,7 +448,9 @@ COMPOSITOR.key.bind("calendar", "Super+C", () => toggleOnCurrentMonitor("calenda
 COMPOSITOR.key.bind("clipboard", "Super+V", () => toggleOnCurrentMonitor("clipboard"));
 // Lock the session. No monitor argument: a lock covers every screen there is,
 // and the shell refuses to expose an unlock over the same socket.
-COMPOSITOR.key.bind("lock", "Super+L", () => {
+// (2026-11) Lock moved here from Super+L, which is now vim-style focus
+// right (tile-focus-right-vim).
+COMPOSITOR.key.bind("lock", "Super+Ctrl+Alt+L", () => {
   COMPOSITOR.process.spawn({ command: `${SHELL} msg lock` });
 });
 
@@ -482,6 +486,14 @@ COMPOSITOR.key.bind("tile-focus-left-quick", "Super+Left", () => {
 COMPOSITOR.key.bind("tile-focus-right-quick", "Super+Right", () => {
   HYBRID_WINDOW_MANAGER.focusTile(1);
 });
+// Vim-style tile focus: Super+H/Super+L focus the tile left/right
+// (2026-11; mirrors Super+Left/Right above).
+COMPOSITOR.key.bind("tile-focus-left-vim", "Super+H", () => {
+  HYBRID_WINDOW_MANAGER.focusTile(-1);
+});
+COMPOSITOR.key.bind("tile-focus-right-vim", "Super+L", () => {
+  HYBRID_WINDOW_MANAGER.focusTile(1);
+});
 COMPOSITOR.key.bind("tile-focus-left", "Super+Ctrl+Left", () => {
   HYBRID_WINDOW_MANAGER.focusTile(-1);
 });
@@ -493,6 +505,14 @@ COMPOSITOR.key.bind("tile-move-left", "Super+Shift+Left", () => {
   scheduleWorkspaceBroadcast();
 });
 COMPOSITOR.key.bind("tile-move-right", "Super+Shift+Right", () => {
+  HYBRID_WINDOW_MANAGER.moveFocusedTile(1);
+  scheduleWorkspaceBroadcast();
+});
+COMPOSITOR.key.bind("tile-move-left-vim", "Super+Shift+H", () => {
+  HYBRID_WINDOW_MANAGER.moveFocusedTile(-1);
+  scheduleWorkspaceBroadcast();
+});
+COMPOSITOR.key.bind("tile-move-right-vim", "Super+Shift+L", () => {
   HYBRID_WINDOW_MANAGER.moveFocusedTile(1);
   scheduleWorkspaceBroadcast();
 });
@@ -510,6 +530,24 @@ COMPOSITOR.key.bind("workspace-prev", "Super+Ctrl+Up", () => {
 });
 COMPOSITOR.key.bind("workspace-next", "Super+Ctrl+Down", () => {
   HYBRID_WINDOW_MANAGER.switchWorkspace(1);
+  scheduleWorkspaceBroadcast();
+});
+// Vim-style workspace nav: Super+J next, Super+K previous (2026-11; mirrors
+// Super+Ctrl+Down/Up above).
+COMPOSITOR.key.bind("workspace-next-vim", "Super+J", () => {
+  HYBRID_WINDOW_MANAGER.switchWorkspace(1);
+  scheduleWorkspaceBroadcast();
+});
+COMPOSITOR.key.bind("workspace-prev-vim", "Super+K", () => {
+  HYBRID_WINDOW_MANAGER.switchWorkspace(-1);
+  scheduleWorkspaceBroadcast();
+});
+COMPOSITOR.key.bind("window-move-workspace-next-vim", "Super+Shift+J", () => {
+  HYBRID_WINDOW_MANAGER.moveFocusedWindowToWorkspace(1);
+  scheduleWorkspaceBroadcast();
+});
+COMPOSITOR.key.bind("window-move-workspace-prev-vim", "Super+Shift+K", () => {
+  HYBRID_WINDOW_MANAGER.moveFocusedWindowToWorkspace(-1);
   scheduleWorkspaceBroadcast();
 });
 
