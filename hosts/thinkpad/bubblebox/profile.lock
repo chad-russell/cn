@@ -293,10 +293,6 @@ dst = ".config/niri/config.kdl"
 blob = "e57761db070e5aa7e5fdca2ba6da1cecfbdab17461013eb9a88f95ed42db53de"
 
 [[file]]
-dst = ".config/umbriel/config.toml"
-blob = "f66dc199c2245cac20dced11775b8ceb0dc64bc6e9c53a93ca6118ec5b48eb9a"
-
-[[file]]
 dst = ".gitconfig"
 blob = "dcf39f73880559f8c0dc3efa3e5f5458c6ffac27a448f3c778ae5577de266951"
 
@@ -505,11 +501,6 @@ blob = "8857fc11670ea0765d9e67c0a851771d97d4150625760172a2781e3416bfa8ab"
 name = "ambxst"
 enabled = true
 blob = "7c2f807f9e40959d5d53bf7c1354c589597bf2ee6fe6ca4f7e9f15092f1776c4"
-
-[[unit]]
-name = "dms-umbriel.service"
-enabled = true
-blob = "e8a195da56a55892b335f86fcf128df84c0be9d77044d54ffcb294e753868b4c"
 
 [[unit]]
 name = "thinkpad-image-update.service"

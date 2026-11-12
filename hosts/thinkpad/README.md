@@ -103,9 +103,11 @@ compositor stack; `nodejs` stays for the npm-managed dev CLIs --
 railway, agent-browser). See
 `host-image/README.md`.
 
-The image is built **on bees** (daily `thinkpad-image-build.timer` + on-demand
-`cjust image-rebuild`) and published to bees's zot registry
-(`10.10.0.6:5000/cn/thinkpad-host:stable`, Nebula-only). `cjust image-upgrade`
+The image is built **on bees** and published to bees's zot registry
+(`10.10.0.6:5000/cn/thinkpad-host:stable`, Nebula-only): merging an image PR
+promotes the exact image CI built and verified for it (no rebuild), and the
+daily `thinkpad-image-build.timer` rebuilds for Fedora updates (on-demand:
+`cjust image-rebuild`). See `host-image/README.md`. `cjust image-upgrade`
 pulls only the changed layers and stages the new deployment; it goes live on
 the next reboot. The bubblebox timer `thinkpad-image-update.timer` automates
 the routine path (daily stage + ntfy lag alert; see
@@ -149,17 +151,25 @@ ship, so the eventual ostree merge stays clean.
 On-demand Wycliffe GlobalProtect container workflow. See
 `wycliffe-vpn/README.md`.
 
-### Umbriel (the second compositor; 2026-11)
+### ShojiWM (the second compositor; 2026-11)
 The Hyprland + MangoWM trial concluded; both were **removed** (image
 Containerfile + bubblebox `[[files]]` + the `hyprland/` kit — git history
-keeps the runbook). The second-session role is now **Umbriel**
-(noctalia-dev's wlroots compositor, Terra's `umbriel-nightly`) with **DMS**
-(Dux Modular Shell, ex-DankMaterialShell, `duxlabs/dms` COPR) as its shell —
-`dms-umbriel.service` binds to `umbriel-session.target` so it never runs in
-the niri session (Ambxst stays niri-only). Behavior lives in
-`bubblebox/files/.config/umbriel/config.toml`: a section-by-section port of
-the niri keybinds (Mod+Space → vicinae preserved verbatim, output layout,
-Bibata cursor, media keys on wpctl). `umbriel config validate` checks it.
+keeps the runbook). Umbriel + DMS held the second-session slot next and were
+**retired 2026-11** in turn. The role now belongs to **ShojiWM**
+(github.com/bea4dev/ShojiWM — Smithay-based, TypeScript-configured, with
+xwayland-satellite built in): source-built into the host image at a pinned
+commit (Containerfile step 2.8), so the **GDM entry is ShojiWM**
+(`DesktopNames=ShojiWM`, `Exec=/usr/bin/shoji_wm --tty`). Its shell is
+**shoji-bar-4** (github.com/bea4dev/shoji-bar-4) — a user-side Rust build
+cloned to `~/.config/shoji-bar-4` and built there with the rust-dev bubblebox
+devshell; ShojiWM's config launches it if the binary is present, so nothing
+shell-shaped ships in the image. Compositor behavior is user-scope TS/TSX at
+`bubblebox/files/.config/shojiwm` (repo-managed like nvim's dir), seeded from
+the image's `/usr/share/shojiwm/default-config` on first setup;
+`node_modules/shoji_wm` inside it is a symlink to `/usr/lib/shojiwm/packages/
+shoji_wm`, and `Super+Shift+R` hot-reloads. ScreenCast portals in that
+session come from the compositor's own backend
+(`.config/xdg-desktop-portal/shojiwm-portals.conf`).
 
 ### `bubblebox/`
 The host's **bubblebox profile** (`profile.toml`) -- the desired set of bubblebox

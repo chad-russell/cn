@@ -6,14 +6,17 @@
 #      (flake.nix checks.<host> = config.system.build.toplevel), so this
 #      is a real build gate, not just eval. bees's persistent /nix/store
 #      makes it incremental.
-#   3. thinkpad-image (path-gated, parallel) — build the bootc
-#      Containerfile and run the shared thinkpad-image-verify.sh gates
-#      against it, so a Containerfile-breaking PR is caught at review
-#      time instead of by the 05:10 nightly's ntfy failure ping. Only
-#      runs when hosts/thinkpad/** or its build/verify plumbing changed
-#      (see the changes job). Uses the same dedicated
-#      btrfs build store as the nightly (warm layer cache; the job runs
-#      as crussell, so podman goes through sudo with the wrapper path).
+#   3. thinkpad-image (path-gated, parallel): BUILD ONCE, PROMOTE ON MERGE.
+#      On a PR: build the bootc Containerfile, run the shared
+#      thinkpad-image-verify.sh gates, and push the VERIFIED image to zot
+#      as cn/thinkpad-host:ctx-<build-context hash>. On the merge push:
+#      retag that exact image to :stable + its version tag (seconds, no
+#      rebuild), so `cjust image-upgrade` on think picks up a merge as
+#      soon as this job is green. Falls back to the nightly build unit
+#      when there's no fresh candidate. Logic + rationale live in
+#      hosts/bees/thinkpad-image-ci.sh. Only runs when the image's build
+#      inputs changed (see the changes job). Uses the nightly's dedicated
+#      btrfs build store (warm layer cache; podman via sudo + wrapper path).
 #
 # Checkout is plain git over HTTPS with the job's GITHUB_TOKEN (works
 # for any runner identity; repo is private). On pull_request,
@@ -61,7 +64,7 @@ jobs:
           CHANGED=$(git diff --name-only "$BASE"...HEAD 2>/dev/null || git diff --name-only "$BASE" )
           echo "changed files:"
           echo "$CHANGED"
-          if echo "$CHANGED" | grep -qE "^hosts/thinkpad/host-image/|^hosts/bees/thinkpad-image-verify\.sh|^hosts/bees/thinkpad-registry\.nix|^hosts/bees/zot"; then
+          if echo "$CHANGED" | grep -qE "^hosts/thinkpad/host-image/|^hosts/bees/thinkpad-image-(verify|ci)\.sh|^hosts/bees/thinkpad-registry\.nix|^hosts/bees/zot"; then
             echo "thinkpad=true" >> "$GITHUB_OUTPUT"
           else
             echo "thinkpad=false" >> "$GITHUB_OUTPUT"
@@ -99,27 +102,12 @@ jobs:
           git fetch --depth 1 origin "+${GITHUB_REF}:"
           git checkout --detach FETCH_HEAD
 
-      # /run/wrappers/bin/sudo: the job shell's PATH doesn't include the
-      # NixOS setuid wrappers (bare `sudo` fails with a misleading
-      # ownership error). Same store as the nightly via the storage conf;
-      # constant IMAGE_VERSION keeps no-change PRs fully layer-cached.
-      - name: Build thinkpad host image
-        run: |
-          set -eu
-          /run/wrappers/bin/sudo -n env CONTAINERS_STORAGE_CONF=/etc/thinkpad-build-storage.conf \
-            podman build \
-              --pull=newer \
-              --build-arg IMAGE_VERSION=ci-check \
-              -t cn-thinkpad-host:ci-check \
-              -f hosts/thinkpad/host-image/Containerfile \
-              hosts/thinkpad/host-image
+      # Script holds the logic so it's shellcheck-able and runnable by hand:
+      #   bash hosts/bees/thinkpad-image-ci.sh pr|promote
+      - name: Build + verify + push candidate (PR)
+        if: github.event_name == 'pull_request'
+        run: bash hosts/bees/thinkpad-image-ci.sh pr
 
-      - name: Verify image (shared gates with the nightly)
-        run: |
-          set -eu
-          /run/wrappers/bin/sudo -n env CONTAINERS_STORAGE_CONF=/etc/thinkpad-build-storage.conf \
-            bash hosts/bees/thinkpad-image-verify.sh cn-thinkpad-host:ci-check
-
-      - name: Clean up build image
-        if: always()
-        run: /run/wrappers/bin/sudo -n env CONTAINERS_STORAGE_CONF=/etc/thinkpad-build-storage.conf podman rmi cn-thinkpad-host:ci-check >/dev/null 2>&1 || true
+      - name: Promote verified candidate to :stable (merge)
+        if: github.event_name == 'push'
+        run: bash hosts/bees/thinkpad-image-ci.sh promote

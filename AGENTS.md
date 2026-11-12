@@ -50,6 +50,7 @@ Last validated via SSH: **2026-09-09**.
 │   │   ├── beszel.nix         # Beszel monitoring hub
 │   │   ├── ntfy.nix, datenight.nix
 │   │   ├── services.nix
+│   │   ├── kaneo.nix           # Kaneo PM quadlet stack (5173) + nightly pg_dump
 │   │   ├── openobserve.nix    # central log search (quadlet :5080)
 │   │   ├── backup.nix         # Restic backup to S3
 │   │   └── *.container        # linkding, papra, jellyfin, jellyseerr, sonarr, radarr, prowlarr, qbittorrent
@@ -157,7 +158,7 @@ Laptop: think / custom Bluefin (Fedora atomic), tooling under `hosts/thinkpad/`.
 
 | Host            | LAN IP            | Nebula IP                             | OS          | Config                               | Purpose / services                                                                                                                                                                                 |
 | --------------- | ----------------- | ------------------------------------- | ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 26.05 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich, OpenObserve (central logs). |
+| `bees`          | `192.168.20.41`   | `10.10.0.6`                           | NixOS 26.05 | `hosts/bees/`                        | Production server: Caddy (**internal `*.internal.crussell.io` only**), ntfy, datenight, linkding, papra, Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Jellyseerr, Immich, OpenObserve (central logs), Kaneo. |
 | `bee`           | `192.168.20.105`  | `10.10.0.12` + lighthouse `10.10.0.1` | NixOS 26.05 | `hosts/bee/`                         | Dev server: Nebula lighthouse (local LH `10.10.0.1` + Hetzner relay), Hermes Agent gateway (retiring), dsh web UI, filebrowser quadlet, dev quadlets (gpl/polymer/buildspace), restic backup.                                |
 | `think`          | varies            | `10.10.0.10`                          | Bluefin (atomic) | `hosts/thinkpad/`               | Laptop: custom Bluefin image, bubblebox tools, Nebula client (container). Resolves Nebula overlay names via baked `/usr/etc/hosts` (Containerfile step 3.7). Not a NixOS deploy target. |
 | `nas`           | `192.168.20.31`   | `10.10.0.3`                           | NixOS 26.05 | `hosts/nas/`                         | NFS storage: media, photos, backups. Btrfs RAID1, btrfs-maintenance. Shared RustFS S3 (`10.10.0.3:9000`, logs parquet).                                                                                                                               |
@@ -344,6 +345,7 @@ Source files:
 - `hosts/bees/thinkpad-registry.nix` + `zot.container` — zot OCI registry (thinkpad host images; retention policies per repo in `zot-config.json`) + daily build/publish service
 - `hosts/bees/ntfy.nix`, `datenight.nix`
 - `hosts/bees/services.nix` + `*.container` — linkding, papra
+- `hosts/bees/kaneo.nix` + `kaneo.container` + `kaneo-postgres.container` — Kaneo (kaneo.crussell.io, public via gateway; 2.49.0-pinned quadlets + containerized Postgres 16 + nightly pg_dump)
 - `hosts/bees/openobserve.nix` + `openobserve.container` — central log
   search (single-node, parquet in RustFS on nas, fed by the fleet-wide
   Vector shipper; UI at `logs.internal.crussell.io`)

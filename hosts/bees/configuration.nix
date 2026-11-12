@@ -21,6 +21,9 @@
     ./nsfw-suite.nix
     ./caddy.nix
     ./services.nix
+    # Kaneo PM (kaneo.crussell.io) — 2.49.0-pinned quadlet stack +
+    # containerized Postgres 16 + nightly pg_dump (docs/kaneo/README.md)
+    ./kaneo.nix
     # Central log search (openobserve quadlet, 10.10.0.6:5080, fed by the
     # fleet-wide Vector shipper; parquet in RustFS on nas)
     ./openobserve.nix

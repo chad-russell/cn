@@ -52,6 +52,22 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install distrobox zsh just fzf nodejs npm
 
+# ---- 1.5. FUSE 2 (libfuse.so.2) for type-2 AppImages --------------------
+# This is an ostree/bootc image, so we can't layer via `rpm-ostree install`
+# on the running host -- packages must be baked in at build time. Fedora 44
+# DROPPED the FUSE 2 libraries from the Atomic Desktop base images (the F44
+# change proposal "Atomic Desktops: Drop FUSE 2 libraries"), so the base
+# Silverblue here ships only FUSE 3 (libfuse.so.3). Classic (type-2)
+# AppImages dlopen() libfuse.so.2 to mount themselves and abort with "error
+# loading libfuse.so.2" without it. `fuse-libs` is still shipped in the
+# Fedora 44 repos and re-installing it is the documented fix. (`fuse2`
+# works too, but fuse-libs is the minimal runtime shim; AppImage's
+# mount-and-run path doesn't need the fusermount helper.) Added for PhysCAD;
+# enables native `./AppImage` launch instead of --appimage-extract-and-run.
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    dnf5 -y install fuse-libs
+
 # ---- 2. Desktop stack: niri + our niri-caelestia-shell fork --------------
 # niri comes from the upstream maintainer's COPR (yalter/niri), which tracks
 # newer than Fedora's package. xwayland-satellite provides niri's X11 app
@@ -120,7 +136,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        niri xwayland-satellite bibata-cursor-themes \
                        quickshell app2unit libcava libcava-devel \
                        material-symbols-fonts cascadia-code-nerd-fonts \
-                       python3-materialyoucolor matugen \
+                       python3-materialyoucolor matugen adw-gtk3-theme \
                        kf6-kirigami kf6-syntax-highlighting kdialog plasma-integration \
                        qt6-qt5compat qt6-qtmultimedia qt6-qtquicktimeline \
                        wl-clipboard cliphist grim slurp swappy \
@@ -134,10 +150,10 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        ddcutil playerctl upower nm-connection-editor \
                        breeze-icon-theme
     # Hyprland + MangoWM REMOVED 2026-11 (trial concluded; the keeper is
-    # Umbriel): the suite lines, the mineiro/hyprland COPR, step 2.4's uwsm
+    # ShojiWM): the suite lines, the mineiro/hyprland COPR, step 2.4's uwsm
     # session surgery, and step 2.7's hyprpm build deps all went together.
-    # waybar left with them -- DMS (step 2.8) provides the bar. The
-    # second-session role is now Umbriel + DMS, see step 2.8 below.
+    # waybar left with them. The second-session role then went Umbriel + DMS
+    # -> ShojiWM + shoji-bar-4 (Umbriel + DMS retired 2026-11, see step 2.8).
     # ripgrep removed 2026-10-15: duplicate of the bubblebox `rg` package
     # (the ~/.local/bin wrapper shadows /usr/bin/rg anyway). fish removed:
     # unused (login shell is zsh; no terminal profile or spawn references).
@@ -149,7 +165,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # ---- 2.5. Ambxst shell binaries (all compositors) -------------------------
 # Ambxst replaces the retired niri-caelestia-shell fork (2026-11): one Go
 # binary supervising a quickshell shell + axctl, running under niri (the
-# Umbriel session runs DMS instead -- step 2.8). Pinned release, SHA256-verified. The shell QML sources clone
+# ShojiWM session runs shoji-bar-4 instead -- step 2.8). Pinned release, SHA256-verified. The shell QML sources clone
 # per-user to ~/.local/src/ambxst (ambxst finds them via the pointer file
 # ~/.local/share/ambxst/shell_repo; axctl.toml there maps compositor
 # targets). Phosphor icon fonts install user-side with the sources.
@@ -161,40 +177,107 @@ RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/ambxst
     && install -m 755 /tmp/axctl /usr/bin/axctl \
     && rm -f /tmp/ambxst-linux-amd64 /tmp/ambxst.SHA256SUMS /tmp/axctl
 
-# ---- 2.8. Umbriel + DMS (the second compositor; 2026-11) ------------------
-# Umbriel (noctalia-dev's wlroots 0.20 compositor) replaces the retired
-# Hyprland + MangoWM comparison stack in the same role: the second GDM
-# session next to niri, with a niri-style scrolling layout. Config is
-# user-scope (.config/umbriel/config.toml, a bubblebox [[files]] entry --
-# the niri port of keybinds lives there).
+# ---- 2.8. ShojiWM (the second compositor; 2026-11) -------------------------
+# ShojiWM (github.com/bea4dev/ShojiWM -- Smithay-based, TypeScript-configured,
+# with xwayland-satellite built in) is the second GDM session next to niri.
+# The second-session lineage: hyprland+mango (trial) -> Umbriel + DMS ->
+# ShojiWM + shoji-bar-4. Umbriel + DMS were RETIRED 2026-11 and this step
+# replaces theirs wholesale: the Terra repo (umbriel-nightly +
+# xdg-desktop-portal-umbriel-nightly), the duxlabs/dms COPR (dms dms-cli
+# dux-search dgop matugen), the dms-umbriel.service user unit, and the
+# bubblebox .config/umbriel files are all gone.
 #
-# Shell for the Umbriel session = DMS / Dux Modular Shell (DankMaterialShell
-# was renamed Dux Shell at 2.0, "DMS" again at 2.1): bar, notifications,
-# lock screen, settings. Started by the dms-umbriel.service user unit bound
-# to umbriel-session.target (NOT autostart; Ambxst stays niri-only).
+# Source-only: ShojiWM ships no distro packages yet (upstream's own docs say
+# packaged installs land "just before the official release"), so this step
+# clones the repo PINNED BY COMMIT (048f2fdf9f2ddd2dea5c96bbb9a37f381edb09b1;
+# no tag at the point we adopted -- a commit pin is the strongest guarantee we
+# have, and Cargo.lock + the pinned smithay fork rev inside it make the build
+# reproducible) and installs exactly what dist/install.sh installs, minus the
+# user-side bits (no default user config is seeded at build time -- first
+# setup copies /usr/share/shojiwm/default-config/. to ~/.config/shojiwm, which
+# is then a repo-managed bubblebox [[files]] dir; node_modules/shoji_wm inside
+# it is a symlink to /usr/lib/shojiwm/packages/shoji_wm created then).
 #
-# Sources, isolated per the repo-drift lesson from the first mango attempt:
-#   * umbriel-nightly + xdg-desktop-portal-umbriel-nightly: Terra (terra44)
-#     -- the only distro channel shipping umbriel today. Installed with
-#     every COPR DISABLED so Terra's package set never meets the COPR stack
-#     in one rpm transaction. Runtime deps (wlroots 0.20, libeis,
-#     tomlplusplus, sdbus-cpp for the portal) resolve from Fedora proper.
-#   * dms + dms-cli (2.1.x) + dux-search + dgop: the duxlabs/dms COPR (its
-#     .repo auto-enables the duxlabs/dux-repo companion repo). matugen comes
-#     from dux-repo at 4.2 -- DMS's dynamic theming needs 4.x; this retires
-#     the user-side ~/.local/bin matugen-4.2 the ambxst unit PATH-hacked
-#     around. Terra disabled here too; quickshell still comes from
-#     errornointernet (step 2), matching what the dms docs test against.
+# The shell for the session is shoji-bar-4 (github.com/bea4dev/shoji-bar-4):
+# a user-side Rust build cloned to ~/.config/shoji-bar-4 and built with the
+# rust-dev bubblebox devshell -- deliberately NOT baked here. ShojiWM's
+# default config launches ~/.config/shoji-bar-4/target/release/shoji-bar-4
+# only if it exists, so the compositor is complete without it.
+#
+# GDM entry: /usr/share/wayland-sessions/shojiwm.desktop, Exec=/usr/bin/
+# shoji_wm --tty, DesktopNames=ShojiWM. Portal backend (ScreenCast):
+# /usr/share/xdg-desktop-portal/portals/shojiwm.portal + the dbus/systemd
+# units below; per-session backend selection lives user-side in
+# .config/xdg-desktop-portal/shojiwm-portals.conf.
+#
+# ONE RUN LAYER, toolchain removed at the end (image size): F44's rustc is
+# 1.99.1, new enough for the workspace (upstream CI runs stable). Build deps
+# are dnf5-removed after the artifacts are installed; removing the *-devel
+# packages leaves the RUNTIME libs in place (wayland, libxkbcommon,
+# systemd-libs, libinput, mesa-libgbm, libseat, libxcb, xcb-util-cursor,
+# pipewire -- shoji_wm links them; Xwayland 24.1 is already in the base for
+# the built-in xwayland-satellite). The bindgen-based -sys crates (drm/gbm/
+# input/libseat/libspa/pipewire/lcms2/pixman/xcb-util-cursor) drive the devel
+# list -- libspa's headers ship inside pipewire-devel (pkgconfig(libspa-0.2),
+# /usr/include/spa-0.2; F44 has no separate SPA devel package) -- and libclang
+# (clang-libs) is for bindgen itself: a live build without it panics in
+# bindgen/lib.rs "Unable to find libclang". clang-libs also ships the builtin
+# headers under /usr/lib/clang/22 (not /usr/lib64/...), which libclang's
+# resource-dir lookup misses on Fedora's multiarch split -- the
+# BINDGEN_EXTRA_CLANG_ARGS resource-dir pin below fixes stdbool.h not found.
+# CARGO_HOME=/tmp/cargo-home: the silverblue base symlinks /root ->
+# var/roothome, DANGLING inside a build container, so cargo's default
+# /root/.cargo dies with EEXIST (plain fedora:44 has a real /root and hides
+# it; caught against the actual base).
+# `dnf5 history
+# inside a container build (no transaction history survives the layer), so
+# plain remove + clean all is the honest cleanup. git and Xwayland are NOT
+# in the remove list: both are base-image packages (the install line lists
+# them only so the build fails loudly if a future base drops them). The
+# cargo cache (~/.cargo: registry tarballs + the smithay git checkout --
+# hundreds of MB) is deleted too; the runtime TS files under /usr/lib/
+# shojiwm are what the compositor actually loads at session start.
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
-    dnf5 -y install \
-        'https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-6.noarch.rpm' \
-        'https://repos.fyralabs.com/terra44/terra-release-0:44-11.noarch.rpm' \
-    && dnf5 -y --disablerepo="copr*" --setopt=install_weak_deps=False install \
-        umbriel-nightly xdg-desktop-portal-umbriel-nightly \
-    && dnf5 -y copr enable duxlabs/dms \
-    && dnf5 -y --disablerepo="terra*" --setopt=install_weak_deps=False install \
-        dms dms-cli dux-search dgop matugen
+    dnf5 -y --setopt=install_weak_deps=False install \
+        rust cargo gcc make \
+        wayland-devel libxkbcommon-devel systemd-devel libinput-devel \
+        mesa-libgbm-devel libseat-devel libxcb-devel xcb-util-cursor-devel \
+        xorg-x11-server-Xwayland pipewire-devel git \
+        clang-libs libdrm-devel lcms2-devel pixman-devel \
+    && git clone --no-checkout https://github.com/bea4dev/ShojiWM.git /tmp/ShojiWM \
+    && git -C /tmp/ShojiWM checkout 048f2fdf9f2ddd2dea5c96bbb9a37f381edb09b1 \
+    && (cd /tmp/ShojiWM \
+        && CARGO_HOME=/tmp/cargo-home \
+           BINDGEN_EXTRA_CLANG_ARGS='-resource-dir /usr/lib/clang/22' \
+           cargo build --release -p shoji_wm -p xdg-desktop-portal-shojiwm \
+        && install -Dm755 target/release/shoji_wm /usr/bin/shoji_wm \
+        && install -Dm755 target/release/xdg-desktop-portal-shojiwm \
+            /usr/bin/xdg-desktop-portal-shojiwm \
+        && mkdir -p /usr/lib/shojiwm/packages /usr/lib/shojiwm/tools \
+        && cp -a packages/shoji_wm /usr/lib/shojiwm/packages/ \
+        && cp tools/decoration-runtime.ts /usr/lib/shojiwm/tools/ \
+        && install -Dm644 dist/shojiwm.desktop \
+            /usr/share/wayland-sessions/shojiwm.desktop \
+        && install -Dm644 dist/shojiwm.portal \
+            /usr/share/xdg-desktop-portal/portals/shojiwm.portal \
+        && install -Dm644 dist/org.freedesktop.impl.portal.desktop.shojiwm.service \
+            /usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.shojiwm.service \
+        && install -Dm644 dist/xdg-desktop-portal-shojiwm.service \
+            /usr/lib/systemd/user/xdg-desktop-portal-shojiwm.service \
+        && rm -rf /usr/share/shojiwm/default-config \
+        && mkdir -p /usr/share/shojiwm/default-config \
+        && cp -a packages/config/. /usr/share/shojiwm/default-config/) \
+    && dnf5 -y remove \
+        rust cargo gcc make \
+        wayland-devel libxkbcommon-devel systemd-devel libinput-devel \
+        mesa-libgbm-devel libseat-devel libxcb-devel xcb-util-cursor-devel \
+        pipewire-devel \
+        clang-libs libdrm-devel lcms2-devel pixman-devel \
+    && dnf5 -y clean all \
+    && rm -rf /tmp/ShojiWM /tmp/cargo-home \
+    && test -x /usr/bin/shoji_wm \
+    && test -f /usr/share/wayland-sessions/shojiwm.desktop
 
 # ---- 3. SELinux: disabled (personal-laptop host policy) -----------------
 # This is a single-user personal laptop, and the operator comes from NixOS/

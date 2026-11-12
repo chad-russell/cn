@@ -22,7 +22,8 @@ set -euo pipefail
 NTFY="https://ntfy.internal.crussell.io/homelab-alerts"
 
 # Let the session and shell settle before judging them (the unit fires at
-# user-manager start; niri + ambxst / umbriel + dms come up seconds later).
+# user-manager start; niri + ambxst / shojiwm + shoji-bar-4 come up seconds
+# later).
 sleep 90
 
 failed=()
@@ -32,21 +33,17 @@ check() {  # check <description> <path>
 
 check "image version stamp" /usr/lib/host-image-thinkpad-version
 check "niri session" /usr/share/wayland-sessions/niri.desktop
-check "umbriel session" /usr/share/wayland-sessions/umbriel.desktop
+check "shojiwm session" /usr/share/wayland-sessions/shojiwm.desktop
 check "shell binary ambxst" /usr/bin/ambxst
 check "shell helper axctl" /usr/bin/axctl
-check "umbriel compositor" /usr/bin/umbriel
-check "dms shell binary" /usr/bin/dms
+check "shojiwm compositor" /usr/bin/shoji_wm
 check "zot registry drop-in" /etc/containers/registries.conf.d/10-homelab-registry.conf
 
 # Shell units only run inside their sessions; "failed" (not merely
 # inactive) after the settle delay means it crashed through its restarts.
-# (dms-umbriel only runs when an Umbriel session was logged into.)
+# (Ambxst only runs when a niri session was logged into.)
 if systemctl --user is-failed ambxst.service >/dev/null 2>&1; then
   failed+=("ambxst.service failed (journalctl --user -u ambxst)")
-fi
-if systemctl --user is-failed dms-umbriel.service >/dev/null 2>&1; then
-  failed+=("dms-umbriel.service failed (journalctl --user -u dms-umbriel)")
 fi
 
 if [ "${#failed[@]}" -eq 0 ]; then

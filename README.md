@@ -13,7 +13,7 @@ operating guide: [AGENTS.md](AGENTS.md).
 | Host | Hardware | Role |
 | --- | --- | --- |
 | `bee` | Beelink mini PC | Dev server + local Nebula lighthouse (dev quadlets, filebrowser, hindsight) |
-| `bees` | Production server | Shared + media + internal services behind Caddy ingress (Immich, Jellyfin, *arr, linkding, papra, ntfy, …) |
+| `bees` | Production server | Shared + media + internal services behind Caddy ingress (Immich, Jellyfin, *arr, linkding, papra, ntfy, Kaneo, …) |
 | `gateway` | Hetzner Cloud VPS | Public TLS ingress (Caddy, HTTP-01), Nebula lighthouse/relay |
 | `nas` | NFS storage server | NFS + Samba exports, shared RustFS S3 (10.10.0.3:9000), btrfs maintenance |
 | `homeassistant` | HAOS appliance | Home Assistant OS + local Nebula add-on, incident notes |
