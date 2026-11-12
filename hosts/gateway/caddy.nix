@@ -49,6 +49,16 @@
       reverse_proxy 10.10.0.6:7890
     '';
 
+    # kaneo.crussell.io — Kaneo PM quadlet on bees (all-interfaces
+    # PublishPort 5173). No basic_auth: Kaneo's own login is the gate.
+    # Registration is open for first boot only — the owner creates the
+    # admin account, then closes registration in the admin UI (or via a
+    # follow-up DISABLE_REGISTRATION=true env in kaneo.container).
+    # WebSockets (live board updates) pass through plain reverse_proxy.
+    virtualHosts."kaneo.crussell.io".extraConfig = ''
+      reverse_proxy 10.10.0.6:5173
+    '';
+
     # glen.crussell.io — Google OAuth consent branding for the "Glen" app
     # (personal-use, unverified). Google (Aug 2026) requires a homepage +
     # privacy policy URL on an authorized domain to publish an OAuth app.

@@ -123,6 +123,15 @@ in {
   # openobserve-env.age.
   "rustfs-env.age".publicKeys = [ crussell ];
 
+  # ── Kaneo (kaneo.app) on bees — kaneo.crussell.io ────────────────
+  # POSTGRES_PASSWORD + AUTH_SECRET (both openssl rand -hex 32; the
+  # same file feeds kaneo.container and kaneo-postgres.container).
+  # The committed kaneo-env.age is a PLACEHOLDER — the owner must `rm`
+  # it and run `agenix -e secrets/kaneo-env.age` with the real values
+  # BEFORE merge/deploy (fresh values are only valid before the postgres
+  # volume's first init; see docs/kaneo/README.md § Secrets).
+  "kaneo-env.age".publicKeys = [ crussell ];
+
   # ── Hermes WebUI on bee ─────────────────────────────────────────
   # HERMES_WEBUI_PASSWORD for the web login gate at
   # https://hermes.internal.crussell.io (routed by bees Caddy to bee).

@@ -1,0 +1,13 @@
+[Unit]
+Description=Kaneo — internal network
+
+[Network]
+# Bridge network; DNS names = container names (kaneo, kaneo-postgres).
+Driver=bridge
+# Pinned subnet (podman would otherwise allocate randomly): the gateway
+# 10.99.53.1 is the peer address port-forwarded host traffic appears from,
+# which kaneo.container's TRUSTED_PROXIES must include for real client IPs.
+# 10.99.53.0/24 avoids the Nebula overlay (10.10.0.0/24), the LAN
+# (192.168.20.0/24) and podman's default 10.88.0.0/16 pool.
+Subnet=10.99.53.0/24
+Gateway=10.99.53.1
