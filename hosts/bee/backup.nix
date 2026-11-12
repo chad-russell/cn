@@ -57,6 +57,12 @@
       # secret-key/media-secret, claude-home/codex-home, and backups/
       # nightly.db (23:05 consistent copy). db + -wal travel together.
       "/home/crussell/tansweat-data"
+
+      # comfylab (hosts/bee/comfylab.nix): sqlite gallery + cached images,
+      # env/overrides.env, ssh/ key for the ComfyUI power button. Images are
+      # copies of what ComfyUI still holds on bees, but the gallery metadata
+      # and the ssh key are not recoverable from anywhere else.
+      "/home/crussell/comfylab-data"
     ];
 
     exclude = [

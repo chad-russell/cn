@@ -55,6 +55,9 @@
     # tansweat (https://tansweat.internal.crussell.io) — rootless quadlet
     # running the CI-built zot image; sweatshop's successor.
     ./tansweat.nix
+    # comfylab (https://comfylab.internal.crussell.io) — mobile ComfyUI
+    # front-end, rootless quadlet on 10.10.0.12:3350 (CI-built zot image).
+    ./comfylab.nix
     # Rootless podman API on Nebula :8750 for tansweat sandboxes
     ../../modules/tansweat-sandbox-host.nix
     { homelab.tansweatSandboxHost.enable = true; }

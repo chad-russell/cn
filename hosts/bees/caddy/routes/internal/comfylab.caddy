@@ -1,0 +1,9 @@
+# comfylab (bee — mobile ComfyUI front-end, 10.10.0.12:3350). SSE for job
+# progress on /api/events — flush immediately (trades precedent).
+# Nebula/LAN only, never public.
+@comfylab host comfylab.internal.crussell.io
+handle @comfylab {
+    reverse_proxy 10.10.0.12:3350 {
+        flush_interval -1
+    }
+}
