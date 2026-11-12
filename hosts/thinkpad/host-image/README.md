@@ -31,11 +31,18 @@ Currently:
     months). Restore = un-comment the cosmic lines in the Containerfile +
     `cjust image-rebuild` + `cjust cosmic-restore`. Settings stay backed up
     in-repo under `bubblebox/files/.config/cosmic/`.
-  - **Umbriel + DMS stack** (2026-11, replacing the retired Hyprland/MangoWM
-    trial): `umbriel-nightly` + `xdg-desktop-portal-umbriel-nightly` from the
-    Terra repo, and `dms` / `dms-cli` / `dux-search` / `dgop` / `matugen`(4.2)
-    from the `duxlabs/dms` COPR (step 2.8) — the second GDM session next to
-    niri, shell = DMS, config at `../bubblebox/files/.config/umbriel/config.toml`.
+  - **ShojiWM** (2026-11, the second GDM session next to niri; the
+    second-session lineage: hyprland+mango trial → Umbriel + DMS →
+    ShojiWM + shoji-bar-4, with Umbriel + DMS retired 2026-11):
+    source-built in the image at a pinned commit (step 2.8 — ShojiWM ships
+    no distro packages yet). Installs `/usr/bin/shoji_wm` + the xwayland-
+    satellite support, the TS runtime under `/usr/lib/shojiwm/`, the GDM
+    entry `shojiwm.desktop` (`DesktopNames=ShojiWM`), and the compositor's
+    own xdg-desktop-portal backend (ScreenCast). Its shell **shoji-bar-4**
+    is user-side at `~/.config/shoji-bar-4` (Rust build via the rust-dev
+    devshell — launched by ShojiWM's config if present, nothing baked);
+    the user config is `../bubblebox/files/.config/shojiwm`, seeded from
+    the image's `/usr/share/shojiwm/default-config`.
 - installs small host convenience packages:
   - `just` + `fzf` — back the `cjust` task menu (see `hosts/thinkpad/Justfile`);
     host-native because `cjust` must work before any sandbox is set up
