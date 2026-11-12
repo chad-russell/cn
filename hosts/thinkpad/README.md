@@ -103,9 +103,11 @@ compositor stack; `nodejs` stays for the npm-managed dev CLIs --
 railway, agent-browser). See
 `host-image/README.md`.
 
-The image is built **on bees** (daily `thinkpad-image-build.timer` + on-demand
-`cjust image-rebuild`) and published to bees's zot registry
-(`10.10.0.6:5000/cn/thinkpad-host:stable`, Nebula-only). `cjust image-upgrade`
+The image is built **on bees** and published to bees's zot registry
+(`10.10.0.6:5000/cn/thinkpad-host:stable`, Nebula-only): merging an image PR
+promotes the exact image CI built and verified for it (no rebuild), and the
+daily `thinkpad-image-build.timer` rebuilds for Fedora updates (on-demand:
+`cjust image-rebuild`). See `host-image/README.md`. `cjust image-upgrade`
 pulls only the changed layers and stages the new deployment; it goes live on
 the next reboot. The bubblebox timer `thinkpad-image-update.timer` automates
 the routine path (daily stage + ntfy lag alert; see

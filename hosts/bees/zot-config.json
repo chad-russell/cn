@@ -20,6 +20,10 @@
             {
               "patterns": ["^[0-9]+-"],
               "mostRecentlyPushedCount": 3
+            },
+            {
+              "patterns": ["^ctx-[0-9a-f]+$"],
+              "mostRecentlyPushedCount": 5
             }
           ]
         },
