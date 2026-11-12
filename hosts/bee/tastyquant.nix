@@ -113,7 +113,7 @@ in {
 
   # Serving quadlets (zot image): materialize read-only under /etc,
   # symlink into crussell's user quadlet search path, reload the user
-  # manager (mechanics as sweatshop.nix D-017).
+  # manager (mechanics as sweatshop.nix).
   environment.etc."tastyquant-quadlets/tastyquant-desk.container" = {
     source = ./tastyquant-quadlets/tastyquant-desk.container;
     mode = "0644";

@@ -69,16 +69,6 @@ in {
   # make both runners churn. Same generator on gateway.
   "forgejo-runner-token-bees.age".publicKeys = [ crussell ];
 
-  # ── Sweatshop host channel (0043) SSH key ──────────────────────
-  # Dedicated ed25519 key for sweatshop's exec tool (repo docs/0043):
-  # the app holds NO credential secrets itself — env names point at
-  # this agenix file, mounted into the sweatshop container by
-  # hosts/bee/sweatshop.nix. One key authorized on every NixOS host
-  # (modules/base-server.nix); per-host env vars (HOST_BEE_SSH_KEY_FILE
-  # …) all reference the same mounted file. Revocation = remove the
-  # authorized_keys entry + rekey.
-  "sweatshop-host-key.age".publicKeys = [ crussell ];
-
   # ── Forgejo API token (tea, git.crussell.io) ───────────────────
   # FORGEJO_TOKEN (single line) — scoped write:repository, write:issue,
   # read:issue, write:user, read:user. Exported to login shells by the
@@ -92,17 +82,6 @@ in {
   # bot (hermes-glen). This env carries its token plus GLOO_API_KEY
   # (work provider). Historical name kept to avoid re-encrypting.
   "hermes-bee-env-glen.age".publicKeys = [ crussell ];
-
-  # ── Sweatshop skills sidecar (bee) ─────────────────────────────
-  # RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY for the sweatshop-rustfs
-  # rootless quadlet (hosts/bee/sweatshop/rustfs.container) and the
-  # bucket-init unit — a DEDICATED pair, not the nas root keys above
-  # (per-service keys were deferred on nas until a second consumer;
-  # sweatshop sidesteps the shared instance entirely — see
-  # docs/rustfs-migration/PLAN.md topology note). Values also ride the
-  # checkout's gitignored .env.local as SKILLS_S3_ACCESS_KEY_ID /
-  # SKILLS_S3_SECRET_ACCESS_KEY (app-side names).
-  "sweatshop-rustfs-env.age".publicKeys = [ crussell ];
 
   # ── Central logging: OpenObserve (bees) + RustFS (nas) ──────────
   # openobserve-env: ZO_ROOT_USER_EMAIL / ZO_ROOT_USER_PASSWORD (UI

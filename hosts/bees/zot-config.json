@@ -28,7 +28,7 @@
           ]
         },
         {
-          "repositories": ["tansweat/*"],
+          "repositories": ["sweatshop/*"],
           "deleteUntagged": true,
           "keepTags": [
             {

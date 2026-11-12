@@ -7,7 +7,7 @@
 # GitOps flow: merge to comfylab main → bees runner builds the image →
 # zot 10.10.0.6:5000/comfylab/app:main → ssh bee: pull + `systemctl
 # --user restart comfylab.service`. This module only installs the quadlet
-# (mechanics as tansweat.nix: read-only under /etc, symlinked into
+# (mechanics as sweatshop.nix: read-only under /etc, symlinked into
 # crussell's user quadlet path, user manager reloaded). Activation never
 # starts or restarts the app; CI and the nightly podman-auto-update
 # (AutoUpdate=registry) own restarts.
@@ -46,7 +46,7 @@ in {
     chmod 700 ${dataDir}/ssh
   '';
 
-  # zot (bees, Nebula-only) serves plain HTTP. Same entry as tansweat.nix;
+  # zot (bees, Nebula-only) serves plain HTTP. Same entry as sweatshop.nix;
   # list options concatenate, so the duplicate is harmless and keeps this
   # module self-contained.
   virtualisation.containers.registries.insecure = [ "10.10.0.6:5000" ];

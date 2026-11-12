@@ -22,8 +22,8 @@
     # Hindsight agent-memory server (hindsight.internal.crussell.io) —
     # API+MCP :8888, UI :9999, rootless quadlet; coding agents connect here.
     ./hindsight.nix
-    # sweatshop software factory (http://bee:3300) — rootless quadlet serving
-    # a production build of ~/sweatshop; deploys via its scripts/deploy.sh.
+    # Renamed sweatshop successor (https://sweatshop.internal.crussell.io).
+    # Old app retired; repo retained as chad/sweatshop-legacy.
     ./sweatshop.nix
     # Nightly podman auto-update for rootless quadlets that set
     # AutoUpdate=registry (hindsight, filebrowser)
@@ -52,15 +52,12 @@
     #                      # superseded by tastyquant (./tastyquant.nix,
     #                      # trades.internal.crussell.io)
     ./tastyquant.nix
-    # tansweat (https://tansweat.internal.crussell.io) — rootless quadlet
-    # running the CI-built zot image; sweatshop's successor.
-    ./tansweat.nix
     # comfylab (https://comfylab.internal.crussell.io) — mobile ComfyUI
     # front-end, rootless quadlet on 10.10.0.12:3350 (CI-built zot image).
     ./comfylab.nix
-    # Rootless podman API on Nebula :8750 for tansweat sandboxes
-    ../../modules/tansweat-sandbox-host.nix
-    { homelab.tansweatSandboxHost.enable = true; }
+    # Rootless podman API on Nebula :8750 for sweatshop sandboxes
+    ../../modules/sweatshop-sandbox-host.nix
+    { homelab.sweatshopSandboxHost.enable = true; }
     ./forgejo-runner.nix # Actions runner for git.crussell.io (Forgejo on gateway)
     ./backup.nix
     ./tailscale.nix
