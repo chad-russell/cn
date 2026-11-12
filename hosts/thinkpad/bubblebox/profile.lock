@@ -1,5 +1,5 @@
-id = "e25db48e04a8ee8d090990c919bda9c1bc421ac1b1b4ffb851540f220c93eefb"
-created_at = 1794004049
+id = "11f932e207bfa892fffffbbc5b48f397488c303a475f19ab1224441caeb71024"
+created_at = 1794008821
 roots = [
     "age",
     "age-keygen",
@@ -15,6 +15,7 @@ roots = [
     "oh-my-posh",
     "pnpm",
     "psql",
+    "railway",
     "rg",
     "rust-dev",
     "sops",
@@ -129,7 +130,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "pnpm"
-digest = "382a882ee8e9a2fabd044ab6b89af3eff97a2cb340372c394f062291fe05a981"
+digest = "bfaf9bf81d3f94f992d2cf32f60b4f927dbb33b759346ba6ceaf844dde2a6109"
 
 [package.origin]
 kind = "cache"
@@ -138,6 +139,14 @@ url = "https://bubblebox.internal.crussell.io"
 [[package]]
 name = "psql"
 digest = "98c21c499b2165bdd181f74751787b706270d21f4ec961bf2e4595f0b768f54f"
+
+[package.origin]
+kind = "cache"
+url = "https://bubblebox.internal.crussell.io"
+
+[[package]]
+name = "railway"
+digest = "8feea9811e4e9d12fd5bfe78f16ecb62a6cba8a85655eca37bb852d97e323f33"
 
 [package.origin]
 kind = "cache"
@@ -185,7 +194,7 @@ url = "https://bubblebox.internal.crussell.io"
 
 [[package]]
 name = "uv"
-digest = "5e5c53a490a4c981ad18de75c590d84a0d4537ad213b88c7dffbe97e7968b685"
+digest = "17070db9b57f5824c631a78b6974e222d0b9b003ed98af0b09ea178bf5f621b3"
 
 [package.origin]
 kind = "cache"
@@ -456,6 +465,10 @@ dst = ".config/bubblebox/entrypoints/wl-party.toml"
 blob = "6197ab7af6ea564995537d7a6a60f30a30c14625eba46ef715f47098fa1b2c7b"
 
 [[file]]
+dst = ".config/bubblebox/entrypoints/sops.toml"
+blob = "9ffabf45272cabb52ab2e305956c7834265aff6ed7b1c968f53607719ad0cb4f"
+
+[[file]]
 dst = ".local/bin/zen-browser"
 blob = "e154842cd6b489d757daeeea9df58ea0ccc041c57d7eb411b8556e608382bece"
 
@@ -465,7 +478,7 @@ blob = "185969847a108f50467d6aa4b877279279668c4d504feb4a5e36f17f7971a752"
 
 [[file]]
 dst = ".local/bin/thinkpad-image-health"
-blob = "aa3debcb2abc73e0447b51cabbdd63242cf78ebd69b97037045e54810ad419e0"
+blob = "6e9a2b3c5f003fd50d0accf0d03311a7d71c47273a47bc3ea196e735f80dd725"
 
 [[file]]
 dst = ".local/bin/thinkpad-bubblebox-check"

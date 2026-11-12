@@ -145,7 +145,7 @@ blur_optimized = false
 
 # Applications (niri: Mod+T wezterm, Mod+B zen, Mod+F nautilus; + Return).
 "Mod+Return" = { action = "spawn wezterm", repeat = false }
-"Mod+T" = { action = "spawn wezterm", repeat = false }
+"Mod+T" = { action = "spawn ghostty", repeat = false }
 "Mod+B" = { action = "spawn flatpak run app.zen_browser.zen", repeat = false }
 "Mod+F" = { action = "spawn nautilus --new-window", repeat = false }
 
