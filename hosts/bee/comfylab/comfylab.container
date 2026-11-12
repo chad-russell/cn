@@ -41,8 +41,9 @@ Environment=PORT=3350
 Environment=HOST=10.10.0.12
 Environment=COMFY_URL=http://10.10.0.6:8188
 Environment=DATA_DIR=/data
-# Layered env: this file last so mutable knobs win (edit + restart).
-EnvironmentFile=/home/crussell/comfylab-data/env/overrides.env
+# Layered env: this file last so mutable knobs win (edit + restart). The `-'
+# prefix keeps a missing overrides.env non-fatal on first boot.
+EnvironmentFile=-/home/crussell/comfylab-data/env/overrides.env
 Volume=/home/crussell/comfylab-data:/data
 Exec=node server/dist/index.js
 
