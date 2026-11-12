@@ -85,7 +85,35 @@ let
         --disable-mmap --gpu-only --disable-smart-memory \
         --cache-none --bf16-vae
   '';
+  # comfylab power button (bee → bees): forced-command wrapper for the
+  # restricted SSH key below. ONLY systemctl start/stop/is-active on
+  # comfyui.service is allowed; everything else is denied.
+  comfylabPower = pkgs.writeShellScript "comfylab-comfy-power" ''
+    case "''${SSH_ORIGINAL_COMMAND:-}" in
+      "systemctl start comfyui.service"|"systemctl stop comfyui.service"|"systemctl is-active comfyui.service")
+        exec /run/wrappers/bin/sudo -n ${config.systemd.package}/bin/systemctl ''${SSH_ORIGINAL_COMMAND#systemctl }
+        ;;
+      *)
+        echo "comfylab power key: only systemctl start/stop/is-active comfyui.service is allowed" >&2
+        exit 128
+        ;;
+    esac
+  '';
 in {
+  # ── comfylab power button (bee → bees) ─────────────────────────────
+  # comfylab's Start/Stop ComfyUI button ssh's here as crussell with a
+  # dedicated key (~/comfylab-data/ssh on bee, restic-covered). The key is
+  # pinned to the comfylabPower forced command: it ONLY runs systemctl
+  # start/stop/is-active on comfyui.service. `restrict` kills
+  # pty/forwarding/x11, so the key grants exactly the power button and
+  # nothing else (sudo itself is unrestricted fleet-wide —
+  # wheelNeedsPassword=false — hence the forced command being the real
+  # boundary).
+  users.users.crussell.openssh.authorizedKeys.keys = lib.mkAfter [
+    ''
+      restrict,command="${comfylabPower}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB09SRtu5qpg1xtIeEHgq8jzBtYF5TiyPhZpQAP/g9pc comfylab comfy power (bee → bees)''
+  ];
+
   # Persistent dirs on local NVMe. Non-recursive chown keeps the tree
   # user-browsable (container writes as root; world-readable anyway).
   system.activationScripts.comfyui-dirs = lib.stringAfter [ "users" ] ''

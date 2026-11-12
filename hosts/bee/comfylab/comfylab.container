@@ -1,0 +1,55 @@
+# comfylab — mobile-first ComfyUI front-end (repo
+# git.crussell.io/chad/comfylab). Serves https://comfylab.internal.crussell.io
+# via bees Caddy (hosts/bees/caddy/routes/internal/comfylab.caddy) →
+# 10.10.0.12:3350.
+#
+# Runs the CI-built zot image (:main). Deploy flow (no cn change needed):
+#   merge to chad/comfylab main → bees Forgejo runner builds the image →
+#   pushes 10.10.0.6:5000/comfylab/app:main → CI ssh's to bee, pulls and
+#   `systemctl --user restart comfylab.service`. The nightly
+#   podman-auto-update (AutoUpdate=registry) catches any missed restart.
+# NixOS activation (hosts/bee/comfylab.nix) only installs/reloads this
+# file; it never starts or restarts the app.
+#
+# First boot, before the first image push: the pull fails and the unit
+# retries (Restart=always). Expected and harmless.
+#
+# State: /home/crussell/comfylab-data (sqlite gallery + cached images +
+# env/overrides.env + ssh/ key for the ComfyUI power button) — in bee's
+# restic paths (backup.nix).
+#
+# ComfyUI (bees, hosts/bees/comfyui.nix) is on-demand and keyless on
+# http://10.10.0.6:8188 (Nebula). The Start/Stop button ssh's to bees as
+# crussell with the dedicated key in /data/ssh — that key is pinned on
+# bees to a forced command that only allows systemctl start/stop/
+# is-active comfyui.service (see hosts/bees/comfyui.nix).
+[Unit]
+Description=comfylab (mobile ComfyUI front-end, 10.10.0.12:3350 → comfylab.internal)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=10.10.0.6:5000/comfylab/app:main
+ContainerName=comfylab
+AutoUpdate=registry
+# Host network: bind the Nebula IP directly and reach ComfyUI on bees
+# (tansweat precedent).
+Network=host
+WorkingDir=/app
+Environment=NODE_ENV=production
+Environment=PORT=3350
+Environment=HOST=10.10.0.12
+Environment=COMFY_URL=http://10.10.0.6:8188
+Environment=DATA_DIR=/data
+# Layered env: this file last so mutable knobs win (edit + restart).
+EnvironmentFile=/home/crussell/comfylab-data/env/overrides.env
+Volume=/home/crussell/comfylab-data:/data
+Exec=node server/dist/index.js
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
