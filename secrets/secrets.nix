@@ -123,6 +123,17 @@ in {
   # openobserve-env.age.
   "rustfs-env.age".publicKeys = [ crussell ];
 
+  # ── Kaneo (kaneo.app) on bees — kaneo.crussell.io ────────────────
+  # kaneo-env: POSTGRES_PASSWORD + AUTH_SECRET for the Kaneo stack
+  # (both openssl rand -hex 32; the same file feeds kaneo.container and
+  # kaneo-postgres.container). Encrypted at creation time (2026-11-12)
+  # by an agent session using `age -r <crussell key>` — no plaintext
+  # ever committed; values generated fresh for this install (valid:
+  # postgres volume not yet initialized). Rotating later requires
+  # regenerating both the file and the postgres volume; see
+  # docs/kaneo/README.md § Secrets.
+  "kaneo-env.age".publicKeys = [ crussell ];
+
   # ── Hermes WebUI on bee ─────────────────────────────────────────
   # HERMES_WEBUI_PASSWORD for the web login gate at
   # https://hermes.internal.crussell.io (routed by bees Caddy to bee).

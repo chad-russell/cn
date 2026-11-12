@@ -1,0 +1,46 @@
+[Unit]
+Description=Kaneo (project management) — web + API
+After=network-online.target
+Wants=network-online.target
+# DB must be up (and healthy — Notify=healthy below) before the app
+# starts, so first-boot migrations never race a booting database.
+Requires=kaneo-postgres.service
+After=kaneo-postgres.service
+# Widen the start-limit window so OnFailure can actually fire
+# (caddy precedent: 5 restarts can never land inside the 10s default).
+StartLimitIntervalSec=60
+OnFailure=ntfy-failure@kaneo.service
+
+[Container]
+Image=ghcr.io/usekaneo/kaneo:2.49.0
+# Deliberately NOT AutoUpdate=registry — version-pinned; upgrades are
+# manual (bump tag + deploy, see docs/kaneo/README.md § Upgrades).
+ContainerName=kaneo
+# Public origin (gateway Caddy terminates TLS, proxies here over Nebula).
+Environment=KANEO_CLIENT_URL=https://kaneo.crussell.io
+# DB connection (POSTGRES_PASSWORD comes from the agenix env file).
+Environment=POSTGRES_HOST=kaneo-postgres
+Environment=POSTGRES_DB=kaneo
+Environment=POSTGRES_USER=kaneo
+# Proxy chain: gateway Caddy (Nebula 10.10.0.2) → bees host port → this
+# container's bundled nginx (loopback peer) → API. Rootful podman's netavark
+# port-forward DNATs, which preserves the gateway's source IP; SNAT'd
+# (hairpin) traffic instead appears from the kaneo.network gateway
+# (10.99.53.1, pinned in kaneo.network). Trust both proxy IPs plus the
+# loopback defaults so real client IPs survive for rate limits and
+# session records.
+Environment=TRUSTED_PROXIES=127.0.0.0/8,::1/128,10.99.53.1/32,10.10.0.2/32
+Environment=TZ=America/New_York
+# POSTGRES_PASSWORD + AUTH_SECRET (agenix).
+EnvironmentFile=/run/agenix/kaneo-env
+Network=kaneo.network
+# All-interfaces bind (house pattern: gateway Caddy proxies over Nebula;
+# the router does not forward :5173 inbound from the internet).
+PublishPort=5173:5173
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
