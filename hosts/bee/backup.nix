@@ -40,23 +40,18 @@
 
       "/home/crussell/.local/share/containers"
 
-      # sweatshop (http://bee:3300, sweatshop.nix): sqlite db + WAL, the
-      # Workflow SDK local world (in-flight runs, gates, hooks), and
-      # data/backups/ (pre-deploy snapshots + the 23:00 nightly.db, a
-      # guaranteed-consistent copy). db + -wal travel together — SQLite
-      # recovers the pair; a bare .db loses committed transactions.
-      "/home/crussell/sweatshop/data"
-
       # tastyquant (hosts/bee/tastyquant.nix): v2 portfolio db + WAL, the
       # executor audit chain (order safety record — irreplaceable), kill
       # switch, scan/capture logs, backtests. Moved out of the checkout
       # 2026-10-24 (image-deploy pilot).
       "/home/crussell/tastyquant-data"
 
-      # tansweat (hosts/bee/tansweat.nix): sqlite db + WAL, generated
+      # sweatshop (hosts/bee/sweatshop.nix): sqlite db + WAL, generated
       # secret-key/media-secret, claude-home/codex-home, and backups/
       # nightly.db (23:05 consistent copy). db + -wal travel together.
-      "/home/crussell/tansweat-data"
+      # Old app data stays read-only in ~/sweatshop-old after retirement
+      # 2026-11 and is not backed up.
+      "/home/crussell/sweatshop-data"
 
       # comfylab (hosts/bee/comfylab.nix): sqlite gallery + cached images,
       # env/overrides.env, ssh/ key for the ComfyUI power button. Images are

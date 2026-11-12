@@ -1,8 +1,8 @@
-# ── tansweat sandbox host: rootless podman API over TCP on Nebula ────
+# ── sweatshop sandbox host: rootless podman API over TCP on Nebula ────
 #
-# tansweat (bee 10.10.0.12:3330) creates per-thread sandbox containers
+# sweatshop (bee 10.10.0.12:3330) creates per-thread sandbox containers
 # on remote engines through dockerode → this API. One line per host:
-#   homelab.tansweatSandboxHost.enable = true;
+#   homelab.sweatshopSandboxHost.enable = true;
 #
 # Shape: crussell user socket+service pair (linger is on, so it starts at
 # boot with no login). The socket binds ONLY <nebula-ip>:8750; podman is
@@ -20,15 +20,15 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.homelab.tansweatSandboxHost;
+  cfg = config.homelab.sweatshopSandboxHost;
   hostMeta = import ../lib/host-meta.nix;
   nebulaIp = hostMeta.${config.networking.hostName}.nebula;
   port = cfg.port;
   portStr = toString port;
 in {
-  options.homelab.tansweatSandboxHost = {
+  options.homelab.sweatshopSandboxHost = {
     enable = lib.mkEnableOption
-      "rootless podman API on <nebula-ip>:8750 for tansweat sandboxes";
+      "rootless podman API on <nebula-ip>:8750 for sweatshop sandboxes";
     port = lib.mkOption {
       type = lib.types.port;
       default = 8750;
@@ -36,13 +36,14 @@ in {
     allowedFrom = lib.mkOption {
       type = lib.types.str;
       default = "${hostMeta.bee.nebula}/32";
-      description = "Nebula CIDR allowed to reach the API (the tansweat host).";
+      description =
+        "Nebula CIDR allowed to reach the API (the sweatshop host).";
     };
   };
 
   config = lib.mkIf cfg.enable {
-    systemd.user.sockets.tansweat-podman-api = {
-      description = "tansweat podman API socket (${nebulaIp}:${portStr})";
+    systemd.user.sockets.sweatshop-podman-api = {
+      description = "sweatshop podman API socket (${nebulaIp}:${portStr})";
       wantedBy = [ "sockets.target" ];
       unitConfig.ConditionUser = "crussell";
       socketConfig = {
@@ -51,10 +52,10 @@ in {
       };
     };
 
-    systemd.user.services.tansweat-podman-api = {
-      description = "tansweat podman API (socket-activated, rootless)";
-      requires = [ "tansweat-podman-api.socket" ];
-      after = [ "tansweat-podman-api.socket" ];
+    systemd.user.services.sweatshop-podman-api = {
+      description = "sweatshop podman API (socket-activated, rootless)";
+      requires = [ "sweatshop-podman-api.socket" ];
+      after = [ "sweatshop-podman-api.socket" ];
       unitConfig.ConditionUser = "crussell";
       # newuidmap/newgidmap (setuid wrappers) + conmon/crun via the system
       # profile — the default user-unit PATH lacks /run/wrappers/bin.

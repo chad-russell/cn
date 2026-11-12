@@ -85,30 +85,19 @@ Original candidate triggers (second restic target, artifact store, hindsight
 attachments, immich cold tier) remain open for future consumers — point them
 at `10.10.0.3:9000`, don't spawn new sidecars.
 
-## Decision record: sweatshop skills store — sidecar, NOT the nas instance (2026-10-30)
+## Retired decision record: legacy sweatshop skills sidecar (2026-10-30)
 
-sweatshop's skills feature (0088, S3 bucket of SKILL.md families) looked
-like a nas consumer and was decided the other way. The rule was applied
-to the data, not the app: skills are stack-private, KB-scale, recreated
-from git history + chat transcripts — fails survival, multiplicity and
-operational weight all three → per-project sidecar, the same topology
-as the minio swaps. Two extra weights on the sidecar side:
+The old app (`chad/sweatshop-legacy`) used a dedicated rootless RustFS
+skills sidecar on bee. Its skills were stack-private and recoverable
+from git history and chat transcripts, so the 2026-10-30 decision kept
+them outside the shared nas instance. The named volume fell inside
+bee's existing restic coverage; the sidecar also traveled with the app.
 
-- **Backup asymmetry.** A rootless named volume on bee lands under
-  `~/.local/share/containers/volumes` — inside bee's existing restic
-  backup (backup.nix excludes image layers only). The nas instance has
-  NO restic coverage (deferred above; nas is the backup target host).
-  For irreplaceable-ish data the sidecar is the safer place today.
-- **Hermeticity.** sweatshop is laptop-portable by design; the sidecar
-  rides the same `sweatshop-harness` network and dies with the stack.
-
-Built as `hosts/bee/sweatshop/rustfs.container` (rootless quadlet,
-crussell user units, same digest as nas, no published port, dedicated
-keypair in `sweatshop-rustfs-env.age`, bucket `skills` bootstrapped by
-the bucket-init unit in sweatshop.nix). The app reads it through
-`SKILLS_S3_*` env (see the module header). If skills ever outgrow the
-stack (shared across hosts, artifact-grade retention), THAT is the
-trigger to move them to the nas instance — lift and shift the bucket.
+The old app, sidecar, bucket-init unit, harness network, and agenix
+mounts retired 2026-11. Its checkout and data remain read-only at
+`~/sweatshop-old`. The renamed successor is configured by
+`hosts/bee/sweatshop.nix`; this historical decision does not describe
+its storage topology.
 
 ## The swap recipe (identical for every sidecar)
 

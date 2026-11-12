@@ -1,7 +1,7 @@
-# tansweat app previews (bee — tansweat.service on 10.10.0.12:3330, the
-# same upstream as tansweat.internal.crussell.io). Each sandbox preview
+# sweatshop app previews (bee — sweatshop.service on 10.10.0.12:3330, the
+# same upstream as sweatshop.internal.crussell.io). Each sandbox preview
 # gets its own subdomain, https://<slug>.preview.internal.crussell.io
-# (slug: 12 chars [A-Za-z0-9]); tansweat reads the slug from the
+# (slug: 12 chars [A-Za-z0-9]); sweatshop reads the slug from the
 # original Host header — Caddy passes Host through by default, don't
 # rewrite it — and routes to the right sandbox container. Dev servers
 # hold streams open (HMR WebSockets, SSE): pass through and flush

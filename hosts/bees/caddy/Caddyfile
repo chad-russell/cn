@@ -25,9 +25,9 @@
     import /etc/caddy/imports/routes/internal/*.caddy
 }
 
-# tansweat app previews — one subdomain per sandbox preview:
+# sweatshop app previews — one subdomain per sandbox preview:
 # https://<slug>.preview.internal.crussell.io. Same upstream as
-# tansweat.internal.crussell.io (bee 10.10.0.12:3330); tansweat reads
+# sweatshop.internal.crussell.io (bee 10.10.0.12:3330); sweatshop reads
 # the slug from the Host header (passed through untouched) and routes
 # to the right sandbox. The slug labels sit one level deeper than
 # *.internal.crussell.io, so this site needs its own wildcard cert —

@@ -33,7 +33,7 @@ Image=10.10.0.6:5000/comfylab/app:main
 ContainerName=comfylab
 AutoUpdate=registry
 # Host network: bind the Nebula IP directly and reach ComfyUI on bees
-# (tansweat precedent).
+# (sweatshop precedent).
 Network=host
 WorkingDir=/app
 Environment=NODE_ENV=production
