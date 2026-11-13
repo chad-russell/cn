@@ -1,5 +1,5 @@
-id = "11f932e207bfa892fffffbbc5b48f397488c303a475f19ab1224441caeb71024"
-created_at = 1794008821
+id = "a43cdb76b4d42ea00817ae2e8169a3d178a98746694bacf24ec73f22f003c543"
+created_at = 1794606923
 roots = [
     "age",
     "age-keygen",
@@ -286,11 +286,115 @@ blob = "1a4f653f7cf2a3218dc0e8c5dfb561132fb4c662f24e74bf92e6269c60f6d9a7"
 
 [[file]]
 dst = ".config/dconf/bubblebox.d/00-thinkpad"
-blob = "c888022072f298cb81a6f9335dbe6f70d8899d52b2a43e5fbdce81fafacac1f1"
+blob = "50eb0de153b47862628d733960f9f96f380c3283930115d4a575defc6c161884"
 
 [[file]]
 dst = ".config/niri/config.kdl"
 blob = "e57761db070e5aa7e5fdca2ba6da1cecfbdab17461013eb9a88f95ed42db53de"
+
+[[file]]
+dst = ".config/shojiwm/.editorconfig"
+blob = "ef4dc867a9476ec5e9a856562ec2696d9b94620fcc4e1211f3a7147c6e6f1cd9"
+
+[[file]]
+dst = ".config/shojiwm/README.md"
+blob = "6e6454f7c22ffc62a2929c93a6da973737436e244fae6a22a33af41431371b16"
+
+[[file]]
+dst = ".config/shojiwm/dev/preview-state.ts"
+blob = "325b165f4f16f715454c9b4373a86ec06dbd76b6cf6c7f6b4db7d173c9c1bdd5"
+
+[[file]]
+dst = ".config/shojiwm/dev/preview.sh"
+blob = "523220f1179c1ebb1167ad4efb4852da8791ec2ca52375c4a1167fda01cbbc32"
+
+[[file]]
+dst = ".config/shojiwm/dev/preview.tsx"
+blob = "8c8e484bd0fed1d69ba378ba52c580ebf6136e3b6a3ea35ccb5d979aa287e164"
+
+[[file]]
+dst = ".config/shojiwm/dev/send-theme.py"
+blob = "d33f5658c55be83021c1f7bb5adce4f49fc51b4658fadc29c18c52db588c704b"
+
+[[file]]
+dst = ".config/shojiwm/package.json"
+blob = "12560405072a8f0e73ac963acb5cb17fca74ef530a89114666d26110001b3977"
+
+[[file]]
+dst = ".config/shojiwm/src/drag-and-drop.tsx"
+blob = "d6b5268b761c2a6ff549cabdb05920a5c23e1472c040408d24ca2cdd8f8f604d"
+
+[[file]]
+dst = ".config/shojiwm/src/effect/backdrop-fade.frag"
+blob = "b8233a6408b9c271cb212709c5981d5ecbfc3b90f0c4ddf77d27756c086f3d8c"
+
+[[file]]
+dst = ".config/shojiwm/src/effect/dnd-badge-glyph.frag"
+blob = "3dc5f64ccefa40d382070c55c80eb710606b8afa3c71234dedba8f0065efc7cf"
+
+[[file]]
+dst = ".config/shojiwm/src/effect/dnd-kind-icon.frag"
+blob = "3a72a658e5614277dde277e852a63255fe0986b2585aa8669f6b43096a631118"
+
+[[file]]
+dst = ".config/shojiwm/src/effect/layer-blur-mask.frag"
+blob = "7ff1cb76225c22f2b33aab3612a594ed0860f605552b2b74728b8e1b5f120ced"
+
+[[file]]
+dst = ".config/shojiwm/src/flip-3d.tsx"
+blob = "cec23a40be0ef03b73a8b590cfe7d671f1ca2df062831d86f101f8a54c5a84d7"
+
+[[file]]
+dst = ".config/shojiwm/src/lid-policy.ts"
+blob = "29a4fe898e50c975f52dac3e22dad17ebb3dc7a53bbc442190dc114ce5427f4e"
+
+[[file]]
+dst = ".config/shojiwm/src/md3e/decoration.tsx"
+blob = "f84577c29b450c5dfa01af66b73f39fd2a654976b1062304e7eb0cfd607120bc"
+
+[[file]]
+dst = ".config/shojiwm/src/md3e/motion.ts"
+blob = "743009f53f17819fce4968467c06cf7b64b38049f86749e79915208a42d5e6ce"
+
+[[file]]
+dst = ".config/shojiwm/src/md3e/shaders/caption-button.frag"
+blob = "800cbf611dfcbb62849c390198f5857a4ae16e213cc13c5eca3e64befa03c6d7"
+
+[[file]]
+dst = ".config/shojiwm/src/md3e/shaders/focus-border.frag"
+blob = "5e183b4161b74261689f7aed8a415dbd5ae06b310a60119102a9f529eb6a4d61"
+
+[[file]]
+dst = ".config/shojiwm/src/md3e/theme.ts"
+blob = "f3d54c6cbc79598db726916ea09339e3c18163d888ddbe4bd730489239772f6d"
+
+[[file]]
+dst = ".config/shojiwm/src/window-animation.ts"
+blob = "bc77065733b698c469efa49ba299ac03201642298c07b8eb71b9afda4c1040e1"
+
+[[file]]
+dst = ".config/shojiwm/src/window-composition.tsx"
+blob = "faf6a0df8484598bce346e1a5ccc28391a3efd8fa2f957218e1a7c8badba526e"
+
+[[file]]
+dst = ".config/shojiwm/src/window-grid.tsx"
+blob = "0f64fc3f66ed66326a93ba2282a7d205615b6d515b190458859f499e9ff91f48"
+
+[[file]]
+dst = ".config/shojiwm/src/window-manager.ts"
+blob = "369317cc1c81ae2acfe0bb1fed60720405020abe87188b5cc81ee30ca50ff197"
+
+[[file]]
+dst = ".config/shojiwm/src/window-switcher.tsx"
+blob = "391a4f1424915f59b6d4002f2d86955fce275f90e1db17fe961a76e54364b0f3"
+
+[[file]]
+dst = ".config/shojiwm/src/index.tsx"
+blob = "d826e7208182a17cff260f086fa241e44490b8eb234348d6ce8574ea98803f25"
+
+[[file]]
+dst = ".config/shojiwm/tsconfig.json"
+blob = "8880e1e367a68768f2ee144ab2ae88de1fb4bfa93b1ff288e30bc1bf42a79115"
 
 [[file]]
 dst = ".gitconfig"
@@ -302,7 +406,11 @@ blob = "1dd2ebc64e0f984e63609c9284a8cb526fffbf3e060d02a7c41197bfb6fdde83"
 
 [[file]]
 dst = ".config/xdg-desktop-portal/portals.conf"
-blob = "8ae6fa5f02827c15f4b80c41dd31142874539973f78dad9c37e9a00ced099954"
+blob = "1a51f9ee34d7655e2d92c5983e28a99a126e1759860b9f612646231795121b36"
+
+[[file]]
+dst = ".config/xdg-desktop-portal/shojiwm-portals.conf"
+blob = "036043de1e3e3884897a03ab4bce152e68420c53e0508bdceea4a7d15d49a321"
 
 [[file]]
 dst = ".config/monitors.xml"
@@ -474,7 +582,7 @@ blob = "185969847a108f50467d6aa4b877279279668c4d504feb4a5e36f17f7971a752"
 
 [[file]]
 dst = ".local/bin/thinkpad-image-health"
-blob = "6e9a2b3c5f003fd50d0accf0d03311a7d71c47273a47bc3ea196e735f80dd725"
+blob = "cdd44cbe33baae0057fcf11d6b791f2788b6fdbe9891b3273d07e5ec71065b46"
 
 [[file]]
 dst = ".local/bin/thinkpad-bubblebox-check"
