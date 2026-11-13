@@ -28,6 +28,15 @@
     # doesn't ship. The module builds its own package internally.
     hermes-agent = { url = "github:NousResearch/hermes-agent"; };
 
+    # ── Forgejo pin (gateway) ─────────────────────────────────────
+    # Like hermes-agent, deliberately does NOT follow our nixpkgs: the NixOS
+    # forgejo module's default package is forgejo-lts (the 15.x line), so the
+    # weekly lock bumps never move the forge forward — gateway wants the
+    # latest stable feature release. nixos-26.05 branch HEAD at this rev
+    # carries forgejo 17.0.1. Drop this pin once forgejo-lts reaches 17.x.
+    nixpkgs-forgejo.url =
+      "github:NixOS/nixpkgs/ac588ef1c914865dad517b337ea0eb9694a4021c";
+
     # ── Hermes WebUI (community web frontend for Hermes Agent) ────────
     # https://github.com/nesquena/hermes-webui — runs the agent in-process
     # against HERMES_HOME. Like hermes-agent, does NOT follow our nixpkgs;
@@ -38,7 +47,7 @@
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, disko, agenix
-    , hermes-agent, ... }:
+    , hermes-agent, nixpkgs-forgejo, ... }:
     let
       lib = nixpkgs.lib;
       username = "crussell";
@@ -54,6 +63,13 @@
 
       # System pkgs for callPackage above.
       pkgs = import nixpkgs {
+        system = "x86_64-linux";
+        config.allowUnfree = true;
+      };
+
+      # Pinned pkgs set that carries forgejo 17.0.1 (see the
+      # nixpkgs-forgejo input comment above). Passed to gateway only.
+      forgejo-pkgs = import nixpkgs-forgejo {
         system = "x86_64-linux";
         config.allowUnfree = true;
       };
@@ -152,7 +168,12 @@
       };
       nixosConfigurations.bees = mkHost { hostname = "bees"; };
       nixosConfigurations.nas = mkHost { hostname = "nas"; };
-      nixosConfigurations.gateway = mkHost { hostname = "gateway"; };
+      nixosConfigurations.gateway = mkHost {
+        hostname = "gateway";
+        # forgejo on gateway tracks the pinned nixpkgs-forgejo input (17.0.1),
+        # not our nixpkgs' forgejo-lts default.
+        extraSpecialArgs = { inherit forgejo-pkgs; };
+      };
 
       # ── Packages ─────────────────────────────────────────────────
       packages.x86_64-linux.dsh = dshPkg;

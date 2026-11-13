@@ -13,11 +13,15 @@
 # State: /var/lib/forgejo (DB, repos). Backups: nightly bounded dump
 # (forgejo-dump-bounded.nix) pulled off-box to bees → restic (NAS + S3).
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, forgejo-pkgs, ... }:
 
 {
   services.forgejo = {
     enable = true;
+
+    # 17.0.1 — pinned input, see flake.nix (the module default is
+    # forgejo-lts 15.x, which the weekly lock bumps never move forward).
+    package = forgejo-pkgs.forgejo;
 
     database.type = "sqlite3";
 
