@@ -87,14 +87,16 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # our maintenance fork of AyushKr2003's archived port of Caelestia to niri):
 #   - `quickshell` from errornointernet/quickshell (release build 0.3.x --
 #     the QML runtime the fork's shell runs on).
-#   - fonts + materialyoucolor from gmanka/caelestia -- the ONE thing we keep
-#     that COPR for (material-symbols-fonts, cascadia-code-nerd-fonts,
-#     python3-materialyoucolor); caelestia-shell itself is NOT installed.
-#     That COPR has no fedora-45 chroot yet (checked 2026-11-14: enabled
-#     chroots max out at 44), so the enable below pins fedora-44-x86_64
-#     explicitly. All three packages are noarch, so the f44 repo works
-#     unchanged on F45; drop the explicit chroot (back to a plain enable)
-#     once upstream adds fedora-45.
+#   - two NOARCH fonts from gmanka/caelestia (material-symbols-fonts,
+#     cascadia-code-nerd-fonts) -- the only reason we keep that COPR;
+#     caelestia-shell itself is NOT installed. No fedora-45 chroot yet
+#     (checked 2026-11-14: enabled chroots max at 44), so the enable pins
+#     fedora-44-x86_64; drop the explicit chroot once upstream adds f45.
+#     python3-materialyoucolor was DROPPED 2026-11-14: fork-era leftover (the
+#     niri-caelestia-shell fork it served is retired, replaced by Ambxst), an
+#     x86_64 rpm bound to py3.14 that can't resolve on F45; Ambxst's color
+#     pipeline uses user-side matugen 4.2 (ambxst.service PATH), so nothing
+#     in the image imports it.
 #   - `app2unit` from celestelove/app2unit (the fork's app-launcher helper:
 #     launches apps as transient user units, scoped to the graphical session).
 #   - `libcava` (+ devel, tiny) from celestelove/libcava -- the audio-
@@ -141,7 +143,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
                        niri xwayland-satellite bibata-cursor-themes \
                        quickshell app2unit libcava libcava-devel \
                        material-symbols-fonts cascadia-code-nerd-fonts \
-                       python3-materialyoucolor matugen adw-gtk3-theme \
+                       matugen adw-gtk3-theme \
                        kf6-kirigami kf6-syntax-highlighting kdialog plasma-integration \
                        qt6-qt5compat qt6-qtmultimedia qt6-qtquicktimeline \
                        wl-clipboard cliphist grim slurp swappy \
