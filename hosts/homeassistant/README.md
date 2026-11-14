@@ -184,7 +184,7 @@ Home Assistant connects to the Nebula overlay mesh via a standalone Docker conta
 
 - **Nebula IP:** `10.10.0.51`
 - **Container:** `nebula` (standalone, `--restart=always`)
-- **Image:** `nebula-standalone` (Alpine + Nebula v1.10.3 with certs baked in)
+- **Image:** `nebula-standalone` (Alpine + Nebula v1.12.0 with certs baked in)
 - **Certs source:** `nebula/pki/homeassistant.{crt,key}` + `ca.crt` in the repo
 - **Add-on source:** `hosts/homeassistant/addons/nebula/` (Dockerfile, config, entrypoint)
 

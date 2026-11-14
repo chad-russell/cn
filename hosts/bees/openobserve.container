@@ -9,7 +9,7 @@
 # journald via OTLP/HTTP → :5080/api/default/v1/logs (basic auth = root
 # user). UI/API: https://logs.internal.crussell.io (bees Caddy route).
 #
-# Image: pinned by digest (v1.0.4 multi-arch index, fetched 2026-09-25).
+# Image: pinned by digest (v1.1.2 amd64 manifest, fetched 2026-11-14).
 # Memory: ZO_MEMORY_CACHE_MAX_SIZE (MB) caps the querier file cache — the
 # upstream default is 50% of host RAM, unacceptable on shared bees — and
 # ZO_MEM_TABLE_MAX_SIZE bounds memtables the same way.
@@ -23,7 +23,7 @@ StartLimitIntervalSec=60
 OnFailure=ntfy-failure@openobserve.service
 
 [Container]
-Image=public.ecr.aws/zinclabs/openobserve@sha256:d4a878fac1f6c56003764f7f2a1625668917388f167e222c8c810de3f54c56ba
+Image=public.ecr.aws/zinclabs/openobserve@sha256:26618f379c86b253c0d91624c487dd14b71293699845ecbc8457c94dca14819f
 ContainerName=openobserve
 Environment=ZO_DATA_DIR=/data
 Environment=ZO_LOCAL_MODE_STORAGE=s3
