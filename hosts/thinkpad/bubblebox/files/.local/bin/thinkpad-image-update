@@ -40,7 +40,7 @@ STATE_FILE="$STATE_DIR/last-alerted"
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing dependency: $1" >&2; exit 1; }; }
 need curl; need jq; need sudo
 
-# IMAGE_VERSION=44-<sha>-<YYYYMMDD-HHMMSS>
+# IMAGE_VERSION=45-<sha>-<YYYYMMDD-HHMMSS>
 booted_version() { sed -n 's/^IMAGE_VERSION=//p' "$VERSION_FILE"; }
 
 # The rolling tag's org.opencontainers.image.version label (the same stamp
@@ -59,7 +59,7 @@ registry_version() {
 # Build-stamp date (UTC) → epoch seconds. Non-zero return on parse failure.
 stamp_ts() {
   local stamp d t
-  stamp=$(cut -d- -f3- <<<"$1")    # 44-<sha>-DATE-TIME → DATE-TIME
+  stamp=$(cut -d- -f3- <<<"$1")    # 45-<sha>-DATE-TIME → DATE-TIME
   [[ "$stamp" =~ ^[0-9]{8}-[0-9]{6}$ ]] || return 1
   d="${stamp:0:8}"; t="${stamp:9:6}"
   date -u -d "${d:0:4}-${d:4:2}-${d:6:2} ${t:0:2}:${t:2:2}:${t:4:2}" +%s

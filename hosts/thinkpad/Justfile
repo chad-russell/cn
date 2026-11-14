@@ -86,7 +86,7 @@ icons:
     #!/usr/bin/env bash
     set -euo pipefail
     icons_dir="${HOME}/.local/share/icons"
-    image="docker.io/library/fedora:44"
+    image="docker.io/library/fedora:45"
     mkdir -p "${icons_dir}"
     stage="$(mktemp -d)"
     trap 'rm -rf "${stage}"' EXIT

@@ -28,7 +28,7 @@
 #
 # Base image: the same one ublue/bluefin/finpilot derive from.
 
-ARG FEDORA_MAJOR_VERSION=44
+ARG FEDORA_MAJOR_VERSION=45
 FROM quay.io/fedora-ostree-desktops/silverblue:${FEDORA_MAJOR_VERSION}
 
 # ---- 1. distrobox added (toolbox stays) ---------------------------------
@@ -60,7 +60,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # Silverblue here ships only FUSE 3 (libfuse.so.3). Classic (type-2)
 # AppImages dlopen() libfuse.so.2 to mount themselves and abort with "error
 # loading libfuse.so.2" without it. `fuse-libs` is still shipped in the
-# Fedora 44 repos and re-installing it is the documented fix. (`fuse2`
+# Fedora repos and re-installing it is the documented fix. (`fuse2`
 # works too, but fuse-libs is the minimal runtime shim; AppImage's
 # mount-and-run path doesn't need the fusermount helper.) Added for PhysCAD;
 # enables native `./AppImage` launch instead of --appimage-extract-and-run.
@@ -85,7 +85,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 #
 # The shell stack for niri (fork: github.com/chad-russell/niri-caelestia-shell,
 # our maintenance fork of AyushKr2003's archived port of Caelestia to niri):
-#   - `quickshell` from errornointernet/quickshell (F44 release build 0.3.x --
+#   - `quickshell` from errornointernet/quickshell (release build 0.3.x --
 #     the QML runtime the fork's shell runs on).
 #   - fonts + materialyoucolor from gmanka/caelestia -- the ONE thing we keep
 #     that COPR for (material-symbols-fonts, cascadia-code-nerd-fonts,
@@ -96,7 +96,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 #     visualizer lib the shell's C++ plugin links for the audio visualizer
 #     widget (plugin built in step 2.5 below).
 #
-# Runtime deps for the fork (each verified available on F44):
+# Runtime deps for the fork (each verified available on F44/F45):
 #   matugen (Fedora proper -- the Material-You color pipeline), nmcli via
 #   NetworkManager (base image), kdialog + kf6-kirigami + kf6-syntax-
 #   highlighting + plasma-integration (Qt dialogs/theme), swappy +
@@ -169,11 +169,11 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 # per-user to ~/.local/src/ambxst (ambxst finds them via the pointer file
 # ~/.local/share/ambxst/shell_repo; axctl.toml there maps compositor
 # targets). Phosphor icon fonts install user-side with the sources.
-RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/ambxst-linux-amd64 -o /tmp/ambxst-linux-amd64 \
-    && curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/SHA256SUMS -o /tmp/ambxst.SHA256SUMS \
+RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.15/ambxst-linux-amd64 -o /tmp/ambxst-linux-amd64 \
+    && curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.15/SHA256SUMS -o /tmp/ambxst.SHA256SUMS \
     && (cd /tmp && sha256sum --check --ignore-missing ambxst.SHA256SUMS) \
     && install -m 755 /tmp/ambxst-linux-amd64 /usr/bin/ambxst \
-    && curl -fsSL https://github.com/Axenide/axctl/releases/download/v0.0.29/axctl_linux_amd64 -o /tmp/axctl \
+    && curl -fsSL https://github.com/Axenide/axctl/releases/download/v0.0.32/axctl_linux_amd64 -o /tmp/axctl \
     && install -m 755 /tmp/axctl /usr/bin/axctl \
     && rm -f /tmp/ambxst-linux-amd64 /tmp/ambxst.SHA256SUMS /tmp/axctl
 
@@ -219,16 +219,19 @@ RUN curl -fsSL https://github.com/Axenide/Ambxst/releases/download/1.3.12/ambxst
 # the built-in xwayland-satellite). The bindgen-based -sys crates (drm/gbm/
 # input/libseat/libspa/pipewire/lcms2/pixman/xcb-util-cursor) drive the devel
 # list -- libspa's headers ship inside pipewire-devel (pkgconfig(libspa-0.2),
-# /usr/include/spa-0.2; F44 has no separate SPA devel package) -- and libclang
+# /usr/include/spa-0.2; Fedora has no separate SPA devel package) -- and libclang
 # (clang-libs) is for bindgen itself: a live build without it panics in
 # bindgen/lib.rs "Unable to find libclang". clang-libs also ships the builtin
-# headers under /usr/lib/clang/22 (not /usr/lib64/...), which libclang's
+# headers under /usr/lib/clang/<n>, a version-named dir per Fedora clang
+# release (22 on F44, 23 on F45; NOT /usr/lib64/...), which libclang's
 # resource-dir lookup misses on Fedora's multiarch split -- the
-# BINDGEN_EXTRA_CLANG_ARGS resource-dir pin below fixes stdbool.h not found.
+# BINDGEN_EXTRA_CLANG_ARGS resource-dir below is resolved at BUILD TIME by
+# globbing that dir (tracks the major without a pin) and fixes the
+# stdbool.h-not-found that a hardcoded path caused across Fedora bumps.
 # CARGO_HOME=/tmp/cargo-home: the silverblue base symlinks /root ->
 # var/roothome, DANGLING inside a build container, so cargo's default
-# /root/.cargo dies with EEXIST (plain fedora:44 has a real /root and hides
-# it; caught against the actual base).
+# /root/.cargo dies with EEXIST (a plain fedora container has a real /root
+# and hides it; caught against the actual base).
 # `dnf5 history
 # inside a container build (no transaction history survives the layer), so
 # plain remove + clean all is the honest cleanup. git and Xwayland are NOT
@@ -249,7 +252,8 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     && git -C /tmp/ShojiWM checkout 048f2fdf9f2ddd2dea5c96bbb9a37f381edb09b1 \
     && (cd /tmp/ShojiWM \
         && CARGO_HOME=/tmp/cargo-home \
-           BINDGEN_EXTRA_CLANG_ARGS='-resource-dir /usr/lib/clang/22' \
+           CLANG_RES_DIR="$(echo /usr/lib/clang/*)" \
+           BINDGEN_EXTRA_CLANG_ARGS="-resource-dir ${CLANG_RES_DIR}" \
            cargo build --release -p shoji_wm -p xdg-desktop-portal-shojiwm \
         && install -Dm755 target/release/shoji_wm /usr/bin/shoji_wm \
         && install -Dm755 target/release/xdg-desktop-portal-shojiwm \
