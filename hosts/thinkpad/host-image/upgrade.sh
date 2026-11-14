@@ -9,8 +9,8 @@
 #       Nebula and stages the new deployment. Diff-only: a version-stamp-only
 #       rebuild is a few MB; a Fedora-update rebuild is typically tens-hundreds.
 #   - containers-storage reference (break-glass local flow, still works):
-#       bootc upgrade → re-resolves localhost/host-image-thinkpad:44 from
-#       root podman storage (no network) exactly like the old script.
+#       bootc upgrade → re-resolves localhost/host-image-thinkpad:<major>
+#       from root podman storage (no network) exactly like the old script.
 #
 # Prereqs: Nebula up (registry path). bootc ships on Silverblue 44+.
 set -euo pipefail

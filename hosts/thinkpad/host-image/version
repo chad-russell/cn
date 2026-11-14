@@ -7,4 +7,4 @@
 # Fedora bump never has to touch the boot reference or zot retention — the
 # 2026-09-24 trap: retention patterns anchored to ^44$ would have GC'd every
 # tag of version 45 within a day of a bump.
-FEDORA_MAJOR_VERSION=44
+FEDORA_MAJOR_VERSION=45

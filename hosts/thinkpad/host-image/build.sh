@@ -41,8 +41,9 @@ IMAGE_VERSION="${FEDORA_MAJOR_VERSION}-${GIT_SHA}-$(date -u +%Y%m%d-%H%M%S)"
 VERSION_TAG="localhost/host-image-thinkpad:${IMAGE_VERSION}"
 
 echo "==> Building ${IMAGE}  (version ${IMAGE_VERSION})"
-# --pull=newer: refresh the base if a newer 44.x exists (gets Fedora updates
-# baked in); still works on first build when the base isn't cached yet.
+# --pull=newer: refresh the base if a newer ${FEDORA_MAJOR_VERSION}.x exists
+# (gets Fedora updates baked in); still works on first build when the base
+# isn't cached yet.
 sudo podman build \
   --pull=newer \
   --build-arg "IMAGE_VERSION=${IMAGE_VERSION}" \
