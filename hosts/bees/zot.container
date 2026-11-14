@@ -4,7 +4,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=ghcr.io/project-zot/zot-linux-amd64:v2.1.20
+Image=ghcr.io/project-zot/zot-linux-amd64:v2.1.23
 ContainerName=zot
 # Bind to bees's Nebula address only — the registry is reachable from the
 # overlay (think, bee, ...) but NOT from the LAN or the internet. bees runs

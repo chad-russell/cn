@@ -41,9 +41,9 @@ fi
 echo "==> Preparing build context"
 ssh_ha 'mkdir -p /tmp/nebula-build'
 ssh_ha "cat > /tmp/nebula-build/Dockerfile" << 'DOCKERFILE'
-FROM alpine:3.21
+FROM alpine:3.24
 RUN apk add --no-cache curl && \
-    curl -fSL "https://github.com/slackhq/nebula/releases/download/v1.10.3/nebula-linux-amd64.tar.gz" | tar xz -C /usr/bin/ && \
+    curl -fSL "https://github.com/slackhq/nebula/releases/download/v1.12.0/nebula-linux-amd64.tar.gz" | tar xz -C /usr/bin/ && \
     chmod 755 /usr/bin/nebula /usr/bin/nebula-cert
 COPY nebula.yaml /etc/nebula/config.yaml
 COPY ca.crt /ssl/nebula/ca.crt

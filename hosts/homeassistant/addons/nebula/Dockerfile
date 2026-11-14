@@ -1,6 +1,6 @@
-FROM alpine:3.21
+FROM alpine:3.24
 
-ENV NEBULA_VERSION=1.10.3
+ENV NEBULA_VERSION=1.12.0
 
 RUN apk add --no-cache --virtual .build-deps curl \
     && case "$(uname -m)" in \
