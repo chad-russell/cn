@@ -90,6 +90,11 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 #   - fonts + materialyoucolor from gmanka/caelestia -- the ONE thing we keep
 #     that COPR for (material-symbols-fonts, cascadia-code-nerd-fonts,
 #     python3-materialyoucolor); caelestia-shell itself is NOT installed.
+#     That COPR has no fedora-45 chroot yet (checked 2026-11-14: enabled
+#     chroots max out at 44), so the enable below pins fedora-44-x86_64
+#     explicitly. All three packages are noarch, so the f44 repo works
+#     unchanged on F45; drop the explicit chroot (back to a plain enable)
+#     once upstream adds fedora-45.
 #   - `app2unit` from celestelove/app2unit (the fork's app-launcher helper:
 #     launches apps as transient user units, scoped to the graphical session).
 #   - `libcava` (+ devel, tiny) from celestelove/libcava -- the audio-
@@ -123,7 +128,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     && dnf5 -y copr enable yalter/niri \
     # && dnf5 -y copr enable ryanabx/cosmic-epoch \
     && dnf5 -y copr enable errornointernet/quickshell \
-    && dnf5 -y copr enable gmanka/caelestia \
+    && dnf5 -y copr enable gmanka/caelestia fedora-44-x86_64 \
     && dnf5 -y copr enable celestelove/libcava \
     && dnf5 -y copr enable celestelove/app2unit \
     && dnf5 -y copr enable peterwu/rendezvous \
