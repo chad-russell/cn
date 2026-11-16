@@ -229,6 +229,17 @@ dst = ".config/bubblebox/entrypoints/sops.toml"
 [[files]]
 dst = ".local/bin/zen-browser"
 
+# PhysCAD launcher / first-run installer. The AppImage itself is NOT a
+# dotfile — it lives version-named at ~/.local/opt/physcad/ and updates
+# itself (electron-updater against physcad.io/updates). This script only
+# bootstraps the download when missing and resolves the current file at
+# launch, so the menu entry never needs rewriting across self-updates.
+[[files]]
+dst = ".local/bin/physcad"
+
+[[files]]
+dst = ".local/share/applications/physcad.desktop"
+
 # think host-image consumer: daily `bootc upgrade` stage + ntfy lag alert
 # (the sudoers grant it relies on is baked into the image -- Containerfile
 # step 3.8). Full story in the script header.

@@ -93,6 +93,36 @@ uninstalls it. Apps installed some other way are reported as "unmanaged" by
 installation (removes a system copy only once the user copy exists; app data
 in `~/.var/app` is shared and untouched).
 
+**PhysCAD** has no Flathub build, so it's the AppImage flow — and the app
+**updates itself**: electron-updater polls `https://physcad.io/updates/`
+(the feed baked into its `resources/app-update.yml`) and installs by
+swapping the version-named AppImage at `~/.local/opt/physcad/`. Nothing here
+races it. What *is* repo-managed is the **launcher** (`bubblebox/files/
+.local/bin/physcad`, a `[[files]]` symlink at `~/.local/bin/physcad`):
+
+- resolves the newest `PhysCAD-*-x86_64.AppImage` in that dir at launch, so
+  the menu entry (`physcad.desktop`, also a `[[files]]`) points at a stable
+  path and survives every self-update (electron-updater writes a new
+  version-named file beside the old one);
+- when the payload is **missing** (fresh host, hand-deleted, restore that
+  skipped `~/.local/opt`) it shows a notification, fetches the feed,
+  downloads the x86_64 AppImage, verifies it against the feed's own base64
+  sha512 + size, installs it, and starts the app — the "reminder to
+  download" is a self-healing launch, not a dead menu entry.
+
+```bash
+cjust physcad           # download-if-missing + launch (same as the menu)
+cjust physcad-install   # just the download/verify, no launch
+cjust physcad-status    # installed vs published (the app updates itself)
+```
+
+First time on a fresh host: `cjust bubblebox-apply` (links the launcher +
+desktop entry) then `cjust physcad-install` — or just launch it from the app
+grid. FUSE2 for the AppImage mount path is baked into the host image
+(`fuse-libs` **and** `fuse`, which owns the setuid `fusermount`); if mounting
+ever fails anyway, the launcher retries once with
+`--appimage-extract-and-run` (slower, still correct, still self-updating).
+
 ## Current architecture
 
 ### `host-image/`

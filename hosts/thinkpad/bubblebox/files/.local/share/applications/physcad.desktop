@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=PhysCAD
+Comment=Parametric and direct-editing CAD with CAM, drawings and rendering (AppImage; self-updating)
+# The launcher (a bubblebox [[files]] symlink at ~/.local/bin/physcad) finds
+# the newest PhysCAD-*-x86_64.AppImage in ~/.local/opt/physcad/ and downloads
+# it from the update feed on first run — so this Exec stays stable across the
+# app's own version-named self-updates (electron-updater writes a new
+# version-named file beside the old one on every update).
+Exec=/var/home/crussell/.local/bin/physcad %U
+Icon=physcad
+Terminal=false
+StartupWMClass=PhysCAD
+Categories=Graphics;Engineering;
+MimeType=application/x-physcad;

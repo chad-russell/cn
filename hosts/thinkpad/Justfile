@@ -218,6 +218,81 @@ zen-memlimit-clear:
     fi
 
 # ═══════════════════════════════════════════════════════════════════════════
+# PhysCAD (AppImage; the app self-updates)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# PhysCAD ships no Flathub build, so this is the AppImage flow:
+#   - the AppImage lives version-named at ~/.local/opt/physcad/ and UPDATES
+#     ITSELF — electron-updater polls https://physcad.io/updates/ (the feed
+#     baked into resources/app-update.yml), downloads, and installs by
+#     unlinking $APPIMAGE and mv-ing the new version-named file beside it.
+#     That's the ONLY update path: we deliberately do not run our own daily
+#     updater alongside it (two writers on the same file would race).
+#   - ~/.local/bin/physcad (bubblebox [[files]], hosts/thinkpad/bubblebox/
+#     files/.local/bin/physcad) is the LAUNCHER + first-run installer: it
+#     resolves the newest AppImage in that dir at launch, and when none is
+#     there it fetches the feed, downloads, verifies the base64 sha512 + size
+#     from the same feed, and installs — then starts the app. So a fresh host
+#     (or a restore that skipped ~/.local/opt) self-heals on first launch.
+#   - the menu entry (.local/share/applications/physcad.desktop, also a
+#     bubblebox [[files]]) points at the LAUNCHER, never at a version-named
+#     file, so app self-updates never break it.
+#
+#   cjust physcad          # download-if-missing + launch (same as the menu)
+#   cjust physcad-install  # download-if-missing, no launch (feed-verified)
+#   cjust physcad-status   # what's installed vs the published feed
+
+# Download the AppImage if missing (feed-resolved, sha512-verified), then
+# launch it. Same code path as the menu entry.
+[group('physcad')]
+physcad:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    launcher="${HOME}/.local/bin/physcad"
+    if [ ! -x "$launcher" ]; then
+      echo "ERROR: ${launcher} missing — run 'cjust bubblebox-apply' first." >&2
+      exit 1
+    fi
+    exec "$launcher" "$@"
+
+# Just the install step (no launch). Idempotent — a no-op when the feed's
+# version is already installed and verifies. Pulls are always verified
+# against the feed's own sha512/size before the file is moved into place.
+[group('physcad')]
+physcad-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    launcher="${HOME}/.local/bin/physcad"
+    if [ ! -x "$launcher" ]; then
+      echo "ERROR: ${launcher} missing — run 'cjust bubblebox-apply' first." >&2
+      exit 1
+    fi
+    # install is an internal function of the launcher; sourcing it in a
+    # subshell would run the launch tail, so drive it via the same code path
+    # with a "stop before running" sentinel argument the launcher understands.
+    "$launcher" --physcad-install-only
+
+# Read-only: installed AppImage(s), the feed's published version, and the
+# update story (the app updates itself in-app; this only reports).
+[group('physcad')]
+physcad-status:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="${HOME}/.local/opt/physcad"
+    feed="https://physcad.io/updates/latest-linux.yml"
+    echo "=== installed (${dir}) ==="
+    ls -1 "${dir}" 2>/dev/null | sed 's/^/  /' || echo "  (nothing — cjust physcad-install)"
+    echo "=== published (feed) ==="
+    if ver=$(curl -fsSL --max-time 15 "$feed" | sed -n 's/^version:[[:space:]]*//p' | head -1); then
+      echo "  ${ver:-unparsed}"
+    else
+      echo "  (feed unreachable)"
+    fi
+    echo "=== notes ==="
+    echo "  updates are the app's own (electron-updater); launch and use"
+    echo "  Help/About or its in-app updater. No daily timer here on purpose."
+
+# ═══════════════════════════════════════════════════════════════════════════
 # desktoppak — RETIRED 2026-09-01. The bwrap-payload experiment lost to the
 # normal bootc/image path; compositors ship in the host image (see
 # host-image/Containerfile). One final cleanup recipe remains for the live
