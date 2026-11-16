@@ -123,6 +123,15 @@ grid. FUSE2 for the AppImage mount path is baked into the host image
 ever fails anyway, the launcher retries once with
 `--appimage-extract-and-run` (slower, still correct, still self-updating).
 
+PhysCAD also self-registers a **duplicate** menu entry on first launch
+(`physcad-appimage.desktop`, `Exec=` the version-named AppImage, plus a
+`*.physcad` MIME package and icons). That duplicate is disabled by setting
+`linuxIntegration.off = true` in `~/.config/PhysCAD/physcad-settings.json`
+(the app's own supported switch — it then removes its entry and never
+re-registers); the MIME registration + document icon live here instead, and
+the app never touches our entry (it only edits files carrying its
+`X-PhysCAD-AppImage=true` marker).
+
 ## Current architecture
 
 ### `host-image/`

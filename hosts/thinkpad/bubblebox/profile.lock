@@ -1,5 +1,5 @@
-id = "35854aa9b95c83235dabe68503f11cbac227fb9d03b29c06dfa558c9ab469961"
-created_at = 1794853278
+id = "7c967fae8a685956559201a0dfe6fbea541987864b9c1d8f5c3df1133471ac63"
+created_at = 1794872766
 roots = [
     "age",
     "age-keygen",
@@ -589,6 +589,14 @@ dst = ".local/share/icons/hicolor/1024x1024/apps/physcad.png"
 blob = "7db744b284ae219213af5a281783efc079bbd71c91d2532a4ff5e29f597e3bcf"
 
 [[file]]
+dst = ".local/share/mime/packages/physcad.xml"
+blob = "04e1ebdf3678c4d0a254a68523af285e632509c76928549130bfdc15182d3b62"
+
+[[file]]
+dst = ".local/share/icons/hicolor/512x512/mimetypes/application-x-physcad.png"
+blob = "3aa0e562d127b337a377af8d4277a06baf0d019e1e988bc1fb802959803b4863"
+
+[[file]]
 dst = ".local/bin/thinkpad-image-update"
 blob = "9b0985aafd676cf748fafee06d31ebd674414036b75ec456504e7cab0fc3f898"
 
@@ -693,9 +701,7 @@ apps = [
     "org.gnome.baobab",
     "org.gnome.clocks",
     "org.gnome.font-viewer",
-    "org.inkscape.Inkscape",
     "org.localsend.localsend_app",
-    "org.onlyoffice.desktopeditors",
     "page.tesk.Refine",
     "studio.planetpeanut.Bobby",
     "us.zoom.Zoom",
