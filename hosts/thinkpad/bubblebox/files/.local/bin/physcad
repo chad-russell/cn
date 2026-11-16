@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# physcad — launcher + first-run installer for the PhysCAD AppImage.
+#
+# MODEL: the app owns its own updates (electron-updater against
+# https://physcad.io/updates/ — the feed the AppImage ships in
+# resources/app-update.yml). This script only BOOTSTRAPS: when no AppImage is
+# installed it resolves the feed's `version:` + the x86_64 AppImage entry,
+# downloads it, verifies it against the feed's base64 sha512 (+ size), and
+# installs it version-named into ~/.local/opt/physcad/. After that it stays
+# out of the way: it runs whatever AppImage is there and passes args through.
+#
+# WHY A LAUNCHER AT ALL (and not a menu entry pointing at the AppImage):
+#   1. First run has nothing to launch — the app is a ~170 MB download that
+#      must NOT live in the bubblebox content-addressed store (binaries are
+#      not dotfiles; same reasoning as zen-browser). This script is small and
+#      IS bubblebox-managed ([[files]]), so the install logic stays
+#      declarative and version-controlled even though the payload is not.
+#   2. A STABLE path. electron-updater's AppImageUpdater installs updates by
+#      unlinking $APPIMAGE and `mv`-ing the downloaded file NEXT TO it under
+#      the downloaded name (PhysCAD-<version>-x86_64.AppImage), so the
+#      versioned file name changes on every self-update. The menu entry and
+#      muscle memory must not. This launcher resolves "the newest AppImage in
+#      the dir" at run time, so the desktop file and keybinds never need
+#      rewriting, and a missing/renamed payload is re-downloaded instead of
+#      breaking the menu entry.
+#   3. The "reminder to download when it's missing": a desktop launch with no
+#      payload shows a notification, downloads, and starts the app — no dead
+#      menu entry after a restore that skipped ~/.local/opt.
+#
+# FUSE note: classic (type-2) AppImages dlopen libfuse.so.2 and call the
+# setuid fusermount(1) helper — the host image bakes both in (Containerfile
+# step 1.5: `fuse-libs` + `fuse`). If mounting fails anyway, the AppImageKit
+# runtime still starts the app via --appimage-extract-and-run (extracts to a
+# content-addressed dir under $TMPDIR, execs AppRun from there, and still
+# sets $APPIMAGE to the real file — so electron-updater keeps working). This
+# launcher retries on that failure automatically, so a broken FUSE setup
+# degrades to a slower start, not a broken app.
+set -euo pipefail
+
+APP_NAME="PhysCAD"
+DEST_DIR="$HOME/.local/opt/physcad"
+FEED_URL="https://physcad.io/updates/latest-linux.yml"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/physcad-launcher"
+
+need() { command -v "$1" >/dev/null 2>&1 || { echo "physcad: missing dependency: $1" >&2; exit 1; }; }
+need curl; need openssl
+
+# The AppImage currently installed (highest version; sort -V).
+installed() {
+  ls -1 "$DEST_DIR"/PhysCAD-*-x86_64.AppImage 2>/dev/null | sort -V | tail -1 || true
+}
+
+# say <msg> — terminal when interactive, a desktop notification when one is
+# available. The .desktop entry runs this with no tty, so the notification is
+# what the user actually sees during a first-run download. (Both branches are
+# failure-tolerant: `[ -t 1 ]` is false under a non-interactive `set -e`
+# shell, and notify-send may be absent on a fresh host.)
+say() {
+  if [ -t 1 ]; then echo "physcad: $*" >&2; fi
+  if command -v notify-send >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+    notify-send -a physcad -i physcad "$APP_NAME" "$*" >/dev/null 2>&1 || true
+  fi
+}
+
+# verify <file> <sha512(base64)> [size] — the feed publishes base64 sha512
+# (electron-builder standard). Size is a cheap second check.
+verify() {
+  local f="$1" want="$2" want_size="${3:-}" got have_size
+  got="$(openssl dgst -sha512 -binary "$f" | openssl base64 -A)" || return 1
+  if [ "$got" != "$want" ]; then
+    echo "physcad: sha512 mismatch for $f" >&2
+    echo "  want: $want" >&2
+    echo "  got:  $got" >&2
+    return 1
+  fi
+  if [ -n "$want_size" ]; then
+    have_size="$(stat -c%s "$f")"
+    [ "$have_size" = "$want_size" ] || { echo "physcad: size mismatch (${have_size} != ${want_size})" >&2; return 1; }
+  fi
+  return 0
+}
+
+# install → prints the installed AppImage path. Idempotent: skips the
+# download when the feed's version is already present and verifies.
+install() {
+  mkdir -p "$DEST_DIR" "$STATE_DIR"
+  local feed version path sha512 size base url dst tmp
+  feed="$(curl -fsSL --max-time 30 "$FEED_URL")" || { echo "physcad: cannot reach $FEED_URL" >&2; return 1; }
+
+  # Parse the feed: plain YAML, the fields we need are one-per-line. The
+  # FIRST url:/sha512:/size: triple belongs to the AppImage entry (the feed
+  # also lists the .deb); the case below asserts we really got it.
+  version="$(sed -n 's/^version:[[:space:]]*//p' <<<"$feed" | head -1)"
+  path="$(sed -n 's/^[[:space:]]*-*[[:space:]]*url:[[:space:]]*//p' <<<"$feed" | head -1)"
+  sha512="$(sed -n 's/^[[:space:]]*-*[[:space:]]*sha512:[[:space:]]*//p' <<<"$feed" | head -1)"
+  size="$(sed -n 's/^[[:space:]]*-*[[:space:]]*size:[[:space:]]*//p' <<<"$feed" | head -1)"
+  case "$path" in
+    *x86_64*AppImage) ;;
+    *) echo "physcad: feed's first file entry is not the x86_64 AppImage ($path)" >&2; return 1 ;;
+  esac
+  [ -n "$version" ] && [ -n "$sha512" ] && [ -n "$size" ] \
+    || { echo "physcad: could not parse $FEED_URL" >&2; return 1; }
+  base="${FEED_URL%/*}"
+  url="$base/$path"
+  dst="$DEST_DIR/PhysCAD-${version}-x86_64.AppImage"
+
+  if [ -f "$dst" ] && verify "$dst" "$sha512" "$size" 2>/dev/null; then
+    say "$version already installed"
+    echo "$dst"
+    return 0
+  fi
+
+  say "downloading ${version} (~$((size / 1024 / 1024)) MB)…"
+  tmp="$(mktemp "$DEST_DIR/.download.XXXXXX")"
+  # -sS: quiet progress, keep errors (a tty still gets `say` notifications).
+  curl -fsSL --retry 3 --max-time 1800 -o "$tmp" "$url" \
+    || { rm -f "$tmp"; echo "physcad: download failed: $url" >&2; return 1; }
+  chmod 0755 "$tmp"
+  verify "$tmp" "$sha512" "$size" || { rm -f "$tmp"; return 1; }
+  mv -f "$tmp" "$dst"
+  printf '%s\t%s\n' "$(date -Is)" "$version" >>"$STATE_DIR/installs.log"
+  say "installed ${version}"
+  echo "$dst"
+}
+
+# ─── entry point ───────────────────────────────────────────────────────────
+# `--physcad-install-only` (used by `cjust physcad-install`): do the
+# download-if-missing and exit 0 without starting the app. Not documented in
+# --help; it's a cjust-internal handshake, forwarded nowhere.
+install_only=0
+if [ "${1:-}" = "--physcad-install-only" ]; then
+  install_only=1
+  shift
+fi
+
+appimage="$(installed)"
+if [ -z "$appimage" ] || [ ! -x "$appimage" ]; then
+  # Missing payload (fresh host, hand-deleted, restore that skipped
+  # ~/.local/opt): re-download instead of failing.
+  say "not installed — fetching from ${FEED_URL%/*}"
+  install >/dev/null || exit 1
+  appimage="$(installed)"
+fi
+if [ -z "$appimage" ]; then
+  echo "physcad: no AppImage found in $DEST_DIR" >&2
+  exit 1
+fi
+if [ "$install_only" = 1 ]; then
+  # `cjust physcad-install` promises a VERIFIED install, not just "a file
+  # exists": the entry point above only installs when nothing is there, so a
+  # truncated/hand-corrupted payload would otherwise pass through untouched.
+  # Re-verify against the current feed and re-download on any mismatch.
+  if ! install >/dev/null; then
+    echo "physcad: install/verify failed for $appimage" >&2
+    exit 1
+  fi
+  echo "$(installed)"
+  exit 0
+fi
+
+# Run it. The normal path is the AppImageKit FUSE mount; if that fails with
+# the "Cannot mount AppImage" runtime error (the runtime prints that to
+# stdout, its fuse error to stderr), retry with --appimage-extract-and-run
+# (see the FUSE note in the header).
+out="$(mktemp)"; err="$(mktemp)"; rc=0
+"$appimage" "$@" >"$out" 2>"$err" || rc=$?
+if [ "$rc" -ne 0 ] && grep -q 'Cannot mount AppImage' "$out" "$err"; then
+  say "FUSE mount failed — retrying with --appimage-extract-and-run"
+  rc=0
+  "$appimage" --appimage-extract-and-run "$@" >"$out" 2>"$err" || rc=$?
+fi
+cat "$out"; cat "$err" >&2
+rm -f "$out" "$err"
+exit "$rc"

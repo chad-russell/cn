@@ -1,5 +1,5 @@
-id = "8ce040f375b644561a7f336268bc56e58a6091a1f2f4832fdb100bf90c3d09a8"
-created_at = 1794510792
+id = "35854aa9b95c83235dabe68503f11cbac227fb9d03b29c06dfa558c9ab469961"
+created_at = 1794853278
 roots = [
     "age",
     "age-keygen",
@@ -577,8 +577,20 @@ dst = ".local/bin/zen-browser"
 blob = "e154842cd6b489d757daeeea9df58ea0ccc041c57d7eb411b8556e608382bece"
 
 [[file]]
+dst = ".local/bin/physcad"
+blob = "456b00154d74eb8a3904f6b01ba6403608e41ef6037e64b238c53aa3c304c4c4"
+
+[[file]]
+dst = ".local/share/applications/physcad.desktop"
+blob = "b91abe7b8274ccfd9324a20a8f2d858ee699cd061fa18dc5b8180d5826b4d826"
+
+[[file]]
+dst = ".local/share/icons/hicolor/1024x1024/apps/physcad.png"
+blob = "7db744b284ae219213af5a281783efc079bbd71c91d2532a4ff5e29f597e3bcf"
+
+[[file]]
 dst = ".local/bin/thinkpad-image-update"
-blob = "185969847a108f50467d6aa4b877279279668c4d504feb4a5e36f17f7971a752"
+blob = "9b0985aafd676cf748fafee06d31ebd674414036b75ec456504e7cab0fc3f898"
 
 [[file]]
 dst = ".local/bin/thinkpad-image-health"

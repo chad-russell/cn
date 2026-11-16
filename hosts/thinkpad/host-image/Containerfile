@@ -52,21 +52,28 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     dnf5 -y install distrobox zsh just fzf nodejs npm
 
-# ---- 1.5. FUSE 2 (libfuse.so.2) for type-2 AppImages --------------------
+# ---- 1.5. FUSE 2 (libfuse.so.2 + fusermount) for type-2 AppImages --------
 # This is an ostree/bootc image, so we can't layer via `rpm-ostree install`
 # on the running host -- packages must be baked in at build time. Fedora 44
 # DROPPED the FUSE 2 libraries from the Atomic Desktop base images (the F44
 # change proposal "Atomic Desktops: Drop FUSE 2 libraries"), so the base
 # Silverblue here ships only FUSE 3 (libfuse.so.3). Classic (type-2)
 # AppImages dlopen() libfuse.so.2 to mount themselves and abort with "error
-# loading libfuse.so.2" without it. `fuse-libs` is still shipped in the
-# Fedora repos and re-installing it is the documented fix. (`fuse2`
-# works too, but fuse-libs is the minimal runtime shim; AppImage's
-# mount-and-run path doesn't need the fusermount helper.) Added for PhysCAD;
-# enables native `./AppImage` launch instead of --appimage-extract-and-run.
+# loading libfuse.so.2" without it. Added for PhysCAD.
+#
+# BOTH halves are needed for the mount-and-run path, and they ship in two
+# Fedora packages (verified on F44: fuse-libs = /usr/lib64/libfuse.so.2 only;
+# fuse = /usr/bin/fusermount (mode 4755) + mount.fuse + ulockmgr_server).
+# The AppImageKit runtime's squashfuse calls fusermount(1) to perform the
+# user mount — without the setuid helper it dies with "fuse: failed to exec
+# fusermount: No such file or directory" EVEN THOUGH the library is present,
+# which was the state of the F45 image (only `fuse-libs` was installed).
+# The physcad launcher covers that with an automatic --appimage-extract-and-run
+# retry (slower start, still correct + the app keeps self-updating), but the
+# image should ship the real mount path.
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
-    dnf5 -y install fuse-libs
+    dnf5 -y install fuse-libs fuse
 
 # ---- 2. Desktop stack: niri + our niri-caelestia-shell fork --------------
 # niri comes from the upstream maintainer's COPR (yalter/niri), which tracks
