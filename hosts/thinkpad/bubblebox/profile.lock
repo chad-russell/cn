@@ -1,5 +1,5 @@
-id = "1bc5f7a004203f6ef2330ce4bd4bd15610fcbe36c297cf48bfc0df1466eb6ca2"
-created_at = 1794872198
+id = "7c967fae8a685956559201a0dfe6fbea541987864b9c1d8f5c3df1133471ac63"
+created_at = 1794872766
 roots = [
     "age",
     "age-keygen",
@@ -701,9 +701,7 @@ apps = [
     "org.gnome.baobab",
     "org.gnome.clocks",
     "org.gnome.font-viewer",
-    "org.inkscape.Inkscape",
     "org.localsend.localsend_app",
-    "org.onlyoffice.desktopeditors",
     "page.tesk.Refine",
     "studio.planetpeanut.Bobby",
     "us.zoom.Zoom",
