@@ -145,7 +145,18 @@ if [ -z "$appimage" ]; then
   echo "physcad: no AppImage found in $DEST_DIR" >&2
   exit 1
 fi
-if [ "$install_only" = 1 ]; then echo "$appimage"; exit 0; fi
+if [ "$install_only" = 1 ]; then
+  # `cjust physcad-install` promises a VERIFIED install, not just "a file
+  # exists": the entry point above only installs when nothing is there, so a
+  # truncated/hand-corrupted payload would otherwise pass through untouched.
+  # Re-verify against the current feed and re-download on any mismatch.
+  if ! install >/dev/null; then
+    echo "physcad: install/verify failed for $appimage" >&2
+    exit 1
+  fi
+  echo "$(installed)"
+  exit 0
+fi
 
 # Run it. The normal path is the AppImageKit FUSE mount; if that fails with
 # the "Cannot mount AppImage" runtime error (the runtime prints that to
