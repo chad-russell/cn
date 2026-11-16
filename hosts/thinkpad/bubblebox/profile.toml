@@ -240,6 +240,12 @@ dst = ".local/bin/physcad"
 [[files]]
 dst = ".local/share/applications/physcad.desktop"
 
+# PhysCAD icon (1024px hicolor), copied straight out of the AppImage's own
+# usr/share/icons/hicolor/1024x1024/apps/physcad.png — the brand mark, stable
+# across versions; re-extract only if PhysCAD ever changes it.
+[[files]]
+dst = ".local/share/icons/hicolor/1024x1024/apps/physcad.png"
+
 # think host-image consumer: daily `bootc upgrade` stage + ntfy lag alert
 # (the sudoers grant it relies on is baked into the image -- Containerfile
 # step 3.8). Full story in the script header.
