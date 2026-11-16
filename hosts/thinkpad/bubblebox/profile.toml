@@ -246,6 +246,16 @@ dst = ".local/share/applications/physcad.desktop"
 [[files]]
 dst = ".local/share/icons/hicolor/1024x1024/apps/physcad.png"
 
+# PhysCAD's *.physcad MIME registration + document icon. Byte-identical to
+# what the app itself installs via its "linux integration" — which we DISABLE
+# (settings linuxIntegration.off=true) because it also plants a duplicate
+# version-pinned menu entry. Ours points at the launcher instead.
+[[files]]
+dst = ".local/share/mime/packages/physcad.xml"
+
+[[files]]
+dst = ".local/share/icons/hicolor/512x512/mimetypes/application-x-physcad.png"
+
 # think host-image consumer: daily `bootc upgrade` stage + ntfy lag alert
 # (the sudoers grant it relies on is baked into the image -- Containerfile
 # step 3.8). Full story in the script header.

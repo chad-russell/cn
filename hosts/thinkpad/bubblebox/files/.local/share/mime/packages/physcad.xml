@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-physcad">
+    <comment>PhysCAD document</comment>
+    <glob pattern="*.physcad"/>
+    <icon name="application-x-physcad"/>
+  </mime-type>
+</mime-info>
