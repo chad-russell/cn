@@ -1,5 +1,5 @@
-id = "7c967fae8a685956559201a0dfe6fbea541987864b9c1d8f5c3df1133471ac63"
-created_at = 1794872766
+id = "fe23731f6a4b2083ffe3c652ee3d18b95783b272e1c02cfbf323761ad2e22ede"
+created_at = 1795023420
 roots = [
     "age",
     "age-keygen",
@@ -286,7 +286,7 @@ blob = "1a4f653f7cf2a3218dc0e8c5dfb561132fb4c662f24e74bf92e6269c60f6d9a7"
 
 [[file]]
 dst = ".config/dconf/bubblebox.d/00-thinkpad"
-blob = "c888022072f298cb81a6f9335dbe6f70d8899d52b2a43e5fbdce81fafacac1f1"
+blob = "6fc1ba474023ced6d7b71d4d498bc196e4bd531a71d22d8ff64009b6b4a7abb9"
 
 [[file]]
 dst = ".config/niri/config.kdl"
@@ -418,11 +418,11 @@ blob = "b3e095b5b4d3966c9947dfef867fc7b5126f06bfaa4681cd297ec61ddb73bd23"
 
 [[file]]
 dst = ".config/gtk-3.0/settings.ini"
-blob = "e3032744abc56d213fbf55db9d31a08e9b66e15eff90403c674a75ba47675de1"
+blob = "b1f861b754faf566297803ae836663558537eb5eebc5d75c51d3c49f75e0dab9"
 
 [[file]]
 dst = ".config/gtk-4.0/settings.ini"
-blob = "e3032744abc56d213fbf55db9d31a08e9b66e15eff90403c674a75ba47675de1"
+blob = "b1f861b754faf566297803ae836663558537eb5eebc5d75c51d3c49f75e0dab9"
 
 [[file]]
 dst = ".config/autostart/app.zen_browser.zen.desktop"

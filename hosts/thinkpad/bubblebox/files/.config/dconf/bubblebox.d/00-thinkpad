@@ -8,6 +8,11 @@
 # Format: dconf keyfile (GVariant text values) — `dconf dump /path/` emits it.
 # Curate deliberately: preferences only, never app state (window sizes,
 # timestamps, per-app portal grants, notification bookkeeping).
+#
+# HAZARD (2026-11-18 RCA): a user ~/.config/gtk-{3,4}.0/gtk.css layers OVER
+# every theme and overrides ALL dconf theming (a stale DMS/Ambxst palette made
+# the GNOME dark toggle visually inert). When retiring a styler that writes
+# gtk.css, DELETE the file — uninstalling the tool leaves it behind.
 
 [org/gnome/desktop/interface]
 accent-color='blue'
