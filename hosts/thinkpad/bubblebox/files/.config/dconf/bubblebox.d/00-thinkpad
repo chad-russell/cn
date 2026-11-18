@@ -11,7 +11,7 @@
 
 [org/gnome/desktop/interface]
 accent-color='blue'
-color-scheme='default'
+color-scheme='prefer-dark'
 cursor-size=24
 cursor-theme='Bibata-Modern-Ice'
 gtk-theme='adw-gtk3-dark'
