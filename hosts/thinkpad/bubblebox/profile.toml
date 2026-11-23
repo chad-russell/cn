@@ -49,6 +49,7 @@ apps = [
   "com.onepassword.OnePassword", "me.proton.Pass", "com.protonvpn.www",
   # dev + making
   "dev.zed.Zed", "com.bambulab.BambuStudio", "com.usebottles.bottles", "org.gnome.Boxes",
+  "org.godotengine.Godot",
   # system tools
   "com.github.tchx84.Flatseal", "io.github.kolunmi.Bazaar", "io.missioncenter.MissionCenter",
   "net.nokyan.Resources", "dev.edfloreshz.CosmicTweaks", "io.github.getnf.embellish",
